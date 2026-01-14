@@ -22,31 +22,47 @@ A comprehensive design system guide for maintaining visual consistency across th
 
 ## Color System
 
-### Base Colors (Dark Theme)
-The application uses a **dark theme exclusively**. All colors are defined in `tailwind.config.js`.
+### Theme Support
+The application supports **dark and light themes**. Theme preference is stored in localStorage and respects system preference by default. All colors are defined via CSS custom properties in `globals.css` and referenced in `tailwind.config.js`.
+
+### Semantic Color Tokens
+Colors are defined as semantic tokens that automatically adapt to the current theme:
+
+| Token | Dark Mode | Light Mode | Usage |
+|-------|-----------|------------|-------|
+| `canvas` | #000000 | #F0F0F0 | Page background |
+| `surface` | #23232D | #FFFFFF | Cards, inputs, elevated surfaces |
+| `surface-elevated` | #39394A | #DEDEE2 | Nested cards, code blocks |
+| `header-bg` | #000000 | #FFFFFF | Sticky header, footer |
+| `fg-muted` | #F0F0F0 | #23232D | Primary text |
+| `link` | #9494A5 | #6C6C87 | Secondary text, labels |
+| `fg-disabled` | #6C6C87 | #9494A5 | Disabled state text |
+| `high` | #DEDEE2 | #39394A | Highlighted text |
+| `default` | #39394A | #DEDEE2 | Standard borders |
 
 #### Background Colors
 ```css
-/* Main canvas background */
-bg-canvas: #171717    /* Primary app background */
-bg-surface: #1F1F1F   /* Elevated surfaces, cards, inputs */
-bg-black: #000000     /* Absolute black for headers */
+/* Use semantic tokens (theme-aware) */
+bg-canvas           /* Primary app background */
+bg-surface          /* Elevated surfaces, cards, inputs */
+bg-surface-elevated /* Nested cards, code blocks */
+bg-header-bg        /* Sticky header, footer */
 ```
 
 #### Text Colors
 ```css
-/* Text hierarchy */
-text-fg-muted: #ededed       /* Primary text - high contrast */
-text-link: #A3A3AD           /* Secondary text, labels, less important info */
-text-fg-disabled: #757575    /* Disabled state text */
-text-high: #CACAD6          /* Highlighted text */
+/* Text hierarchy (theme-aware) */
+text-fg-muted        /* Primary text - high contrast */
+text-link            /* Secondary text, labels, less important info */
+text-fg-disabled     /* Disabled state text */
+text-high            /* Highlighted text */
 ```
 
 #### Border & Divider Colors
 ```css
-border-default: #333         /* Standard borders */
-border-default/20           /* Subtle borders (with opacity) */
-border-default/50           /* Medium emphasis borders */
+border-default       /* Standard borders (theme-aware) */
+border-default/20    /* Subtle borders (with opacity) */
+border-default/50    /* Medium emphasis borders */
 ```
 
 #### Brand Colors
@@ -80,9 +96,33 @@ turbo-purple: #8B5CF6       /* Developer/technical features */
   → Use: text-turbo-purple, bg-turbo-purple/20
 ```
 
-#### Semantic Colors
+#### Alert Colors (Theme-Aware)
+For alert/notification text that appears on colored backgrounds, use theme-aware alert colors:
+
+| Token | Dark Mode | Light Mode | Usage |
+|-------|-----------|------------|-------|
+| `alert-danger` | #f87171 (red-400) | #991b1b (red-800) | Error messages on red backgrounds |
+| `alert-warning` | #fbbf24 (yellow-400) | #92400e (yellow-800) | Warning messages on yellow backgrounds |
+| `alert-success` | #4ade80 (green-400) | #166534 (green-800) | Success messages on green backgrounds |
+| `alert-info` | #60a5fa (blue-400) | #1e40af (blue-800) | Info messages on blue backgrounds |
+
+```jsx
+/* Alert card example with theme-aware text */
+<div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+  <AlertTriangle className="w-5 h-5 text-alert-danger" />
+  <p className="text-sm text-alert-danger">Error message here</p>
+</div>
+
+<div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+  <AlertTriangle className="w-5 h-5 text-alert-warning" />
+  <p className="text-sm text-alert-warning">Warning message here</p>
+</div>
+```
+
+#### Legacy Status Indicators (Non-Alert)
+For icons and non-text status indicators, standard Tailwind colors are acceptable:
 ```css
-/* Status indicators */
+/* Status indicators (icons, badges without text) */
 success: text-turbo-green, bg-green-500/10, border-green-500/20
 error: text-red-400, bg-red-500/10, border-red-500/20
 warning: text-yellow-400, bg-yellow-500/10, border-yellow-500/20
@@ -92,17 +132,19 @@ info: text-blue-400, bg-blue-500/10, border-blue-500/20
 ### Color Usage Guidelines
 
 **DO:**
+- Use semantic color tokens (`bg-canvas`, `bg-surface`, `text-fg-muted`) that adapt to theme
 - Use `turbo-red` for primary CTAs and important accents
 - Use `text-fg-muted` for all primary readable text
 - Use `text-link` for secondary text, labels, and metadata
 - Apply transparency (`/10`, `/20`) for subtle backgrounds
 - Use service-specific colors consistently within their context
+- Test components in both light and dark themes
 
 **DON'T:**
+- Hardcode hex colors (use semantic tokens instead)
 - Mix brand colors indiscriminately
-- Use light colors or create custom light themes
-- Use pure white except for rare emphasis cases
 - Rely on color alone for critical information (ensure accessibility)
+- Use `bg-black` except for modal backdrops or intentional effects
 
 ---
 
@@ -228,7 +270,7 @@ gap-12 (48px)  /* Page section dividers */
 
 #### Sticky Header Pattern
 ```jsx
-<div className="sticky top-0 z-50 bg-[#090909] border-b border-default/20">
+<div className="sticky top-0 z-50 bg-header-bg border-b border-default/20">
   <div className="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8 w-full">
     <Header />
   </div>
@@ -237,9 +279,9 @@ gap-12 (48px)  /* Page section dividers */
 
 #### Full Page Layout
 ```jsx
-<div className="min-h-screen bg-black text-fg-muted flex flex-col">
+<div className="min-h-screen bg-canvas text-fg-muted flex flex-col">
   {/* Header */}
-  <div className="sticky top-0 z-50">{/* ... */}</div>
+  <div className="sticky top-0 z-50 bg-header-bg">{/* ... */}</div>
 
   {/* Main Content */}
   <div className="flex-1">
@@ -398,7 +440,7 @@ Gradient: from-turbo-purple/5 to-turbo-purple/3
 
 ### Primary CTA Button
 ```jsx
-<button className="w-full py-4 px-6 rounded-lg bg-fg-muted text-black font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+<button className="w-full py-4 px-6 rounded-lg bg-fg-muted text-canvas font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
   <Icon className="w-5 h-5" />
   Button Text
 </button>
@@ -428,14 +470,14 @@ Gradient: from-turbo-purple/5 to-turbo-purple/3
 <div className="inline-flex bg-surface rounded-lg p-1 border border-default">
   <button className={`px-4 py-3 rounded-md text-sm font-medium transition-all ${
     isActive
-      ? 'bg-fg-muted text-black'
+      ? 'bg-fg-muted text-canvas'
       : 'text-link hover:text-fg-muted'
   }`}>
     Option 1
   </button>
   <button className={`px-4 py-3 rounded-md text-sm font-medium transition-all ${
     isActive
-      ? 'bg-fg-muted text-black'
+      ? 'bg-fg-muted text-canvas'
       : 'text-link hover:text-fg-muted'
   }`}>
     Option 2
@@ -692,7 +734,7 @@ modal content: z-[9999]
       <button className="flex-1 py-3 px-4 rounded-lg border border-default text-link hover:bg-surface hover:text-fg-muted transition-colors">
         Cancel
       </button>
-      <button className="flex-1 py-3 px-4 rounded-lg bg-fg-muted text-black font-semibold hover:bg-fg-muted/90 transition-colors">
+      <button className="flex-1 py-3 px-4 rounded-lg bg-fg-muted text-canvas font-semibold hover:bg-fg-muted/90 transition-colors">
         Confirm
       </button>
     </div>
@@ -942,14 +984,14 @@ className="hover:bg-surface hover:text-fg-muted transition-colors"
 9. State (disabled:, focus:)
 
 ### Common Pitfalls to Avoid
-- ❌ Don't create custom light themes
+- ❌ Don't hardcode hex colors (use semantic tokens like `bg-canvas`, `text-fg-muted`)
 - ❌ Don't mix different icon libraries
 - ❌ Don't use inline styles except for dynamic values
 - ❌ Don't skip responsive breakpoints
 - ❌ Don't use `any` type in TypeScript
 - ❌ Don't forget loading/error states
-- ❌ Don't hardcode colors (use Tailwind classes)
 - ❌ Don't skip the service panel pattern
+- ❌ Don't forget to test both light and dark themes
 
 ### Testing Checklist
 - [ ] Test on Chrome, Firefox, Safari, Edge

@@ -1,11 +1,46 @@
 import { useState } from 'react';
-import { Upload, ExternalLink, Receipt } from 'lucide-react';
+import { Upload, ExternalLink, Receipt, FileImage, FileVideo, FileAudio, FileText, File, Code } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { getArweaveUrl } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import CopyButton from '../CopyButton';
 import ReceiptModal from '../modals/ReceiptModal';
 import { useNavigate } from 'react-router-dom';
+
+// Get contextual file icon JSX based on content type or file name
+const getFileIcon = (contentType?: string, fileName?: string) => {
+  const type = contentType?.toLowerCase() || '';
+  const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+
+  // Images
+  if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)) {
+    return <FileImage className="w-4 h-4 text-link flex-shrink-0" />;
+  }
+
+  // Videos
+  if (type.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) {
+    return <FileVideo className="w-4 h-4 text-link flex-shrink-0" />;
+  }
+
+  // Audio
+  if (type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(ext)) {
+    return <FileAudio className="w-4 h-4 text-link flex-shrink-0" />;
+  }
+
+  // Code files
+  if (['application/javascript', 'application/json', 'text/css', 'text/html', 'application/xml', 'text/xml'].includes(type) ||
+      ['js', 'ts', 'jsx', 'tsx', 'css', 'html', 'json', 'xml', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh', 'yml', 'yaml', 'toml', 'md'].includes(ext)) {
+    return <Code className="w-4 h-4 text-link flex-shrink-0" />;
+  }
+
+  // Text/Documents
+  if (type.startsWith('text/') || ['txt', 'pdf', 'doc', 'docx', 'rtf'].includes(ext)) {
+    return <FileText className="w-4 h-4 text-link flex-shrink-0" />;
+  }
+
+  // Default file icon
+  return <File className="w-4 h-4 text-link flex-shrink-0" />;
+};
 
 export default function RecentUploadsSection() {
   const { uploadHistory } = useStore();
@@ -25,7 +60,7 @@ export default function RecentUploadsSection() {
         <p className="text-sm text-link mb-4">Upload your first files to get started</p>
         <button
           onClick={() => navigate('/upload')}
-          className="px-4 py-2 bg-fg-muted text-black rounded-lg hover:bg-fg-muted/90 transition-colors"
+          className="px-4 py-2 bg-fg-muted text-canvas rounded-lg hover:bg-fg-muted/90 transition-colors"
         >
           Upload Files
         </button>
@@ -60,67 +95,64 @@ export default function RecentUploadsSection() {
       </div>
 
       {/* Upload List */}
-      <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
+      <div className="space-y-4 max-h-64 overflow-y-auto px-4 pb-4">
         {displayUploads.map((upload, index) => {
           const status = uploadStatuses[upload.id];
-          
-          return (
-            <div key={index} className="bg-canvas rounded-lg p-3 border border-default/30">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-mono text-sm text-fg-muted">
-                      {upload.id.substring(0, 5)}...
-                    </div>
-                    <CopyButton textToCopy={upload.id} />
-                  </div>
-                  
-                  {/* File name if available */}
-                  {upload.fileName && (
-                    <span className="text-sm text-link truncate" title={upload.fileName}>
-                      {upload.fileName}
-                    </span>
-                  )}
 
-                  {status && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs">
-                        {getStatusIcon(status.status, status.info)} 
-                      </span>
-                      <span className={`text-xs font-medium ${getStatusColor(status.status, status.info)}`}>
-                        {status.status}
-                      </span>
+          return (
+            <div key={index} className="bg-surface border border-default rounded-lg p-4">
+              <div className="space-y-2">
+                {/* Row 1: Transaction ID + Actions */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="font-mono text-sm text-fg-muted">
+                      {upload.id.substring(0, 6)}...
                     </div>
-                  )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
+                    {/* Status Icon */}
+                    {status && (
+                      <div className="p-1.5" title={`Status: ${status.status}`}>
+                        <span className="text-xs">{getStatusIcon(status.status, status.info)}</span>
+                      </div>
+                    )}
+                    <CopyButton textToCopy={upload.id} />
+                    <button
+                      onClick={() => setShowReceiptModal(upload.id)}
+                      className="p-1.5 text-link hover:text-fg-muted transition-colors"
+                      title="View Receipt"
+                    >
+                      <Receipt className="w-4 h-4" />
+                    </button>
+                    <a
+                      href={getArweaveUrl(upload.id, upload.dataCaches)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 text-link hover:text-fg-muted transition-colors"
+                      title="View File"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
                 </div>
-                
-                {/* Actions */}
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setShowReceiptModal(upload.id)}
-                    className="p-1.5 text-link hover:text-fg-muted transition-colors"
-                    title="View Receipt"
-                  >
-                    <Receipt className="w-4 h-4" />
-                  </button>
-                  <a
-                    href={getArweaveUrl(upload.id, upload.dataCaches)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 text-link hover:text-fg-muted transition-colors"
-                    title="View File"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
+
+                {/* Row 2: File Name */}
+                {upload.fileName && (
+                  <div className="text-sm text-fg-muted truncate flex items-center" title={upload.fileName}>
+                    {getFileIcon(upload.contentType, upload.fileName)}
+                    <span className="truncate">{upload.fileName}</span>
+                  </div>
+                )}
+
+                {/* Row 3: Upload timestamp */}
+                {upload.timestamp && (
+                  <div className="text-sm text-link">
+                    {new Date(upload.timestamp).toLocaleString()}
+                  </div>
+                )}
               </div>
-              
-              {/* Upload timestamp */}
-              {upload.timestamp && (
-                <div className="text-xs text-link">
-                  Uploaded: {new Date(upload.timestamp).toLocaleString()}
-                </div>
-              )}
             </div>
           );
         })}

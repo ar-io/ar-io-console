@@ -6,7 +6,7 @@ import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { wincPerCredit, SupportedTokenType } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { CheckCircle, XCircle, Upload, ExternalLink, Shield, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet } from 'lucide-react';
+import { CheckCircle, XCircle, Upload, ExternalLink, Shield, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
@@ -21,6 +21,41 @@ import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { tokenLabels } from '../../constants';
 import { Loader2 } from 'lucide-react';
 import X402OnlyBanner from '../X402OnlyBanner';
+
+// Helper function to get contextual file icon based on content type or file name
+const getFileIcon = (contentType?: string, fileName?: string) => {
+  const type = contentType?.toLowerCase() || '';
+  const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+
+  // Images
+  if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)) {
+    return <Image className="w-4 h-4 text-link inline mr-1" />;
+  }
+
+  // Videos
+  if (type.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) {
+    return <Film className="w-4 h-4 text-link inline mr-1" />;
+  }
+
+  // Audio
+  if (type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(ext)) {
+    return <Music className="w-4 h-4 text-link inline mr-1" />;
+  }
+
+  // Code files
+  if (['application/javascript', 'application/json', 'text/css', 'text/html', 'application/xml', 'text/xml'].includes(type) ||
+      ['js', 'ts', 'jsx', 'tsx', 'css', 'html', 'json', 'xml', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh', 'yml', 'yaml', 'toml', 'md'].includes(ext)) {
+    return <FileCode className="w-4 h-4 text-link inline mr-1" />;
+  }
+
+  // Text/Documents
+  if (type.startsWith('text/') || ['txt', 'pdf', 'doc', 'docx', 'rtf'].includes(ext)) {
+    return <FileText className="w-4 h-4 text-link inline mr-1" />;
+  }
+
+  // Default file icon
+  return <File className="w-4 h-4 text-link inline mr-1" />;
+};
 
 // Unified Crypto Payment Details Component (matches Credits layout)
 interface CryptoPaymentDetailsProps {
@@ -275,7 +310,7 @@ function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-default bg-canvas text-fg-muted focus:outline-none focus:border-fg-muted"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-default bg-surface text-fg-muted focus:outline-none focus:border-fg-muted"
                   />
                   <span className="text-xs text-link">%</span>
                 </div>
@@ -536,6 +571,7 @@ export default function UploadPanel() {
   };
 
   const handleConfirmUpload = async () => {
+    console.log('[UploadPanel] handleConfirmUpload called', { fileCount: files.length, walletType, address });
     setShowConfirmModal(false);
     setJitSectionExpanded(false); // Reset for next upload
     setUploadMessage(null);
@@ -607,16 +643,21 @@ export default function UploadPanel() {
       }
       
       if (failedFiles.length > 0) {
-        // Failed to upload some files
-        setUploadMessage({ 
-          type: 'error', 
-          text: `Failed to upload ${failedFiles.length} file${failedFiles.length !== 1 ? 's' : ''}: ${failedFiles.join(', ')}` 
+        // Failed to upload some files - error is now included in failedFiles entries
+        // Format: ["filename.pdf: Error message", ...]
+        setUploadMessage({
+          type: 'error',
+          text: `Failed to upload ${failedFiles.length} file${failedFiles.length !== 1 ? 's' : ''}: ${failedFiles.join('; ')}`
         });
       }
     } catch (error) {
-      // Upload error occurred
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-      setUploadMessage({ type: 'error', text: errorMessage });
+      // Upload error occurred - show raw error for debugging
+      console.error('Upload error:', error);
+      const rawMessage = error instanceof Error ? error.message : String(error);
+      // Include error name/type for better debugging on mobile
+      const errorType = error instanceof Error ? error.name : 'Unknown';
+      const debugMessage = `[${errorType}] ${rawMessage}`;
+      setUploadMessage({ type: 'error', text: debugMessage });
     }
   };
 
@@ -647,7 +688,7 @@ export default function UploadPanel() {
       {uploadMessage && (
         <div className={`mb-4 sm:mb-6 p-4 rounded-lg border ${
           uploadMessage.type === 'error'
-            ? 'bg-red-500/10 border-red-500/20 text-red-500'
+            ? 'bg-red-500/10 border-red-500/20 text-alert-danger'
             : uploadMessage.type === 'success'
             ? 'bg-turbo-green/10 border-turbo-green/20 text-turbo-green'
             : 'bg-blue-500/10 border-blue-500/20 text-blue-500'
@@ -704,7 +745,7 @@ export default function UploadPanel() {
               />
               <label
                 htmlFor="file-upload"
-                className="inline-block px-4 py-2 rounded bg-fg-muted text-black font-medium cursor-pointer hover:bg-fg-muted/90 transition-colors"
+                className="inline-block px-4 py-2 rounded bg-fg-muted text-canvas font-medium cursor-pointer hover:bg-fg-muted/90 transition-colors"
               >
                 Select Files
               </label>
@@ -912,7 +953,7 @@ export default function UploadPanel() {
                   };
                   
                   return (
-                    <div key={index} className="bg-[#090909] border border-turbo-red/20 rounded-lg p-4">
+                    <div key={index} className="bg-surface border border-default rounded-lg p-4">
                       <div className="space-y-2">
                         {/* Row 1: ArNS Name/Transaction ID + Actions */}
                         <div className="flex items-center justify-between gap-2">
@@ -1090,8 +1131,12 @@ export default function UploadPanel() {
 
                     {/* Row 2: File Name (if available) */}
                     {(result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value) && (
-                      <div className="text-sm text-fg-muted truncate" title={result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}>
-                        📄 {result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}
+                      <div className="text-sm text-fg-muted truncate flex items-center" title={result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}>
+                        {getFileIcon(
+                          result.contentType || result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value,
+                          result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value
+                        )}
+                        <span className="truncate">{result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}</span>
                       </div>
                     )}
 
@@ -1267,7 +1312,7 @@ export default function UploadPanel() {
                           onClick={handleCreditsTabClick}
                           className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                             paymentTab === 'credits'
-                              ? 'bg-fg-muted text-black'
+                              ? 'bg-fg-muted text-canvas'
                               : 'text-link hover:text-fg-muted'
                           }`}
                         >
@@ -1279,7 +1324,7 @@ export default function UploadPanel() {
                           onClick={handleCryptoTabClick}
                           className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                             paymentTab === 'crypto'
-                              ? 'bg-fg-muted text-black'
+                              ? 'bg-fg-muted text-canvas'
                               : 'text-link hover:text-fg-muted'
                           }`}
                         >
@@ -1362,10 +1407,10 @@ export default function UploadPanel() {
                       {x402OnlyMode && walletType !== 'ethereum' && (
                         <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                           <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                            <AlertTriangle className="w-5 h-5 text-alert-warning flex-shrink-0 mt-0.5" />
                             <div>
-                              <div className="font-medium text-yellow-400 text-sm mb-1">Ethereum Wallet Required</div>
-                              <div className="text-xs text-yellow-400/80">
+                              <div className="font-medium text-alert-warning text-sm mb-1">Ethereum Wallet Required</div>
+                              <div className="text-xs text-alert-warning/80">
                                 X402 payments only support Ethereum wallets with BASE-USDC. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.
                               </div>
                             </div>

@@ -4,7 +4,7 @@ import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
 import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, tokenNetworkLabels, tokenNetworkDescriptions, SupportedTokenType } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Loader2, Lock, CreditCard, DollarSign, Wallet, Info, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
+import { Loader2, Lock, CreditCard, DollarSign, Wallet, Info, Shield, AlertCircle, HardDrive, ChevronDown, Check, CheckCircle, MapPin, AlertTriangle, Key } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
 import { useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
 import CryptoConfirmationPanel from './crypto/CryptoConfirmationPanel';
@@ -15,6 +15,7 @@ import PaymentSuccessPanel from './fiat/PaymentSuccessPanel';
 import { getPaymentIntent } from '../../services/paymentService';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import WalletSelectionModal from '../modals/WalletSelectionModal';
+import SeedPhraseModal from '../modals/SeedPhraseModal';
 import { getTurboBalance } from '../../utils';
 
 
@@ -29,7 +30,9 @@ export default function TopUpPanel() {
     paymentTargetAddress,
     paymentTargetType,
     setPaymentTarget,
-    clearPaymentTarget
+    clearPaymentTarget,
+    isHotWallet,
+    hotWalletSeedExported,
   } = useStore();
   
   const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>('fiat');
@@ -59,6 +62,7 @@ export default function TopUpPanel() {
 
   // Wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showSeedPhraseModal, setShowSeedPhraseModal] = useState(false);
 
   // Payment flow state
   const [fiatFlowStep, setFiatFlowStep] = useState<'amount' | 'details' | 'confirmation' | 'success'>('amount');
@@ -541,6 +545,32 @@ export default function TopUpPanel() {
         </div>
       </div>
 
+      {/* Temporary Wallet Section - Only show if seed not yet exported */}
+      {isHotWallet && !hotWalletSeedExported && (
+        <div className="mb-6 rounded-xl border border-default bg-surface p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-fg-muted/20">
+                <Shield className="w-5 h-5 text-fg-muted" />
+              </div>
+              <div>
+                <h3 className="font-bold text-fg-muted mb-1">Temporary Wallet</h3>
+                <p className="text-sm text-link">
+                  You're using a temporary wallet. Save your recovery phrase to keep permanent access to your uploads and cryptographic proof of ownership.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSeedPhraseModal(true)}
+              className="px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-2 bg-fg-muted text-canvas hover:bg-fg-muted/90"
+            >
+              <Key className="w-4 h-4" />
+              Save Recovery Phrase
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Container with Gradient */}
       <div className="bg-gradient-to-br from-fg-muted/5 to-fg-muted/3 rounded-xl border border-default p-4 sm:p-6 mb-4 sm:mb-6">
         
@@ -555,7 +585,7 @@ export default function TopUpPanel() {
               }}
               className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                 paymentMethod === 'fiat'
-                  ? 'bg-fg-muted text-black'
+                  ? 'bg-fg-muted text-canvas'
                   : 'text-link hover:text-fg-muted'
               }`}
             >
@@ -575,7 +605,7 @@ export default function TopUpPanel() {
               }}
               className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                 paymentMethod === 'crypto'
-                  ? 'bg-fg-muted text-black'
+                  ? 'bg-fg-muted text-canvas'
                   : 'text-link hover:text-fg-muted'
               }`}
             >
@@ -619,7 +649,7 @@ export default function TopUpPanel() {
                   }
                 }}
                 placeholder="Enter Arweave, Ethereum, or Solana address"
-                className={`w-full p-3 rounded-lg border bg-canvas text-fg-muted font-mono text-sm focus:outline-none transition-colors ${
+                className={`w-full p-3 rounded-lg border bg-surface text-fg-muted font-mono text-sm focus:outline-none transition-colors ${
                   targetAddressError
                     ? 'border-red-500 focus:border-red-500'
                     : 'border-default focus:border-fg-muted'
@@ -730,7 +760,7 @@ export default function TopUpPanel() {
                       }
                     }}
                     placeholder="Enter Arweave, Ethereum, or Solana address"
-                    className={`w-full p-3 rounded-lg border bg-canvas text-fg-muted font-mono text-sm focus:outline-none transition-colors ${
+                    className={`w-full p-3 rounded-lg border bg-surface text-fg-muted font-mono text-sm focus:outline-none transition-colors ${
                       targetAddressError
                         ? 'border-red-500 focus:border-red-500'
                         : 'border-default focus:border-fg-muted'
@@ -1039,7 +1069,7 @@ export default function TopUpPanel() {
                       }
                     }}
                     placeholder="Enter Arweave, Ethereum, or Solana address"
-                    className={`w-full p-3 rounded-lg border bg-canvas text-fg-muted font-mono text-sm focus:outline-none transition-colors ${
+                    className={`w-full p-3 rounded-lg border bg-surface text-fg-muted font-mono text-sm focus:outline-none transition-colors ${
                       targetAddressError
                         ? 'border-red-500 focus:border-red-500'
                         : 'border-default focus:border-fg-muted'
@@ -1082,7 +1112,7 @@ export default function TopUpPanel() {
                   <button
                     className={`px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5 ${
                       inputType === 'storage'
-                        ? 'bg-fg-muted text-black'
+                        ? 'bg-fg-muted text-canvas'
                         : 'text-link hover:text-fg-muted'
                     }`}
                     onClick={() => {
@@ -1096,7 +1126,7 @@ export default function TopUpPanel() {
                   <button
                     className={`px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5 ${
                       inputType === 'dollars'
-                        ? 'bg-fg-muted text-black'
+                        ? 'bg-fg-muted text-canvas'
                         : 'text-link hover:text-fg-muted'
                     }`}
                     onClick={() => {
@@ -1149,9 +1179,9 @@ export default function TopUpPanel() {
                             setUsdAmountInput(String(usdAmount));
                           }
                         }}
-                        className={`flex-1 p-3 rounded-lg border bg-canvas text-fg-muted font-medium text-lg focus:outline-none transition-colors ${
+                        className={`flex-1 p-3 rounded-lg border bg-surface text-fg-muted font-medium text-lg focus:outline-none transition-colors ${
                           usdAmount > maxUSDAmount || (usdAmount < minUSDAmount && usdAmount > 0)
-                            ? 'border-red-500 focus:border-red-500' 
+                            ? 'border-red-500 focus:border-red-500'
                             : 'border-default focus:border-fg-muted'
                         }`}
                         placeholder="Enter amount"
@@ -1207,7 +1237,7 @@ export default function TopUpPanel() {
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
-                          <Listbox.Button className="relative w-full sm:w-auto rounded-lg border border-default bg-canvas pl-4 pr-12 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full sm:w-auto rounded-lg border border-default bg-surface pl-4 pr-12 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none cursor-pointer text-left">
                             <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-link" aria-hidden="true" />
@@ -1258,7 +1288,7 @@ export default function TopUpPanel() {
                           setStorageAmount(value);
                           setErrorMessage('');
                         }}
-                        className="w-full sm:flex-1 rounded-lg border border-default bg-canvas px-4 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none"
+                        className="w-full sm:flex-1 rounded-lg border border-default bg-surface px-4 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none"
                         placeholder="Enter amount"
                       />
                     </div>
@@ -1280,7 +1310,7 @@ export default function TopUpPanel() {
                   <button
                     className={`px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5 ${
                       inputType === 'storage'
-                        ? 'bg-fg-muted text-black'
+                        ? 'bg-fg-muted text-canvas'
                         : 'text-link hover:text-fg-muted'
                     }`}
                     onClick={() => {
@@ -1294,7 +1324,7 @@ export default function TopUpPanel() {
                   <button
                     className={`px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5 ${
                       inputType === 'dollars'
-                        ? 'bg-fg-muted text-black'
+                        ? 'bg-fg-muted text-canvas'
                         : 'text-link hover:text-fg-muted'
                     }`}
                     onClick={() => {
@@ -1352,7 +1382,7 @@ export default function TopUpPanel() {
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
-                          <Listbox.Button className="relative w-full sm:w-auto rounded-lg border border-default bg-canvas pl-4 pr-12 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full sm:w-auto rounded-lg border border-default bg-surface pl-4 pr-12 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none cursor-pointer text-left">
                             <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-link" aria-hidden="true" />
@@ -1403,7 +1433,7 @@ export default function TopUpPanel() {
                           setStorageAmount(value);
                           setErrorMessage('');
                         }}
-                        className="w-full sm:flex-1 rounded-lg border border-default bg-canvas px-4 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none"
+                        className="w-full sm:flex-1 rounded-lg border border-default bg-surface px-4 py-3 text-lg font-medium text-fg-muted focus:border-fg-muted focus:outline-none"
                         placeholder="Enter amount"
                       />
                     </div>
@@ -1452,7 +1482,7 @@ export default function TopUpPanel() {
                             setCryptoAmountInput(String(cryptoAmount));
                           }
                         }}
-                        className="flex-1 p-3 rounded-lg border bg-canvas text-fg-muted font-medium text-lg focus:outline-none transition-colors border-default focus:border-fg-muted"
+                        className="flex-1 p-3 rounded-lg border bg-surface text-fg-muted font-medium text-lg focus:outline-none transition-colors border-default focus:border-fg-muted"
                         placeholder={`Enter ${tokenLabels[selectedTokenType]} amount`}
                         inputMode="decimal"
                       />
@@ -1489,7 +1519,7 @@ export default function TopUpPanel() {
 
         {/* Purchase Summary - Shopping Cart Style */}
         {((paymentMethod === 'fiat' && ((inputType === 'dollars' && usdAmount > 0) || (inputType === 'storage' && storageAmount > 0))) || (paymentMethod === 'crypto' && ((inputType === 'dollars' && cryptoAmount > 0) || (inputType === 'storage' && storageAmount > 0)))) && (
-          <div className="bg-canvas border-2 border-fg-muted rounded-lg p-6 mb-6">
+          <div className="bg-surface border-2 border-fg-muted rounded-lg p-6 mb-6">
             {/* Header */}
             <div className="text-sm text-link mb-4">Purchase Summary</div>
 
@@ -1641,7 +1671,7 @@ export default function TopUpPanel() {
         {/* Checkout Button */}
         <button
           onClick={handleCheckout}
-          className="w-full py-4 px-6 rounded-lg bg-fg-muted text-black font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-4 px-6 rounded-lg bg-fg-muted text-canvas font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           disabled={
             (paymentMethod === 'fiat' && (
               (!paymentTargetAddress && !address) || // Must have either a target address or connected wallet
@@ -1709,6 +1739,10 @@ export default function TopUpPanel() {
         <WalletSelectionModal
           onClose={() => setShowWalletModal(false)}
         />
+      )}
+
+      {showSeedPhraseModal && (
+        <SeedPhraseModal onClose={() => setShowSeedPhraseModal(false)} />
       )}
 
     </div>

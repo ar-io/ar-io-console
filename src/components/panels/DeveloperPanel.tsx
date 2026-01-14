@@ -3,6 +3,7 @@ import { ExternalLink, Code, Copy, Check, Database, Zap, Rss, Globe, Wrench, Edi
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { useStore } from '../../store/useStore';
 import CopyButton from '../CopyButton';
+import { ThemeToggle } from '../ThemeToggle';
 
 export default function DeveloperPanel() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -444,6 +445,17 @@ console.log('Folder manifest ID:', folderUpload.id);`,
 
       {activeTab === 'configuration' && (
         <div className="space-y-6">
+          {/* Theme Selection */}
+          <div>
+            <h4 className="text-lg font-semibold text-fg-muted mb-4">Theme</h4>
+            <p className="text-sm text-link mb-4">
+              Choose your preferred color theme
+            </p>
+            <div className="flex justify-center">
+              <ThemeToggle />
+            </div>
+          </div>
+
           {/* Environment Configuration Panel */}
           <div>
             <h4 className="text-lg font-semibold text-fg-muted mb-4">Environment Configuration</h4>
@@ -506,11 +518,11 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                     value={currentConfig.paymentServiceUrl}
                     onChange={(e) => updateCustomConfig('paymentServiceUrl', e.target.value)}
                     disabled={x402OnlyMode}
-                    className="w-full px-3 py-2 bg-black/40 border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent disabled:cursor-not-allowed"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black/40 rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
                       {currentConfig.paymentServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.paymentServiceUrl} />
@@ -558,11 +570,11 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                     type="text"
                     value={currentConfig.uploadServiceUrl}
                     onChange={(e) => updateCustomConfig('uploadServiceUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
+                    className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black/40 rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
                       {currentConfig.uploadServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.uploadServiceUrl} />
@@ -578,11 +590,11 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                     type="text"
                     value={currentConfig.captureServiceUrl}
                     onChange={(e) => updateCustomConfig('captureServiceUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
+                    className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black/40 rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
                       {currentConfig.captureServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.captureServiceUrl} />
@@ -598,11 +610,11 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                     type="text"
                     value={currentConfig.arioGatewayUrl}
                     onChange={(e) => updateCustomConfig('arioGatewayUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
+                    className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black/40 rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
                       {currentConfig.arioGatewayUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.arioGatewayUrl} />
@@ -618,11 +630,11 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                     type="text"
                     value={currentConfig.stripeKey}
                     onChange={(e) => updateCustomConfig('stripeKey', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
+                    className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black/40 rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
                       {currentConfig.stripeKey.substring(0, 20)}...{currentConfig.stripeKey.substring(currentConfig.stripeKey.length - 4)}
                     </code>
                     <CopyButton textToCopy={currentConfig.stripeKey} />
@@ -638,11 +650,11 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                     type="text"
                     value={currentConfig.processId}
                     onChange={(e) => updateCustomConfig('processId', e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
+                    className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm focus:ring-2 focus:ring-turbo-purple focus:border-transparent"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black/40 rounded-lg text-sm text-fg-muted font-mono break-all overflow-hidden">
+                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono break-all overflow-hidden">
                       {currentConfig.processId}
                     </code>
                     <CopyButton textToCopy={currentConfig.processId} />
@@ -656,7 +668,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
               <summary className="cursor-pointer text-sm font-medium text-link mb-3 hover:text-fg-muted">
                 Token Gateway Configuration ({Object.keys(currentConfig.tokenMap).length} networks)
               </summary>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 p-4 bg-black/20 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 p-4 bg-surface-elevated/50 rounded-lg">
                 {Object.entries(currentConfig.tokenMap).map(([token, url]) => (
                   <div key={token}>
                     <label className="block text-xs font-medium text-link mb-1 uppercase">{token}</label>
@@ -665,11 +677,11 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                         type="text"
                         value={url}
                         onChange={(e) => updateTokenMap(token as any, e.target.value)}
-                        className="w-full px-2 py-1 bg-black/40 border border-default rounded text-fg-muted text-xs focus:ring-1 focus:ring-turbo-purple focus:border-transparent"
+                        className="w-full px-2 py-1 bg-surface border border-default rounded text-fg-muted text-xs focus:ring-1 focus:ring-turbo-purple focus:border-transparent"
                       />
                     ) : (
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 px-2 py-1 bg-black/40 rounded text-xs text-fg-muted font-mono truncate">
+                        <code className="flex-1 px-2 py-1 bg-canvas rounded text-xs text-fg-muted font-mono truncate">
                           {url}
                         </code>
                         <CopyButton textToCopy={url} />

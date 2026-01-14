@@ -47,7 +47,7 @@ export default function RecentDeploymentsSection() {
         <p className="text-sm text-link mb-4">Deploy your first site to get started</p>
         <button
           onClick={() => navigate('/deploy')}
-          className="px-4 py-2 bg-fg-muted text-black rounded-lg hover:bg-fg-muted/90 transition-colors"
+          className="px-4 py-2 bg-fg-muted text-canvas rounded-lg hover:bg-fg-muted/90 transition-colors"
         >
           Deploy Site
         </button>
@@ -84,7 +84,7 @@ export default function RecentDeploymentsSection() {
       {/* Deployment List */}
       <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
         {displayDeployments.map(([manifestId, group]) => (
-          <div key={manifestId} className="bg-canvas rounded-lg p-4 border border-default/30">
+          <div key={manifestId} className="bg-surface rounded-lg p-4 border border-default">
             {/* Deployment Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">

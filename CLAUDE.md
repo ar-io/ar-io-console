@@ -18,6 +18,8 @@ npm run clean:all    # Full clean and reinstall
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - All scripts use `cross-env NODE_OPTIONS=--max-old-space-size` (2GB-8GB) for complex wallet integrations
 - No test framework configured
+- Build outputs go to `dist/` directory
+- Path alias: `@/` maps to `src/` (e.g., `import { foo } from '@/utils'`)
 
 ## Architecture Overview
 
@@ -110,13 +112,32 @@ import { useEthereumTurboClient } from '../hooks/useEthereumTurboClient';
 const { createEthereumTurboClient } = useEthereumTurboClient();
 const turbo = await createEthereumTurboClient('base-ario'); // or 'base-eth', 'base-usdc', etc.
 
-// Manual Ethereum client (for non-hook contexts)
+// Solana wallet
+import { TurboFactory } from '@ardrive/turbo-sdk/web';
+import { useWallet } from '@solana/wallet-adapter-react';
+const { publicKey, signMessage } = useWallet();
+// Create adapter that implements TurboWalletSigner interface
+const solanaAdapter = {
+  publicKey,
+  signMessage: async (message: Uint8Array) => signMessage!(message),
+};
+const turbo = TurboFactory.authenticated({ signer: solanaAdapter, token: 'solana', ...turboConfig });
+
+// Manual Ethereum client (for non-hook contexts - prefer the hook above)
 import { InjectedEthereumSigner } from '@ar.io/sdk/web';
 import { getConnectorClient } from 'wagmi/actions';
 const connectorClient = await getConnectorClient(wagmiConfig, { connector: ethAccount.connector });
 const ethersProvider = new ethers.BrowserProvider(connectorClient.transport, 'any');
 const ethersSigner = await ethersProvider.getSigner();
-const injectedSigner = new InjectedEthereumSigner(provider);
+const userAddress = await ethersSigner.getAddress();
+// InjectedEthereumSigner expects a provider with getSigner() returning signMessage/getAddress
+const injectedProvider = {
+  getSigner: () => ({
+    signMessage: async (msg: string) => ethersSigner.signMessage(msg),
+    getAddress: async () => userAddress,
+  }),
+};
+const injectedSigner = new InjectedEthereumSigner(injectedProvider as any);
 await injectedSigner.setPublicKey(); // Requests signature
 const turbo = TurboFactory.authenticated({ signer: injectedSigner, token: 'base-eth', ...turboConfig });
 ```
@@ -135,6 +156,39 @@ All uploads include standardized metadata tags:
 - `App-Version`: User-provided app version
 
 **Feature-specific:** `Content-Type`, `File-Name`, `File-Path`, `Original-URL`, `Title`, viewport dimensions
+
+## Upload Workflow
+
+The app supports three upload modes with different payment strategies:
+
+**1. Pre-funded Credits (Traditional)**
+- User buys credits via fiat or crypto first
+- Upload deducts from credit balance
+- Works with all wallet types
+
+**2. JIT (Just-In-Time) Payments**
+- No pre-purchase required; crypto sent at upload time
+- Uses `fundAndUpload()` from Turbo SDK
+- Supported tokens: `ario`, `base-ario`, `solana`, `base-eth`, `base-usdc`
+- Configurable via store: `jitPaymentEnabled`, `jitMaxTokenAmount`, `jitBufferMultiplier`
+
+**3. X402 Protocol (Base USDC)**
+- Pay-per-upload via HTTP 402 payment flow
+- Only works with Ethereum wallets on Base network
+- Used when `x402OnlyMode` is enabled or connecting to x402-only bundlers
+
+**Upload Flow Decision Tree:**
+```
+1. Check if file is free (under bundler's free limit)
+   → Yes: Upload without payment
+   → No: Continue to payment check
+
+2. Check wallet type and mode
+   → x402OnlyMode + Ethereum wallet: Use X402
+   → JIT enabled + supported token: Use fundAndUpload
+   → Has sufficient credits: Use standard upload
+   → None: Prompt user to buy credits
+```
 
 ## X402 Protocol (x402-only mode)
 
@@ -187,11 +241,30 @@ Service URLs managed by store's configuration system, overridable via Developer 
 
 ## Styling
 
-**Dark theme (default):**
-- `bg-canvas`: #171717, `bg-surface`: #1F1F1F
-- `text-fg-muted`: #ededed, `text-link`: #A3A3AD
+### Theme System
+The app supports light and dark themes via CSS custom properties. Theme preference is stored in Zustand and persists to localStorage.
 
-**Brand colors:**
+**Theme toggle location:** Developer Resources → Configuration tab
+
+**Key files:**
+- `src/styles/globals.css` - CSS custom properties for both themes
+- `src/hooks/useTheme.ts` - Theme detection and application hook
+- `src/components/ThemeToggle.tsx` - Theme toggle component
+- `src/store/useStore.ts` - `theme` state ('light' | 'dark' | 'system')
+
+**Semantic color tokens (defined in globals.css, referenced in tailwind.config.js):**
+
+| Token | Dark Mode | Light Mode |
+|-------|-----------|------------|
+| `canvas` | #000000 | #F0F0F0 |
+| `surface` | #23232D | #FFFFFF |
+| `surface-elevated` | #39394A | #DEDEE2 |
+| `header-bg` | #000000 | #FFFFFF |
+| `fg-muted` | #F0F0F0 | #23232D |
+| `link` | #9494A5 | #6C6C87 |
+| `default` | #39394A | #DEDEE2 |
+
+**Brand colors (same in both themes):**
 - `turbo-red`: #FE0230 (primary), `turbo-green`: #18A957 (success)
 
 **Font:** Rubik via @fontsource/rubik
@@ -250,6 +323,13 @@ if (Number.isFinite(wincNum) && wincNum > 0) {
 }
 ```
 
+### Turbo SDK destinationAddress Requirement
+All pricing API calls (`getWincForFiat`, `getWincForToken`) require a `destinationAddress` parameter. Use the connected wallet address when available, or a descriptive fallback for unauthenticated pricing queries:
+```typescript
+const destinationAddress = address || 'pricing-lookup';
+const result = await turbo.getWincForFiat({ amount, currency, destinationAddress });
+```
+
 ## Key Dependencies
 
 - `@ardrive/turbo-sdk`: Turbo services, multi-chain signing, USDC support
@@ -299,9 +379,12 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 | `useCryptoPrice(tokenType)` | Get current USD price for a token |
 | `useWalletAccountListener()` | Listens for wallet changes across all ecosystems, clears caches on switch |
 | `useFreeUploadLimit()` | Fetch bundler's free upload limit, defaults to 0 |
-| `useGatewayInfo()` | Fetch gateway capabilities and info |
+| `useGatewayInfo()` | Fetch gateway capabilities and info; returns `{ data, isLoading, error }` |
 | `useTurboCapture()` | Web page capture functionality |
 | `usePrivyWallet()` | Detect and access Privy embedded wallet |
+| `useArweaveWallet()` | Detect and access Arweave wallet (window.arweaveWallet) |
+| `useSolanaWallet()` | Detect and access Solana wallet via wallet-adapter |
+| `useTheme()` | Theme management (light/dark/system) with system preference detection |
 
 ## Important Utilities
 

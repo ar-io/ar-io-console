@@ -1,8 +1,12 @@
+import { useTheme } from '../hooks/useTheme';
+
 export default function TurboLogo() {
+  const { resolvedTheme } = useTheme();
+
+  // Use light logo (white) on dark backgrounds, dark logo (black) on light backgrounds
+  const logoSrc = resolvedTheme === 'dark' ? '/turbo-logo-light.png' : '/turbo-logo-dark.png';
+
   return (
-    <div className="flex items-center gap-2">
-      <img src="/turbo-logo.png" alt="Turbo" className="h-8 w-8" />
-      <img src="/turbo-wordmark.png" alt="Turbo" className="h-6 hidden sm:block" />
-    </div>
+    <img src={logoSrc} alt="Turbo" className="h-8" />
   );
 }

@@ -337,14 +337,14 @@ export default function BalanceCheckerPanel() {
                 onChange={(e) => setWalletAddress(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Paste wallet address here..."
-                className="w-full pl-11 pr-4 py-3 rounded-lg border border-default bg-canvas text-fg-muted font-mono text-sm focus:border-fg-muted focus:outline-none transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-default bg-surface text-fg-muted font-mono text-sm focus:border-fg-muted focus:outline-none transition-colors"
                 disabled={loading}
               />
             </div>
             <button
               onClick={() => handleCheckBalance()}
               disabled={loading || !walletAddress.trim()}
-              className="px-6 py-3 rounded-lg bg-fg-muted text-black font-bold hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-3 rounded-lg bg-fg-muted text-canvas font-bold hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Search className="w-4 h-4" />
               {loading ? 'Checking...' : 'Check'}

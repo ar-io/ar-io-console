@@ -188,14 +188,14 @@ export default function RedeemPanel() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a
                 href="/upload"
-                className="inline-flex items-center justify-center gap-2 bg-fg-muted text-black px-6 py-3 rounded-lg font-bold hover:bg-fg-muted/90 transition-colors"
+                className="inline-flex items-center justify-center gap-2 bg-fg-muted text-canvas px-6 py-3 rounded-lg font-bold hover:bg-fg-muted/90 transition-colors"
               >
                 <Upload className="w-4 h-4" />
                 Upload Files
               </a>
               <a
                 href="/domains"
-                className="inline-flex items-center justify-center gap-2 bg-fg-muted text-black px-6 py-3 rounded-lg font-bold hover:bg-fg-muted/90 transition-colors"
+                className="inline-flex items-center justify-center gap-2 bg-fg-muted text-canvas px-6 py-3 rounded-lg font-bold hover:bg-fg-muted/90 transition-colors"
               >
                 <Globe className="w-4 h-4" />
                 Search Domains
@@ -241,7 +241,7 @@ export default function RedeemPanel() {
             type="text"
             value={destinationAddress}
             onChange={(e) => setDestinationAddress(e.target.value)}
-            className="w-full p-3 pl-11 rounded-lg border border-default bg-canvas text-fg-muted font-mono text-sm focus:border-fg-muted focus:outline-none transition-colors"
+            className="w-full p-3 pl-11 rounded-lg border border-default bg-surface text-fg-muted font-mono text-sm focus:border-fg-muted focus:outline-none transition-colors"
             placeholder="Your wallet address"
           />
         </div>
@@ -264,7 +264,7 @@ export default function RedeemPanel() {
             type="text"
             value={redemptionCode}
             onChange={(e) => setRedemptionCode(e.target.value)}
-            className="w-full p-3 pl-11 rounded-lg border border-default bg-canvas text-fg-muted font-mono focus:border-fg-muted focus:outline-none transition-colors"
+            className="w-full p-3 pl-11 rounded-lg border border-default bg-surface text-fg-muted font-mono focus:border-fg-muted focus:outline-none transition-colors"
             placeholder="XXXX-XXXX-XXXX"
           />
         </div>
@@ -279,7 +279,7 @@ export default function RedeemPanel() {
             type="email"
             value={recipientEmail}
             onChange={(e) => setRecipientEmail(e.target.value)}
-            className="w-full p-3 pl-11 rounded-lg border border-default bg-canvas text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
+            className="w-full p-3 pl-11 rounded-lg border border-default bg-surface text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
             placeholder="Confirm your email address"
           />
         </div>
@@ -298,7 +298,7 @@ export default function RedeemPanel() {
       {/* Redeem Button */}
       <button
         onClick={handleRedeem}
-        className="w-full py-4 px-6 rounded-lg bg-fg-muted text-black font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-4 px-6 rounded-lg bg-fg-muted text-canvas font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         disabled={!canSubmit}
       >
         {loading ? (

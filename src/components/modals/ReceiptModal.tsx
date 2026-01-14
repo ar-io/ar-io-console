@@ -277,7 +277,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                   <CopyButton textToCopy={JSON.stringify(receipt, null, 2)} />
                 </div>
                 <div className="bg-canvas rounded-lg p-3 border border-default">
-                  <pre className="font-mono text-[10px] sm:text-xs text-link overflow-auto max-h-48 whitespace-pre-wrap break-words">
+                  <pre className="font-mono text-[10px] sm:text-xs text-fg-muted overflow-auto max-h-48 whitespace-pre-wrap break-words">
                     {JSON.stringify(receipt, null, 2)}
                   </pre>
                 </div>
@@ -291,7 +291,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                     <CopyButton textToCopy={JSON.stringify(currentStatus, null, 2)} />
                   </div>
                   <div className="bg-canvas rounded-lg p-3 border border-default">
-                    <pre className="font-mono text-[10px] sm:text-xs text-link overflow-auto max-h-48 whitespace-pre-wrap break-words">
+                    <pre className="font-mono text-[10px] sm:text-xs text-fg-muted overflow-auto max-h-48 whitespace-pre-wrap break-words">
                       {JSON.stringify(currentStatus, null, 2)}
                     </pre>
                   </div>

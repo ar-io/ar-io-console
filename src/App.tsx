@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useFreeUploadLimit } from './hooks/useFreeUploadLimit';
+import { useHotWalletWarning } from './hooks/useHotWalletWarning';
+import { useTheme } from './hooks/useTheme';
 import LandingPage from './pages/LandingPage';
 import TopUpPage from './pages/TopUpPage';
 import UploadPage from './pages/UploadPage';
@@ -18,6 +20,7 @@ import GatewayInfoPage from './pages/GatewayInfoPage';
 import DeploySitePage from './pages/DeploySitePage';
 import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
 import AccountPage from './pages/AccountPage';
+import TryItNowPage from './pages/TryItNowPage';
 import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
@@ -53,6 +56,12 @@ function AppRoutes() {
   // Initialize bundler's free upload limit on app startup
   useFreeUploadLimit();
 
+  // Show browser warning if hot wallet user tries to leave without saving seed phrase
+  useHotWalletWarning();
+
+  // Apply theme class to document based on user preference
+  useTheme();
+
   return (
     <>
       <PaymentCallbackHandler />
@@ -74,6 +83,7 @@ function AppRoutes() {
           <Route path="redeem" element={<RedeemPage />} />
           <Route path="developer" element={<DeveloperPage />} />
           <Route path="gateway-info" element={<GatewayInfoPage />} />
+          <Route path="try" element={<TryItNowPage />} />
           {/* Catch all route - redirect to home */}
           <Route path="*" element={<LandingPage />} />
         </Route>

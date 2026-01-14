@@ -151,7 +151,7 @@ export default function GiftPanel() {
             type="number"
             value={usdAmount}
             onChange={handleAmountChange}
-            className="w-full p-3 pl-8 rounded-lg border border-default bg-canvas text-fg-muted font-medium text-lg focus:border-fg-muted focus:outline-none transition-colors"
+            className="w-full p-3 pl-8 rounded-lg border border-default bg-surface text-fg-muted font-medium text-lg focus:border-fg-muted focus:outline-none transition-colors"
             placeholder="10.00"
             min={minUSDAmount}
             max={maxUSDAmount}
@@ -173,7 +173,7 @@ export default function GiftPanel() {
             type="email"
             value={recipientEmail}
             onChange={(e) => setRecipientEmail(e.target.value)}
-            className="w-full p-3 pl-11 rounded-lg border border-default bg-canvas text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
+            className="w-full p-3 pl-11 rounded-lg border border-default bg-surface text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
             placeholder="recipient@example.com"
           />
         </div>
@@ -187,7 +187,7 @@ export default function GiftPanel() {
           <textarea
             value={giftMessage}
             onChange={(e) => setGiftMessage(e.target.value)}
-            className="w-full p-3 pl-11 rounded-lg border border-default bg-canvas text-fg-muted min-h-[100px] focus:border-fg-muted focus:outline-none transition-colors resize-none"
+            className="w-full p-3 pl-11 rounded-lg border border-default bg-surface text-fg-muted min-h-[100px] focus:border-fg-muted focus:outline-none transition-colors resize-none"
             placeholder="Add a personal message..."
             maxLength={500}
           />
@@ -205,7 +205,7 @@ export default function GiftPanel() {
       {/* Send Button */}
       <button
         onClick={handleSendGift}
-        className="w-full py-4 px-6 rounded-lg bg-fg-muted text-black font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-4 px-6 rounded-lg bg-fg-muted text-canvas font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         disabled={!canSubmit || isProcessing}
       >
         {isProcessing ? (

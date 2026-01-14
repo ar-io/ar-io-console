@@ -343,7 +343,7 @@ export default function RecentDeploymentsPage() {
                 const arnsAssociation = getArNSAssociation(manifestId);
                 
                 return (
-                  <div key={manifestId} className="bg-[#090909] border border-turbo-red/20 rounded-lg p-4">
+                  <div key={manifestId} className="bg-surface border border-default rounded-lg p-4">
                     {/* Unified Header Row - Manifest Info + Actions */}
                     {group.manifest && (
                       <div className="flex items-center justify-between gap-2 mb-3">
@@ -575,7 +575,7 @@ export default function RecentDeploymentsPage() {
                             const isChecking = statusChecking[file.id];
                             
                             return (
-                              <div key={fileIndex} className="bg-canvas border border-default/20 rounded p-3">
+                              <div key={fileIndex} className="bg-canvas border border-default rounded p-3">
                                 <div className="space-y-2">
                                   {/* Row 1: Status Icon + Shortened TxID + File Path + Actions */}
                                   <div className="flex items-center justify-between gap-2">

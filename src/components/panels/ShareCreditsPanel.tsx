@@ -240,7 +240,7 @@ export default function ShareCreditsPanel() {
                 setCreditAmount(finalAmount);
                 setCreditAmountInput(String(finalAmount));
               }}
-              className="w-full p-3 rounded-lg border border-default bg-canvas text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
+              className="w-full p-3 rounded-lg border border-default bg-surface text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
               placeholder="Minimum 0.01 credits"
               inputMode="decimal"
             />
@@ -289,7 +289,7 @@ export default function ShareCreditsPanel() {
                   setRecipientWalletType(null);
                 }
               }}
-              className="w-full p-3 rounded-lg border border-default bg-canvas text-fg-muted font-mono text-sm focus:border-fg-muted focus:outline-none transition-colors"
+              className="w-full p-3 rounded-lg border border-default bg-surface text-fg-muted font-mono text-sm focus:border-fg-muted focus:outline-none transition-colors"
               placeholder="Arweave, Ethereum, or Solana address"
             />
             {recipientWalletType && recipientWalletType !== 'unknown' && (
@@ -359,7 +359,7 @@ export default function ShareCreditsPanel() {
             type="number"
             value={expiresBySeconds}
             onChange={(e) => setExpiresBySeconds(Number(e.target.value))}
-            className="w-full p-3 rounded-lg border border-default bg-canvas text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
+            className="w-full p-3 rounded-lg border border-default bg-surface text-fg-muted focus:border-fg-muted focus:outline-none transition-colors"
             placeholder="Custom time in seconds (0 = no expiration)"
             min="0"
           />
@@ -396,7 +396,7 @@ export default function ShareCreditsPanel() {
         <button
           onClick={handleShare}
           disabled={sending || !address || creditAmount < 0.01 || creditAmount > creditBalance || !approvedAddress}
-          className="w-full py-4 px-6 rounded-lg bg-fg-muted text-black font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-4 px-6 rounded-lg bg-fg-muted text-canvas font-bold text-lg hover:bg-fg-muted/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {sending ? (
             <>

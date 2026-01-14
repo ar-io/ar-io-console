@@ -31,7 +31,7 @@ export function HomePage() {
         
         {!address && (
           <div className="mt-8">
-            <Link to="/topup" className="inline-flex items-center gap-2 bg-fg-muted text-black font-bold text-lg px-8 py-3 rounded-lg hover:bg-fg-muted/90 transition-colors">
+            <Link to="/topup" className="inline-flex items-center gap-2 bg-fg-muted text-canvas font-bold text-lg px-8 py-3 rounded-lg hover:bg-fg-muted/90 transition-colors">
               Get Started <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
           </div>

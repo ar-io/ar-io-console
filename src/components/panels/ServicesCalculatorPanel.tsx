@@ -203,7 +203,7 @@ export default function ServicesCalculatorPanel() {
                             setStorageAmount(numValue);
                           }
                         }}
-                        className="w-full sm:flex-1 rounded-lg border border-default bg-canvas px-4 py-3 sm:py-4 text-lg font-medium text-fg-muted focus:border-turbo-red focus:outline-none"
+                        className="w-full sm:flex-1 rounded-lg border border-default bg-surface px-4 py-3 sm:py-4 text-lg font-medium text-fg-muted focus:border-turbo-red focus:outline-none"
                         placeholder="Enter amount"
                       />
                       <Listbox 
@@ -211,7 +211,7 @@ export default function ServicesCalculatorPanel() {
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
-                          <Listbox.Button className="relative w-full sm:w-auto rounded-lg border border-default bg-canvas pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-fg-muted focus:border-turbo-red focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full sm:w-auto rounded-lg border border-default bg-surface pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-fg-muted focus:border-turbo-red focus:outline-none cursor-pointer text-left">
                             <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-link" aria-hidden="true" />
@@ -318,7 +318,7 @@ export default function ServicesCalculatorPanel() {
                             setDollarAmount(numValue);
                           }
                         }}
-                        className="flex-1 rounded-lg border border-default bg-canvas px-4 py-3 sm:py-4 text-lg font-medium text-fg-muted focus:border-turbo-red focus:outline-none"
+                        className="flex-1 rounded-lg border border-default bg-surface px-4 py-3 sm:py-4 text-lg font-medium text-fg-muted focus:border-turbo-red focus:outline-none"
                         placeholder="Enter amount"
                       />
                       <span className="text-link text-lg">USD</span>

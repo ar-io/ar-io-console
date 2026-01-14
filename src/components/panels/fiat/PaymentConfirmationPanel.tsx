@@ -275,7 +275,7 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
           </button>
           <button
             disabled={sendingPayment || !estimatedCredits}
-            className="px-8 py-3 rounded-lg bg-fg-muted text-black font-bold hover:bg-fg-muted/90 disabled:bg-surface disabled:text-link disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="px-8 py-3 rounded-lg bg-fg-muted text-canvas font-bold hover:bg-fg-muted/90 disabled:bg-surface disabled:text-link disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             onClick={submitPayment}
           >
             {sendingPayment ? (

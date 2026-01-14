@@ -5,6 +5,7 @@ import { FC, useCallback, useEffect, useState } from 'react';
 import { isEmail } from 'validator';
 import { CircleX, RefreshCw, CreditCard, Users } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
+import { useTheme } from '../../../hooks/useTheme';
 import useCountries from '../../../hooks/useCountries';
 import { useWincForOneGiB } from '../../../hooks/useWincForOneGiB';
 import { getPaymentIntent, getWincForFiat } from '../../../services/paymentService';
@@ -42,6 +43,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
   const countries = useCountries();
   const wincForOneGiB = useWincForOneGiB();
   const { address } = useStore();
+  const { isLight } = useTheme();
 
   const {
     setPaymentIntent,
@@ -122,11 +124,11 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
   const cardElementOptions: StripeCardElementOptions = {
     style: {
       base: {
-        color: '#ededed', // text-fg-muted
+        color: isLight ? '#23232D' : '#ededed', // text-fg-muted (theme-aware)
         fontSize: '16px',
         fontFamily: 'Rubik, system-ui, sans-serif',
         '::placeholder': {
-          color: '#A3A3AD', // text-link
+          color: isLight ? '#6C6C87' : '#A3A3AD', // text-link (theme-aware)
         },
       },
     },
@@ -273,7 +275,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         <div className="space-y-6">
           <FormEntry name="name" label="Name on Card *" errorText={nameError}>
             <input
-              className="w-full bg-canvas px-4 py-3 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-fg-muted/50"
+              className="w-full bg-surface border border-default px-4 py-3 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-fg-muted/50"
               type="text"
               name="name"
               value={name}
@@ -291,7 +293,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="card" label="Credit Card *" errorText={cardError}>
             <CardElement
               options={cardElementOptions}
-              className="w-full bg-canvas px-4 py-3 text-white rounded"
+              className="w-full bg-surface border border-default px-4 py-3 text-fg-muted rounded"
               onChange={(e) => {
                 setCardError(e.error?.message || '');
               }}
@@ -300,7 +302,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
 
           <FormEntry name="country" label="Country *" errorText={countryError}>
             <select
-              className="w-full bg-canvas px-4 py-3 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-fg-muted/50"
+              className="w-full bg-surface border border-default px-4 py-3 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-fg-muted/50"
               value={country}
               onChange={(e) => {
                 setCountry(e.target.value);
@@ -361,7 +363,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
             <FormEntry name="promoCode" label="Promo Code" errorText={promoCodeError}>
               <div className="relative">
                 <input
-                  className="peer w-full bg-canvas px-4 py-3 pr-16 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-turbo-red/50"
+                  className="peer w-full bg-surface border border-default px-4 py-3 pr-16 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-turbo-red/50"
                   type="text"
                   name="promoCode"
                   value={localPromoCode}
@@ -410,7 +412,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="email" label="Email (optional - for receipt)" errorText={emailError}>
             <input
               type="email"
-              className="w-full bg-canvas px-4 py-3 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-fg-muted/50"
+              className="w-full bg-surface border border-default px-4 py-3 text-fg-muted rounded focus:outline-none focus:ring-2 focus:ring-fg-muted/50"
               name="email"
               value={email}
               onChange={(e) => {
@@ -459,7 +461,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           </button>
           <button
             disabled={!isValid}
-            className="px-6 py-2 rounded bg-fg-muted text-black font-medium hover:bg-fg-muted/90 disabled:bg-surface disabled:text-link disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2 rounded bg-fg-muted text-canvas font-medium hover:bg-fg-muted/90 disabled:bg-surface disabled:text-link disabled:cursor-not-allowed transition-colors"
             onClick={handleSubmit}
           >
             Next

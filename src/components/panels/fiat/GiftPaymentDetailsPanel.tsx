@@ -5,6 +5,7 @@ import { isEmail } from 'validator';
 import { CircleX, CreditCard, Gift, Loader2 } from 'lucide-react';
 import useCountries from '../../../hooks/useCountries';
 import { useStore } from '../../../store/useStore';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface GiftPaymentDetailsPanelProps {
   usdAmount: number;
@@ -15,19 +16,20 @@ interface GiftPaymentDetailsPanelProps {
   onNext: () => void;
 }
 
-const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({ 
-  usdAmount, 
-  recipientEmail, 
-  giftMessage, 
+const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
+  usdAmount,
+  recipientEmail,
+  giftMessage,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  paymentIntent, 
-  onBack, 
-  onNext 
+  paymentIntent,
+  onBack,
+  onNext
 }) => {
   const countries = useCountries();
   const stripe = useStripe();
   const elements = useElements();
   const { setPaymentInformation } = useStore();
+  const { isLight } = useTheme();
 
   const [name, setName] = useState<string>('');
   const [country, setCountry] = useState<string>('');
@@ -126,10 +128,10 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
     style: {
       base: {
         fontSize: '16px',
-        color: '#ededed',
-        backgroundColor: '#171717',
+        color: isLight ? '#23232D' : '#ededed', // text-fg-muted (theme-aware)
+        backgroundColor: isLight ? '#FFFFFF' : '#171717', // bg-surface (theme-aware)
         '::placeholder': {
-          color: '#A3A3AD',
+          color: isLight ? '#6C6C87' : '#A3A3AD', // text-link (theme-aware)
         },
       },
       invalid: {
@@ -188,7 +190,7 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 rounded-lg border border-default bg-canvas text-fg-muted focus:border-turbo-red focus:outline-none"
+              className="w-full p-3 rounded-lg border border-default bg-surface text-fg-muted focus:border-turbo-red focus:outline-none"
               placeholder="Enter your full name"
             />
             {nameError && (
@@ -207,7 +209,7 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="w-full p-3 rounded-lg border border-default bg-canvas text-fg-muted focus:border-turbo-red focus:outline-none"
+              className="w-full p-3 rounded-lg border border-default bg-surface text-fg-muted focus:border-turbo-red focus:outline-none"
             >
               <option value="">Select your country</option>
               {countries?.data?.map((country) => (
@@ -229,7 +231,7 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
             <label className="block text-sm font-medium text-link mb-2">
               Card Information <span className="text-red-400">*</span>
             </label>
-            <div className="p-3 rounded-lg border border-default bg-canvas">
+            <div className="p-3 rounded-lg border border-default bg-surface">
               <CardElement options={cardElementOptions} onChange={(e) => {
                 if (e.error) {
                   setCardError(e.error.message);
@@ -255,7 +257,7 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 rounded-lg border border-default bg-canvas text-fg-muted focus:border-turbo-red focus:outline-none"
+              className="w-full p-3 rounded-lg border border-default bg-surface text-fg-muted focus:border-turbo-red focus:outline-none"
               placeholder="your.email@example.com"
             />
             {emailError && (

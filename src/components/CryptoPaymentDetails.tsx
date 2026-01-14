@@ -246,7 +246,7 @@ export function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-default bg-canvas text-fg-muted focus:outline-none focus:border-fg-muted"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-default bg-surface text-fg-muted focus:outline-none focus:border-fg-muted"
                   />
                   <span className="text-xs text-link">%</span>
                 </div>

@@ -6,6 +6,7 @@ import { useWallets } from '@privy-io/react-auth';
 import { useAccount, useConfig } from 'wagmi';
 import { getConnectorClient, switchChain } from 'wagmi/actions';
 import { useStore } from '../store/useStore';
+import { getHotWalletSigner } from './useHotWallet';
 
 // Custom connect message for Ethereum wallet uploads (instead of SDK's generic message)
 const ETHEREUM_CONNECT_MESSAGE = 'Sign this message to connect to Turbo Gateway';
@@ -79,6 +80,7 @@ export function useEthereumTurboClient() {
 
     // Create new signer
     const createSigner = async (): Promise<CachedEthereumSigner> => {
+      console.log('[useEthereumTurboClient] Creating new signer...');
       // Get Ethereum provider - priority: Privy > RainbowKit/Wagmi > window.ethereum
       const privyWallet = wallets.find((w) => w.walletClientType === 'privy');
       let ethersSigner: ethers.JsonRpcSigner;
@@ -114,9 +116,18 @@ export function useEthereumTurboClient() {
 
       // Create InjectedEthereumSigner with custom provider
       // The signer's signMessage can receive string, Uint8Array, or object with raw property
+      let signatureRequestCount = 0;
       const injectedProvider = {
         getSigner: () => ({
           signMessage: async (message: string | Uint8Array | { raw?: string }) => {
+            signatureRequestCount++;
+            const msgPreview = typeof message === 'string'
+              ? message.slice(0, 50)
+              : message instanceof Uint8Array
+                ? `[Uint8Array ${message.length} bytes]`
+                : `[Object: ${JSON.stringify(message).slice(0, 50)}]`;
+            console.log(`[useEthereumTurboClient] signMessage #${signatureRequestCount}:`, msgPreview);
+
             // Handle different message types:
             // - string: pass directly
             // - Uint8Array: pass directly (ethers handles it)
@@ -136,7 +147,9 @@ export function useEthereumTurboClient() {
 
       // Manually set the public key using our custom connect message
       // THIS IS THE ONLY SIGNATURE REQUEST - shared across all token types
+      console.log('[useEthereumTurboClient] Requesting signature for connect message...');
       const signature = await ethersSigner.signMessage(ETHEREUM_CONNECT_MESSAGE);
+      console.log('[useEthereumTurboClient] Signature received');
       const messageHash = ethers.hashMessage(ETHEREUM_CONNECT_MESSAGE);
       const recoveredKey = ethers.SigningKey.recoverPublicKey(messageHash, signature);
       const publicKey = Buffer.from(ethers.getBytes(recoveredKey));
@@ -177,6 +190,21 @@ export function useEthereumTurboClient() {
       const config = getCurrentConfig();
       const configKey = `${config.paymentServiceUrl}|${config.uploadServiceUrl}`;
       const clientCacheKey = `${configKey}|${tokenType}`;
+
+      // Check for hot wallet first - if active, use the hot wallet signer
+      const isHotWallet = useStore.getState().isHotWallet;
+      if (isHotWallet) {
+        const hotSigner = getHotWalletSigner();
+        if (hotSigner) {
+          // Hot wallet only supports regular uploads, not EVM token transfers
+          return TurboFactory.authenticated({
+            token: tokenType as any,
+            signer: hotSigner,
+            paymentServiceConfig: { url: config.paymentServiceUrl },
+            uploadServiceConfig: { url: config.uploadServiceUrl },
+          });
+        }
+      }
 
       // Check if we can reuse cached client for this specific token type
       const cachedClient = sharedEthereumClientCache.get(clientCacheKey);

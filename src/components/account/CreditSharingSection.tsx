@@ -254,7 +254,7 @@ export default function CreditSharingSection() {
       
       {/* Error Message */}
       {error && (
-        <div className="mx-4 mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400">
+        <div className="mx-4 mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-sm text-alert-danger">
           {error}
         </div>
       )}

@@ -8,17 +8,25 @@ export default {
     },
     extend: {
       colors: {
-        canvas: '#171717',
-        surface: '#1F1F1F',
-        default: '#333',
-        'fg-muted': '#ededed',
-        'fg-disabled': '#757575',
-        'fg-on-disabled': '#E0E0E0',
-        'accent-disabled': '#757575',
+        // Theme-aware colors (switch via CSS variables)
+        canvas: 'var(--color-canvas)',
+        surface: 'var(--color-surface)',
+        'surface-elevated': 'var(--color-surface-elevated)',
+        'header-bg': 'var(--color-header-bg)',
+        default: 'var(--color-default)',
+        'fg-muted': 'var(--color-fg-muted)',
+        'fg-disabled': 'var(--color-fg-disabled)',
+        'fg-on-disabled': 'var(--color-fg-on-disabled)',
+        'accent-disabled': 'var(--color-accent-disabled)',
+        link: 'var(--color-link)',
+        high: 'var(--color-high)',
         error: '#f00',
-        link: '#A3A3AD',
-        high: '#CACAD6',
-        // Additional turbo colors
+        // Alert colors (theme-aware - darker in light mode for contrast)
+        'alert-danger': 'var(--color-alert-danger)',
+        'alert-warning': 'var(--color-alert-warning)',
+        'alert-success': 'var(--color-alert-success)',
+        'alert-info': 'var(--color-alert-info)',
+        // Brand colors (static - same in both themes)
         turbo: {
           red: '#FE0230',
           blue: '#3142C4',

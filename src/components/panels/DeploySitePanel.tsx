@@ -426,7 +426,7 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-default bg-canvas text-fg-muted focus:outline-none focus:border-fg-muted"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-default bg-surface text-fg-muted focus:outline-none focus:border-fg-muted"
                   />
                   <span className="text-xs text-link">%</span>
                 </div>
@@ -667,7 +667,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       onClick={handleCreditsTabClick}
                       className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                         paymentTab === 'credits'
-                          ? 'bg-fg-muted text-black'
+                          ? 'bg-fg-muted text-canvas'
                           : 'text-link hover:text-fg-muted'
                       }`}
                     >
@@ -679,7 +679,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       onClick={handleCryptoTabClick}
                       className={`flex-1 px-4 py-3 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                         paymentTab === 'crypto'
-                          ? 'bg-fg-muted text-black'
+                          ? 'bg-fg-muted text-canvas'
                           : 'text-link hover:text-fg-muted'
                       }`}
                     >
@@ -761,10 +761,10 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                   {x402OnlyMode && walletType !== 'ethereum' && (
                     <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                        <AlertTriangle className="w-5 h-5 text-alert-warning flex-shrink-0 mt-0.5" />
                         <div>
-                          <div className="font-medium text-yellow-400 text-sm mb-1">Ethereum Wallet Required</div>
-                          <div className="text-xs text-yellow-400/80">
+                          <div className="font-medium text-alert-warning text-sm mb-1">Ethereum Wallet Required</div>
+                          <div className="text-xs text-alert-warning/80">
                             X402 payments only support Ethereum wallets with BASE-USDC. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.
                           </div>
                         </div>
@@ -1841,7 +1841,7 @@ export default function DeploySitePanel() {
             />
             <label
               htmlFor="folder-upload"
-              className="inline-block px-4 py-2 rounded bg-fg-muted text-black font-medium cursor-pointer hover:bg-fg-muted/90 transition-colors"
+              className="inline-block px-4 py-2 rounded bg-fg-muted text-canvas font-medium cursor-pointer hover:bg-fg-muted/90 transition-colors"
             >
               Select Site Folder
             </label>
@@ -2199,7 +2199,7 @@ export default function DeploySitePanel() {
             </div>
 
             {/* Overall Progress Bar */}
-            <div className="w-full bg-[#090909] rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-surface-elevated rounded-full h-2 overflow-hidden">
               <div
                 className="bg-turbo-red h-full transition-all duration-300"
                 style={{ width: `${deployProgress}%` }}
@@ -2505,7 +2505,7 @@ export default function DeploySitePanel() {
       {deployMessage && (
         <div className={`mt-4 p-3 rounded-lg ${
           deployMessage.type === 'error' 
-            ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+            ? 'bg-red-500/10 border border-red-500/20 text-alert-danger'
             : deployMessage.type === 'success'
             ? 'bg-green-500/10 border border-green-500/20 text-green-400' 
             : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
@@ -2594,7 +2594,7 @@ export default function DeploySitePanel() {
                   const arnsAssociation = getArNSAssociation(manifestId);
                   
                   return (
-                    <div key={manifestId} className="bg-bg-[#090909] border border-turbo-red/20 rounded-lg p-4">
+                    <div key={manifestId} className="bg-surface border border-default rounded-lg p-4">
                       {/* Unified Header Row - Manifest Info + Actions */}
                       {group.manifest && (
                         <div className="flex items-center justify-between gap-2 mb-3">
@@ -2837,7 +2837,7 @@ export default function DeploySitePanel() {
                       {/* Files Section - Integrated into same card */}
                       {group.files && group.files.files && (
                         <details className="border-t border-default/30 pt-3">
-                          <summary className="cursor-pointer text-sm text-fg-muted flex items-center gap-2 hover:text-white transition-colors">
+                          <summary className="cursor-pointer text-sm text-link flex items-center gap-2 hover:text-fg-muted transition-colors">
                             <Folder className="w-4 h-4" />
                             Files ({group.files.files.length})
                             <ChevronDown className="w-3 h-3 text-link ml-auto" />
@@ -2848,7 +2848,7 @@ export default function DeploySitePanel() {
                               const isChecking = statusChecking[file.id];
                               
                               return (
-                                <div key={fileIndex} className="bg-[#090909] border border-default/20 rounded p-3">
+                                <div key={fileIndex} className="bg-canvas border border-default rounded p-3">
                                   <div className="space-y-2">
                                     {/* Row 1: Status Icon + Shortened TxID + File Path + Actions */}
                                     <div className="flex items-center justify-between gap-2">

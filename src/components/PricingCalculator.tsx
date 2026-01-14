@@ -137,12 +137,12 @@ export default function PricingCalculator() {
                         step="1"
                         value={storageAmount}
                         onChange={(e) => setStorageAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                        className="flex-1 rounded-lg border border-default bg-canvas px-4 py-2 text-fg-muted focus:border-turbo-red focus:outline-none"
+                        className="flex-1 rounded-lg border border-default bg-surface px-4 py-2 text-fg-muted focus:border-turbo-red focus:outline-none"
                       />
                       <select
                         value={storageUnit}
                         onChange={(e) => setStorageUnit(e.target.value as 'MB' | 'GB' | 'TB')}
-                        className="rounded-lg border border-default bg-canvas px-4 py-2 text-fg-muted focus:border-turbo-red focus:outline-none"
+                        className="rounded-lg border border-default bg-surface px-4 py-2 text-fg-muted focus:border-turbo-red focus:outline-none"
                       >
                         <option value="MB">MB</option>
                         <option value="GB">GB</option>
@@ -224,7 +224,7 @@ export default function PricingCalculator() {
                     step="1"
                     value={dollarAmount}
                     onChange={(e) => setDollarAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="flex-1 rounded-lg border border-default bg-canvas px-4 py-2 text-fg-muted focus:border-turbo-red focus:outline-none"
+                    className="flex-1 rounded-lg border border-default bg-surface px-4 py-2 text-fg-muted focus:border-turbo-red focus:outline-none"
                   />
                   <span className="text-link text-sm">USD</span>
                 </div>

@@ -113,7 +113,7 @@ export default function BalanceCardsGrid() {
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => navigate('/topup')}
-              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-fg-muted text-black rounded-lg font-medium hover:bg-fg-muted/90 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-fg-muted text-canvas rounded-lg font-medium hover:bg-fg-muted/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Top Up Credits

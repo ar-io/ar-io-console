@@ -3,6 +3,7 @@ import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { useTheme } from '../hooks/useTheme';
 import WalletSelectionModal from '../components/modals/WalletSelectionModal';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
@@ -15,6 +16,7 @@ import {
 
 const LandingPage = () => {
   const { address } = useStore();
+  const { isLight } = useTheme();
   const navigate = useNavigate();
   const freeUploadLimitBytes = useFreeUploadLimit();
   const loggedIn = address !== null;
@@ -85,15 +87,15 @@ const LandingPage = () => {
   const getFeatureColor = (name: string) => {
     switch (name.toLowerCase()) {
       case 'top up':
-      case 'share': 
+      case 'share':
       case 'gift':
       case 'check balance':
       case 'redeem':
         return {
           text: 'text-fg-muted',
-          bg: 'bg-fg-muted/10', 
+          bg: 'bg-fg-muted/10',
           border: 'border-fg-muted',
-          button: 'bg-fg-muted text-black hover:bg-fg-muted/90'
+          button: 'bg-fg-muted text-canvas hover:bg-fg-muted/90'
         };
       case 'upload':
       case 'deploy':
@@ -235,7 +237,7 @@ const LandingPage = () => {
   return (
     <div className="space-y-12 px-4 sm:px-0">
       {/* Hero Section */}
-      <div className="flex w-full flex-col items-center rounded-xl border border-default bg-gradient-to-b from-canvas to-surface/30 px-8 sm:px-12 py-10">
+      <div className="flex w-full flex-col items-center rounded-xl border border-default bg-surface px-8 sm:px-12 py-10">
         {/* Small badge */}
         <a
           href="https://ar.io"
@@ -243,7 +245,7 @@ const LandingPage = () => {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-surface/80 backdrop-blur text-fg-muted px-3 py-1.5 rounded-full text-xs font-semibold mb-4 border border-default hover:border-turbo-purple/50 transition-colors group"
         >
-          <img src="/ar.io-logo-white.png" alt="AR.IO" className="h-4 w-auto" />
+          <img src="/ar.io-logo-white.png" alt="AR.IO" className={`h-4 w-auto ${isLight ? 'invert' : ''}`} />
           <span className="group-hover:text-turbo-red transition-colors">Powered by AR.IO</span>
         </a>
 
@@ -337,13 +339,7 @@ const LandingPage = () => {
           {/* Subtle Try it Out link */}
           <div className="mt-3 text-center">
             <button
-              onClick={() => {
-                if (loggedIn) {
-                  navigate('/upload');
-                } else {
-                  setShowWalletModal(true);
-                }
-              }}
+              onClick={() => navigate(loggedIn ? '/upload' : '/try')}
               className="text-sm text-link hover:text-fg-muted underline decoration-link/40 hover:decoration-fg-muted inline-flex items-center gap-1.5 group transition-colors"
             >
               <span>or try uploading a file</span>
@@ -370,7 +366,7 @@ const LandingPage = () => {
         
         <div className="grid md:grid-cols-4 gap-6">
           {/* Step 1: Fund */}
-          <div className="bg-surface/50 border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
+          <div className="bg-surface border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-fg-muted">1.</div>
               <h3 className="text-xl font-bold text-fg-muted">Fund</h3>
@@ -381,7 +377,7 @@ const LandingPage = () => {
           </div>
 
           {/* Step 2: Bundle */}
-          <div className="bg-surface/50 border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
+          <div className="bg-surface border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-fg-muted">2.</div>
               <h3 className="text-xl font-bold text-fg-muted">Upload</h3>
@@ -392,7 +388,7 @@ const LandingPage = () => {
           </div>
 
           {/* Step 3: Settle */}
-          <div className="bg-surface/50 border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
+          <div className="bg-surface border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-fg-muted">3.</div>
               <h3 className="text-xl font-bold text-fg-muted">Settle</h3>
@@ -403,7 +399,7 @@ const LandingPage = () => {
           </div>
 
           {/* Step 4: Access */}
-          <div className="bg-surface/50 border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
+          <div className="bg-surface border border-default rounded-xl p-6 hover:border-turbo-purple/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-fg-muted">4.</div>
               <h3 className="text-xl font-bold text-fg-muted">Access</h3>
@@ -451,14 +447,14 @@ const LandingPage = () => {
 
         <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {freeUploadLimitBytes > 0 && (
-            <div className="bg-gradient-to-br from-turbo-green/10 to-turbo-green/5 rounded-lg border-2 border-turbo-green/50 p-8 text-center">
+            <div className="bg-surface rounded-lg border border-default p-8 text-center">
               <div className="text-4xl font-bold text-turbo-green mb-2">FREE</div>
               <div className="text-lg text-fg-muted font-medium mb-1">Files under {formatFreeLimit(freeUploadLimitBytes)}</div>
               <div className="text-sm text-link">No credit card required</div>
             </div>
           )}
-          <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-8 text-center">
-            <div className="text-4xl font-bold text-turbo-red mb-2">${pricePerGiB}</div>
+          <div className="bg-surface rounded-lg border border-default p-8 text-center">
+            <div className="text-4xl font-bold text-fg-muted mb-2">${pricePerGiB}</div>
             <div className="text-lg text-fg-muted font-medium mb-1">Per GiB</div>
             <div className="text-sm text-link mb-4">Larger files & bulk storage</div>
             <button
@@ -499,7 +495,7 @@ const LandingPage = () => {
                     href={company.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-6 text-center hover:border-turbo-red/30 transition-all group block h-full"
+                    className="bg-surface rounded-lg border border-default p-6 text-center hover:border-turbo-red/30 transition-all group block h-full"
                   >
                     <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                       <img src={company.logo} alt={company.name} className="w-16 h-16 object-contain" />
@@ -526,7 +522,7 @@ const LandingPage = () => {
                     href={company.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-6 text-center hover:border-turbo-red/30 transition-all group block h-full"
+                    className="bg-surface rounded-lg border border-default p-6 text-center hover:border-turbo-red/30 transition-all group block h-full"
                   >
                     <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                       <img src={company.logo} alt={company.name} className="w-12 h-12 object-contain" />
@@ -548,7 +544,7 @@ const LandingPage = () => {
                     href={company.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-6 text-center hover:border-turbo-red/30 transition-all group block h-full"
+                    className="bg-surface rounded-lg border border-default p-6 text-center hover:border-turbo-red/30 transition-all group block h-full"
                   >
                     <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                       <img src={company.logo} alt={company.name} className="w-12 h-12 object-contain" />
@@ -590,8 +586,8 @@ const LandingPage = () => {
 
       {/* Interactive Feature Explorer */}
       <div className="mb-12">
-        <div className="rounded-lg border border-default bg-canvas">
-          <div className="border-b border-default bg-surface/30 px-4 sm:px-6 py-3 flex items-center gap-2">
+        <div className="rounded-lg border border-default bg-surface">
+          <div className="border-b border-default bg-canvas/50 px-4 sm:px-6 py-3 flex items-center gap-2">
             <Search className="w-4 h-4 text-link" />
             <p className="text-xs sm:text-sm text-link">
               <span className="font-medium">Feature Explorer</span> 
@@ -602,7 +598,7 @@ const LandingPage = () => {
           {/* Desktop: Vertical Sidebar Layout */}
           <div className="hidden md:flex">
             {/* Sidebar */}
-            <div className="w-64 border-r border-default bg-surface/20">
+            <div className="w-64 border-r border-default bg-canvas/30">
               <div className="py-2">
                 {features.map((feature, index) => (
                   <button
@@ -779,19 +775,19 @@ const LandingPage = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-6 text-center">
+          <div className="bg-surface rounded-lg border border-default p-6 text-center">
             <div className="text-3xl font-bold text-turbo-red mb-1">20B+</div>
             <div className="text-sm text-link">Files uploaded to Arweave</div>
           </div>
-          <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-6 text-center">
+          <div className="bg-surface rounded-lg border border-default p-6 text-center">
             <div className="text-3xl font-bold text-turbo-red mb-1">200+</div>
             <div className="text-sm text-link">TiB of data stored</div>
           </div>
-          <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-6 text-center">
+          <div className="bg-surface rounded-lg border border-default p-6 text-center">
             <div className="text-3xl font-bold text-turbo-red mb-1">~860</div>
             <div className="text-sm text-link">Files per second</div>
           </div>
-          <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-lg border border-default p-6 text-center">
+          <div className="bg-surface rounded-lg border border-default p-6 text-center">
             <div className="text-3xl font-bold text-turbo-red mb-1">99.9%</div>
             <div className="text-sm text-link">Gateway uptime</div>
           </div>
@@ -977,7 +973,7 @@ const LandingPage = () => {
       </section>
 
       {/* The Expanding Turbo Ecosystem Section */}
-      <section className="bg-gradient-to-r from-turbo-red/10 to-turbo-blue/10 rounded-lg border border-default p-4 sm:p-8">
+      <section className="bg-surface rounded-lg border border-default p-4 sm:p-8">
         <div className="text-center">
           <div className="text-xs text-link uppercase tracking-wider mb-2">TURBO ECOSYSTEM</div>
           <h2 className="text-3xl font-bold mb-4 text-fg-muted">The Expanding Turbo Ecosystem</h2>
@@ -1050,7 +1046,7 @@ const LandingPage = () => {
       </section>
 
       {/* ArDrive Section - For Non-Developers */}
-      <section className="text-center bg-gradient-to-r from-surface/50 to-surface/30 rounded-lg border border-default p-4 sm:p-8">
+      <section className="text-center bg-surface rounded-lg border border-default p-4 sm:p-8">
         <div className="max-w-3xl mx-auto">
           <h3 className="text-xl font-bold text-fg-muted mb-3">Looking for a no-code solution?</h3>
           <p className="text-link mb-6">
@@ -1073,7 +1069,7 @@ const LandingPage = () => {
       </section>
 
       {/* Final CTA Section */}
-      <section className="bg-gradient-to-r from-turbo-red/10 to-turbo-blue/10 rounded-lg border border-default p-8 sm:p-12 text-center">
+      <section className="bg-surface rounded-lg border border-default p-8 sm:p-12 text-center">
         <h2 className="text-3xl font-bold mb-4 text-fg-muted">Ready to Build on Arweave?</h2>
         <p className="text-lg text-link max-w-2xl mx-auto mb-8">
           Talk to our team about custom integrations, enterprise solutions, or technical guidance.

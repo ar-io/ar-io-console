@@ -285,14 +285,21 @@ const WalletSelectionModal = ({
   };
 
   const connectWander = async () => {
+    console.log('[WalletSelectionModal] connectWander called');
+    console.log('[WalletSelectionModal] window.arweaveWallet exists:', !!window.arweaveWallet);
+    if (window.arweaveWallet) {
+      console.log('[WalletSelectionModal] arweaveWallet keys:', Object.keys(window.arweaveWallet));
+    }
     setConnectingWallet('Connecting to Wander...');
     try {
       if (!window.arweaveWallet) {
+        console.log('[WalletSelectionModal] No arweaveWallet found, opening wander.app');
         window.open('https://wander.app', '_blank');
         setConnectingWallet(undefined);
         return;
       }
-      
+
+      console.log('[WalletSelectionModal] Calling arweaveWallet.connect()...');
       await window.arweaveWallet.connect([
         'ACCESS_ADDRESS',
         'SIGN_TRANSACTION',
@@ -300,13 +307,16 @@ const WalletSelectionModal = ({
         'DISPATCH',
         'SIGNATURE', // Required for Turbo SDK file upload signing
       ]);
-      
+      console.log('[WalletSelectionModal] connect() succeeded, getting address...');
+
       const addr = await window.arweaveWallet.getActiveAddress();
+      console.log('[WalletSelectionModal] Got address:', addr);
       // For Arweave, raw address = native address
       setAddress(addr, 'arweave');
       onClose();
-    } catch {
+    } catch (error) {
       // Failed to connect Wander wallet
+      console.error('[WalletSelectionModal] Wander connect error:', error);
     } finally {
       setConnectingWallet(undefined);
     }

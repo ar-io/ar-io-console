@@ -111,6 +111,7 @@ export interface PaymentInformation {
 }
 
 export type ConfigMode = 'production' | 'development' | 'custom';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface DeveloperConfig {
   paymentServiceUrl: string;
@@ -127,6 +128,10 @@ interface StoreState {
   address: string | null;
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
   creditBalance: number;
+
+  // Hot wallet state (for Try It Out feature)
+  isHotWallet: boolean;
+  hotWalletSeedExported: boolean;
   
   // ArNS state
   arnsNamesCache: Record<string, { name: string; logo?: string; timestamp: number }>;
@@ -176,6 +181,9 @@ interface StoreState {
 
   // UI state
   showResumeTransactionPanel: boolean;
+
+  // Theme state
+  theme: ThemeMode;
   
   // Developer configuration state
   configMode: ConfigMode;
@@ -244,6 +252,9 @@ interface StoreState {
   setShowResumeTransactionPanel: (show: boolean) => void;
   clearAllPaymentState: () => void;
 
+  // Theme actions
+  setTheme: (theme: ThemeMode) => void;
+
   // Just-in-time payment actions
   setJitPaymentEnabled: (enabled: boolean) => void;
   setJitMaxTokenAmount: (token: SupportedTokenType, amount: number) => void;
@@ -271,6 +282,10 @@ interface StoreState {
   getDeployedApp: (appName: string) => DeployedAppEntry | null;
   getRecentAppNames: (limit?: number) => string[];
   getLastDeployedApp: () => { appName: string; appVersion: string } | null;
+
+  // Hot wallet actions
+  setIsHotWallet: (isHot: boolean) => void;
+  setHotWalletSeedExported: (exported: boolean) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -280,12 +295,20 @@ export const useStore = create<StoreState>()(
       address: null,
       walletType: null,
       creditBalance: 0,
+
+      // Hot wallet state
+      isHotWallet: false,
+      hotWalletSeedExported: false,
+
       arnsNamesCache: {},
       ownedArnsCache: {},
       uploadHistory: [],
       deployHistory: [],
       uploadStatusCache: {},
       
+      // Theme state
+      theme: 'system', // Default to system preference
+
       // Developer configuration state
       configMode: 'production',
       customConfig: PRESET_CONFIGS.production,
@@ -334,7 +357,7 @@ export const useStore = create<StoreState>()(
       jitBufferMultiplier: 1.1, // Default 10% buffer
       // Actions
       setAddress: (address, type) => set({ address, walletType: type }),
-      clearAddress: () => set({ address: null, walletType: null, creditBalance: 0, arnsNamesCache: {}, ownedArnsCache: {} }),
+      clearAddress: () => set({ address: null, walletType: null, creditBalance: 0, arnsNamesCache: {}, ownedArnsCache: {}, isHotWallet: false, hotWalletSeedExported: false }),
       setCreditBalance: (balance) => set({ creditBalance: balance }),
       setArNSName: (address, name, logo) => {
         const cache = get().arnsNamesCache;
@@ -443,6 +466,9 @@ export const useStore = create<StoreState>()(
         cryptoTopupResponse: undefined,
         showResumeTransactionPanel: false,
       }),
+
+      // Theme action
+      setTheme: (theme) => set({ theme }),
 
       // Just-in-time payment actions
       setJitPaymentEnabled: (enabled) => set({ jitPaymentEnabled: enabled }),
@@ -592,17 +618,48 @@ export const useStore = create<StoreState>()(
         if (!app) return null;
         return { appName: lastDeployedAppName, appVersion: app.appVersion };
       },
+
+      // Hot wallet actions
+      setIsHotWallet: (isHot) => set({ isHotWallet: isHot }),
+      setHotWalletSeedExported: (exported) => set({ hotWalletSeedExported: exported }),
     }),
     {
       name: 'turbo-gateway-store',
+      // Restore hot wallet state after rehydration
+      // Check if encrypted hot wallet data exists in localStorage and sync flags
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const hotWalletData = localStorage.getItem('turbo-hot-wallet');
+          if (hotWalletData) {
+            // Hot wallet exists - ensure flags are set
+            try {
+              const parsed = JSON.parse(hotWalletData);
+              state.isHotWallet = true;
+              state.hotWalletSeedExported = parsed.seedExported || false;
+            } catch {
+              // Corrupted data - clear it
+              localStorage.removeItem('turbo-hot-wallet');
+              state.isHotWallet = false;
+              state.hotWalletSeedExported = false;
+            }
+          } else {
+            // No hot wallet - ensure flags are cleared
+            state.isHotWallet = false;
+            state.hotWalletSeedExported = false;
+          }
+        }
+      },
       partialize: (state) => ({
         address: state.address,
         walletType: state.walletType,
+        // Note: isHotWallet and hotWalletSeedExported are NOT persisted here
+        // They are derived from the hot wallet localStorage entry in onRehydrateStorage
         arnsNamesCache: state.arnsNamesCache,
         ownedArnsCache: state.ownedArnsCache,
         uploadHistory: state.uploadHistory,
         deployHistory: state.deployHistory,
         uploadStatusCache: state.uploadStatusCache,
+        theme: state.theme,
         configMode: state.configMode,
         customConfig: state.customConfig,
         x402OnlyMode: state.x402OnlyMode,

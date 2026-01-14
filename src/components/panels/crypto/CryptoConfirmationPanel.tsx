@@ -828,7 +828,7 @@ export default function CryptoConfirmationPanel({
               <button
                 onClick={handlePayment}
                 disabled={!quote || isProcessing || (!hasSufficientBalance && !balanceLoading)}
-                className="px-6 py-3 rounded-lg bg-fg-muted text-black font-medium hover:bg-fg-muted/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-3 rounded-lg bg-fg-muted text-canvas font-medium hover:bg-fg-muted/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isProcessing ? (
                   <>

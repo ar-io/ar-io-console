@@ -8,18 +8,65 @@
 @tailwind utilities;
 
 @layer base {
+  /* Dark theme (default) */
   :root {
     color-scheme: dark;
+
+    --color-canvas: #000000;
+    --color-surface: #1F1F1F;
+    --color-surface-elevated: #2A2A2A;
+    --color-header-bg: #000000;
+    --color-default: #39394A;
+    --color-fg-muted: #ededed;
+    --color-fg-disabled: #6C6C87;
+    --color-fg-on-disabled: #9494A5;
+    --color-accent-disabled: #6C6C87;
+    --color-link: #A3A3AD;
+    --color-high: #DEDEE2;
+
+    /* Alert text colors - lighter in dark mode for visibility on dark backgrounds */
+    --color-alert-danger: #f87171;  /* red-400 */
+    --color-alert-warning: #fbbf24; /* yellow-400 */
+    --color-alert-success: #4ade80; /* green-400 */
+    --color-alert-info: #60a5fa;    /* blue-400 */
   }
-  
+
+  /* Light theme */
+  :root.light {
+    color-scheme: light;
+
+    --color-canvas: #F0F0F0;
+    --color-surface: #FFFFFF;
+    --color-surface-elevated: #DEDEE2;
+    --color-header-bg: #FFFFFF;
+    --color-default: #DEDEE2;
+    --color-fg-muted: #23232D;
+    --color-fg-disabled: #9494A5;
+    --color-fg-on-disabled: #6C6C87;
+    --color-accent-disabled: #9494A5;
+    --color-link: #6C6C87;
+    --color-high: #39394A;
+
+    /* Alert text colors - darker in light mode for visibility on light backgrounds */
+    --color-alert-danger: #991b1b;  /* red-800 - dark red for light mode */
+    --color-alert-warning: #92400e; /* yellow-800 - dark amber for light mode */
+    --color-alert-success: #166534; /* green-800 - dark green for light mode */
+    --color-alert-info: #1e40af;    /* blue-800 - dark blue for light mode */
+  }
+
   body {
     @apply bg-canvas text-fg-muted antialiased;
     font-family: 'Rubik', sans-serif;
   }
-  
-  /* Ensure dark mode colors are applied */
-  .dark {
-    @apply bg-canvas text-fg-muted;
+
+  /* Ensure sticky header has solid background (no transparency) */
+  .sticky {
+    background-color: var(--color-canvas);
+  }
+
+  /* Smooth theme transitions */
+  *, *::before, *::after {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
 }
 

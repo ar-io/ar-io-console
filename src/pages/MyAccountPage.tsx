@@ -1,18 +1,21 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { User, Globe, ExternalLink, RefreshCw, Calendar, ArrowRight } from 'lucide-react';
+import { User, Globe, ExternalLink, RefreshCw, Calendar, ArrowRight, Key, Shield, CheckCircle } from 'lucide-react';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { makePossessive } from '../utils';
 import BalanceCardsGrid from '../components/account/BalanceCardsGrid';
 import CreditSharingSection from '../components/account/CreditSharingSection';
 import ActivityOverview from '../components/account/ActivityOverview';
+import SeedPhraseModal from '../components/modals/SeedPhraseModal';
 
 export default function MyAccountPage() {
-  const { address, walletType, isPaymentServiceAvailable } = useStore();
+  const { address, walletType, isPaymentServiceAvailable, isHotWallet, hotWalletSeedExported } = useStore();
   const navigate = useNavigate();
   const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
+  const [showSeedPhraseModal, setShowSeedPhraseModal] = useState(false);
 
   // Redirect to home if not logged in
   if (!address) {
@@ -69,6 +72,49 @@ export default function MyAccountPage() {
           </p>
         </div>
       </div>
+
+      {/* Temporary Wallet Section - Show for hot wallets */}
+      {isHotWallet && (
+        <div className="mb-6 rounded-xl border border-default bg-surface p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                hotWalletSeedExported
+                  ? 'bg-turbo-green/20'
+                  : 'bg-fg-muted/20'
+              }`}>
+                {hotWalletSeedExported ? (
+                  <CheckCircle className="w-5 h-5 text-turbo-green" />
+                ) : (
+                  <Shield className="w-5 h-5 text-fg-muted" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-bold text-fg-muted mb-1">
+                  {hotWalletSeedExported ? 'Temporary Wallet Secured' : 'Temporary Wallet'}
+                </h3>
+                <p className="text-sm text-link">
+                  {hotWalletSeedExported
+                    ? 'Your recovery phrase has been exported. You can import it into any Ethereum wallet to access your account.'
+                    : 'You\'re using a temporary wallet. Save your recovery phrase to keep permanent access to your uploads and cryptographic proof of ownership.'
+                  }
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSeedPhraseModal(true)}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-2 ${
+                hotWalletSeedExported
+                  ? 'bg-surface border border-default text-fg-muted hover:bg-canvas'
+                  : 'bg-fg-muted text-canvas hover:bg-fg-muted/90'
+              }`}
+            >
+              <Key className="w-4 h-4" />
+              {hotWalletSeedExported ? 'View Recovery Phrase' : 'Save Recovery Phrase'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Wallet Overview Section - Hide balance/sharing in x402-only mode */}
       {isPaymentServiceAvailable() && (
@@ -194,11 +240,16 @@ export default function MyAccountPage() {
       {/* Activity & Management */}
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-fg-muted">Activity</h2>
-        
+
         {/* Activity Overview */}
         <ActivityOverview />
 
       </div>
+
+      {/* Seed Phrase Modal */}
+      {showSeedPhraseModal && (
+        <SeedPhraseModal onClose={() => setShowSeedPhraseModal(false)} />
+      )}
     </div>
   );
 }

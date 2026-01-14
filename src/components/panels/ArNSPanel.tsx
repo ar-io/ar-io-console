@@ -51,7 +51,7 @@ export default function ArNSPanel() {
       </div>
 
       {/* Main Content Container with Gradient */}
-      <div className="bg-gradient-to-br from-turbo-yellow/5 to-turbo-yellow/3 rounded-xl border border-turbo-yellow/20 p-4 sm:p-6 mb-4 sm:mb-6">
+      <div className="bg-gradient-to-br from-turbo-yellow/10 to-turbo-yellow/5 rounded-xl border border-turbo-yellow/30 p-4 sm:p-6 mb-4 sm:mb-6">
 
       {/* Name Search */}
       <div className="mb-6">
@@ -61,16 +61,16 @@ export default function ArNSPanel() {
             href="https://arns.ar.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-turbo-yellow hover:text-turbo-yellow/80 transition-colors"
+            className="flex items-center gap-1 text-xs text-alert-warning hover:opacity-80 transition-colors font-medium"
           >
             <ExternalLink className="w-3 h-3" />
-            Full ArNS App
+            arns.ar.io
           </a>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <div className="flex items-center border border-default rounded-lg bg-canvas focus-within:border-turbo-yellow transition-colors">
+            <div className="flex items-center border border-default rounded-lg bg-surface focus-within:border-turbo-yellow transition-colors">
               <input
                 type="text"
                 value={nameSearch}
@@ -189,7 +189,7 @@ export default function ArNSPanel() {
             <div>
               <h4 className="font-bold text-fg-muted mb-1 text-sm">Global Propagation</h4>
               <p className="text-xs text-link">
-                Instant propagation across the AR.IO gateway network worldwide.
+                Instant propagation across the entire AR.IO Network worldwide.
               </p>
             </div>
           </div>
