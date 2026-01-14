@@ -97,7 +97,15 @@ export function useFileUpload() {
 
   // Validate wallet state to prevent cross-wallet conflicts
   const validateWalletState = useCallback((): void => {
-    console.log('[useFileUpload] validateWalletState:', { address, walletType });
+    console.log('[useFileUpload] validateWalletState:', { address, walletType, isHotWalletActive: isHotWalletActive() });
+
+    // Hot wallet check first - if active, signer is cached and ready
+    // This handles the case where generateHotWallet() was just called but
+    // the hook's closure values (address/walletType) haven't updated yet
+    if (isHotWalletActive()) {
+      return; // Hot wallet is ready, no further validation needed
+    }
+
     if (!address || !walletType) {
       throw new Error('Wallet not connected');
     }
@@ -138,9 +146,32 @@ export function useFileUpload() {
 
   // Create Turbo client with proper walletAdapter based on wallet type
   const createTurboClient = useCallback(async (tokenTypeOverride?: string): Promise<TurboAuthenticatedClient> => {
-    console.log('[useFileUpload] Creating Turbo client...', { walletType, tokenTypeOverride });
+    console.log('[useFileUpload] Creating Turbo client...', { walletType, tokenTypeOverride, isHotWalletActive: isHotWalletActive() });
     // Validate wallet state first
     validateWalletState();
+
+    const config = getCurrentConfig();
+    const turboConfig = {
+      paymentServiceConfig: { url: config.paymentServiceUrl },
+      uploadServiceConfig: { url: config.uploadServiceUrl },
+      processId: config.processId,
+    };
+
+    // Hot wallet check FIRST - handles case where walletType closure hasn't updated yet
+    if (isHotWalletActive()) {
+      const hotWalletSigner = getHotWalletSigner();
+      if (!hotWalletSigner) {
+        throw new Error('Hot wallet signer not available');
+      }
+
+      const hotWalletClient = TurboFactory.authenticated({
+        signer: hotWalletSigner,
+        token: 'ethereum',
+        ...turboConfig,
+      });
+
+      return hotWalletClient;
+    }
 
     // Get turbo config based on the token type (use override if provided, otherwise use wallet type)
     const effectiveTokenType = tokenTypeOverride || walletType;
@@ -153,11 +184,10 @@ export function useFileUpload() {
     ) {
       return turboClientCache.current.client;
     }
-    const config = getCurrentConfig();
-    const turboConfig = {
-      paymentServiceConfig: { url: config.paymentServiceUrl },
-      uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
+
+    // Add gateway URL for non-hot-wallet cases
+    const fullTurboConfig = {
+      ...turboConfig,
       ...(effectiveTokenType && config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap]
         ? { gatewayUrl: config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap] }
         : {})
@@ -196,7 +226,7 @@ export function useFileUpload() {
         const signer = new ArconnectSigner(window.arweaveWallet);
         console.log('[useFileUpload] ArconnectSigner created, creating TurboFactory.authenticated...');
         const arweaveClient = TurboFactory.authenticated({
-          ...turboConfig,
+          ...fullTurboConfig,
           signer,
           // Use token type override if provided (for JIT with ARIO)
           ...(tokenTypeOverride && tokenTypeOverride !== 'arweave' ? { token: tokenTypeOverride as any } : {})
@@ -214,31 +244,8 @@ export function useFileUpload() {
         return arweaveClient;
 
       case 'ethereum':
-        // Check if this is a hot wallet - use its cached signer directly
-        if (isHotWalletActive()) {
-          const hotWalletSigner = getHotWalletSigner();
-          if (!hotWalletSigner) {
-            throw new Error('Hot wallet signer not available');
-          }
-
-          const hotWalletClient = TurboFactory.authenticated({
-            signer: hotWalletSigner,
-            token: 'ethereum',
-            ...turboConfig,
-          });
-
-          if (address && effectiveTokenType) {
-            turboClientCache.current = {
-              client: hotWalletClient,
-              address: address,
-              tokenType: effectiveTokenType,
-            };
-          }
-
-          return hotWalletClient;
-        }
-
         // Regular Ethereum wallet (Privy, RainbowKit, etc.)
+        // Note: Hot wallet is handled above before the switch statement
         const ethereumClient = await createEthereumTurboClient(tokenTypeOverride || 'ethereum');
 
         // Also cache in local ref for consistency with other wallet types
@@ -260,7 +267,7 @@ export function useFileUpload() {
         const solanaClient = TurboFactory.authenticated({
           token: "solana",
           walletAdapter: window.solana,
-          ...turboConfig,
+          ...fullTurboConfig,
         });
 
         // Cache the client
@@ -289,7 +296,8 @@ export function useFileUpload() {
       selectedJitToken?: SupportedTokenType; // Selected JIT payment token
     }
   ) => {
-    if (!address) {
+    // Allow hot wallet even if address closure hasn't updated yet
+    if (!address && !isHotWalletActive()) {
       throw new Error('Wallet not connected');
     }
 

@@ -59,11 +59,6 @@
     font-family: 'Rubik', sans-serif;
   }
 
-  /* Ensure sticky header has solid background (no transparency) */
-  .sticky {
-    background-color: var(--color-canvas);
-  }
-
   /* Smooth theme transitions */
   *, *::before, *::after {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
