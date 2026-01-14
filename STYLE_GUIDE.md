@@ -31,8 +31,8 @@ Colors are defined as semantic tokens that automatically adapt to the current th
 | Token | Dark Mode | Light Mode | Usage |
 |-------|-----------|------------|-------|
 | `page` | #000000 | #F0F0F0 | Page background |
-| `canvas` | #171717 | #E0E0E0 | Dropdowns, hover states |
-| `surface` | #1F1F1F | #FFFFFF | Cards, panels |
+| `canvas` | #171717 | #E8E8E8 | Dropdowns, hover states, nested content |
+| `surface` | #1F1F1F | #FFFFFF | Cards, panels, inputs |
 | `surface-elevated` | #2A2A2A | #F5F5F5 | Nested cards, code blocks |
 | `header-bg` | #090909 | #FFFFFF | Sticky header, footer |
 | `fg-muted` | #ededed | #23232D | Primary text |
@@ -42,12 +42,29 @@ Colors are defined as semantic tokens that automatically adapt to the current th
 | `default` | #333 | #C8C8CE | Standard borders |
 | `card-tint` | #FFFFFF | #FFFFFF | Card overlay gradient (stays white in both themes) |
 
+### Light Mode Considerations
+The app supports both dark and light themes. When implementing components:
+
+**Key Differences:**
+| Element | Dark Mode | Light Mode |
+|---------|-----------|------------|
+| `bg-surface` | Dark gray (#1F1F1F) | White (#FFFFFF) |
+| `bg-canvas` | Charcoal (#171717) | Light gray (#E8E8E8) |
+| Gradient opacity | Subtle is fine | Needs `/10` to `/5` for visibility |
+| Border opacity | `/20` works | Use `/30` for better contrast |
+
+**Light Mode Best Practices:**
+1. **Use stronger gradients** - `/10` to `/5` instead of `/5` to `/3`
+2. **Use stronger borders** - `/30` instead of `/20` on colored containers
+3. **Create visual depth** - Alternate `bg-surface` and `bg-canvas` for nested elements
+4. **Test both themes** - Always verify components in Developer Resources → Theme toggle
+
 #### Background Colors
 ```css
 /* Use semantic tokens (theme-aware) */
 bg-page             /* Page background */
-bg-canvas           /* Dropdowns, hover states - provides contrast against page */
-bg-surface          /* Elevated surfaces, cards, inputs */
+bg-canvas           /* Dropdowns, hover states, nested content for depth */
+bg-surface          /* Elevated surfaces, cards, inputs (white in light mode) */
 bg-surface-elevated /* Nested cards, code blocks */
 bg-header-bg        /* Sticky header, footer */
 ```
@@ -87,7 +104,7 @@ turbo-purple: #8B5CF6       /* Developer/technical features */
   → Use: text-fg-muted, bg-fg-muted/20
 
 // Upload/Deployment Services → Red theme
-'upload', 'deploy'
+'upload', 'deploy', 'capture'
   → Use: text-turbo-red, bg-turbo-red/20
 
 // ArNS/Domain Services → Yellow theme
@@ -269,6 +286,22 @@ gap-12 (48px)  /* Page section dividers */
 </div>
 ```
 
+### Border Radius Standards
+```css
+/* Use consistent border radius hierarchy */
+rounded-xl     /* Main panel containers, modals */
+rounded-lg     /* Cards, inputs, buttons, nested containers */
+rounded-md     /* Small buttons, tags */
+rounded        /* Tiny elements, badges */
+rounded-full   /* Avatars, circular indicators, status dots */
+```
+
+**Border Radius Guidelines:**
+- `rounded-xl` - Main gradient containers, modal dialogs
+- `rounded-lg` - Cards inside containers, form inputs, standard buttons
+- `rounded-md` - Tab buttons, small action buttons
+- `rounded-full` - Avatar images, status indicators, pills
+
 ### Layout Components
 
 #### Sticky Header Pattern
@@ -321,7 +354,7 @@ gap-12 (48px)  /* Page section dividers */
   </div>
 
   {/* 2. Main Content Container with Gradient */}
-  <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-xl border border-turbo-red/20 p-4 sm:p-6 mb-4 sm:mb-6">
+  <div className="bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 rounded-xl border border-turbo-red/30 p-4 sm:p-6 mb-4 sm:mb-6">
     {/* Panel content goes here */}
   </div>
 </div>
@@ -334,26 +367,38 @@ Icon: bg-fg-muted/20, text-fg-muted
 Border: border-default
 Background: bg-surface  // White in light mode, dark gray in dark mode
 
-// Upload/Deploy services (upload, deploy)
+// Upload/Deploy/Capture services (upload, deploy, capture)
 Icon: bg-turbo-red/20, text-turbo-red
-Border: border-default  OR  border-turbo-red/20
-Gradient: from-turbo-red/5 to-turbo-red/3
+Border: border-turbo-red/30
+Gradient: from-turbo-red/10 to-turbo-red/5
+Inner cards: bg-surface (white in light mode)
+Nested content: bg-canvas (gray in light mode for depth)
 
 // ArNS/Domain services (domains)
 Icon: bg-turbo-yellow/20, text-turbo-yellow
-Border: border-default  OR  border-turbo-yellow/20
-Gradient: from-turbo-yellow/5 to-turbo-yellow/3
+Border: border-turbo-yellow/30
+Gradient: from-turbo-yellow/10 to-turbo-yellow/5
+Inner cards: bg-surface
 
 // Developer services (developer, gateway-info)
 Icon: bg-turbo-purple/20, text-turbo-purple
-Border: border-default  OR  border-turbo-purple/20
-Gradient: from-turbo-purple/5 to-turbo-purple/3
+Border: border-turbo-purple/30
+Gradient: from-turbo-purple/10 to-turbo-purple/5
 ```
 
-**Border Color Guidelines:**
-- Use `border-default` for neutral, subtle borders (most common)
-- Use `border-{service-color}/20` to emphasize service identity (optional enhancement)
-- Both approaches are valid - choose based on desired visual prominence
+**Gradient Opacity Guidelines (Light Mode Optimized):**
+- Use `/10` to `/5` for gradient backgrounds (visible in light mode)
+- Use `/30` for gradient container borders (good contrast)
+- Use `/20` for inner card borders within gradient containers
+- Always use solid `bg-surface` for cards inside gradient containers
+
+**Visual Hierarchy Pattern:**
+```
+Page (bg-page)
+  └─ Gradient container (from-{color}/10 to-{color}/5, border-{color}/30)
+       └─ Surface card (bg-surface, border-{color}/20) - white in light mode
+            └─ Nested content (bg-canvas) - gray in light mode for depth
+```
 
 ### Card Components
 
@@ -516,12 +561,24 @@ Gradient: from-turbo-purple/5 to-turbo-purple/3
 
 ### Standard Input Field
 ```jsx
+{/* Use bg-surface for better light mode visibility (white background) */}
+<input
+  type="text"
+  className="w-full p-3 rounded-lg border border-default bg-surface text-fg-muted focus:outline-none focus:border-fg-muted transition-colors"
+  placeholder="Enter value"
+/>
+
+{/* Use bg-canvas for inputs inside white surface cards (creates depth) */}
 <input
   type="text"
   className="w-full p-3 rounded-lg border border-default bg-canvas text-fg-muted focus:outline-none focus:border-fg-muted transition-colors"
   placeholder="Enter value"
 />
 ```
+
+**When to use which background:**
+- `bg-surface` - Default for most inputs (white in light mode)
+- `bg-canvas` - Use inside white cards to create visual depth (gray in light mode)
 
 ### Input with Error State
 ```jsx
@@ -1048,6 +1105,6 @@ import FormEntry from './FormEntry';
 
 ---
 
-**Last Updated**: Based on v0.4.5 codebase analysis
+**Last Updated**: Based on v0.10.0 codebase analysis (with light mode support)
 
 For questions or clarifications, refer to existing components in `src/components/panels/` for working examples.
