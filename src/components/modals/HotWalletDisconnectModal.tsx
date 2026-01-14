@@ -28,7 +28,7 @@ export default function HotWalletDisconnectModal({
         <div className="w-[400px] p-6">
           <h2 className="text-xl font-bold text-fg-muted mb-4">Disconnect Temporary Wallet?</h2>
           <p className="text-sm text-link mb-6">
-            You can restore this wallet later using your recovery phrase.
+            You can restore this seedphrase into any Ethereum wallet and log in later.
           </p>
           <div className="flex gap-3">
             <button

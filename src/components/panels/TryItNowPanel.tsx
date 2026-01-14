@@ -25,6 +25,7 @@ import {
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { useStore } from '../../store/useStore';
 import { useFileUpload } from '../../hooks/useFileUpload';
+import { useHotWallet } from '../../hooks/useHotWallet';
 import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { getArweaveUrl } from '../../utils';
@@ -80,6 +81,7 @@ export default function TryItNowPanel() {
   const { address, uploadHistory, isHotWallet, hotWalletSeedExported, addUploadResults } = useStore();
   const freeLimit = useFreeUploadLimit();
   const { uploadFile } = useFileUpload();
+  const { generateHotWallet } = useHotWallet();
   const { uploadStatuses, getStatusColor, getStatusIcon, checkUploadStatus, statusChecking, formatFileSize } = useUploadStatus();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -160,15 +162,24 @@ export default function TryItNowPanel() {
     setIsUploading(true);
 
     try {
+      // Generate hot wallet on first upload if not already connected
+      let currentAddress = address;
+      if (!currentAddress) {
+        currentAddress = await generateHotWallet();
+        if (!currentAddress) {
+          throw new Error('Failed to create wallet');
+        }
+      }
+
       const result = await uploadFile(selectedFile);
 
       // Save to upload history
-      if (result && address) {
+      if (result && currentAddress) {
         // Override owner with current address since SDK returns Arweave-format public key
         // for Ethereum signers, not the Ethereum address
         const resultWithCorrectOwner = {
           ...result,
-          owner: address,
+          owner: currentAddress,
         };
         addUploadResults([resultWithCorrectOwner]);
         setLastUploadedFile({ id: result.id, fileName, dataCaches: result.dataCaches });
@@ -189,7 +200,7 @@ export default function TryItNowPanel() {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, uploadFile, addUploadResults, previewUrl]);
+  }, [selectedFile, uploadFile, addUploadResults, previewUrl, address, generateHotWallet]);
 
   const clearSelection = useCallback(() => {
     if (previewUrl) {
@@ -249,31 +260,6 @@ export default function TryItNowPanel() {
           </div>
         </div>
       </div>
-
-      {/* Temporary Wallet Notice - Only show for hot wallet users who haven't exported */}
-      {isHotWallet && !hotWalletSeedExported && (
-        <div className="bg-surface rounded-lg border border-default p-4 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <Key className="w-5 h-5 text-fg-muted flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-fg-muted">
-                  We created a temporary wallet for you. This gives you cryptographic proof of ownership for anything you upload.
-                </p>
-                <p className="text-xs text-link mt-1">
-                  Save your recovery phrase to keep access, or import it into any Ethereum wallet.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowSeedPhraseModal(true)}
-              className="px-4 py-2 bg-fg-muted text-canvas font-semibold rounded-lg hover:bg-fg-muted/90 transition-colors whitespace-nowrap flex-shrink-0"
-            >
-              Save Recovery Phrase
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Upload Area - Only show if bundler supports free uploads */}
       {freeLimit > 0 ? (
@@ -410,6 +396,31 @@ export default function TryItNowPanel() {
               <p className="text-xs text-link mt-2">
                 Your file is now permanently stored and accessible at this link.
               </p>
+            </div>
+          )}
+
+          {/* Recovery Phrase Notice - Show after first upload for hot wallet users who haven't exported */}
+          {isHotWallet && !hotWalletSeedExported && userUploads.length > 0 && (
+            <div className="mt-4 bg-surface rounded-lg border border-default p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <Key className="w-5 h-5 text-fg-muted flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-fg-muted">
+                      We created a wallet for you. This gives you cryptographic proof of ownership.
+                    </p>
+                    <p className="text-xs text-link mt-1">
+                      Save your recovery phrase to keep access, or import it into any Ethereum wallet.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSeedPhraseModal(true)}
+                  className="px-4 py-2 bg-fg-muted text-canvas font-semibold rounded-lg hover:bg-fg-muted/90 transition-colors whitespace-nowrap flex-shrink-0"
+                >
+                  Save Recovery Phrase
+                </button>
+              </div>
             </div>
           )}
 
