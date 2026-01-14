@@ -110,7 +110,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
       </div>
 
       {/* Main Content Container with Gradient */}
-      <div className="bg-gradient-to-br from-turbo-purple/5 to-turbo-purple/3 rounded-xl border border-default p-4 sm:p-6 mb-4 sm:mb-6">
+      <div className="bg-gradient-to-br from-turbo-purple/10 to-turbo-purple/5 rounded-xl border border-turbo-purple/30 p-4 sm:p-6 mb-4 sm:mb-6">
 
       {/* Tab Navigation */}
       <div className="flex gap-2 sm:gap-4 mb-4 sm:mb-6 border-b border-default overflow-x-auto scrollbar-hide">

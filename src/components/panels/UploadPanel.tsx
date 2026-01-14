@@ -720,7 +720,7 @@ export default function UploadPanel() {
 
       {/* Main Content Container with Gradient - Hide during upload */}
       {!uploading && (
-        <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-xl border border-turbo-red/20 p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 rounded-xl border border-turbo-red/30 p-4 sm:p-6 mb-4 sm:mb-6">
           {/* Upload Area - Show when no files selected */}
           {files.length === 0 && (
             <div
@@ -903,7 +903,7 @@ export default function UploadPanel() {
 
       {/* Upload Results - Activity theme */}
       {uploadHistory.length > 0 && (
-        <div className="mt-4 sm:mt-6 bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-xl border border-turbo-red/20">
+        <div className="mt-4 sm:mt-6 bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 rounded-xl border border-turbo-red/30">
           {/* Collapsible Header with Actions */}
           <div className={`flex items-center justify-between p-4 ${showUploadResults ? 'pb-0 mb-4' : 'pb-4'}`}>
             <button

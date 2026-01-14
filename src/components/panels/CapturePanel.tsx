@@ -476,7 +476,7 @@ export default function CapturePanel() {
 
       {/* Main Content Container - Hide during upload */}
       {!uploading && (
-        <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-xl border border-turbo-red/20 p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 rounded-xl border border-turbo-red/30 p-4 sm:p-6 mb-4 sm:mb-6">
           {/* URL Input */}
           <div className="mb-4">
             <label htmlFor="url-input" className="block text-sm font-medium text-fg-muted mb-2">
@@ -546,9 +546,9 @@ export default function CapturePanel() {
 
       {/* ArNS Update Progress */}
       {isUpdatingArNS && (
-        <div className="mt-4 bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 rounded-xl border border-yellow-500/20 p-4">
+        <div className="mt-4 bg-gradient-to-br from-turbo-yellow/10 to-turbo-yellow/5 rounded-xl border border-turbo-yellow/30 p-4">
           <div className="flex items-center gap-3">
-            <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />
+            <RefreshCw className="w-5 h-5 text-turbo-yellow animate-spin" />
             <div>
               <div className="text-sm font-medium text-fg-muted">Updating ArNS Record</div>
               <div className="text-xs text-link">
@@ -561,7 +561,7 @@ export default function CapturePanel() {
 
       {/* Upload Results - Filter to show only Turbo-Capture items or all */}
       {uploadHistory.length > 0 && (
-        <div className="mt-4 sm:mt-6 bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-xl border border-turbo-red/20">
+        <div className="mt-4 sm:mt-6 bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 rounded-xl border border-turbo-red/30">
           {/* Collapsible Header with Actions */}
           <div className={`flex items-center justify-between p-4 ${showUploadResults ? 'pb-0 mb-4' : 'pb-4'}`}>
             <button

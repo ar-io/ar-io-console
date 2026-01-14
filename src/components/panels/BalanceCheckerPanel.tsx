@@ -460,9 +460,9 @@ export default function BalanceCheckerPanel() {
           {/* Balance Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Credits Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 border border-fg-muted/20">
+            <div className="p-4 rounded-lg bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 border border-turbo-red/30">
               <div className="flex items-center gap-2 mb-3">
-                <Coins className="w-5 h-5 text-fg-muted" />
+                <Coins className="w-5 h-5 text-turbo-red" />
                 <span className="font-medium text-fg-muted">Credits</span>
               </div>
               
@@ -494,7 +494,7 @@ export default function BalanceCheckerPanel() {
             </div>
 
             {/* Storage Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-br from-turbo-blue/10 to-turbo-blue/5 border border-turbo-blue/20">
+            <div className="p-4 rounded-lg bg-gradient-to-br from-turbo-blue/10 to-turbo-blue/5 border border-turbo-blue/30">
               <div className="flex items-center gap-2 mb-3">
                 <HardDrive className="w-5 h-5 text-turbo-blue" />
                 <span className="font-medium text-fg-muted">Storage</span>
@@ -510,9 +510,9 @@ export default function BalanceCheckerPanel() {
             </div>
 
             {/* Shared Out Credits Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20">
+            <div className="p-4 rounded-lg bg-gradient-to-br from-turbo-purple/10 to-turbo-purple/5 border border-turbo-purple/30">
               <div className="flex items-center gap-2 mb-3">
-                <Share2 className="w-5 h-5 text-purple-500" />
+                <Share2 className="w-5 h-5 text-turbo-purple" />
                 <span className="font-medium text-fg-muted">Credits Shared</span>
               </div>
               
@@ -533,9 +533,9 @@ export default function BalanceCheckerPanel() {
             </div>
 
             {/* Credits Available from Others Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20">
+            <div className="p-4 rounded-lg bg-gradient-to-br from-turbo-green/10 to-turbo-green/5 border border-turbo-green/30">
               <div className="flex items-center gap-2 mb-3">
-                <ArrowDown className="w-5 h-5 text-green-500" />
+                <ArrowDown className="w-5 h-5 text-turbo-green" />
                 <span className="font-medium text-fg-muted">Credits Available</span>
               </div>
               
