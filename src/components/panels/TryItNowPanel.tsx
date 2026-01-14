@@ -298,7 +298,7 @@ export default function TryItNowPanel() {
                   Drop a file here or click to browse
                 </p>
                 <p className="text-sm text-link">
-                  Files under {formatFreeLimit(freeLimit)} are <span className="text-turbo-green font-semibold">FREE</span>
+                  Max file size: <span className="text-fg-muted font-medium">{formatFreeLimit(freeLimit)}</span>
                 </p>
               </div>
               <input
