@@ -183,8 +183,8 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                 {copiedCode === 'install' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
-            <div className="bg-canvas rounded-lg p-4 border border-default">
-              <pre className="text-xs overflow-x-auto font-mono text-fg-muted">
+            <div className="bg-black rounded-lg p-4 border border-default">
+              <pre className="text-xs overflow-x-auto font-mono text-gray-100">
                 <code>{codeExamples.install}</code>
               </pre>
             </div>
@@ -200,8 +200,8 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                 {copiedCode === 'quickstart' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
-            <div className="bg-canvas rounded-lg p-4 border border-default">
-              <pre className="text-xs overflow-x-auto font-mono text-fg-muted">
+            <div className="bg-black rounded-lg p-4 border border-default">
+              <pre className="text-xs overflow-x-auto font-mono text-gray-100">
                 <code>{codeExamples.quickStart}</code>
               </pre>
             </div>
@@ -217,8 +217,8 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                 {copiedCode === 'topup' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
-            <div className="bg-canvas rounded-lg p-4 border border-default">
-              <pre className="text-xs overflow-x-auto font-mono text-fg-muted">
+            <div className="bg-black rounded-lg p-4 border border-default">
+              <pre className="text-xs overflow-x-auto font-mono text-gray-100">
                 <code>{codeExamples.topUp}</code>
               </pre>
             </div>
@@ -234,8 +234,8 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                 {copiedCode === 'folder' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
-            <div className="bg-canvas rounded-lg p-4 border border-default">
-              <pre className="text-xs overflow-x-auto font-mono text-fg-muted">
+            <div className="bg-black rounded-lg p-4 border border-default">
+              <pre className="text-xs overflow-x-auto font-mono text-gray-100">
                 <code>{codeExamples.folder}</code>
               </pre>
             </div>
@@ -522,7 +522,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-black rounded-lg text-sm text-gray-100 font-mono">
                       {currentConfig.paymentServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.paymentServiceUrl} />
@@ -574,7 +574,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-black rounded-lg text-sm text-gray-100 font-mono">
                       {currentConfig.uploadServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.uploadServiceUrl} />
@@ -594,7 +594,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-black rounded-lg text-sm text-gray-100 font-mono">
                       {currentConfig.captureServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.captureServiceUrl} />
@@ -614,7 +614,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-black rounded-lg text-sm text-gray-100 font-mono">
                       {currentConfig.arioGatewayUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.arioGatewayUrl} />
@@ -634,7 +634,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono">
+                    <code className="flex-1 px-3 py-2 bg-black rounded-lg text-sm text-gray-100 font-mono">
                       {currentConfig.stripeKey.substring(0, 20)}...{currentConfig.stripeKey.substring(currentConfig.stripeKey.length - 4)}
                     </code>
                     <CopyButton textToCopy={currentConfig.stripeKey} />
@@ -654,7 +654,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-canvas rounded-lg text-sm text-fg-muted font-mono break-all overflow-hidden">
+                    <code className="flex-1 px-3 py-2 bg-black rounded-lg text-sm text-gray-100 font-mono break-all overflow-hidden">
                       {currentConfig.processId}
                     </code>
                     <CopyButton textToCopy={currentConfig.processId} />
@@ -681,7 +681,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
                       />
                     ) : (
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 px-2 py-1 bg-canvas rounded text-xs text-fg-muted font-mono truncate">
+                        <code className="flex-1 px-2 py-1 bg-black rounded text-xs text-gray-100 font-mono truncate">
                           {url}
                         </code>
                         <CopyButton textToCopy={url} />

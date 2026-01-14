@@ -149,9 +149,9 @@ export function HomePage() {
           <Terminal className="w-8 h-8 text-turbo-purple mt-1" />
           <div className="flex-1">
             <h3 className="text-lg font-semibold mb-2 text-fg-muted">Quick Start for Developers</h3>
-            <div className="bg-canvas rounded p-3 border border-default">
-              <div className="text-link text-xs mb-2"># Install the SDK</div>
-              <div className="font-mono text-fg-muted">npm install @ardrive/turbo-sdk</div>
+            <div className="bg-black rounded p-3 border border-default">
+              <div className="text-gray-400 text-xs mb-2"># Install the SDK</div>
+              <div className="font-mono text-gray-100">npm install @ardrive/turbo-sdk</div>
             </div>
             <div className="mt-4 flex gap-4">
               <Link to="/developer" className="text-turbo-purple hover:underline">
