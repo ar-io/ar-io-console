@@ -424,13 +424,7 @@ const LandingPage = () => {
 
           <button
             className="rounded-lg border border-default px-8 py-4 font-medium flex items-center gap-2 hover:bg-surface hover:border-fg-muted transition-all group"
-            onClick={() => {
-              if (loggedIn) {
-                navigate('/upload');
-              } else {
-                setShowWalletModal(true);
-              }
-            }}
+            onClick={() => navigate(loggedIn ? '/upload' : '/try')}
           >
             <Upload className="w-5 h-5" />
             <span>Try it Out</span>

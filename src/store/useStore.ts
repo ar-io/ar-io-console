@@ -129,10 +129,6 @@ interface StoreState {
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
   creditBalance: number;
 
-  // Hot wallet state (for Try It Out feature)
-  isHotWallet: boolean;
-  hotWalletSeedExported: boolean;
-  
   // ArNS state
   arnsNamesCache: Record<string, { name: string; logo?: string; timestamp: number }>;
   ownedArnsCache: Record<string, { names: Array<{name: string; processId: string; currentTarget?: string; undernames?: string[]; ttl?: number; undernameTTLs?: Record<string, number>}>; timestamp: number }>;
@@ -282,10 +278,6 @@ interface StoreState {
   getDeployedApp: (appName: string) => DeployedAppEntry | null;
   getRecentAppNames: (limit?: number) => string[];
   getLastDeployedApp: () => { appName: string; appVersion: string } | null;
-
-  // Hot wallet actions
-  setIsHotWallet: (isHot: boolean) => void;
-  setHotWalletSeedExported: (exported: boolean) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -295,10 +287,6 @@ export const useStore = create<StoreState>()(
       address: null,
       walletType: null,
       creditBalance: 0,
-
-      // Hot wallet state
-      isHotWallet: false,
-      hotWalletSeedExported: false,
 
       arnsNamesCache: {},
       ownedArnsCache: {},
@@ -357,7 +345,7 @@ export const useStore = create<StoreState>()(
       jitBufferMultiplier: 1.1, // Default 10% buffer
       // Actions
       setAddress: (address, type) => set({ address, walletType: type }),
-      clearAddress: () => set({ address: null, walletType: null, creditBalance: 0, arnsNamesCache: {}, ownedArnsCache: {}, isHotWallet: false, hotWalletSeedExported: false }),
+      clearAddress: () => set({ address: null, walletType: null, creditBalance: 0, arnsNamesCache: {}, ownedArnsCache: {} }),
       setCreditBalance: (balance) => set({ creditBalance: balance }),
       setArNSName: (address, name, logo) => {
         const cache = get().arnsNamesCache;
@@ -618,42 +606,12 @@ export const useStore = create<StoreState>()(
         if (!app) return null;
         return { appName: lastDeployedAppName, appVersion: app.appVersion };
       },
-
-      // Hot wallet actions
-      setIsHotWallet: (isHot) => set({ isHotWallet: isHot }),
-      setHotWalletSeedExported: (exported) => set({ hotWalletSeedExported: exported }),
     }),
     {
       name: 'turbo-gateway-store',
-      // Restore hot wallet state after rehydration
-      // Check if encrypted hot wallet data exists in localStorage and sync flags
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          const hotWalletData = localStorage.getItem('turbo-hot-wallet');
-          if (hotWalletData) {
-            // Hot wallet exists - ensure flags are set
-            try {
-              const parsed = JSON.parse(hotWalletData);
-              state.isHotWallet = true;
-              state.hotWalletSeedExported = parsed.seedExported || false;
-            } catch {
-              // Corrupted data - clear it
-              localStorage.removeItem('turbo-hot-wallet');
-              state.isHotWallet = false;
-              state.hotWalletSeedExported = false;
-            }
-          } else {
-            // No hot wallet - ensure flags are cleared
-            state.isHotWallet = false;
-            state.hotWalletSeedExported = false;
-          }
-        }
-      },
       partialize: (state) => ({
         address: state.address,
         walletType: state.walletType,
-        // Note: isHotWallet and hotWalletSeedExported are NOT persisted here
-        // They are derived from the hot wallet localStorage entry in onRehydrateStorage
         arnsNamesCache: state.arnsNamesCache,
         ownedArnsCache: state.ownedArnsCache,
         uploadHistory: state.uploadHistory,

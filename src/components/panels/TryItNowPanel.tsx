@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   Upload,
   AlertCircle,
@@ -13,7 +13,6 @@ import {
   FileVideo,
   FileAudio,
   File,
-  Key,
   BookOpen,
   Code,
   ArrowRight,
@@ -21,17 +20,17 @@ import {
   MoreVertical,
   Copy,
   CheckCircle,
+  Mail,
 } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
+import { usePrivy, useLogin, useWallets, useCreateWallet } from '@privy-io/react-auth';
 import { useStore } from '../../store/useStore';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { useHotWallet } from '../../hooks/useHotWallet';
 import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
-import { getArweaveUrl } from '../../utils';
+import { getArweaveUrl, resolveEthereumAddress, getTurboBalance } from '../../utils';
 import CopyButton from '../CopyButton';
 import ReceiptModal from '../modals/ReceiptModal';
-import SeedPhraseModal from '../modals/SeedPhraseModal';
 
 // Get appropriate icon for file type (returns component class)
 function getFileIconClass(type: string) {
@@ -78,11 +77,15 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
 };
 
 export default function TryItNowPanel() {
-  const { address, uploadHistory, isHotWallet, hotWalletSeedExported, addUploadResults } = useStore();
+  const { address, uploadHistory, addUploadResults, setAddress } = useStore();
   const freeLimit = useFreeUploadLimit();
   const { uploadFile } = useFileUpload();
-  const { generateHotWallet } = useHotWallet();
   const { uploadStatuses, getStatusColor, getStatusIcon, checkUploadStatus, statusChecking, formatFileSize } = useUploadStatus();
+
+  // Privy hooks
+  const { authenticated, ready } = usePrivy();
+  const { wallets: privyWallets } = useWallets();
+  const { createWallet } = useCreateWallet();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -92,9 +95,80 @@ export default function TryItNowPanel() {
   const [isUploading, setIsUploading] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showAllUploads, setShowAllUploads] = useState(false);
-  const [showSeedPhraseModal, setShowSeedPhraseModal] = useState(false);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
   const [lastUploadedFile, setLastUploadedFile] = useState<{ id: string; fileName: string; dataCaches?: string[] } | null>(null);
+  const [waitingForWallet, setWaitingForWallet] = useState(false);
+  const [loginInProgress, setLoginInProgress] = useState(false);
+
+  // Track if we should upload after login completes
+  const pendingUploadRef = useRef(false);
+
+  // Helper function to resolve and set Ethereum address
+  const setEthereumAddress = async (rawAddress: string) => {
+    try {
+      const resolvedAddress = await resolveEthereumAddress(rawAddress, getTurboBalance);
+      setAddress(resolvedAddress, 'ethereum');
+      return resolvedAddress;
+    } catch (error) {
+      console.error('[TryItNow] Error resolving Ethereum address:', error);
+      setAddress(rawAddress, 'ethereum');
+      return rawAddress;
+    }
+  };
+
+  // Privy login handler
+  const { login } = useLogin({
+    onComplete: async ({ user }) => {
+      setLoginInProgress(false);
+
+      // Check if user already has a wallet
+      const existingWallet = user?.linkedAccounts?.find(
+        account => account.type === 'wallet'
+      );
+
+      if (existingWallet) {
+        await setEthereumAddress(existingWallet.address);
+      } else {
+        // Create embedded wallet
+        setWaitingForWallet(true);
+        try {
+          const newWallet = await createWallet();
+          if (newWallet) {
+            await setEthereumAddress(newWallet.address);
+            setWaitingForWallet(false);
+          }
+        } catch (err) {
+          console.error('[TryItNow] Failed to create wallet:', err);
+          setWaitingForWallet(false);
+          setError('Failed to create wallet. Please try again.');
+          pendingUploadRef.current = false;
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('[TryItNow] Login error:', error);
+      setLoginInProgress(false);
+      setError('Login failed. Please try again.');
+      pendingUploadRef.current = false;
+    }
+  });
+
+  // Watch for wallet to become available after login
+  useEffect(() => {
+    if (waitingForWallet && privyWallets && privyWallets.length > 0) {
+      const privyWallet = privyWallets.find(w =>
+        w.walletClientType === 'privy' ||
+        w.walletClientType === 'embedded' ||
+        !w.imported
+      );
+
+      if (privyWallet) {
+        setEthereumAddress(privyWallet.address).then(() => {
+          setWaitingForWallet(false);
+        });
+      }
+    }
+  }, [privyWallets, waitingForWallet]);
 
   // Check if file is previewable (image)
   const isPreviewable = useMemo(() => {
@@ -153,8 +227,9 @@ export default function TryItNowPanel() {
     [handleFileSelect]
   );
 
-  const handleUpload = useCallback(async () => {
-    if (!selectedFile) return;
+  // The actual upload logic
+  const executeUpload = useCallback(async () => {
+    if (!selectedFile || !address) return;
 
     const fileName = selectedFile.name;
     setError(null);
@@ -162,24 +237,13 @@ export default function TryItNowPanel() {
     setIsUploading(true);
 
     try {
-      // Generate hot wallet on first upload if not already connected
-      let currentAddress = address;
-      if (!currentAddress) {
-        currentAddress = await generateHotWallet();
-        if (!currentAddress) {
-          throw new Error('Failed to create wallet');
-        }
-      }
-
       const result = await uploadFile(selectedFile);
 
       // Save to upload history
-      if (result && currentAddress) {
-        // Override owner with current address since SDK returns Arweave-format public key
-        // for Ethereum signers, not the Ethereum address
+      if (result) {
         const resultWithCorrectOwner = {
           ...result,
-          owner: currentAddress,
+          owner: address,
         };
         addUploadResults([resultWithCorrectOwner]);
         setLastUploadedFile({ id: result.id, fileName, dataCaches: result.dataCaches });
@@ -193,14 +257,41 @@ export default function TryItNowPanel() {
       }
       setSelectedFile(null);
 
-      // Trigger balance refresh (though free uploads won't change balance)
+      // Trigger balance refresh
       window.dispatchEvent(new CustomEvent('refresh-balance'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, uploadFile, addUploadResults, previewUrl, address, generateHotWallet]);
+  }, [selectedFile, uploadFile, addUploadResults, previewUrl, address]);
+
+  // Execute upload when address becomes available after login
+  useEffect(() => {
+    if (pendingUploadRef.current && address && selectedFile && !isUploading && !waitingForWallet) {
+      pendingUploadRef.current = false;
+      executeUpload();
+    }
+  }, [address, waitingForWallet, selectedFile, isUploading, executeUpload]);
+
+  // Handle upload button click
+  const handleUpload = useCallback(async () => {
+    if (!selectedFile) return;
+
+    setError(null);
+    setSuccessMessage(null);
+
+    // If already logged in, upload directly
+    if (address) {
+      await executeUpload();
+      return;
+    }
+
+    // Not logged in - trigger Privy login
+    pendingUploadRef.current = true;
+    setLoginInProgress(true);
+    login();
+  }, [selectedFile, address, executeUpload, login]);
 
   const clearSelection = useCallback(() => {
     if (previewUrl) {
@@ -211,8 +302,7 @@ export default function TryItNowPanel() {
     setError(null);
   }, [previewUrl]);
 
-  // Filter upload history for this address (hot wallet)
-  // Use case-insensitive comparison for Ethereum addresses
+  // Filter upload history for this address
   const userUploads = uploadHistory.filter(
     (u) => u.owner?.toLowerCase() === address?.toLowerCase()
   );
@@ -220,6 +310,9 @@ export default function TryItNowPanel() {
   const displayUploads = showAllUploads ? userUploads : recentUploads;
 
   const FileIcon = selectedFile ? getFileIconClass(selectedFile.type) : File;
+
+  const isLoading = isUploading || loginInProgress || waitingForWallet;
+  const loadingText = loginInProgress ? 'Signing in...' : waitingForWallet ? 'Creating wallet...' : 'Uploading...';
 
   return (
     <div className="px-4 sm:px-6">
@@ -263,7 +356,7 @@ export default function TryItNowPanel() {
 
       {/* Upload Area - Only show if bundler supports free uploads */}
       {freeLimit > 0 ? (
-        <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-xl border border-turbo-red/20 p-6 mb-6">
+        <div className="bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 rounded-xl border border-turbo-red/30 p-6 mb-6">
           {!selectedFile ? (
             <div
               onDragOver={(e) => {
@@ -342,16 +435,16 @@ export default function TryItNowPanel() {
               </div>
             </div>
 
-            {/* Upload Button - RED */}
+            {/* Upload Button - Shows email sign-in hint if not logged in */}
             <button
               onClick={handleUpload}
-              disabled={isUploading}
+              disabled={isLoading}
               className="w-full py-4 px-6 rounded-lg bg-turbo-red text-white font-bold text-lg hover:bg-turbo-red/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isUploading ? (
+              {isLoading ? (
                 <>
                   <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                  Uploading...
+                  {loadingText}
                 </>
               ) : (
                 <>
@@ -360,6 +453,14 @@ export default function TryItNowPanel() {
                 </>
               )}
             </button>
+
+            {/* Sign-in hint for non-authenticated users */}
+            {!address && !isLoading && (
+              <div className="flex items-center justify-center gap-2 text-sm text-link">
+                <Mail className="w-4 h-4" />
+                <span>You'll sign in with email to complete the upload</span>
+              </div>
+            )}
 
             {/* Reminder about permanence and terms */}
             <p className="text-xs text-center text-link">
@@ -379,8 +480,8 @@ export default function TryItNowPanel() {
 
           {/* Success Message */}
           {successMessage && lastUploadedFile && (
-            <div className="mt-4 bg-turbo-green/10 border border-turbo-green/20 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-turbo-green text-sm mb-3">
+            <div className="mt-4 bg-turbo-green/10 border border-turbo-green/20 rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-turbo-green text-sm mb-3">
                 <CheckCircle className="w-5 h-5 flex-shrink-0" />
                 <span className="font-medium">{successMessage}</span>
               </div>
@@ -393,34 +494,9 @@ export default function TryItNowPanel() {
                 <ExternalLink className="w-4 h-4" />
                 View Your File
               </a>
-              <p className="text-xs text-link mt-2">
+              <p className="text-xs text-link mt-3">
                 Your file is now permanently stored and accessible at this link.
               </p>
-            </div>
-          )}
-
-          {/* Recovery Phrase Notice - Show after first upload for hot wallet users who haven't exported */}
-          {isHotWallet && !hotWalletSeedExported && userUploads.length > 0 && (
-            <div className="mt-4 bg-surface rounded-lg border border-default p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <Key className="w-5 h-5 text-fg-muted flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-fg-muted">
-                      We created a wallet for you. This gives you cryptographic proof of ownership.
-                    </p>
-                    <p className="text-xs text-link mt-1">
-                      Save your recovery phrase to keep access, or import it into any Ethereum wallet.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowSeedPhraseModal(true)}
-                  className="px-4 py-2 bg-fg-muted text-canvas font-semibold rounded-lg hover:bg-fg-muted/90 transition-colors whitespace-nowrap flex-shrink-0"
-                >
-                  Save Recovery Phrase
-                </button>
-              </div>
             </div>
           )}
 
@@ -468,7 +544,7 @@ export default function TryItNowPanel() {
           </div>
 
           {/* Upload List */}
-          <div className="space-y-4 max-h-80 overflow-y-auto px-4 pb-4">
+          <div className="space-y-4 max-h-80 overflow-y-auto p-4">
             {displayUploads.map((upload, index) => {
               const status = uploadStatuses[upload.id];
               const isChecking = statusChecking[upload.id];
@@ -679,11 +755,6 @@ export default function TryItNowPanel() {
           uploadId={showReceiptModal}
           initialStatus={uploadStatuses[showReceiptModal]}
         />
-      )}
-
-      {/* Seed Phrase Modal */}
-      {showSeedPhraseModal && (
-        <SeedPhraseModal onClose={() => setShowSeedPhraseModal(false)} />
       )}
     </div>
   );

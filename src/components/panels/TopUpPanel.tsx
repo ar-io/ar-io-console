@@ -4,7 +4,7 @@ import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
 import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, tokenNetworkLabels, tokenNetworkDescriptions, SupportedTokenType } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Loader2, Lock, CreditCard, DollarSign, Wallet, Info, Shield, AlertCircle, HardDrive, ChevronDown, Check, CheckCircle, MapPin, AlertTriangle, Key } from 'lucide-react';
+import { Loader2, Lock, CreditCard, DollarSign, Wallet, Info, Shield, AlertCircle, HardDrive, ChevronDown, Check, CheckCircle, MapPin, AlertTriangle } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
 import { useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
 import CryptoConfirmationPanel from './crypto/CryptoConfirmationPanel';
@@ -15,7 +15,6 @@ import PaymentSuccessPanel from './fiat/PaymentSuccessPanel';
 import { getPaymentIntent } from '../../services/paymentService';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import WalletSelectionModal from '../modals/WalletSelectionModal';
-import SeedPhraseModal from '../modals/SeedPhraseModal';
 import { getTurboBalance } from '../../utils';
 
 
@@ -31,8 +30,6 @@ export default function TopUpPanel() {
     paymentTargetType,
     setPaymentTarget,
     clearPaymentTarget,
-    isHotWallet,
-    hotWalletSeedExported,
   } = useStore();
   
   const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>('fiat');
@@ -62,7 +59,6 @@ export default function TopUpPanel() {
 
   // Wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [showSeedPhraseModal, setShowSeedPhraseModal] = useState(false);
 
   // Payment flow state
   const [fiatFlowStep, setFiatFlowStep] = useState<'amount' | 'details' | 'confirmation' | 'success'>('amount');
@@ -544,32 +540,6 @@ export default function TopUpPanel() {
           <p className="text-sm text-link">Purchase credits for permanent storage and domains on Arweave</p>
         </div>
       </div>
-
-      {/* Temporary Wallet Section - Only show if seed not yet exported */}
-      {isHotWallet && !hotWalletSeedExported && (
-        <div className="mb-6 rounded-xl border border-default bg-surface p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-fg-muted/20">
-                <Shield className="w-5 h-5 text-fg-muted" />
-              </div>
-              <div>
-                <h3 className="font-bold text-fg-muted mb-1">Temporary Wallet</h3>
-                <p className="text-sm text-link">
-                  You're using a temporary wallet. Save your recovery phrase to keep permanent access to your uploads and cryptographic proof of ownership.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowSeedPhraseModal(true)}
-              className="px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-2 bg-fg-muted text-canvas hover:bg-fg-muted/90"
-            >
-              <Key className="w-4 h-4" />
-              Save Recovery Phrase
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Main Content Container with Gradient */}
       <div className="bg-surface rounded-xl border border-default p-4 sm:p-6 mb-4 sm:mb-6">
@@ -1740,11 +1710,6 @@ export default function TopUpPanel() {
           onClose={() => setShowWalletModal(false)}
         />
       )}
-
-      {showSeedPhraseModal && (
-        <SeedPhraseModal onClose={() => setShowSeedPhraseModal(false)} />
-      )}
-
     </div>
   );
 }

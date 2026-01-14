@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useFreeUploadLimit } from './hooks/useFreeUploadLimit';
-import { useHotWalletWarning } from './hooks/useHotWalletWarning';
 import { useTheme } from './hooks/useTheme';
 import LandingPage from './pages/LandingPage';
 import TopUpPage from './pages/TopUpPage';
@@ -55,9 +54,6 @@ function AppRoutes() {
 
   // Initialize bundler's free upload limit on app startup
   useFreeUploadLimit();
-
-  // Show browser warning if hot wallet user tries to leave without saving seed phrase
-  useHotWalletWarning();
 
   // Apply theme class to document based on user preference
   useTheme();

@@ -1,38 +1,34 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { useHotWallet } from '../hooks/useHotWallet';
 import TryItNowPanel from '../components/panels/TryItNowPanel';
 
 /**
  * Try It Out Page
  *
  * Allows users to upload files without connecting a wallet.
- * Hot wallet is generated on-demand when user clicks upload.
+ * Uses Privy email login when user clicks upload.
  *
  * Behavior:
- * - If user has real wallet connected: Redirect to /upload
- * - If user has existing hot wallet: Restore it (to show upload history)
- * - If user has no wallet: Show upload UI, generate wallet on first upload
+ * - If user has wallet connected: Redirect to /upload
+ * - If user has no wallet: Show upload UI, prompt Privy login on upload
  */
 export default function TryItNowPage() {
   const navigate = useNavigate();
-  const { address, walletType, isHotWallet } = useStore();
-  const { restoreHotWallet, hasStoredHotWallet } = useHotWallet();
+  const { address, walletType } = useStore();
 
   useEffect(() => {
-    // If user has a real wallet connected (not hot wallet), redirect to regular upload
-    if (address && walletType && !isHotWallet && !hasStoredHotWallet()) {
+    // If user has a wallet connected via external wallet (not Privy email), redirect to regular upload
+    // Privy email users can stay here since they came through the Try It Out flow
+    if (address && walletType === 'arweave') {
       navigate('/upload');
       return;
     }
-
-    // Only restore existing hot wallet - don't generate new one
-    // New wallet will be generated on-demand when user clicks upload
-    if (hasStoredHotWallet() && !isHotWallet) {
-      restoreHotWallet();
+    if (address && walletType === 'solana') {
+      navigate('/upload');
+      return;
     }
-  }, [address, walletType, isHotWallet, restoreHotWallet, hasStoredHotWallet, navigate]);
+  }, [address, walletType, navigate]);
 
   return (
     <div className="pt-6 sm:pt-8 pb-3 sm:pb-4">

@@ -14,7 +14,6 @@ import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
 import { useFreeUploadLimit } from './useFreeUploadLimit';
 import { getContentType } from '../utils/mimeTypes';
-import { getHotWalletSigner, isHotWalletActive } from './useHotWallet';
 
 interface UploadResult {
   id: string;
@@ -97,14 +96,7 @@ export function useFileUpload() {
 
   // Validate wallet state to prevent cross-wallet conflicts
   const validateWalletState = useCallback((): void => {
-    console.log('[useFileUpload] validateWalletState:', { address, walletType, isHotWalletActive: isHotWalletActive() });
-
-    // Hot wallet check first - if active, signer is cached and ready
-    // This handles the case where generateHotWallet() was just called but
-    // the hook's closure values (address/walletType) haven't updated yet
-    if (isHotWalletActive()) {
-      return; // Hot wallet is ready, no further validation needed
-    }
+    console.log('[useFileUpload] validateWalletState:', { address, walletType });
 
     if (!address || !walletType) {
       throw new Error('Wallet not connected');
@@ -126,10 +118,9 @@ export function useFileUpload() {
         }
         break;
       case 'ethereum':
-        // For Ethereum, check multiple sources: Privy, RainbowKit/Wagmi, direct window.ethereum, or hot wallet
+        // For Ethereum, check multiple sources: Privy, RainbowKit/Wagmi, direct window.ethereum
         // WalletConnect and other remote wallets won't have window.ethereum
-        // Hot wallets are locally generated and have a cached signer
-        if (!hasPrivyWallet && !ethAccount.isConnected && !window.ethereum && !isHotWalletActive()) {
+        if (!hasPrivyWallet && !ethAccount.isConnected && !window.ethereum) {
           throw new Error('Ethereum wallet not connected. Please reconnect your wallet.');
         }
         break;
@@ -146,7 +137,7 @@ export function useFileUpload() {
 
   // Create Turbo client with proper walletAdapter based on wallet type
   const createTurboClient = useCallback(async (tokenTypeOverride?: string): Promise<TurboAuthenticatedClient> => {
-    console.log('[useFileUpload] Creating Turbo client...', { walletType, tokenTypeOverride, isHotWalletActive: isHotWalletActive() });
+    console.log('[useFileUpload] Creating Turbo client...', { walletType, tokenTypeOverride });
     // Validate wallet state first
     validateWalletState();
 
@@ -156,22 +147,6 @@ export function useFileUpload() {
       uploadServiceConfig: { url: config.uploadServiceUrl },
       processId: config.processId,
     };
-
-    // Hot wallet check FIRST - handles case where walletType closure hasn't updated yet
-    if (isHotWalletActive()) {
-      const hotWalletSigner = getHotWalletSigner();
-      if (!hotWalletSigner) {
-        throw new Error('Hot wallet signer not available');
-      }
-
-      const hotWalletClient = TurboFactory.authenticated({
-        signer: hotWalletSigner,
-        token: 'ethereum',
-        ...turboConfig,
-      });
-
-      return hotWalletClient;
-    }
 
     // Get turbo config based on the token type (use override if provided, otherwise use wallet type)
     const effectiveTokenType = tokenTypeOverride || walletType;
@@ -185,7 +160,7 @@ export function useFileUpload() {
       return turboClientCache.current.client;
     }
 
-    // Add gateway URL for non-hot-wallet cases
+    // Add gateway URL
     const fullTurboConfig = {
       ...turboConfig,
       ...(effectiveTokenType && config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap]
@@ -244,8 +219,7 @@ export function useFileUpload() {
         return arweaveClient;
 
       case 'ethereum':
-        // Regular Ethereum wallet (Privy, RainbowKit, etc.)
-        // Note: Hot wallet is handled above before the switch statement
+        // Ethereum wallet (Privy, RainbowKit, etc.)
         const ethereumClient = await createEthereumTurboClient(tokenTypeOverride || 'ethereum');
 
         // Also cache in local ref for consistency with other wallet types
@@ -296,8 +270,7 @@ export function useFileUpload() {
       selectedJitToken?: SupportedTokenType; // Selected JIT payment token
     }
   ) => {
-    // Allow hot wallet even if address closure hasn't updated yet
-    if (!address && !isHotWalletActive()) {
+    if (!address) {
       throw new Error('Wallet not connected');
     }
 

@@ -6,7 +6,6 @@ import { useWallets } from '@privy-io/react-auth';
 import { useAccount, useConfig } from 'wagmi';
 import { getConnectorClient, switchChain } from 'wagmi/actions';
 import { useStore } from '../store/useStore';
-import { getHotWalletSigner } from './useHotWallet';
 
 // Custom connect message for Ethereum wallet uploads (instead of SDK's generic message)
 const ETHEREUM_CONNECT_MESSAGE = 'Sign this message to connect to Turbo Gateway';
@@ -190,21 +189,6 @@ export function useEthereumTurboClient() {
       const config = getCurrentConfig();
       const configKey = `${config.paymentServiceUrl}|${config.uploadServiceUrl}`;
       const clientCacheKey = `${configKey}|${tokenType}`;
-
-      // Check for hot wallet first - if active, use the hot wallet signer
-      const isHotWallet = useStore.getState().isHotWallet;
-      if (isHotWallet) {
-        const hotSigner = getHotWalletSigner();
-        if (hotSigner) {
-          // Hot wallet only supports regular uploads, not EVM token transfers
-          return TurboFactory.authenticated({
-            token: tokenType as any,
-            signer: hotSigner,
-            paymentServiceConfig: { url: config.paymentServiceUrl },
-            uploadServiceConfig: { url: config.uploadServiceUrl },
-          });
-        }
-      }
 
       // Check if we can reuse cached client for this specific token type
       const cachedClient = sharedEthereumClientCache.get(clientCacheKey);

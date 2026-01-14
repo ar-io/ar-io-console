@@ -8,15 +8,12 @@ import { useStore } from '../store/useStore';
 import { formatWalletAddress, getTurboBalance } from '../utils';
 import TurboLogo from './TurboLogo';
 import WalletSelectionModal from './modals/WalletSelectionModal';
-import SeedPhraseModal from './modals/SeedPhraseModal';
-import HotWalletDisconnectModal from './modals/HotWalletDisconnectModal';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useNavigate } from 'react-router-dom';
 import { usePrivyWallet } from '../hooks/usePrivyWallet';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { clearEthereumTurboClientCache } from '../hooks/useEthereumTurboClient';
-import { useHotWallet } from '../hooks/useHotWallet';
 
 // Services for logged-in users
 const accountServices = [
@@ -74,11 +71,10 @@ const getServiceActiveColor = (page: string): string => {
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable, isHotWallet, hotWalletSeedExported } = useStore();
+  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable } = useStore();
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
-  const { disconnectHotWallet } = useHotWallet();
   // Only check ArNS for Arweave/Ethereum wallets - Solana can't own ArNS names
   const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
 
@@ -87,8 +83,6 @@ const Header = () => {
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [showSeedPhraseModal, setShowSeedPhraseModal] = useState(false);
-  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const wincForOneGiB = useWincForOneGiB();
   
   // Fetch actual credit balance from Turbo API
@@ -383,7 +377,7 @@ const Header = () => {
             <div className="px-6 py-4 border-b border-default">
               <div className="text-xs text-link mb-2">
                 {walletType === 'arweave' && 'Arweave Account'}
-                {walletType === 'ethereum' && `Ethereum Account${isHotWallet ? ' (Temporary)' : isPrivyUser ? ' (Privy.io)' : ''}`}
+                {walletType === 'ethereum' && `Ethereum Account${isPrivyUser ? ' (Privy.io)' : ''}`}
                 {walletType === 'solana' && 'Solana Account'}
               </div>
               <div className="flex items-center justify-between">
@@ -441,31 +435,22 @@ const Header = () => {
               My Account
             </button>
 
-            {/* Export Wallet - Show for Privy users OR hot wallet users who haven't exported yet */}
-            {(isPrivyUser || (isHotWallet && !hotWalletSeedExported)) && (
+            {/* Export Wallet - Show for Privy users */}
+            {isPrivyUser && (
               <button
                 className="flex items-center gap-2 px-6 py-3 text-link hover:text-fg-muted hover:bg-canvas transition-colors"
                 onClick={async () => {
-                  if (isHotWallet) {
-                    // Open seed phrase modal for hot wallet
-                    setShowSeedPhraseModal(true);
-                    close();
-                  } else {
-                    try {
-                      // Export the Privy wallet - this opens Privy's secure modal
-                      await exportWallet();
-                      close(); // Close dropdown after export modal opens
-                    } catch {
-                      // Failed to export wallet
-                    }
+                  try {
+                    // Export the Privy wallet - this opens Privy's secure modal
+                    await exportWallet();
+                    close(); // Close dropdown after export modal opens
+                  } catch {
+                    // Failed to export wallet
                   }
                 }}
               >
                 <Key className="w-4 h-4" />
-                {isHotWallet ? 'Export Recovery Phrase' : 'Export Private Key'}
-                {isHotWallet && !hotWalletSeedExported && (
-                  <span className="ml-auto w-2 h-2 bg-yellow-400 rounded-full" />
-                )}
+                Export Private Key
               </button>
             )}
 
@@ -493,13 +478,6 @@ const Header = () => {
             <button
               className="px-6 py-3 font-semibold text-red-400 hover:bg-canvas hover:text-red-300 border-t border-default transition-colors"
               onClick={async () => {
-                // For hot wallets, show disconnect warning modal
-                if (isHotWallet) {
-                  setShowDisconnectModal(true);
-                  close();
-                  return;
-                }
-
                 try {
                   // Check if this is a Privy user and handle logout differently
                   if (isPrivyUser) {
@@ -539,7 +517,7 @@ const Header = () => {
                 }
               }}
             >
-              {isHotWallet ? 'Disconnect' : isPrivyUser ? 'Logout' : 'Disconnect'}
+              {isPrivyUser ? 'Logout' : 'Disconnect'}
             </button>
               </>
             )}
@@ -566,24 +544,6 @@ const Header = () => {
           onClose={() => {
             setShowWalletModal(false);
           }}
-        />
-      )}
-
-      {/* Seed Phrase Modal (for hot wallets) */}
-      {showSeedPhraseModal && (
-        <SeedPhraseModal onClose={() => setShowSeedPhraseModal(false)} />
-      )}
-
-      {/* Hot Wallet Disconnect Warning Modal */}
-      {showDisconnectModal && (
-        <HotWalletDisconnectModal
-          onClose={() => setShowDisconnectModal(false)}
-          onDisconnect={() => {
-            disconnectHotWallet();
-            setShowDisconnectModal(false);
-            navigate('/');
-          }}
-          seedExported={hotWalletSeedExported}
         />
       )}
     </div>
