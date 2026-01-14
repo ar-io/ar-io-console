@@ -33,8 +33,8 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
     return <Code className="w-4 h-4 text-link flex-shrink-0" />;
   }
 
-  // Text/Documents
-  if (type.startsWith('text/') || ['txt', 'pdf', 'doc', 'docx', 'rtf'].includes(ext)) {
+  // Text/Documents (including PDF by MIME type)
+  if (type.startsWith('text/') || type === 'application/pdf' || ['txt', 'pdf', 'doc', 'docx', 'rtf'].includes(ext)) {
     return <FileText className="w-4 h-4 text-link flex-shrink-0" />;
   }
 
@@ -140,7 +140,7 @@ export default function RecentUploadsSection() {
 
                 {/* Row 2: File Name */}
                 {upload.fileName && (
-                  <div className="text-sm text-fg-muted truncate flex items-center" title={upload.fileName}>
+                  <div className="text-sm text-fg-muted truncate flex items-center gap-2" title={upload.fileName}>
                     {getFileIcon(upload.contentType, upload.fileName)}
                     <span className="truncate">{upload.fileName}</span>
                   </div>

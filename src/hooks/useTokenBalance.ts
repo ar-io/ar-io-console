@@ -9,6 +9,71 @@ import { getConnectorClient, switchChain } from 'wagmi/actions';
 import { useWallets } from '@privy-io/react-auth';
 
 /**
+ * Network parameters for wallet_addEthereumChain
+ * Used when a chain hasn't been added to the user's wallet yet
+ */
+function getNetworkParams(chainId: number): {
+  chainId: string;
+  chainName: string;
+  nativeCurrency: { name: string; symbol: string; decimals: number };
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
+} | null {
+  const configs: Record<number, ReturnType<typeof getNetworkParams>> = {
+    // Base Mainnet
+    8453: {
+      chainId: '0x2105',
+      chainName: 'Base',
+      nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://mainnet.base.org'],
+      blockExplorerUrls: ['https://basescan.org'],
+    },
+    // Base Sepolia
+    84532: {
+      chainId: '0x14a34',
+      chainName: 'Base Sepolia',
+      nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://sepolia.base.org'],
+      blockExplorerUrls: ['https://sepolia.basescan.org'],
+    },
+    // Ethereum Mainnet (usually pre-configured, but included for completeness)
+    1: {
+      chainId: '0x1',
+      chainName: 'Ethereum Mainnet',
+      nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://eth.drpc.org'],
+      blockExplorerUrls: ['https://etherscan.io'],
+    },
+    // Sepolia Testnet
+    11155111: {
+      chainId: '0xaa36a7',
+      chainName: 'Sepolia',
+      nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://rpc.sepolia.org'],
+      blockExplorerUrls: ['https://sepolia.etherscan.io'],
+    },
+    // Polygon Mainnet
+    137: {
+      chainId: '0x89',
+      chainName: 'Polygon',
+      nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+      rpcUrls: ['https://polygon-rpc.com'],
+      blockExplorerUrls: ['https://polygonscan.com'],
+    },
+    // Polygon Amoy Testnet
+    80002: {
+      chainId: '0x13882',
+      chainName: 'Polygon Amoy',
+      nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+      rpcUrls: ['https://rpc-amoy.polygon.technology'],
+      blockExplorerUrls: ['https://amoy.polygonscan.com'],
+    },
+  };
+
+  return configs[chainId] || null;
+}
+
+/**
  * Result of token balance fetch
  */
 export interface TokenBalanceResult {
@@ -164,10 +229,33 @@ export function useTokenBalance(
 
         if (currentChainId !== expectedChainId) {
           console.log(`[useTokenBalance] Switching window.ethereum from chain ${currentChainId} to ${expectedChainId} (${networkName})`);
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${expectedChainId.toString(16)}` }],
-          });
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${expectedChainId.toString(16)}` }],
+            });
+          } catch (switchError: any) {
+            // Error code 4902 means the chain hasn't been added to the wallet
+            if (switchError?.code === 4902) {
+              console.log(`[useTokenBalance] Chain ${expectedChainId} not found, adding ${networkName}...`);
+              const networkParams = getNetworkParams(expectedChainId);
+              if (networkParams) {
+                await window.ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [networkParams],
+                });
+                // Retry switch after adding
+                await window.ethereum.request({
+                  method: 'wallet_switchEthereumChain',
+                  params: [{ chainId: `0x${expectedChainId.toString(16)}` }],
+                });
+              } else {
+                throw switchError; // Unknown chain, rethrow
+              }
+            } else {
+              throw switchError; // Other error, rethrow
+            }
+          }
           // Wait for switch to complete
           await new Promise(resolve => setTimeout(resolve, 1000));
           console.log(`[useTokenBalance] Successfully switched to ${networkName}`);

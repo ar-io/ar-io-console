@@ -13,6 +13,13 @@ export function useImagePreviews(files: File[], maxPreviews: number = MAX_PREVIE
   const [previewUrls, setPreviewUrls] = useState<Map<number, string>>(new Map());
   // Track which URLs we've created to ensure cleanup
   const createdUrls = useRef<Set<string>>(new Set());
+  // Stable ref for reading previewUrls inside effect without stale closure
+  const previewUrlsRef = useRef<Map<number, string>>(new Map());
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    previewUrlsRef.current = previewUrls;
+  }, [previewUrls]);
 
   // Check if a file is a previewable image (by MIME type or extension)
   const isPreviewableImage = useCallback((file: File): boolean => {
@@ -41,12 +48,15 @@ export function useImagePreviews(files: File[], maxPreviews: number = MAX_PREVIE
     const newCreatedUrls = new Set<string>();
     let imageCount = 0;
 
+    // Capture previous URLs before processing
+    const prevCreatedUrls = createdUrls.current;
+
     // Create previews for image files up to the limit
     files.forEach((file, index) => {
       if (isPreviewableImage(file) && imageCount < maxPreviews) {
-        // Check if we already have this URL (same file reference)
-        const existingUrl = previewUrls.get(index);
-        if (existingUrl && createdUrls.current.has(existingUrl)) {
+        // Check if we already have this URL (same file reference) using ref to avoid stale closure
+        const existingUrl = previewUrlsRef.current.get(index);
+        if (existingUrl && prevCreatedUrls.has(existingUrl)) {
           // Reuse existing URL if file hasn't changed
           // Note: This is a simple check - if files array is rebuilt, URLs will be recreated
           newPreviewUrls.set(index, existingUrl);
@@ -61,20 +71,20 @@ export function useImagePreviews(files: File[], maxPreviews: number = MAX_PREVIE
       }
     });
 
-    // Revoke URLs that are no longer needed
-    createdUrls.current.forEach(url => {
+    // Revoke only URLs that were in previous set but not in new set (avoids double revocation)
+    prevCreatedUrls.forEach(url => {
       if (!newCreatedUrls.has(url)) {
         URL.revokeObjectURL(url);
       }
     });
 
-    // Update state
+    // Update ref and state
     createdUrls.current = newCreatedUrls;
     setPreviewUrls(newPreviewUrls);
 
-    // Cleanup on unmount
+    // Cleanup on unmount - revoke whatever is currently tracked
     return () => {
-      newCreatedUrls.forEach(url => {
+      createdUrls.current.forEach(url => {
         URL.revokeObjectURL(url);
       });
     };

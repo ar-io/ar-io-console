@@ -46,6 +46,7 @@ Colors are defined as semantic tokens that automatically adapt to the current th
 The app supports both dark and light themes. When implementing components:
 
 **Key Differences:**
+
 | Element | Dark Mode | Light Mode |
 |---------|-----------|------------|
 | `bg-surface` | Dark gray (#1F1F1F) | White (#FFFFFF) |
@@ -393,7 +394,7 @@ Gradient: from-turbo-purple/10 to-turbo-purple/5
 - Always use solid `bg-surface` for cards inside gradient containers
 
 **Visual Hierarchy Pattern:**
-```
+```text
 Page (bg-page)
   └─ Gradient container (from-{color}/10 to-{color}/5, border-{color}/30)
        └─ Surface card (bg-surface, border-{color}/20) - white in light mode

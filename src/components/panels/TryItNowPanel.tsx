@@ -681,7 +681,7 @@ export default function TryItNowPanel() {
 
                     {/* Row 2: File Name */}
                     {upload.fileName && (
-                      <div className="text-sm text-fg-muted truncate flex items-center" title={upload.fileName}>
+                      <div className="text-sm text-fg-muted truncate flex items-center gap-2" title={upload.fileName}>
                         {getFileIcon(upload.contentType, upload.fileName)}
                         <span className="truncate">{upload.fileName}</span>
                       </div>
