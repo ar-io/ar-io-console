@@ -136,6 +136,12 @@ export default function TryItNowPanel() {
           if (newWallet) {
             await setEthereumAddress(newWallet.address);
             setWaitingForWallet(false);
+          } else {
+            // createWallet returned null/undefined without throwing
+            console.error('[TryItNow] createWallet returned falsy value');
+            setWaitingForWallet(false);
+            setError('Failed to create wallet. Please try again.');
+            pendingUploadRef.current = false;
           }
         } catch (err) {
           console.error('[TryItNow] Failed to create wallet:', err);
