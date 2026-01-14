@@ -1869,12 +1869,15 @@ export default function DeploySitePanel() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <p className="text-lg font-medium mb-2">
-              Drop site folder here or click to browse
-            </p>
-            <p className="text-sm text-link mb-4">
-              Select your site folder (HTML, CSS, JS, assets) for deployment
-            </p>
+            <div className="mb-4">
+              <Zap className="w-12 h-12 text-turbo-red mx-auto mb-2" />
+              <p className="text-lg font-medium mb-2">
+                Drop site folder here or click to browse
+              </p>
+              <p className="text-sm text-link">
+                Select your site folder (HTML, CSS, JS, assets) for deployment
+              </p>
+            </div>
             <input
               type="file"
               {...({ webkitdirectory: 'true', directory: 'true' } as any)}
