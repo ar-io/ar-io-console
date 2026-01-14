@@ -201,7 +201,7 @@ export default function AssignDomainModal({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-fg-muted">
-                      Select ArNS name:
+                      Select name:
                     </label>
                     <button
                       onClick={() => fetchOwnedNames(true)}

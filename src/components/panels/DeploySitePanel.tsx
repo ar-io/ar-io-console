@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useFolderUpload } from '../../hooks/useFolderUpload';
 import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
@@ -131,7 +131,7 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
           }}
           placeholder="My Awesome App"
           maxLength={100}
-          className="w-full px-3 py-2 bg-canvas border border-default rounded-lg text-fg-muted text-sm placeholder:text-link/50 focus:outline-none focus:border-turbo-red/50 transition-colors"
+          className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm placeholder:text-link/50 focus:outline-none focus:border-turbo-red/50 transition-colors"
         />
         {/* Suggestions Dropdown */}
         {showSuggestions && filteredSuggestions.length > 0 && (
@@ -163,7 +163,7 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
           onBlur={() => onAppVersionChange(localVersion)} // Sync to parent on blur
           placeholder="1.0.0"
           maxLength={50}
-          className="w-full px-3 py-2 bg-canvas border border-default rounded-lg text-fg-muted text-sm placeholder:text-link/50 focus:outline-none focus:border-turbo-red/50 transition-colors"
+          className="w-full px-3 py-2 bg-surface border border-default rounded-lg text-fg-muted text-sm placeholder:text-link/50 focus:outline-none focus:border-turbo-red/50 transition-colors"
         />
         {currentApp && localVersion !== currentApp.appVersion && (
           <p className="mt-1 text-xs text-link">Last: v{currentApp.appVersion}</p>
@@ -1081,6 +1081,50 @@ export default function DeploySitePanel() {
     }
   }, [selectedFolder, lastDeployedAppName, deployedApps]);
 
+  // Image preview management for folder files
+  const MAX_FOLDER_PREVIEWS = 30; // Lower limit for folders since they can have many files
+  const previewUrlsRef = useRef<Map<string, string>>(new Map());
+
+  const isPreviewableImage = useCallback((fileName: string): boolean => {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico'];
+    return imageExtensions.includes(ext);
+  }, []);
+
+  // Generate preview URLs for image files in the folder
+  const imagePreviewUrls = useMemo(() => {
+    // Revoke old URLs first
+    previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    previewUrlsRef.current.clear();
+
+    if (!selectedFolder) return new Map<string, string>();
+
+    const newUrls = new Map<string, string>();
+    let imageCount = 0;
+
+    Array.from(selectedFolder).forEach(file => {
+      if (imageCount >= MAX_FOLDER_PREVIEWS) return;
+
+      const path = file.webkitRelativePath || file.name;
+      if (isPreviewableImage(file.name)) {
+        const url = URL.createObjectURL(file);
+        newUrls.set(path, url);
+        previewUrlsRef.current.set(path, url);
+        imageCount++;
+      }
+    });
+
+    return newUrls;
+  }, [selectedFolder, isPreviewableImage]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      previewUrlsRef.current.clear();
+    };
+  }, []);
+
   // Handle successful domain assignment from modal
   const handleAssignDomainSuccess = (manifestId: string, arnsName: string, undername?: string, transactionId?: string) => {
     // Add ArNS update to deploy history
@@ -1808,9 +1852,9 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* Main Content Container with Gradient - Hide during success and deployment */}
+      {/* Main Content Container with Red Gradient - Hide during success and deployment */}
       {!deploySuccessInfo && !deploying && (
-        <div className="bg-gradient-to-br from-turbo-red/5 to-turbo-red/3 rounded-xl border border-turbo-red/20 p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-gradient-to-br from-turbo-red/10 to-turbo-red/5 rounded-xl border border-turbo-red/30 p-4 sm:p-6 mb-4 sm:mb-6">
 
         {/* Dynamic Zone: Drop Zone OR Selected Folder */}
         {!selectedFolder || selectedFolder.length === 0 ? (
@@ -1818,8 +1862,8 @@ export default function DeploySitePanel() {
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               isDragging
-                ? 'border-turbo-red bg-turbo-red/5'
-                : 'border-link/30 hover:border-turbo-red/50'
+                ? 'border-turbo-red bg-turbo-red/10'
+                : 'border-turbo-red/30 bg-surface/80 hover:border-turbo-red/50'
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -1848,7 +1892,7 @@ export default function DeploySitePanel() {
           </div>
         ) : (
           /* Selected Folder Card - replaces drop zone */
-          <div className="bg-surface/50 rounded-xl border border-default/30 p-4">
+          <div className="bg-surface rounded-xl border border-turbo-red/20 p-4">
               {/* Folder Header Row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1913,7 +1957,7 @@ export default function DeploySitePanel() {
 
               {/* Expandable Content: App Details + Smart Deploy + File Tree */}
               {showFolderContents && (
-                  <div className="mt-3 p-3 bg-surface/50 rounded border border-default/30 max-h-96 overflow-y-auto">
+                  <div className="mt-3 p-3 bg-canvas rounded-lg border border-default max-h-96 overflow-y-auto">
                     {/* App Details Fields - Memoized for performance */}
                     <AppDetailsFields
                       appName={appName}
@@ -1986,21 +2030,34 @@ export default function DeploySitePanel() {
                                 .map(({ file, path }, index) => {
                                   const FileIcon = getFileIcon(file.name);
                                   const fileName = path.split('/').pop() || file.name;
-                                  const fileSize = file.size < 1024 
-                                    ? `${file.size}B` 
-                                    : file.size < 1024 * 1024 
+                                  const fileSize = file.size < 1024
+                                    ? `${file.size}B`
+                                    : file.size < 1024 * 1024
                                     ? `${(file.size / 1024).toFixed(1)}KB`
                                     : `${(file.size / 1024 / 1024).toFixed(1)}MB`;
-                                  
+
                                   const fullPath = file.webkitRelativePath || file.name;
                                   const isHtml = fileName.toLowerCase().endsWith('.html') || fileName.toLowerCase().endsWith('.htm');
                                   const isIndex = indexFile === fullPath;
                                   const isFallback = fallbackFile === fullPath;
-                                  
+                                  const previewUrl = imagePreviewUrls.get(fullPath);
+                                  const isImage = isPreviewableImage(file.name);
+
                                   return (
                                     <div key={index} className="flex items-center justify-between text-link hover:text-fg-muted transition-colors py-1 px-1 rounded">
                                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <FileIcon className="w-3 h-3 text-link flex-shrink-0" />
+                                        {/* Thumbnail for images, icon for others */}
+                                        {isImage && previewUrl ? (
+                                          <div className="w-6 h-6 rounded overflow-hidden bg-surface border border-default flex-shrink-0">
+                                            <img
+                                              src={previewUrl}
+                                              alt={fileName}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <FileIcon className="w-3 h-3 text-link flex-shrink-0" />
+                                        )}
                                         <span className="truncate">{fileName}</span>
                                         
                                         {/* Badges for selected files */}
@@ -2119,7 +2176,7 @@ export default function DeploySitePanel() {
 
       {/* Summary Panel - After ArNS configuration, hide during success and deployment */}
       {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
-        <div className="mt-4 p-4 bg-surface/50 rounded-lg">
+        <div className="mt-4 p-4 bg-surface rounded-lg border border-turbo-red/20">
             <div className="flex justify-between mb-2">
               <span className="text-xs text-link">Total Size:</span>
               <span className="text-xs text-fg-muted">{(totalFileSize / 1024 / 1024).toFixed(2)} MB</span>

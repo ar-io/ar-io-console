@@ -79,7 +79,7 @@ const GiftPaymentSuccessPanel: FC<GiftPaymentSuccessPanelProps> = ({
         </div>
 
         {/* Next Steps */}
-        <div className="bg-canvas rounded-lg p-4 mb-6">
+        <div className="bg-surface rounded-lg p-4 mb-6">
           <h5 className="font-bold text-fg-muted mb-3">What happens next?</h5>
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2">

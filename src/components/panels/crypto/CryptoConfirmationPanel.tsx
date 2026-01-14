@@ -6,7 +6,6 @@ import { useStore } from '../../../store/useStore';
 import {  tokenLabels, tokenNetworkLabels, tokenProcessingTimes, wincPerCredit, SupportedTokenType } from '../../../constants';
 import { useWincForAnyToken, useWincForOneGiB } from '../../../hooks/useWincForOneGiB';
 import useTurboWallets from '../../../hooks/useTurboWallets';
-import TurboLogo from '../../TurboLogo';
 import { useWallets } from '@privy-io/react-auth';
 import { getWalletTypeLabel } from '../../../utils/addressValidation';
 import CopyButton from '../../CopyButton';
@@ -594,7 +593,7 @@ export default function CryptoConfirmationPanel({
       </div>
 
       {/* Single Main Container - All elements inside like Stripe */}
-      <div className="bg-gradient-to-br from-fg-muted/5 to-fg-muted/3 rounded-xl border border-default p-6">
+      <div className="bg-surface rounded-xl border border-default p-6">
         {pricingLoading ? (
           <div className="text-center py-8">
             <div className="w-12 h-12 border-4 border-fg-muted border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -638,10 +637,6 @@ export default function CryptoConfirmationPanel({
 
             {/* Order Summary */}
             <div className="bg-canvas p-6 rounded-lg mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <TurboLogo />
-              </div>
-              
               <div className="flex flex-col items-center py-4 mb-4">
                 <div className="text-4xl font-bold text-fg-muted mb-1">
                   {quote.credits.toFixed(4)}
@@ -748,10 +743,13 @@ export default function CryptoConfirmationPanel({
                 <div>
                   <h4 className="font-medium text-fg-muted mb-1">Payment Method</h4>
                   <p className="text-sm text-link">
-                    {canPayDirectly 
-                      ? `Direct payment using your ${tokenLabels[tokenType]} balance on ${tokenNetworkLabels[tokenType]}`
-                      : `Manual transfer of ${tokenLabels[tokenType]} on ${tokenNetworkLabels[tokenType]} required`
-                    }
+                    {(() => {
+                      // Extract just the token name without network qualifier (e.g., "ARIO" from "ARIO (Base)")
+                      const tokenName = tokenLabels[tokenType].split(' (')[0];
+                      return canPayDirectly
+                        ? `Direct payment using your ${tokenName} on ${tokenNetworkLabels[tokenType]}`
+                        : `Manual transfer of ${tokenName} on ${tokenNetworkLabels[tokenType]} required`;
+                    })()}
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Clock className={`w-3 h-3 ${
@@ -767,9 +765,6 @@ export default function CryptoConfirmationPanel({
                       Expected processing: {tokenProcessingTimes[tokenType].time}
                     </p>
                   </div>
-                  <p className="text-xs text-link mt-1">
-                    {tokenProcessingTimes[tokenType].description}
-                  </p>
                   {!canPayDirectly && (
                     <p className="text-xs text-link mt-1">
                       You'll be guided through the manual payment process

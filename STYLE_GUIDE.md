@@ -30,20 +30,23 @@ Colors are defined as semantic tokens that automatically adapt to the current th
 
 | Token | Dark Mode | Light Mode | Usage |
 |-------|-----------|------------|-------|
-| `canvas` | #000000 | #F0F0F0 | Page background |
-| `surface` | #23232D | #FFFFFF | Cards, inputs, elevated surfaces |
-| `surface-elevated` | #39394A | #DEDEE2 | Nested cards, code blocks |
-| `header-bg` | #000000 | #FFFFFF | Sticky header, footer |
-| `fg-muted` | #F0F0F0 | #23232D | Primary text |
-| `link` | #9494A5 | #6C6C87 | Secondary text, labels |
+| `page` | #000000 | #F0F0F0 | Page background |
+| `canvas` | #171717 | #E0E0E0 | Dropdowns, hover states |
+| `surface` | #1F1F1F | #FFFFFF | Cards, panels |
+| `surface-elevated` | #2A2A2A | #F5F5F5 | Nested cards, code blocks |
+| `header-bg` | #090909 | #FFFFFF | Sticky header, footer |
+| `fg-muted` | #ededed | #23232D | Primary text |
+| `link` | #A3A3AD | #6C6C87 | Secondary text, labels |
 | `fg-disabled` | #6C6C87 | #9494A5 | Disabled state text |
-| `high` | #DEDEE2 | #39394A | Highlighted text |
-| `default` | #39394A | #DEDEE2 | Standard borders |
+| `high` | #CACAD6 | #39394A | Highlighted text |
+| `default` | #333 | #C8C8CE | Standard borders |
+| `card-tint` | #FFFFFF | #FFFFFF | Card overlay gradient (stays white in both themes) |
 
 #### Background Colors
 ```css
 /* Use semantic tokens (theme-aware) */
-bg-canvas           /* Primary app background */
+bg-page             /* Page background */
+bg-canvas           /* Dropdowns, hover states - provides contrast against page */
 bg-surface          /* Elevated surfaces, cards, inputs */
 bg-surface-elevated /* Nested cards, code blocks */
 bg-header-bg        /* Sticky header, footer */
@@ -328,8 +331,8 @@ gap-12 (48px)  /* Page section dividers */
 ```jsx
 // Credit services (topup, share, gift, balances, redeem, calculator)
 Icon: bg-fg-muted/20, text-fg-muted
-Border: border-default  OR  border-fg-muted/20
-Gradient: from-fg-muted/5 to-fg-muted/3
+Border: border-default
+Background: bg-surface  // White in light mode, dark gray in dark mode
 
 // Upload/Deploy services (upload, deploy)
 Icon: bg-turbo-red/20, text-turbo-red

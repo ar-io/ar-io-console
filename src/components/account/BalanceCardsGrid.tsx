@@ -76,7 +76,7 @@ export default function BalanceCardsGrid() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-fg-muted/5 to-fg-muted/3 rounded-xl border border-default p-6">
+    <div className="bg-surface rounded-xl border border-default p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

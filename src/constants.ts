@@ -76,15 +76,15 @@ export const tokenLabels: Record<SupportedTokenType, string> = {
 export const tokenNetworkLabels: Record<SupportedTokenType, string> = {
   arweave: 'Arweave Network',
   ario: 'AR.IO Network',
-  'base-ario': 'ARIO on Base Network',
-  ethereum: 'Ethereum Mainnet (L1)',
-  'base-eth': 'Base Network (L2)',
+  'base-ario': 'the Base Network',
+  ethereum: 'Ethereum Mainnet',
+  'base-eth': 'the Base Network',
   solana: 'Solana Network',
   kyve: 'KYVE Network',
   pol: 'Polygon Network',
-  'usdc': 'USDC on Ethereum',
-  'base-usdc': 'USDC on Base',
-  'polygon-usdc': 'USDC on Polygon',
+  'usdc': 'Ethereum Mainnet',
+  'base-usdc': 'the Base Network',
+  'polygon-usdc': 'Polygon Network',
 } as const;
 
 // Network descriptions for user clarity

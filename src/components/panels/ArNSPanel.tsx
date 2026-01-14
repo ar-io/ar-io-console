@@ -102,8 +102,8 @@ export default function ArNSPanel() {
         {/* Single consolidated availability display */}
         {availability !== null && nameSearch && (
           <div className={`mt-4 p-4 rounded-lg border text-center ${
-            availability 
-              ? 'bg-turbo-yellow/5 border-turbo-yellow/30' 
+            availability
+              ? 'bg-surface border-turbo-yellow/30'
               : 'bg-red-500/10 border-red-500/20'
           }`}>
             {availability ? (

@@ -8,54 +8,58 @@
 @tailwind utilities;
 
 @layer base {
-  /* Dark theme (default) */
+  /* Dark theme (default) - matches main branch */
   :root {
     color-scheme: dark;
 
-    --color-canvas: #000000;
-    --color-surface: #1F1F1F;
-    --color-surface-elevated: #2A2A2A;
-    --color-header-bg: #000000;
-    --color-default: #39394A;
-    --color-fg-muted: #ededed;
+    --color-page: #000000;           /* Page background - pure black */
+    --color-canvas: #171717;         /* Dropdowns, hover states - visible against black */
+    --color-surface: #1F1F1F;        /* Cards, panels */
+    --color-surface-elevated: #2A2A2A; /* Nested cards, code blocks */
+    --color-header-bg: #090909;      /* Header/footer - subtle lift from page */
+    --color-default: #333;           /* Borders */
+    --color-fg-muted: #ededed;       /* Primary text */
     --color-fg-disabled: #6C6C87;
     --color-fg-on-disabled: #9494A5;
     --color-accent-disabled: #6C6C87;
-    --color-link: #A3A3AD;
-    --color-high: #DEDEE2;
+    --color-link: #A3A3AD;           /* Secondary text */
+    --color-high: #CACAD6;           /* Highlighted text */
+    --color-card-tint: #FFFFFF;      /* Card overlay tint - white in both themes */
 
     /* Alert text colors - lighter in dark mode for visibility on dark backgrounds */
-    --color-alert-danger: #f87171;  /* red-400 */
-    --color-alert-warning: #fbbf24; /* yellow-400 */
-    --color-alert-success: #4ade80; /* green-400 */
-    --color-alert-info: #60a5fa;    /* blue-400 */
+    --color-alert-danger: #f87171;   /* red-400 */
+    --color-alert-warning: #fbbf24;  /* yellow-400 */
+    --color-alert-success: #4ade80;  /* green-400 */
+    --color-alert-info: #60a5fa;     /* blue-400 */
   }
 
   /* Light theme */
   :root.light {
     color-scheme: light;
 
-    --color-canvas: #F0F0F0;
-    --color-surface: #FFFFFF;
-    --color-surface-elevated: #DEDEE2;
-    --color-header-bg: #FFFFFF;
-    --color-default: #DEDEE2;
-    --color-fg-muted: #23232D;
+    --color-page: #F0F0F0;           /* Page background - light gray */
+    --color-canvas: #E8E8E8;         /* Dropdowns, hover states - darker than page for contrast */
+    --color-surface: #FFFFFF;        /* Cards, panels */
+    --color-surface-elevated: #F5F5F5; /* Nested cards, code blocks */
+    --color-header-bg: #FFFFFF;      /* Header/footer */
+    --color-default: #C8C8CE;        /* Borders - darker for visibility */
+    --color-fg-muted: #23232D;       /* Primary text */
     --color-fg-disabled: #9494A5;
     --color-fg-on-disabled: #6C6C87;
     --color-accent-disabled: #9494A5;
-    --color-link: #6C6C87;
-    --color-high: #39394A;
+    --color-link: #6C6C87;           /* Secondary text */
+    --color-high: #39394A;           /* Highlighted text */
+    --color-card-tint: #FFFFFF;      /* Card overlay tint - white in both themes */
 
     /* Alert text colors - darker in light mode for visibility on light backgrounds */
-    --color-alert-danger: #991b1b;  /* red-800 - dark red for light mode */
-    --color-alert-warning: #92400e; /* yellow-800 - dark amber for light mode */
-    --color-alert-success: #166534; /* green-800 - dark green for light mode */
-    --color-alert-info: #1e40af;    /* blue-800 - dark blue for light mode */
+    --color-alert-danger: #991b1b;   /* red-800 */
+    --color-alert-warning: #92400e;  /* yellow-800 */
+    --color-alert-success: #166534;  /* green-800 */
+    --color-alert-info: #1e40af;     /* blue-800 */
   }
 
   body {
-    @apply bg-canvas text-fg-muted antialiased;
+    @apply bg-page text-fg-muted antialiased;
     font-family: 'Rubik', sans-serif;
   }
 

@@ -4,6 +4,7 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
+import { useImagePreviews } from '../../hooks/useImagePreviews';
 import { wincPerCredit, SupportedTokenType } from '../../constants';
 import { useStore } from '../../store/useStore';
 import { CheckCircle, XCircle, Upload, ExternalLink, Shield, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
@@ -23,38 +24,42 @@ import { Loader2 } from 'lucide-react';
 import X402OnlyBanner from '../X402OnlyBanner';
 
 // Helper function to get contextual file icon based on content type or file name
-const getFileIcon = (contentType?: string, fileName?: string) => {
+// size: 'sm' (16px) for inline use, 'lg' (24px) for file list thumbnails
+const getFileIcon = (contentType?: string, fileName?: string, size: 'sm' | 'lg' = 'sm') => {
   const type = contentType?.toLowerCase() || '';
   const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+  const sizeClass = size === 'lg' ? 'w-6 h-6' : 'w-4 h-4';
+  const baseClass = `${sizeClass} text-link`;
+  const inlineClass = size === 'sm' ? `${baseClass} inline mr-1` : baseClass;
 
   // Images
   if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)) {
-    return <Image className="w-4 h-4 text-link inline mr-1" />;
+    return <Image className={inlineClass} />;
   }
 
   // Videos
   if (type.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) {
-    return <Film className="w-4 h-4 text-link inline mr-1" />;
+    return <Film className={inlineClass} />;
   }
 
   // Audio
   if (type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(ext)) {
-    return <Music className="w-4 h-4 text-link inline mr-1" />;
+    return <Music className={inlineClass} />;
   }
 
   // Code files
   if (['application/javascript', 'application/json', 'text/css', 'text/html', 'application/xml', 'text/xml'].includes(type) ||
       ['js', 'ts', 'jsx', 'tsx', 'css', 'html', 'json', 'xml', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh', 'yml', 'yaml', 'toml', 'md'].includes(ext)) {
-    return <FileCode className="w-4 h-4 text-link inline mr-1" />;
+    return <FileCode className={inlineClass} />;
   }
 
   // Text/Documents
   if (type.startsWith('text/') || ['txt', 'pdf', 'doc', 'docx', 'rtf'].includes(ext)) {
-    return <FileText className="w-4 h-4 text-link inline mr-1" />;
+    return <FileText className={inlineClass} />;
   }
 
   // Default file icon
-  return <File className="w-4 h-4 text-link inline mr-1" />;
+  return <File className={inlineClass} />;
 };
 
 // Unified Crypto Payment Details Component (matches Credits layout)
@@ -344,6 +349,10 @@ export default function UploadPanel() {
 
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+
+  // Image preview management for selected files
+  const { getPreviewUrl, isPreviewableImage } = useImagePreviews(files);
+
   const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showAssignDomainModal, setShowAssignDomainModal] = useState<string | null>(null);
@@ -796,15 +805,33 @@ export default function UploadPanel() {
                 id="file-upload-add"
               />
 
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-80 overflow-y-auto">
                 {files.map((file, index) => {
                   const cost = calculateUploadCost(file.size);
                   const isFree = isFileFree(file.size, freeUploadLimitBytes);
+                  const previewUrl = getPreviewUrl(index);
+                  const isImage = isPreviewableImage(file);
 
                   return (
                     <div key={index} className="bg-surface/50 rounded p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        {/* Thumbnail or Icon */}
+                        {isImage && previewUrl ? (
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface border border-default flex-shrink-0">
+                            <img
+                              src={previewUrl}
+                              alt={file.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-surface border border-default flex items-center justify-center flex-shrink-0">
+                            {getFileIcon(file.type, file.name, 'lg')}
+                          </div>
+                        )}
+
+                        {/* File Info */}
+                        <div className="flex-1 min-w-0">
                           <div className="text-sm text-fg-muted truncate">{file.name}</div>
                           <div className="text-xs text-link">
                             {formatFileSize(file.size)}
@@ -816,9 +843,11 @@ export default function UploadPanel() {
                             )}
                           </div>
                         </div>
+
+                        {/* Remove Button */}
                         <button
                           onClick={() => removeFile(index)}
-                          className="text-link hover:text-red-400 ml-4 transition-colors"
+                          className="text-link hover:text-red-400 transition-colors flex-shrink-0"
                         >
                           <XCircle className="w-5 h-5" />
                         </button>

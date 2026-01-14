@@ -128,7 +128,7 @@ export function JitPaymentCard({
                   (typeof totalCost === 'number' && totalCost > 0);
 
   return (
-    <div className="bg-gradient-to-br from-fg-muted/5 to-fg-muted/3 rounded-lg border border-default p-3">
+    <div className="bg-surface rounded-lg border border-default p-3">
       {/* Message when no files selected */}
       {!hasCost && (
         <div className="text-center py-4">

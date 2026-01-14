@@ -9,6 +9,7 @@ export default {
     extend: {
       colors: {
         // Theme-aware colors (switch via CSS variables)
+        page: 'var(--color-page)',
         canvas: 'var(--color-canvas)',
         surface: 'var(--color-surface)',
         'surface-elevated': 'var(--color-surface-elevated)',
@@ -20,6 +21,7 @@ export default {
         'accent-disabled': 'var(--color-accent-disabled)',
         link: 'var(--color-link)',
         high: 'var(--color-high)',
+        'card-tint': 'var(--color-card-tint)',
         error: '#f00',
         // Alert colors (theme-aware - darker in light mode for contrast)
         'alert-danger': 'var(--color-alert-danger)',

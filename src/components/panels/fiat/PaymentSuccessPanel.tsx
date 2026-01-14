@@ -121,7 +121,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
         )}
 
         {/* Payment Summary */}
-        <div className="bg-canvas rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-surface rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm text-link">Payment Amount:</span>
@@ -179,7 +179,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
         </div>
 
         {/* Next Steps - Call to Actions */}
-        <div className="bg-surface/50 rounded-lg p-4 mb-6">
+        <div className="bg-surface rounded-lg p-4 mb-6">
           <h5 className="font-medium text-fg-muted mb-4">What's Next?</h5>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
@@ -187,7 +187,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
                 onComplete();
                 navigate('/upload');
               }}
-              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface transition-colors rounded-lg border border-default hover:border-turbo-red/30 text-left"
+              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface-elevated transition-colors rounded-lg border border-default hover:border-turbo-red/30 text-left"
             >
               <div className="w-8 h-8 bg-turbo-red/20 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Upload className="w-4 h-4 text-turbo-red" />
@@ -203,7 +203,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
                 onComplete();
                 navigate('/deploy');
               }}
-              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface transition-colors rounded-lg border border-default hover:border-turbo-red/30 text-left"
+              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface-elevated transition-colors rounded-lg border border-default hover:border-turbo-red/30 text-left"
             >
               <div className="w-8 h-8 bg-turbo-red/20 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Zap className="w-4 h-4 text-turbo-red" />
@@ -219,7 +219,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
                 onComplete();
                 navigate('/domains');
               }}
-              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface transition-colors rounded-lg border border-default hover:border-turbo-yellow/30 text-left"
+              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface-elevated transition-colors rounded-lg border border-default hover:border-turbo-yellow/30 text-left"
             >
               <div className="w-8 h-8 bg-turbo-yellow/20 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Globe className="w-4 h-4 text-turbo-yellow" />
@@ -235,7 +235,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
                 onComplete();
                 navigate('/share');
               }}
-              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface transition-colors rounded-lg border border-default hover:border-fg-muted/30 text-left w-full"
+              className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface-elevated transition-colors rounded-lg border border-default hover:border-fg-muted/30 text-left w-full"
             >
               <div className="w-8 h-8 bg-fg-muted/20 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Share2 className="w-4 h-4 text-fg-muted" />

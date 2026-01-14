@@ -5,7 +5,6 @@ import { RefreshCw, CheckCircle, Users } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import { getWincForFiat } from '../../../services/paymentService';
 import { useWincForOneGiB } from '../../../hooks/useWincForOneGiB';
-import TurboLogo from '../../TurboLogo';
 import { wincPerCredit } from '../../../constants';
 import { getWalletTypeLabel } from '../../../utils/addressValidation';
 import CopyButton from '../../CopyButton';
@@ -156,7 +155,7 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
       </div>
 
       {/* Main Content Container with Gradient */}
-      <div className="bg-gradient-to-br from-fg-muted/5 to-fg-muted/3 rounded-xl border border-default p-4 sm:p-6 mb-4 sm:mb-6">
+      <div className="bg-surface rounded-xl border border-default p-4 sm:p-6 mb-4 sm:mb-6">
 
         {/* Show recipient info if funding another wallet */}
         {targetAddress && targetAddress !== address && (
@@ -179,10 +178,6 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
 
         {/* Order Summary */}
         <div className="bg-canvas p-6 rounded-lg mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <TurboLogo />
-          </div>
-          
           {estimatedCredits ? (
             <>
               <div className="flex flex-col items-center py-4 mb-4">

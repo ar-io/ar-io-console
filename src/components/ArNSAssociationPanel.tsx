@@ -123,7 +123,7 @@ export default function ArNSAssociationPanel({
     }
   }, [currentTTL]);
   return (
-    <div className="bg-gradient-to-br from-turbo-yellow/5 to-turbo-yellow/3 rounded-xl border border-turbo-yellow/20 p-6 mb-6">
+    <div className="bg-gradient-to-br from-turbo-yellow/10 to-turbo-yellow/5 rounded-xl border border-turbo-yellow/30 p-6 mb-6">
       <div className="flex items-start gap-3 mb-4">
         <div className="w-10 h-10 bg-turbo-yellow/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
           <Globe className="w-5 h-5 text-turbo-yellow" />
@@ -138,11 +138,11 @@ export default function ArNSAssociationPanel({
               className="w-4 h-4 bg-surface border-2 border-default rounded focus:ring-0 checked:bg-canvas checked:border-default accent-white transition-colors"
             />
             <label htmlFor="arns-enabled" className="font-medium text-fg-muted cursor-pointer">
-              Associate with ArNS name
+              Add domain name
             </label>
           </div>
           <p className="text-sm text-link">
-            Give your site a friendly, decentralized domain name
+            Give your site a friendly, smart domain name
           </p>
         </div>
       </div>
@@ -180,7 +180,7 @@ export default function ArNSAssociationPanel({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-fg-muted">
-                    Select ArNS name:
+                    Select name:
                   </label>
                   <button
                     onClick={() => fetchOwnedNames(true)}
@@ -304,7 +304,7 @@ export default function ArNSAssociationPanel({
                     {selectedNameRecord?.undernames && selectedNameRecord.undernames.length > 0 && (
                       <div>
                         <div className="text-sm font-medium text-fg-muted mb-2">Existing undernames:</div>
-                        <div className="bg-surface/50 rounded-lg p-3 border border-default/30">
+                        <div className="bg-surface rounded-lg p-3 border border-turbo-yellow/20">
                           <div className="flex flex-wrap gap-2">
                             {selectedNameRecord.undernames.map(undername => (
                               <button
@@ -337,7 +337,7 @@ export default function ArNSAssociationPanel({
                       
                       {/* Info for first-time users */}
                       {(!selectedNameRecord?.undernames || selectedNameRecord.undernames.length === 0) && (
-                        <div className="text-xs text-link mb-2 bg-turbo-yellow/5 rounded p-2 border border-turbo-yellow/20">
+                        <div className="text-xs text-link mb-2 bg-turbo-yellow/10 rounded p-2 border border-turbo-yellow/30">
                           This will be the first undername for {selectedName}
                         </div>
                       )}
@@ -386,7 +386,7 @@ export default function ArNSAssociationPanel({
 
               {/* Preview */}
               {selectedName && (
-                <div className="bg-surface/50 rounded-lg p-4 space-y-3">
+                <div className="bg-surface rounded-lg p-4 space-y-3 border border-turbo-yellow/20">
                   <div>
                     <div className="text-sm font-medium text-fg-muted mb-2">Preview:</div>
                     <div className="flex items-center gap-2 mb-2">
@@ -435,7 +435,7 @@ export default function ArNSAssociationPanel({
                   </button>
 
                   {showAdvanced && (
-                    <div className="mt-4 space-y-4 bg-surface/30 rounded-lg p-4 border border-turbo-yellow/10">
+                    <div className="mt-4 space-y-4 bg-surface rounded-lg p-4 border border-turbo-yellow/20">
                       <div>
                         <div className="text-sm font-medium text-fg-muted mb-3">
                           TTL (Time to Live)
@@ -528,7 +528,7 @@ export default function ArNSAssociationPanel({
                         </div>
 
                         {/* Help Text */}
-                        <div className="mt-3 text-xs text-link bg-turbo-yellow/5 rounded p-3 border border-turbo-yellow/20">
+                        <div className="mt-3 text-xs text-link bg-turbo-yellow/10 rounded p-3 border border-turbo-yellow/30">
                           <div className="font-medium text-fg-muted mb-1">What is TTL?</div>
                           TTL controls how long AR.IO gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
                         </div>

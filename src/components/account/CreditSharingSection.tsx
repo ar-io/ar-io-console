@@ -232,7 +232,7 @@ export default function CreditSharingSection() {
   );
 
   return (
-    <div className="bg-gradient-to-br from-fg-muted/5 to-fg-muted/3 rounded-xl border border-default">
+    <div className="bg-surface rounded-xl border border-default">
       {/* Header */}
       <button
         onClick={() => setShowDetails(!showDetails)}

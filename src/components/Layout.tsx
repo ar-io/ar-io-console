@@ -4,9 +4,9 @@ import Footer from './Footer';
 
 export function Layout() {
   return (
-    <div className="min-h-screen bg-canvas text-fg-muted flex flex-col">
+    <div className="min-h-screen bg-page text-fg-muted flex flex-col">
       {/* Fixed Header */}
-      <div className="sticky top-0 z-50 border-b border-default/20" style={{ backgroundColor: '#000000' }}>
+      <div className="sticky top-0 z-50 bg-header-bg border-b border-default">
         <div className="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8 w-full">
           <Header />
         </div>

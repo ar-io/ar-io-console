@@ -59,7 +59,11 @@
       "Bash(findstr:*)",
       "Bash(npx grep:*)",
       "Bash(powershell -Command:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git -C \"C:/Source/turbo-gateway\" show main:app/src/styles/globals.css)",
+      "Bash(git -C \"C:/Source/turbo-gateway\" show origin/main:app/src/styles/globals.css)",
+      "Bash(git -C \"C:/Source/turbo-gateway\" branch -a)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []
