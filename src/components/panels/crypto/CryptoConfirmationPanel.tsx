@@ -583,7 +583,7 @@ export default function CryptoConfirmationPanel({
     <div className="px-4 sm:px-6 space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-fg-muted/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+        <div className="w-10 h-10 bg-fg-muted/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-default">
           <Wallet className="w-5 h-5 text-fg-muted" />
         </div>
         <div>

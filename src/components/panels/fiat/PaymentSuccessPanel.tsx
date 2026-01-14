@@ -237,7 +237,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
               }}
               className="flex items-center gap-3 p-3 bg-canvas hover:bg-surface-elevated transition-colors rounded-lg border border-default hover:border-fg-muted/30 text-left w-full"
             >
-              <div className="w-8 h-8 bg-fg-muted/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 bg-fg-muted/20 rounded-lg flex items-center justify-center flex-shrink-0 border border-default">
                 <Share2 className="w-4 h-4 text-fg-muted" />
               </div>
               <div>

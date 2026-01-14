@@ -239,7 +239,7 @@ export default function CreditSharingSection() {
         className="w-full p-4 sm:p-6 text-left hover:bg-surface/30 transition-colors flex items-center justify-between"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-fg-muted/20 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-fg-muted/20 rounded-lg flex items-center justify-center border border-default">
             <Users className="w-5 h-5 text-fg-muted" />
           </div>
           <div>

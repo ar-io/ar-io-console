@@ -730,7 +730,7 @@ export default function UploadPanel() {
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
                 isDragging
                   ? 'border-turbo-red bg-turbo-red/10'
-                  : 'border-link/30 hover:border-turbo-red/50'
+                  : 'border-turbo-red/30 hover:border-turbo-red/50'
               }`}
             >
               <div className="mb-4">
