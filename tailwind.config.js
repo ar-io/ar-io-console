@@ -28,6 +28,8 @@ export default {
         'alert-warning': 'var(--color-alert-warning)',
         'alert-success': 'var(--color-alert-success)',
         'alert-info': 'var(--color-alert-info)',
+        // Brand text colors (theme-aware - darker in light mode for accessibility)
+        'turbo-yellow-text': 'var(--color-turbo-yellow-text)',
         // Brand colors (static - same in both themes)
         turbo: {
           red: '#FE0230',

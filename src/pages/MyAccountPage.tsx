@@ -89,7 +89,7 @@ export default function MyAccountPage() {
             <button
               onClick={() => fetchOwnedNames(true)}
               disabled={loadingDomains}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-turbo-yellow hover:text-turbo-yellow/80 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-turbo-yellow-text hover:text-turbo-yellow-text/80 transition-colors disabled:opacity-50"
               title="Refresh domain list"
             >
               <RefreshCw className={`w-4 h-4 ${loadingDomains ? 'animate-spin' : ''}`} />
@@ -128,7 +128,7 @@ export default function MyAccountPage() {
                           <div className="flex items-center gap-3 mb-2">
                             <Globe className="w-5 h-5 text-turbo-yellow flex-shrink-0" />
                             <div>
-                              <h3 className="text-lg font-bold text-turbo-yellow">
+                              <h3 className="text-lg font-bold text-turbo-yellow-text">
                                 {domain.displayName}.ar.io
                               </h3>
                               {domain.displayName !== domain.name && (
@@ -162,7 +162,7 @@ export default function MyAccountPage() {
                           </button>
                           <button
                             onClick={() => window.open(`https://arns.ar.io/#/manage/names/${domain.name}`, '_blank')}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-surface border border-turbo-yellow/30 rounded-lg text-turbo-yellow hover:bg-turbo-yellow/10 transition-colors"
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-surface border border-turbo-yellow/30 rounded-lg text-turbo-yellow-text hover:bg-turbo-yellow/10 transition-colors"
                           >
                             <Globe className="w-4 h-4" />
                             Manage
@@ -178,7 +178,7 @@ export default function MyAccountPage() {
                   <div className="text-center pt-4 border-t border-turbo-yellow/20">
                     <button
                       onClick={() => window.open('https://arns.ar.io/#/manage/names', '_blank')}
-                      className="flex items-center justify-center gap-2 px-6 py-3 text-turbo-yellow hover:text-turbo-yellow/80 transition-colors font-medium"
+                      className="flex items-center justify-center gap-2 px-6 py-3 text-turbo-yellow-text hover:text-turbo-yellow-text/80 transition-colors font-medium"
                     >
                       View All Domains
                       <ArrowRight className="w-4 h-4" />

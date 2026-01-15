@@ -108,7 +108,7 @@ const LandingPage = () => {
         };
       case 'domains':
         return {
-          text: 'text-turbo-yellow',
+          text: 'text-turbo-yellow-text',
           bg: 'bg-turbo-yellow/10',
           border: 'border-turbo-yellow',
           button: 'bg-turbo-yellow text-black hover:bg-turbo-yellow/90'

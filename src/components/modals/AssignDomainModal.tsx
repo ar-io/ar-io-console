@@ -206,7 +206,7 @@ export default function AssignDomainModal({
                     <button
                       onClick={() => fetchOwnedNames(true)}
                       disabled={loading}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-turbo-yellow hover:text-turbo-yellow/80 transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-turbo-yellow-text hover:text-turbo-yellow-text/80 transition-colors disabled:opacity-50"
                       title="Refresh ArNS names"
                     >
                       <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
@@ -407,7 +407,7 @@ export default function AssignDomainModal({
                         href={`https://${selectedUndername ? selectedUndername + '_' : ''}${selectedArnsName}.ar.io`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-mono text-turbo-yellow hover:underline flex items-center gap-1"
+                        className="text-sm font-mono text-turbo-yellow-text hover:underline flex items-center gap-1"
                       >
                         {selectedUndername ? selectedUndername + '_' : ''}{displayName}.ar.io
                         <ExternalLink className="w-3 h-3" />
@@ -437,7 +437,7 @@ export default function AssignDomainModal({
                   <div className="border-t border-turbo-yellow/20 pt-4">
                     <button
                       onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="flex items-center gap-2 text-sm font-medium text-fg-muted hover:text-turbo-yellow transition-colors w-full"
+                      className="flex items-center gap-2 text-sm font-medium text-fg-muted hover:text-turbo-yellow-text transition-colors w-full"
                     >
                       <ChevronRight className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} />
                       Advanced Settings
@@ -461,7 +461,7 @@ export default function AssignDomainModal({
                                 className="mt-0.5 w-4 h-4 bg-surface border-2 border-default rounded-full checked:bg-canvas checked:border-turbo-yellow transition-colors"
                               />
                               <div className="flex-1">
-                                <div className="text-sm text-fg-muted group-hover:text-turbo-yellow transition-colors">
+                                <div className="text-sm text-fg-muted group-hover:text-turbo-yellow-text transition-colors">
                                   Keep existing TTL
                                 </div>
                                 <div className="text-xs text-link mt-0.5">
@@ -479,7 +479,7 @@ export default function AssignDomainModal({
                                 className="mt-0.5 w-4 h-4 bg-surface border-2 border-default rounded-full checked:bg-canvas checked:border-turbo-yellow transition-colors"
                               />
                               <div className="flex-1">
-                                <div className="text-sm text-fg-muted group-hover:text-turbo-yellow transition-colors">
+                                <div className="text-sm text-fg-muted group-hover:text-turbo-yellow-text transition-colors">
                                   Set custom TTL
                                 </div>
                                 {ttlMode === 'custom' && (
@@ -504,28 +504,28 @@ export default function AssignDomainModal({
                                       <button
                                         type="button"
                                         onClick={() => setCustomTTLInput('300')}
-                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow transition-colors"
+                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow-text transition-colors"
                                       >
                                         5 min
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => setCustomTTLInput('600')}
-                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow transition-colors"
+                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow-text transition-colors"
                                       >
                                         10 min
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => setCustomTTLInput('900')}
-                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow transition-colors"
+                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow-text transition-colors"
                                       >
                                         15 min
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => setCustomTTLInput('3600')}
-                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow transition-colors"
+                                        className="px-3 py-1.5 bg-surface border border-default rounded text-xs text-link hover:border-turbo-yellow hover:text-turbo-yellow-text transition-colors"
                                       >
                                         1 hour
                                       </button>

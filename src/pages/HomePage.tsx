@@ -104,7 +104,7 @@ export function HomePage() {
           <p className="text-link mb-4">
             Search available ArNS domain names and check registration costs. No login required.
           </p>
-          <div className="text-turbo-yellow flex items-center gap-1 group-hover:gap-2 transition-all">
+          <div className="text-turbo-yellow-text flex items-center gap-1 group-hover:gap-2 transition-all">
             Search domains <ArrowRight className="w-4 h-4" />
           </div>
         </Link>

@@ -55,7 +55,7 @@ const getServiceActiveColor = (page: string): string => {
     
     // ArNS services -> Yellow theme
     case 'domains':
-      return 'text-turbo-yellow';
+      return 'text-turbo-yellow-text';
     
     // Developer/Info services -> Purple theme
     case 'developer':
