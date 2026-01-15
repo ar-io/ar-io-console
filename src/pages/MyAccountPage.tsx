@@ -97,7 +97,7 @@ export default function MyAccountPage() {
             </button>
           </div>
           
-          <div className="bg-gradient-to-br from-turbo-yellow/5 to-turbo-yellow/3 rounded-xl border border-turbo-yellow/20 p-6">
+          <div className="bg-gradient-to-br from-turbo-yellow/10 to-turbo-yellow/5 rounded-xl border border-turbo-yellow/30 p-6">
             {loadingDomains ? (
               <div className="text-center py-8">
                 <RefreshCw className="w-6 h-6 text-turbo-yellow mx-auto mb-3 animate-spin" />
@@ -121,7 +121,7 @@ export default function MyAccountPage() {
               <>
                 <div className="grid gap-4 mb-6">
                   {ownedNames.slice(0, 5).map((domain) => (
-                    <div key={domain.name} className="bg-surface/50 rounded-lg border border-turbo-yellow/10 p-4">
+                    <div key={domain.name} className="bg-surface rounded-lg border border-turbo-yellow/20 p-4">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         {/* Domain Info */}
                         <div className="flex-1">
