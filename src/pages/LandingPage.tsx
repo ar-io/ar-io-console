@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -7,10 +7,11 @@ import { useTheme } from '../hooks/useTheme';
 import WalletSelectionModal from '../components/modals/WalletSelectionModal';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
+import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit';
 import {
-  ArrowRight, Zap, Github, FileCode,
+  ArrowRight, Zap, Github,
   CreditCard, Gift, Ticket, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Package, Cloud, Server, Wallet, Brain, Camera, Phone, BookOpen, Calculator
+  Package, Cloud, Server, Wallet, Camera, Phone, BookOpen, Calculator
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 import { CompanyCarousel } from '../components/CompanyCarousel';
@@ -32,6 +33,9 @@ const LandingPage = () => {
   const pricePerGiB = wincForOneGiB && creditsForOneUSD
     ? ((Number(wincForOneGiB) / 1e12) / creditsForOneUSD).toFixed(2)
     : '...';
+
+  // Get free upload limit from bundler
+  const freeUploadLimitBytes = useFreeUploadLimit();
 
   // Company data for the carousel
   const companies = [
@@ -169,13 +173,14 @@ const LandingPage = () => {
         <HeroBackground />
         {/* Main headline with gradient */}
         <h1 className="relative z-10 font-heading font-bold text-3xl sm:text-4xl lg:text-5xl text-center max-w-5xl leading-tight">
-          <span className="text-foreground">Permanent Cloud </span>
-          <span className="text-primary">Console</span>
+          <span className="text-foreground">Scale on a </span>
+          <span className="text-primary">permanent</span>
+          <span className="text-foreground"> cloud</span>
         </h1>
 
         {/* Subheadline */}
         <p className="relative z-10 mt-5 text-base sm:text-lg text-center max-w-3xl text-foreground/80 leading-relaxed">
-          Upload, deploy, and manage permanent data with fiat or crypto. Built for developers and AI agents.
+          Enterprise-grade storage, deployments, and domains for devs and teams.
         </p>
 
         {/* CTA Section */}
@@ -347,9 +352,27 @@ const LandingPage = () => {
           <p className="text-foreground/80">Pay-as-you-go storage with no subscriptions, now with x402</p>
         </div>
 
-        <div className="grid md:grid-cols-1 gap-6 max-w-md mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          {/* Free Tier */}
+          <div className="bg-card rounded-2xl border border-success/30 p-8 text-center">
+            <div className="text-4xl font-heading font-bold text-success mb-2">FREE</div>
+            <div className="text-lg text-foreground font-medium mb-1">
+              {freeUploadLimitBytes > 0 ? `Up to ${formatFreeLimit(freeUploadLimitBytes)}` : 'Small files'}
+            </div>
+            <div className="text-sm text-foreground/80 mb-4">No wallet or credits required</div>
+            <button
+              onClick={() => navigate('/try')}
+              className="inline-flex items-center gap-1 text-sm text-success hover:text-success/80 font-medium group"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Try it now</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* Per GiB Pricing */}
           <div className="bg-card rounded-2xl border border-border/20 p-8 text-center">
-            <div className="text-4xl font-bold text-foreground mb-2">${pricePerGiB}</div>
+            <div className="text-4xl font-heading font-bold text-primary mb-2">${pricePerGiB}</div>
             <div className="text-lg text-foreground font-medium mb-1">Per GiB</div>
             <div className="text-sm text-foreground/80 mb-4">Larger files & bulk storage</div>
             <button
@@ -522,29 +545,6 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* CTA Section after Features */}
-      <div className="mb-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a
-          href="https://cal.com/kempsterrrr/ar-io-ecosystem-intro"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group relative rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-lg"
-        >
-          <Phone className="w-5 h-5" />
-          <span>Book a Demo</span>
-        </a>
-
-        <a
-          href="https://docs.ar.io/build/upload/bundling-services"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-full border border-border/20 px-8 py-4 font-medium flex items-center gap-2 hover:bg-card hover:border-foreground transition-all group"
-        >
-          <BookOpen className="w-5 h-5" />
-          <span>Read the Docs</span>
-        </a>
-      </div>
-
       {/* ar.io by the Numbers */}
       <div className="mb-12">
         <div className="text-center mb-8">
@@ -554,197 +554,159 @@ const LandingPage = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-bold text-primary mb-1">20B+</div>
+            <div className="text-3xl font-heading font-bold text-primary mb-1">20B+</div>
             <div className="text-sm text-foreground/80">Files uploaded to Arweave</div>
           </div>
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-bold text-primary mb-1">200+</div>
-            <div className="text-sm text-foreground/80">TiB of data stored</div>
+            <div className="text-3xl font-heading font-bold text-primary mb-1">200TiB</div>
+            <div className="text-sm text-foreground/80">Data stored</div>
           </div>
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-bold text-primary mb-1">~860</div>
+            <div className="text-3xl font-heading font-bold text-primary mb-1">~860</div>
             <div className="text-sm text-foreground/80">Files per second</div>
           </div>
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-bold text-primary mb-1">99.9%</div>
+            <div className="text-3xl font-heading font-bold text-primary mb-1">99.9%</div>
             <div className="text-sm text-foreground/80">Gateway uptime</div>
           </div>
         </div>
       </div>
 
-      {/* Build Section */}
-      <section>
-        <h2 className="font-heading font-bold text-2xl mb-6 text-foreground">Build</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          <a href="https://docs.ar.io/build/upload/bundling-services" target="_blank" rel="noopener noreferrer"
-             className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-            <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2">START</div>
-            <h3 className="font-heading font-bold mb-2 text-foreground">Getting Started</h3>
-            <p className="text-sm text-foreground/80">AR.IO guide that walks through uploads.</p>
-          </a>
-
-          <a href="https://docs.ar.io/build/upload/turbo-credits" target="_blank" rel="noopener noreferrer"
-             className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-            <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2">PAY</div>
-            <h3 className="font-heading font-bold mb-2 text-foreground">Paying for Uploads</h3>
-            <p className="text-sm text-foreground/80">Credits are the payment medium used by the upload service.</p>
-          </a>
-
-          <a href="https://docs.ar.io/build/guides/hosting-decentralized-websites" target="_blank" rel="noopener noreferrer"
-             className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-            <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2">DEPLOY</div>
-            <h3 className="font-heading font-bold mb-2 text-foreground">Host Decentralized Websites</h3>
-            <p className="text-sm text-foreground/80">Deploy your webpage or app Arweave with ArNS.</p>
-          </a>
-
-          <a href="https://docs.ar.io/build/access" target="_blank" rel="noopener noreferrer"
-             className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-            <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2">ACCESS</div>
-            <h3 className="font-heading font-bold mb-2 text-foreground">Accessing Data</h3>
-            <p className="text-sm text-foreground/80">Resilient and decentralized access for your apps.</p>
-          </a>
-
-          <a href="https://docs.ar.io/build/upload/advanced-uploading-with-turbo" target="_blank" rel="noopener noreferrer"
-             className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-            <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2">ADVANCED</div>
-            <h3 className="font-heading font-bold mb-2 text-foreground">Advanced Uploading</h3>
-            <p className="text-sm text-foreground/80">Code-first examples for paying for and uploading files.</p>
-          </a>
-
-          <a href="https://docs.ar.io/build/run-a-gateway" target="_blank" rel="noopener noreferrer"
-             className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-            <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2">OPERATE</div>
-            <h3 className="font-heading font-bold mb-2 text-foreground">Run a Gateway</h3>
-            <p className="text-sm text-foreground/80">Join the decentralized network that powers permanent data.</p>
-          </a>
-
+      {/* Developer Resources Section */}
+      <section className="mb-12">
+        <div className="text-center mb-8">
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Developer Resources</h2>
+          <p className="text-foreground/80">Guides, APIs, and documentation to build on ar.io</p>
         </div>
-      </section>
 
-      {/* Resources Section */}
-      <section>
-        <h2 className="font-heading font-bold text-2xl mb-8 text-foreground">Resources</h2>
-
-        {/* API Documentation */}
-        <div className="mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
-              <Cloud className="w-4 h-4 text-primary" />
-            </div>
-            <h3 className="font-heading font-bold text-lg text-foreground">API Documentation</h3>
+        {/* Guides */}
+        <div className="mb-8">
+          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">Guides</h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            <a href="https://docs.ar.io/build/upload/bundling-services" target="_blank" rel="noopener noreferrer"
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <h4 className="font-heading font-bold mb-1 text-foreground">Getting Started</h4>
+              <p className="text-sm text-foreground/80">Create your first upload integration.</p>
+            </a>
+            <a href="https://docs.ar.io/build/guides/hosting-decentralized-websites" target="_blank" rel="noopener noreferrer"
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <h4 className="font-heading font-bold mb-1 text-foreground">Host Websites</h4>
+              <p className="text-sm text-foreground/80">Deploy your site to Arweave with ArNS.</p>
+            </a>
+            <a href="https://docs.ar.io/build/upload/advanced-uploading-with-turbo" target="_blank" rel="noopener noreferrer"
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <h4 className="font-heading font-bold mb-1 text-foreground">Advanced Uploading</h4>
+              <p className="text-sm text-foreground/80">Code-first examples for uploads and payments.</p>
+            </a>
+            <a href="https://docs.ar.io/build/upload/turbo-credits" target="_blank" rel="noopener noreferrer"
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <h4 className="font-heading font-bold mb-1 text-foreground">Paying for Uploads</h4>
+              <p className="text-sm text-foreground/80">Credits are the payment medium for uploads.</p>
+            </a>
+            <a href="https://docs.ar.io/build/access" target="_blank" rel="noopener noreferrer"
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <h4 className="font-heading font-bold mb-1 text-foreground">Accessing Data</h4>
+              <p className="text-sm text-foreground/80">Resilient and decentralized access for apps.</p>
+            </a>
+            <a href="https://docs.ar.io/build/run-a-gateway" target="_blank" rel="noopener noreferrer"
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
+              <h4 className="font-heading font-bold mb-1 text-foreground">Run a Gateway</h4>
+              <p className="text-sm text-foreground/80">Join the network that powers permanent data.</p>
+            </a>
           </div>
+        </div>
+
+        {/* APIs */}
+        <div className="mb-8">
+          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">API Reference</h3>
           <div className="grid md:grid-cols-3 gap-4">
             <a href="https://upload.ardrive.io/api-docs" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Upload className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Upload Service API</h3>
-              <p className="text-sm text-foreground/80">Pay for signed data-items and post to Arweave.</p>
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
+              <Upload className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-heading font-bold mb-1 text-foreground">Upload Service API</h4>
+                <p className="text-sm text-foreground/80">Pay for signed data-items and post to Arweave.</p>
+              </div>
             </a>
-
             <a href="https://payment.ardrive.io/api-docs" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Wallet className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Payment Service API</h3>
-              <p className="text-sm text-foreground/80">Top ups, fiat rates, supported currencies/countries.</p>
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
+              <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-heading font-bold mb-1 text-foreground">Payment Service API</h4>
+                <p className="text-sm text-foreground/80">Top ups, fiat rates, supported currencies.</p>
+              </div>
             </a>
-
             <a href="http://turbo-gateway.com/api-docs/" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Server className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Gateway API</h3>
-              <p className="text-sm text-foreground/80">General gateway endpoints served by this Gateway.</p>
+               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
+              <Server className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-heading font-bold mb-1 text-foreground">Gateway API</h4>
+                <p className="text-sm text-foreground/80">General gateway endpoints for this Gateway.</p>
+              </div>
             </a>
           </div>
         </div>
 
-        {/* Learn */}
-        <div className="mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
-              <Brain className="w-4 h-4 text-primary" />
-            </div>
-            <h3 className="font-heading font-bold text-lg text-foreground">Learn</h3>
-          </div>
-          <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {/* Learn - Compact grid */}
+        <div className="mb-8">
+          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">Learn</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <a href="https://docs.ar.io/learn/gateways" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Server className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">AR.IO Gateways</h3>
-              <p className="text-sm text-foreground/80">Infrastructure nodes that bridge the Arweave network and applications.</p>
+               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
+              <Server className="w-5 h-5 text-primary mx-auto mb-2" />
+              <h4 className="font-bold text-sm text-foreground">Gateways</h4>
             </a>
-
             <a href="https://docs.ar.io/learn/arns" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Globe2 className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Arweave Name System</h3>
-              <p className="text-sm text-foreground/80">A decentralized domain system connecting friendly names to permanent data.</p>
+               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
+              <Globe2 className="w-5 h-5 text-primary mx-auto mb-2" />
+              <h4 className="font-bold text-sm text-foreground">ArNS</h4>
             </a>
-
             <a href="https://docs.ar.io/learn/wayfinder" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Search className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Wayfinder</h3>
-              <p className="text-sm text-foreground/80">Decentralized access to Arweave content through any gateway in the AR.IO network.</p>
+               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
+              <Search className="w-5 h-5 text-primary mx-auto mb-2" />
+              <h4 className="font-bold text-sm text-foreground">Wayfinder</h4>
             </a>
-
             <a href="https://docs.ar.io/build/upload/turbo-credits#credit-sharing" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Users className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Credit Sharing</h3>
-              <p className="text-sm text-foreground/80">Approve other wallets to use your Credits with guardrails.</p>
+               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
+              <Users className="w-5 h-5 text-primary mx-auto mb-2" />
+              <h4 className="font-bold text-sm text-foreground">Credit Sharing</h4>
             </a>
-
             <a href="https://docs.ar.io/learn/what-is-ario" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Globe2 className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">AR.IO Network</h3>
-              <p className="text-sm text-foreground/80">A permanent cloud network of services built on Arweave.</p>
+               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
+              <Cloud className="w-5 h-5 text-primary mx-auto mb-2" />
+              <h4 className="font-bold text-sm text-foreground">AR.IO Network</h4>
             </a>
-
             <a href="https://docs.ar.io/learn/ans-104-bundles" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Package className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">ANS-104 Bundles</h3>
-              <p className="text-sm text-foreground/80">Efficient data packaging standard that bundles multiple items into single transactions.</p>
+               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
+              <Package className="w-5 h-5 text-primary mx-auto mb-2" />
+              <h4 className="font-bold text-sm text-foreground">ANS-104</h4>
             </a>
           </div>
         </div>
 
-        {/* Source Code */}
+        {/* Source Code - Compact row */}
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
-              <Github className="w-4 h-4 text-primary" />
-            </div>
-            <h3 className="font-heading font-bold text-lg text-foreground">Source Code</h3>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">Source Code</h3>
+          <div className="flex flex-wrap gap-3 justify-center">
             <a href="https://github.com/ardriveapp/turbo-sdk" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <FileCode className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">SDK</h3>
-              <p className="text-sm text-foreground/80">TypeScript SDK for uploads and payments.</p>
+               className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
+              <Github className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm text-foreground">SDK</span>
             </a>
-
             <a href="https://github.com/ardriveapp/turbo-upload-service" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Upload className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Upload Services</h3>
-              <p className="text-sm text-foreground/80">Bundler that packages ANS-104 data items.</p>
+               className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
+              <Github className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm text-foreground">Upload Service</span>
             </a>
-
             <a href="https://github.com/ardriveapp/turbo-payment-service" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Wallet className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">Payment Service</h3>
-              <p className="text-sm text-foreground/80">Balances, top-ups, fiat/crypto rails.</p>
+               className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
+              <Github className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm text-foreground">Payment Service</span>
             </a>
-
             <a href="https://github.com/ar-io/ar-io-node" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors">
-              <Server className="w-6 h-6 text-primary mb-3" />
-              <h3 className="font-heading font-bold mb-2 text-foreground">AR.IO Node</h3>
-              <p className="text-sm text-foreground/80">Core gateway/node implementation.</p>
+               className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
+              <Github className="w-4 h-4 text-primary" />
+              <span className="font-medium text-sm text-foreground">AR.IO Node</span>
             </a>
           </div>
         </div>
