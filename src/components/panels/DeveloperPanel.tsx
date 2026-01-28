@@ -3,7 +3,6 @@ import { ExternalLink, Code, Copy, Check, Database, Zap, Rss, Globe, Wrench, Edi
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { useStore } from '../../store/useStore';
 import CopyButton from '../CopyButton';
-import { ThemeToggle } from '../ThemeToggle';
 
 export default function DeveloperPanel() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -346,7 +345,7 @@ console.log('Folder manifest ID:', folderUpload.id);`,
              className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors border border-border/20 hover:border-primary/50">
             <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2">START</div>
             <h5 className="font-bold mb-2 text-foreground">Getting Started</h5>
-            <p className="text-xs text-foreground/80">AR.IO guide that walks through uploads.</p>
+            <p className="text-xs text-foreground/80">Build your first upload integration.</p>
           </a>
 
           <a href="https://docs.ar.io/build/upload/turbo-credits" target="_blank" rel="noopener noreferrer"
@@ -445,17 +444,6 @@ console.log('Folder manifest ID:', folderUpload.id);`,
 
       {activeTab === 'configuration' && (
         <div className="space-y-6">
-          {/* Theme Selection */}
-          <div>
-            <h4 className="text-lg font-semibold font-heading text-foreground mb-4">Theme</h4>
-            <p className="text-sm text-foreground/80 mb-4">
-              Choose your preferred color theme
-            </p>
-            <div className="flex justify-center">
-              <ThemeToggle />
-            </div>
-          </div>
-
           {/* Environment Configuration Panel */}
           <div>
             <h4 className="text-lg font-semibold font-heading text-foreground mb-4">Environment Configuration</h4>

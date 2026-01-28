@@ -56,11 +56,11 @@ export default function RecentDeploymentsSection() {
   }
 
   return (
-    <div className="bg-card rounded-2xl border border-border/20">
+    <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-primary/20">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border/20">
+      <div className="flex items-center justify-between p-4 border-b border-primary/10">
         <h3 className="font-bold text-foreground flex items-center gap-2">
-          <Globe className="w-5 h-5 text-foreground" />
+          <Globe className="w-5 h-5 text-primary" />
           Recent Deployments ({deployments.length})
         </h3>
         <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export default function RecentDeploymentsSection() {
           )}
           <button
             onClick={() => navigate('/deployments')}
-            className="text-xs text-foreground hover:text-foreground/80 transition-colors"
+            className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
           >
             View All Deployments →
           </button>

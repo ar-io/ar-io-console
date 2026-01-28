@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Info, Zap, User, Lock, Key } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Info, Zap, User, Lock, Key, Settings } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -22,17 +22,18 @@ const accountServices = [
   { name: 'Capture Page', page: 'capture' as const, icon: Camera },
   { name: 'Deploy Site', page: 'deploy' as const, icon: Zap },
   { name: 'Share Credits', page: 'share' as const, icon: Share2 },
+  { name: 'Redeem Gift', page: 'redeem' as const, icon: Ticket },
   { name: 'Send Gift', page: 'gift' as const, icon: Gift },
 ];
 
 // Public utility services
 const utilityServices = [
   { name: 'Search Domains', page: 'domains' as const, icon: Globe },
-  { name: 'Developer Resources', page: 'developer' as const, icon: Code },
+  { name: 'Configuration', page: 'configuration' as const, icon: Settings },
   { name: 'Pricing Calculator', page: 'calculator' as const, icon: Calculator },
   { name: 'Check Balance', page: 'balances' as const, icon: Search },
-  { name: 'Redeem Gift', page: 'redeem' as const, icon: Ticket },
   { name: 'Service Info', page: 'gateway-info' as const, icon: Info },
+  { name: 'Developer Resources', href: 'https://docs.ar.io', icon: Code, external: true },
 ];
 
 const Header = () => {
@@ -172,9 +173,15 @@ const Header = () => {
   const filteredAccountServices = accountServices.filter(service =>
     isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page)
   );
-  const filteredUtilityServices = utilityServices.filter(service =>
-    isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page)
-  );
+  const filteredUtilityServices = utilityServices.filter(service => {
+    // External links are always shown
+    if ('external' in service && service.external) return true;
+    // Internal links: check if payment service is available or not a payment route
+    if ('page' in service && service.page) {
+      return isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page);
+    }
+    return true;
+  });
 
   return (
     <div className="flex items-center py-2 sm:py-3">
@@ -262,11 +269,30 @@ const Header = () => {
                 {/* Public Tools */}
                 <div className="px-4 py-2 text-xs font-semibold text-foreground/60 uppercase tracking-wider">Tools</div>
                 {filteredUtilityServices.map((service) => {
-                  const isActive = location.pathname === `/${service.page}`;
+                  // Handle external links
+                  if ('external' in service && service.external && 'href' in service) {
+                    return (
+                      <a
+                        key={service.href}
+                        href={service.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => close()}
+                        className="flex items-center gap-3 py-2 px-4 text-sm transition-colors text-foreground/80 hover:bg-primary/10 hover:text-foreground"
+                      >
+                        <service.icon className="w-4 h-4 text-foreground/60" />
+                        <span className="flex-1">{service.name}</span>
+                        <ExternalLink className="w-3 h-3 text-foreground/40" />
+                      </a>
+                    );
+                  }
+
+                  // Handle internal links
+                  const isActive = 'page' in service && location.pathname === `/${service.page}`;
                   return (
                     <Link
-                      key={service.page}
-                      to={`/${service.page}`}
+                      key={'page' in service ? service.page : service.name}
+                      to={`/${'page' in service ? service.page : ''}`}
                       onClick={() => close()}
                       className={`flex items-center gap-3 py-2 px-4 text-sm transition-colors ${
                         isActive
@@ -492,7 +518,7 @@ const Header = () => {
         </Popover>
       )}
 
-      {/* Connect Wallet Button for non-logged-in users */}
+      {/* Sign In Button for non-logged-in users */}
       {!address && (
         <button
           onClick={() => {
@@ -501,7 +527,7 @@ const Header = () => {
           className="flex items-center gap-2 bg-foreground text-card px-4 py-2.5 rounded-full font-semibold hover:bg-foreground/90 transition-colors mr-2 sm:mr-0"
         >
           <Wallet className="w-4 h-4" />
-          Connect
+          Sign in
         </button>
       )}
 

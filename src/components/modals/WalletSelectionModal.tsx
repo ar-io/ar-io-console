@@ -4,6 +4,7 @@ import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { usePrivy, useLogin, useWallets, useCreateWallet } from '@privy-io/react-auth';
+import { useLocation, useNavigate } from 'react-router-dom';
 import BaseModal from './BaseModal';
 import BlockingMessageModal from './BlockingMessageModal';
 import { useStore } from '../../store/useStore';
@@ -20,6 +21,18 @@ const WalletSelectionModal = ({
   const [connectingWallet, setConnectingWallet] = useState<string>();
   const [intentionalSolanaConnect, setIntentionalSolanaConnect] = useState(false);
   const [waitingForPrivyWallet, setWaitingForPrivyWallet] = useState(false);
+
+  // Navigation hooks for post-connection redirect
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Handle post-connection: if on homepage, redirect to account page
+  const handleConnectionSuccess = () => {
+    if (location.pathname === '/') {
+      navigate('/account');
+    }
+    onClose();
+  };
 
   // Privy hooks for email login
   const { authenticated } = usePrivy();
@@ -49,7 +62,7 @@ const WalletSelectionModal = ({
       if (existingWallet) {
         await setEthereumAddress(existingWallet.address);
         setConnectingWallet(undefined);
-        onClose();
+        handleConnectionSuccess();
       } else {
         // No wallet exists, need to create one
         setConnectingWallet('Creating your wallet...');
@@ -61,7 +74,7 @@ const WalletSelectionModal = ({
           if (newWallet) {
             await setEthereumAddress(newWallet.address);
             setConnectingWallet(undefined);
-            onClose();
+            handleConnectionSuccess();
           } else {
             // If wallet creation didn't return immediately, wait for it
             setWaitingForPrivyWallet(true);
@@ -93,7 +106,7 @@ const WalletSelectionModal = ({
         setEthereumAddress(privyWallet.address).then(() => {
           setConnectingWallet(undefined);
           setWaitingForPrivyWallet(false);
-          onClose();
+          handleConnectionSuccess();
         });
       } else {
         // If we have wallets but none match our criteria, use the first one
@@ -102,7 +115,7 @@ const WalletSelectionModal = ({
           setEthereumAddress(firstWallet.address).then(() => {
             setConnectingWallet(undefined);
             setWaitingForPrivyWallet(false);
-            onClose();
+            handleConnectionSuccess();
           });
         }
       }
@@ -120,7 +133,7 @@ const WalletSelectionModal = ({
 
       if (privyWallet && privyWallet.address !== currentAddress) {
         setEthereumAddress(privyWallet.address).then(() => {
-          onClose();
+          handleConnectionSuccess();
         });
       }
     }
@@ -157,12 +170,12 @@ const WalletSelectionModal = ({
       // Resolve and set Ethereum address (handles checksummed vs lowercase)
       setEthereumAddress(ethAccount.address).then(() => {
         setIntentionalEthConnect(false);
-        onClose();
+        handleConnectionSuccess();
       }).catch((error) => {
         console.error('[Wallet Connection] Failed to set Ethereum address:', error);
         // Still close modal on error - address was set via fallback in setEthereumAddress
         setIntentionalEthConnect(false);
-        onClose();
+        handleConnectionSuccess();
       });
     }
   }, [ethAccount.isConnected, ethAccount.address, intentionalEthConnect, onClose]);
@@ -183,7 +196,7 @@ const WalletSelectionModal = ({
       const rawAddress = publicKey.toString();
       // For now, use raw address - will be converted by Turbo SDK internally
       setAddress(rawAddress, 'solana');
-      onClose();
+      handleConnectionSuccess();
       setIntentionalSolanaConnect(false); // Reset flag
     }
     // Remove setAddress and onClose from dependencies to prevent infinite loop
@@ -203,7 +216,7 @@ const WalletSelectionModal = ({
         // Already connected to Solana wallet
         const rawAddress = publicKey.toString();
         setAddress(rawAddress, 'solana');
-        onClose();
+        handleConnectionSuccess();
         setIntentionalSolanaConnect(false);
         return;
       }
@@ -269,8 +282,8 @@ const WalletSelectionModal = ({
 
       if (privyWallet) {
         await setEthereumAddress(privyWallet.address);
-        // Close the modal immediately without waiting
-        setTimeout(() => onClose(), 0);
+        // Handle connection and navigate if needed
+        setTimeout(() => handleConnectionSuccess(), 0);
         return;
       }
     }
@@ -313,7 +326,7 @@ const WalletSelectionModal = ({
       console.log('[WalletSelectionModal] Got address:', addr);
       // For Arweave, raw address = native address
       setAddress(addr, 'arweave');
-      onClose();
+      handleConnectionSuccess();
     } catch (error) {
       // Failed to connect Wander wallet
       console.error('[WalletSelectionModal] Wander connect error:', error);
@@ -349,7 +362,7 @@ const WalletSelectionModal = ({
   return (
     <BaseModal onClose={onClose} showCloseButton={true}>
       <div className="flex flex-col items-center justify-center text-foreground p-6 sm:p-8" style={{ minWidth: 'min(85vw, 480px)', maxWidth: '95vw' }}>
-        <div className="mb-8 sm:mb-10 text-xl sm:text-2xl font-bold">Connect a Wallet</div>
+        <div className="mb-8 sm:mb-10 text-xl sm:text-2xl font-bold">Sign in</div>
 
         <div className="flex w-full flex-col gap-3 sm:gap-4">
           {/* Email login option - prominently at the top */}
@@ -413,7 +426,7 @@ const WalletSelectionModal = ({
 
         <div className="mt-6 sm:mt-8 text-center">
           <div className="text-xs text-foreground/80 px-2">
-            By connecting, you agree to our{' '}
+            By signing in, you agree to our{' '}
             <a
               href="https://ardrive.io/tos-and-privacy/"
               target="_blank"

@@ -69,11 +69,11 @@ export default function RecentUploadsSection() {
   }
 
   return (
-    <div className="bg-card rounded-2xl border border-border/20">
+    <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-primary/20">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border/20">
+      <div className="flex items-center justify-between p-4 border-b border-primary/10">
         <h3 className="font-bold text-foreground flex items-center gap-2">
-          <Upload className="w-5 h-5 text-foreground" />
+          <Upload className="w-5 h-5 text-primary" />
           Recent Uploads ({uploadHistory.length})
         </h3>
         <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export default function RecentUploadsSection() {
           )}
           <button
             onClick={() => navigate('/upload')}
-            className="text-xs text-foreground hover:text-foreground/80 transition-colors"
+            className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
           >
             View Full Page →
           </button>
