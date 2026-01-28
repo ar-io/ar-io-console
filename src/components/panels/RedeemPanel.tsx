@@ -319,8 +319,8 @@ export default function RedeemPanel() {
       <div className="grid md:grid-cols-3 gap-4">
         <div className="bg-card rounded-2xl p-4 border border-border/20">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-foreground/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
-              <Ticket className="w-5 h-5 text-foreground" />
+            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
+              <Ticket className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h4 className="font-bold text-foreground mb-1 text-sm">Gift Code Required</h4>
@@ -333,8 +333,8 @@ export default function RedeemPanel() {
 
         <div className="bg-card rounded-2xl p-4 border border-border/20">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-foreground/15 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <Shield className="w-5 h-5 text-foreground" />
+            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
+              <Shield className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h4 className="font-bold text-foreground mb-1 text-sm">Secure Verification</h4>
@@ -347,8 +347,8 @@ export default function RedeemPanel() {
 
         <div className="bg-card rounded-2xl p-4 border border-border/20">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-foreground/15 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="w-5 h-5 text-foreground" />
+            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
+              <CheckCircle className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h4 className="font-bold text-foreground mb-1 text-sm">Instant Credit</h4>

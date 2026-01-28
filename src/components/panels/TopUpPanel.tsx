@@ -532,8 +532,8 @@ export default function TopUpPanel() {
     <div className="px-4 sm:px-6">
       {/* Inline Header with Description */}
       <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-foreground/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <CreditCard className="w-5 h-5 text-foreground" />
+        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+          <CreditCard className="w-5 h-5 text-primary" />
         </div>
         <div>
           <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Buy Credits</h3>

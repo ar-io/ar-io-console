@@ -128,8 +128,8 @@ export default function GiftPanel() {
     <div className="px-4 sm:px-6">
       {/* Inline Header with Description */}
       <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-foreground/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <Gift className="w-5 h-5 text-foreground" />
+        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+          <Gift className="w-5 h-5 text-primary" />
         </div>
         <div>
           <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Send Gift</h3>
@@ -232,8 +232,8 @@ export default function GiftPanel() {
       <div className="grid md:grid-cols-3 gap-4">
         <div className="bg-card rounded-2xl p-4 border border-border/20">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-foreground/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
-              <Mail className="w-5 h-5 text-foreground" />
+            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
+              <Mail className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h4 className="font-bold text-foreground mb-1 text-sm">Email Delivery</h4>
@@ -246,8 +246,8 @@ export default function GiftPanel() {
 
         <div className="bg-card rounded-2xl p-4 border border-border/20">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-foreground/15 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="w-5 h-5 text-foreground" />
+            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
+              <CheckCircle className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h4 className="font-bold text-foreground mb-1 text-sm">Never Expires</h4>
@@ -260,8 +260,8 @@ export default function GiftPanel() {
 
         <div className="bg-card rounded-2xl p-4 border border-border/20">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-foreground/15 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <Heart className="w-5 h-5 text-foreground" />
+            <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
+              <Heart className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h4 className="font-bold text-foreground mb-1 text-sm">Personal Touch</h4>
