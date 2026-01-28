@@ -542,7 +542,7 @@ export default function CryptoConfirmationPanel({
     // Wait a bit for the transaction to be confirmed on-chain
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    setPaymentError('Submitting transaction to Turbo...');
+    setPaymentError('Submitting transaction to ar.io...');
 
     try {
       // Use properly formatted turbo config with correct token type
@@ -570,7 +570,7 @@ export default function CryptoConfirmationPanel({
       const errorMessage = e instanceof Error ? e.message : String(e);
 
       if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        setPaymentError(`Transaction not found yet. The blockchain transaction (${failedTxId}) needs to be confirmed before Turbo can process it. Please wait 1-2 minutes and try again.`);
+        setPaymentError(`Transaction not found yet. The blockchain transaction (${failedTxId}) needs to be confirmed before ar.io can process it. Please wait 1-2 minutes and try again.`);
       } else {
         setPaymentError(`Retry failed: ${errorMessage}`);
       }

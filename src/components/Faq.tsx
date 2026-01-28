@@ -13,7 +13,7 @@ const getFaqData = (freeLimit: number) => [
   },
   {
     question: "What are Credits?",
-    answer: "Credits offer users the ability to pay via credit card instead of using AR tokens. Credits represent a 1:1 value with storage costs and are used solely to pay for uploads with Turbo. Credits never expire once purchased."
+    answer: "Credits offer users the ability to pay via credit card instead of using AR tokens. Credits represent a 1:1 value with storage costs and are used solely to pay for uploads. Credits never expire once purchased."
   },
   {
     question: "How do I gift Credits?",
@@ -25,15 +25,15 @@ const getFaqData = (freeLimit: number) => [
   },
   {
     question: "What wallets are supported?",
-    answer: "Turbo supports Wander for Arweave wallets, MetaMask for Ethereum wallets, and Phantom for Solana wallets. You can connect any of these to manage your credits and uploads."
+    answer: "Ar.io supports Wander for Arweave wallets, MetaMask for Ethereum wallets, and Phantom for Solana wallets. You can connect any of these to manage your credits and uploads."
   },
   {
     question: "Is my data permanent?",
-    answer: "Yes! All data uploaded through Turbo is permanently stored on the Arweave network. Once uploaded, your data cannot be deleted or modified, ensuring it remains accessible forever."
+    answer: "Yes! All data uploaded through ar.io is permanently stored on the Arweave network. Once uploaded, your data cannot be deleted or modified, ensuring it remains accessible forever."
   },
   {
     question: "How fast are uploads?",
-    answer: "Turbo processes uploads at up to 860 transactions per second, making it one of the fastest ways to get data onto Arweave. Upload speeds depend on your internet connection and file sizes."
+    answer: "Ar.io processes uploads at up to 860 transactions per second, making it one of the fastest ways to get data onto Arweave. Upload speeds depend on your internet connection and file sizes."
   }
 ];
 

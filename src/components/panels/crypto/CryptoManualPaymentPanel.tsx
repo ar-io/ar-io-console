@@ -64,7 +64,7 @@ export default function CryptoManualPaymentPanel({
   const submitTransactionToTurbo = async () => {
     setPaymentError(undefined);
     if (turboUnauthenticatedClient && transferTransactionResult) {
-      setSigningMessage('Submitting Transaction to Turbo...');
+      setSigningMessage('Submitting transaction to ar.io...');
       try {
         const response = await turboUnauthenticatedClient.submitFundTransaction({
           txId: transferTransactionResult.txid,
@@ -145,7 +145,7 @@ export default function CryptoManualPaymentPanel({
         </div>
         <div>
           <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Submit Transactions</h3>
-          <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to Turbo</p>
+          <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to ar.io</p>
         </div>
       </div>
 
@@ -172,7 +172,7 @@ export default function CryptoManualPaymentPanel({
             </div>
             <div>
               <h4 className="font-heading font-medium text-foreground">
-                Send {tokenLabels[tokenType]} to Turbo
+                Send {tokenLabels[tokenType]} to ar.io
               </h4>
               <p className="text-sm text-foreground/80">
                 Transfer {Number(cryptoTopupValue).toFixed(6)} {tokenLabels[tokenType]} from your wallet
@@ -184,8 +184,8 @@ export default function CryptoManualPaymentPanel({
             <div className="space-y-4">
               <div className="bg-card rounded-2xl p-4 border border-border/20">
                 <p className="text-sm text-foreground/80 mb-2">
-                  This step sends {tokenLabels[tokenType]} to Turbo.
-                  You can verify the recipient is Turbo's wallet address{' '}
+                  This step sends {tokenLabels[tokenType]} to ar.io.
+                  You can verify the recipient is ar.io's wallet address{' '}
                   <a
                     href={`${config.paymentServiceUrl}/info`}
                     target="_blank"
@@ -283,7 +283,7 @@ export default function CryptoManualPaymentPanel({
         )}
       </div>
 
-      {/* Step 2 - Submit to Turbo */}
+      {/* Step 2 - Submit to ar.io */}
       {transferTransactionResult && (
         <div className="bg-card rounded-2xl border border-border/20">
           <div className="p-6">
@@ -296,9 +296,9 @@ export default function CryptoManualPaymentPanel({
                 {transactionSubmitted ? '✓' : '2'}
               </div>
               <div>
-                <h4 className="font-heading font-medium text-foreground">Submit Transaction to Turbo</h4>
+                <h4 className="font-heading font-medium text-foreground">Submit Transaction to ar.io</h4>
                 <p className="text-sm text-foreground/80">
-                  Confirm your transaction with Turbo's payment service
+                  Confirm your transaction with ar.io's payment service
                 </p>
               </div>
             </div>
@@ -307,7 +307,7 @@ export default function CryptoManualPaymentPanel({
               <div className="space-y-4">
                 <div className="bg-card rounded-2xl p-4 border border-border/20">
                   <p className="text-sm text-foreground/80">
-                    This step submits your transaction to Turbo for processing.
+                    This step submits your transaction to ar.io for processing.
                     Once submitted, your credits will be added to your account.
                   </p>
                 </div>
@@ -320,7 +320,7 @@ export default function CryptoManualPaymentPanel({
                   className="w-full px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                   disabled={!transferTransactionResult}
                 >
-                  Submit to Turbo
+                  Submit to ar.io
                 </button>
               </div>
             ) : (

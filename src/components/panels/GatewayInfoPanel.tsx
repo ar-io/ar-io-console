@@ -136,11 +136,11 @@ export default function GatewayInfoPanel() {
               </div>
 
               <div className="bg-card rounded-2xl p-4">
-                <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Turbo Rate</div>
+                <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Rate</div>
                 <div className="text-lg font-bold text-primary">
                   ${pricingInfo.usdPerGiB.toFixed(4)}
                 </div>
-                <div className="text-xs text-foreground/80 mt-1">Per GiB via Turbo</div>
+                <div className="text-xs text-foreground/80 mt-1">Per GiB via ar.io</div>
               </div>
 
               <div className="bg-card rounded-2xl p-4">
@@ -157,7 +157,7 @@ export default function GatewayInfoPanel() {
               </div>
 
               <div className="bg-card rounded-2xl p-4">
-                <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Turbo Premium</div>
+                <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Premium</div>
                 <div className="text-lg font-bold text-primary">
                   {pricingInfo.turboFeePercentage
                     ? `+${pricingInfo.turboFeePercentage.toFixed(1)}%`
