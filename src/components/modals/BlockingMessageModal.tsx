@@ -18,7 +18,7 @@ export default function BlockingMessageModal({ message, onClose }: BlockingMessa
             style={{ width: 72, height: 72 }}
           />
         </div>
-        <div className="text-fg-muted text-sm text-center">{message}</div>
+        <div className="text-foreground text-sm text-center">{message}</div>
       </div>
     </BaseModal>
   );

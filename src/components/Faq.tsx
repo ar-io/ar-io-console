@@ -54,22 +54,22 @@ export default function Faq() {
         {faqData.map((item, index) => (
           <div 
             key={index}
-            className="border border-default rounded-lg overflow-hidden"
+            className="border border-border/20 rounded-2xl overflow-hidden"
           >
             <button
               onClick={() => toggleExpanded(index)}
-              className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-surface transition-colors"
+              className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-card transition-colors"
             >
               <span className="font-medium">{item.question}</span>
-              <ChevronDown 
-                className={`w-5 h-5 text-link transition-transform ${
+              <ChevronDown
+                className={`w-5 h-5 text-foreground/80 transition-transform ${
                   expandedIndex === index ? 'rotate-180' : ''
                 }`}
               />
             </button>
             {expandedIndex === index && (
-              <div className="px-4 py-3 bg-surface border-t border-default">
-                <p className="text-sm text-link leading-relaxed">
+              <div className="px-4 py-3 bg-card border-t border-border/20">
+                <p className="text-sm text-foreground/80 leading-relaxed">
                   {item.answer}
                 </p>
               </div>

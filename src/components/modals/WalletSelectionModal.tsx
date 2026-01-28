@@ -348,44 +348,44 @@ const WalletSelectionModal = ({
 
   return (
     <BaseModal onClose={onClose} showCloseButton={true}>
-      <div className="flex flex-col items-center justify-center text-fg-muted p-6 sm:p-8" style={{ minWidth: 'min(85vw, 480px)', maxWidth: '95vw' }}>
+      <div className="flex flex-col items-center justify-center text-foreground p-6 sm:p-8" style={{ minWidth: 'min(85vw, 480px)', maxWidth: '95vw' }}>
         <div className="mb-8 sm:mb-10 text-xl sm:text-2xl font-bold">Connect a Wallet</div>
 
         <div className="flex w-full flex-col gap-3 sm:gap-4">
           {/* Email login option - prominently at the top */}
           <button
-            className="w-full bg-surface p-3 sm:p-4 rounded hover:bg-surface/80 transition-colors text-left flex items-center gap-3"
+            className="w-full bg-card p-3 sm:p-4 rounded-2xl hover:bg-card/80 transition-colors text-left flex items-center gap-3"
             onClick={connectWithEmail}
           >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-surface rounded-lg flex items-center justify-center flex-shrink-0 border border-default/30">
-              <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-link" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-card rounded-lg flex items-center justify-center flex-shrink-0 border border-border/20">
+              <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-foreground/80" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-semibold mb-1 text-base">Email Sign-in</div>
-              <div className="text-xs sm:text-sm text-link">No wallet needed • Instant access</div>
+              <div className="text-xs sm:text-sm text-foreground/80">No wallet needed • Instant access</div>
             </div>
           </button>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-2">
-            <div className="flex-1 h-px bg-surface"></div>
-            <div className="text-xs text-link">or use a wallet</div>
-            <div className="flex-1 h-px bg-surface"></div>
+            <div className="flex-1 h-px bg-border/20"></div>
+            <div className="text-xs text-foreground/60">or use a wallet</div>
+            <div className="flex-1 h-px bg-border/20"></div>
           </div>
 
           <button
-            className="w-full bg-surface p-3 sm:p-4 rounded hover:bg-surface/80 transition-colors text-left flex items-center gap-3"
+            className="w-full bg-card p-3 sm:p-4 rounded-2xl hover:bg-card/80 transition-colors text-left flex items-center gap-3"
             onClick={connectWander}
           >
             <img src="/wander-logo.png" alt="Wander" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="font-semibold mb-1 text-base">Wander</div>
-              <div className="text-xs sm:text-sm text-link">Arweave native wallet</div>
+              <div className="text-xs sm:text-sm text-foreground/80">Arweave native wallet</div>
             </div>
           </button>
 
           <button
-            className="w-full bg-surface p-3 sm:p-4 rounded hover:bg-surface/80 transition-colors text-left flex items-center gap-3"
+            className="w-full bg-card p-3 sm:p-4 rounded-2xl hover:bg-card/80 transition-colors text-left flex items-center gap-3"
             onClick={connectEthereumWallet}
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#627EEA] rounded-lg flex items-center justify-center flex-shrink-0">
@@ -395,30 +395,30 @@ const WalletSelectionModal = ({
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-semibold mb-1 text-base">Ethereum Wallets</div>
-              <div className="text-xs sm:text-sm text-link">MetaMask, WalletConnect, Coinbase & more</div>
+              <div className="text-xs sm:text-sm text-foreground/80">MetaMask, WalletConnect, Coinbase & more</div>
             </div>
           </button>
 
           <button
-            className="w-full bg-surface p-3 sm:p-4 rounded hover:bg-surface/80 transition-colors text-left flex items-center gap-3"
+            className="w-full bg-card p-3 sm:p-4 rounded-2xl hover:bg-card/80 transition-colors text-left flex items-center gap-3"
             onClick={connectPhantom}
           >
             <img src="/phantom-logo.svg" alt="Phantom" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="font-semibold mb-1 text-base">Phantom / Solflare</div>
-              <div className="text-xs sm:text-sm text-link">Solana wallets</div>
+              <div className="text-xs sm:text-sm text-foreground/80">Solana wallets</div>
             </div>
           </button>
         </div>
 
         <div className="mt-6 sm:mt-8 text-center">
-          <div className="text-xs text-link px-2">
+          <div className="text-xs text-foreground/80 px-2">
             By connecting, you agree to our{' '}
             <a
               href="https://ardrive.io/tos-and-privacy/"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-fg-muted transition-colors"
+              className="underline hover:text-foreground transition-colors"
             >
               Terms and Conditions
             </a>
