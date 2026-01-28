@@ -1833,7 +1833,7 @@ export default function DeploySitePanel() {
               }
             </h3>
             <p className="text-sm text-foreground/80">
-              Success! Your site is live on the permanent web.
+              Success! Your site is live on the permanent cloud.
             </p>
           </div>
         </div>
@@ -1846,7 +1846,7 @@ export default function DeploySitePanel() {
           <div>
             <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Deploy Site</h3>
             <p className="text-sm text-foreground/80">
-              Deploy NFT collections, static sites and apps to the permanent web
+              Deploy NFT collections, static sites and apps to the permanent cloud
             </p>
           </div>
         </div>

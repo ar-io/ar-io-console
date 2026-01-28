@@ -94,7 +94,7 @@ const LandingPage = () => {
       icon: Camera,
       title: 'Capture & Archive Webpages',
       description: 'Preserve any webpage as a full-page screenshot on Arweave. Perfect for archiving content, preserving evidence, or creating permanent snapshots of the web.',
-      benefits: ['Full-page screenshots', 'Permanent web archival', 'ArNS domain assignment'],
+      benefits: ['Full-page screenshots', 'Web page archival', 'Smart domain assignment'],
       action: 'capture',
       loginText: 'Capture Webpage',
       connectText: 'Connect Wallet to Capture'
