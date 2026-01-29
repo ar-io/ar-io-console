@@ -11,7 +11,7 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Gift, Ticket, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Cloud, Server, Wallet, Camera, Phone, BookOpen, Calculator
+  Camera, Phone, BookOpen, Calculator
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 import { CompanyCarousel } from '../components/CompanyCarousel';
@@ -584,115 +584,135 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Developer Resources Section */}
+      {/* Builder's Journey Section */}
       <section className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Developer Resources</h2>
-          <p className="text-foreground/80">Guides, APIs, and documentation to build on ar.io</p>
+        <div className="text-center mb-10">
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Builder's Journey</h2>
+          <p className="text-foreground/80">Follow the path from first upload to running your own infrastructure</p>
         </div>
 
-        {/* Guides */}
-        <div className="mb-8">
-          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">Guides</h3>
-          <div className="grid md:grid-cols-3 gap-4">
-            <a href="https://docs.ar.io/build/upload/bundling-services" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
-              <h4 className="font-heading font-bold mb-1 text-foreground">Getting Started</h4>
-              <p className="text-sm text-foreground/80">Create your first upload integration.</p>
+        {/* Timeline */}
+        <div className="max-w-3xl mx-auto">
+          {/* Steps 1-6: Core Journey */}
+          <div className="relative">
+            {/* Connecting line */}
+            <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary via-primary/50 to-primary/20 hidden sm:block" />
+
+            {/* Step 1 */}
+            <a href="https://docs.ar.io/learn/what-is-arweave/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 mb-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
+                1
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Learn about ar.io</h4>
+                <p className="text-sm text-foreground/70">Understand permanent storage and the Arweave ecosystem</p>
+              </div>
             </a>
-            <a href="https://docs.ar.io/build/guides/hosting-decentralized-websites" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
-              <h4 className="font-heading font-bold mb-1 text-foreground">Host Websites</h4>
-              <p className="text-sm text-foreground/80">Deploy your site to Arweave with ArNS.</p>
+
+            {/* Step 2 */}
+            <a href="https://docs.ar.io/build/upload/bundling-services/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 mb-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
+                2
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Upload your first data</h4>
+                <p className="text-sm text-foreground/70">Create your first permanent data integration</p>
+              </div>
             </a>
-            <a href="https://docs.ar.io/build/upload/advanced-uploading-with-turbo" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
-              <h4 className="font-heading font-bold mb-1 text-foreground">Advanced Uploading</h4>
-              <p className="text-sm text-foreground/80">Code-first examples for uploads and payments.</p>
+
+            {/* Step 3 */}
+            <a href="https://docs.ar.io/build/guides/hosting-decentralised-apps/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 mb-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
+                3
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Deploy a site or app</h4>
+                <p className="text-sm text-foreground/70">Host your website or web app permanently</p>
+              </div>
             </a>
-            <a href="https://docs.ar.io/build/upload/turbo-credits" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
-              <h4 className="font-heading font-bold mb-1 text-foreground">Paying for Uploads</h4>
-              <p className="text-sm text-foreground/80">Credits are the payment medium for uploads.</p>
+
+            {/* Step 4 */}
+            <a href="https://docs.ar.io/build/guides/working-with-arns/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 mb-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
+                4
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Connect an ArNS domain</h4>
+                <p className="text-sm text-foreground/70">Give your content a human-readable name</p>
+              </div>
             </a>
-            <a href="https://docs.ar.io/build/access" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
-              <h4 className="font-heading font-bold mb-1 text-foreground">Accessing Data</h4>
-              <p className="text-sm text-foreground/80">Resilient and decentralized access for apps.</p>
+
+            {/* Step 5 */}
+            <a href="https://docs.ar.io/build/access/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 mb-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
+                5
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Access data with Wayfinder</h4>
+                <p className="text-sm text-foreground/70">Resilient data access and verification for your apps</p>
+              </div>
             </a>
-            <a href="https://docs.ar.io/build/run-a-gateway" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors">
-              <h4 className="font-heading font-bold mb-1 text-foreground">Run a Gateway</h4>
-              <p className="text-sm text-foreground/80">Join the network that powers permanent data.</p>
+
+            {/* Step 6 */}
+            <a href="https://docs.ar.io/build/guides/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
+                6
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Explore more possibilities</h4>
+                <p className="text-sm text-foreground/70">Discover advanced patterns and integrations</p>
+              </div>
             </a>
           </div>
-        </div>
 
-        {/* APIs */}
-        <div className="mb-8">
-          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">API Documentation</h3>
-          <div className="grid md:grid-cols-3 gap-4">
-            <a href="https://upload.ardrive.io/api-docs" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
-              <Upload className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-heading font-bold mb-1 text-foreground">Upload</h4>
-                <p className="text-sm text-foreground/80">Storing data and confirming availability.</p>
-              </div>
-            </a>
-            <a href="https://payment.ardrive.io/api-docs" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
-              <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-heading font-bold mb-1 text-foreground">Payments</h4>
-                <p className="text-sm text-foreground/80">Rates, purchasing credits and managing accounts.</p>
-              </div>
-            </a>
-            <a href="http://turbo-gateway.com/api-docs/" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
-              <Server className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-heading font-bold mb-1 text-foreground">Access</h4>
-                <p className="text-sm text-foreground/80">Data access and domain name resolution.</p>
-              </div>
-            </a>
+          {/* Advanced Section Divider */}
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px bg-border/30" />
+            <div className="px-4 py-1.5 rounded-full bg-foreground/10 text-xs font-medium text-foreground/60 uppercase tracking-wider">
+              Advanced
+            </div>
+            <div className="flex-1 h-px bg-border/30" />
           </div>
-        </div>
 
-        {/* Learn - Compact grid */}
-        <div className="mb-8">
-          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">Learn</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <a href="https://docs.ar.io/learn/gateways" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
-              <Server className="w-5 h-5 text-primary mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-foreground">Gateways</h4>
+          {/* Steps 7-8: Advanced */}
+          <div className="relative">
+            {/* Connecting line for advanced */}
+            <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-foreground/30 to-foreground/10 hidden sm:block" />
+
+            {/* Step 7 */}
+            <a href="https://docs.ar.io/learn/gateways/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 mb-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-foreground/20 text-foreground flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:bg-foreground/30 transition-colors">
+                7
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-foreground/30 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Understand gateways</h4>
+                <p className="text-sm text-foreground/70">Deep dive into the infrastructure powering the network</p>
+              </div>
             </a>
-            <a href="https://docs.ar.io/learn/arns" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
-              <Globe2 className="w-5 h-5 text-primary mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-foreground">ArNS</h4>
-            </a>
-            <a href="https://docs.ar.io/learn/wayfinder" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
-              <Search className="w-5 h-5 text-primary mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-foreground">Wayfinder</h4>
-            </a>
-            <a href="https://docs.ar.io/build/upload/turbo-credits#credit-sharing" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
-              <Users className="w-5 h-5 text-primary mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-foreground">Credit Sharing</h4>
-            </a>
-            <a href="https://docs.ar.io/learn/what-is-ario" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
-              <Cloud className="w-5 h-5 text-primary mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-foreground">Network</h4>
+
+            {/* Step 8 */}
+            <a href="https://docs.ar.io/build/run-a-gateway/" target="_blank" rel="noopener noreferrer"
+               className="relative flex items-start gap-4 group">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-foreground/20 text-foreground flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:bg-foreground/30 transition-colors">
+                8
+              </div>
+              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-foreground/30 transition-colors">
+                <h4 className="font-heading font-bold text-foreground mb-1">Run your own node</h4>
+                <p className="text-sm text-foreground/70">Deploy and operate gateway infrastructure</p>
+              </div>
             </a>
           </div>
         </div>
 
         {/* Source Code - Compact row */}
-        <div>
+        <div className="mt-10">
           <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">Source Code</h3>
           <div className="flex flex-wrap gap-3 justify-center">
             <a href="https://github.com/ardriveapp/turbo-sdk" target="_blank" rel="noopener noreferrer"
