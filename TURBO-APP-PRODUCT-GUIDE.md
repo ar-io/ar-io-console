@@ -69,7 +69,7 @@ The Turbo App is accessible through any modern web browser at the deployment URL
 **Public Landing Page**
 - Hero section with "How does it work?" explanation
 - Turbo by the Numbers: Real performance metrics (20B+ files, 200+ TiB, ~860 files/sec, 99.9% uptime)
-- Trusted by Web3 Leaders: Carousel with Forward Research, Drip Haus, Manifold, Meta, RedStone, KYVE, Metaplex, Load Network, Solana Mobile
+- Trusted by the Best: Carousel with Forward Research, Drip Haus, Manifold, Meta, RedStone, KYVE, Metaplex, Load Network, Solana Mobile
 - Interactive Feature Explorer: Browse all 9 service features with dropdown/sidebar navigation
 - Build Section: 6 cards organized by function
   - Getting Started
@@ -741,7 +741,7 @@ All captures include standardized tags:
   - POST /graphql - GraphQL query interface
 
 **Guides Tab** (Aligned with Homepage Build Section)
-- **Getting Started**: AR.IO guide that walks through uploads with Turbo (https://docs.ar.io/build/upload/bundling-services)
+- **Getting Started**: Create your first upload integration (https://docs.ar.io/build/upload/bundling-services)
 - **Paying for Uploads**: Turbo Credits as payment medium (https://docs.ar.io/build/upload/turbo-credits)
 - **Host Decentralized Websites**: Deploy webpage/app to Arweave with ArNS (https://docs.ar.io/build/guides/hosting-decentralized-websites)
 - **Accessing Data**: Resilient decentralized access (https://docs.ar.io/build/access)
