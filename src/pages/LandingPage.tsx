@@ -11,7 +11,7 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Gift, Ticket, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Package, Cloud, Server, Wallet, Camera, Phone, BookOpen, Calculator
+  Cloud, Server, Wallet, Camera, Phone, BookOpen, Calculator
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 import { CompanyCarousel } from '../components/CompanyCarousel';
@@ -630,30 +630,30 @@ const LandingPage = () => {
 
         {/* APIs */}
         <div className="mb-8">
-          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">API Reference</h3>
+          <h3 className="text-sm font-medium text-foreground/60 uppercase tracking-wider mb-4 text-center">API Documentation</h3>
           <div className="grid md:grid-cols-3 gap-4">
             <a href="https://upload.ardrive.io/api-docs" target="_blank" rel="noopener noreferrer"
                className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
               <Upload className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-heading font-bold mb-1 text-foreground">Upload Service API</h4>
-                <p className="text-sm text-foreground/80">Pay for signed data-items and post to Arweave.</p>
+                <h4 className="font-heading font-bold mb-1 text-foreground">Upload</h4>
+                <p className="text-sm text-foreground/80">Storing data and confirming availability.</p>
               </div>
             </a>
             <a href="https://payment.ardrive.io/api-docs" target="_blank" rel="noopener noreferrer"
                className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
               <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-heading font-bold mb-1 text-foreground">Payment Service API</h4>
-                <p className="text-sm text-foreground/80">Top ups, fiat rates, supported currencies.</p>
+                <h4 className="font-heading font-bold mb-1 text-foreground">Payments</h4>
+                <p className="text-sm text-foreground/80">Rates, purchasing credits and managing accounts.</p>
               </div>
             </a>
             <a href="http://turbo-gateway.com/api-docs/" target="_blank" rel="noopener noreferrer"
                className="bg-card border border-border/20 rounded-2xl p-5 hover:border-primary/50 transition-colors flex items-start gap-3">
               <Server className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-heading font-bold mb-1 text-foreground">Gateway API</h4>
-                <p className="text-sm text-foreground/80">General gateway endpoints for this Gateway.</p>
+                <h4 className="font-heading font-bold mb-1 text-foreground">Access</h4>
+                <p className="text-sm text-foreground/80">Data access and domain name resolution.</p>
               </div>
             </a>
           </div>
@@ -686,12 +686,7 @@ const LandingPage = () => {
             <a href="https://docs.ar.io/learn/what-is-ario" target="_blank" rel="noopener noreferrer"
                className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
               <Cloud className="w-5 h-5 text-primary mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-foreground">AR.IO Network</h4>
-            </a>
-            <a href="https://docs.ar.io/learn/ans-104-bundles" target="_blank" rel="noopener noreferrer"
-               className="bg-card border border-border/20 rounded-xl p-4 hover:border-primary/50 transition-colors text-center">
-              <Package className="w-5 h-5 text-primary mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-foreground">ANS-104</h4>
+              <h4 className="font-bold text-sm text-foreground">Network</h4>
             </a>
           </div>
         </div>
