@@ -557,25 +557,25 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* ar.io by the Numbers */}
+      {/* Service Metrics */}
       <div className="mb-12">
         <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">ar.io by the Numbers</h2>
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Service Metrics</h2>
           <p className="text-foreground/80">Real performance metrics from production infrastructure</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
             <div className="text-3xl font-heading font-bold text-primary mb-1">20B+</div>
-            <div className="text-sm text-foreground/80">Files uploaded to Arweave</div>
+            <div className="text-sm text-foreground/80">Files protected</div>
           </div>
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
             <div className="text-3xl font-heading font-bold text-primary mb-1">200TiB</div>
-            <div className="text-sm text-foreground/80">Data stored</div>
+            <div className="text-sm text-foreground/80">Permanent data stored</div>
           </div>
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
             <div className="text-3xl font-heading font-bold text-primary mb-1">~860</div>
-            <div className="text-sm text-foreground/80">Files per second</div>
+            <div className="text-sm text-foreground/80">Average uploads per second</div>
           </div>
           <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
             <div className="text-3xl font-heading font-bold text-primary mb-1">99.9%</div>
