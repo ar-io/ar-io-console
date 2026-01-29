@@ -280,6 +280,43 @@ const LandingPage = () => {
         )}
       </div>
 
+      {/* Trusted by the Best */}
+      <div className="mb-12">
+        <div className="text-center mb-8">
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Trusted by the Best</h2>
+          <p className="text-foreground/80">Powering critical infrastructure across the decentralized web</p>
+        </div>
+
+        <CompanyCarousel companies={companies} />
+      </div>
+
+      {/* Service Metrics */}
+      <div className="mb-12">
+        <div className="text-center mb-8">
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Service Metrics</h2>
+          <p className="text-foreground/80">Real performance metrics from production infrastructure</p>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
+            <div className="text-3xl font-heading font-bold text-primary mb-1">20B+</div>
+            <div className="text-sm text-foreground/80">Files protected</div>
+          </div>
+          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
+            <div className="text-3xl font-heading font-bold text-primary mb-1">200TiB+</div>
+            <div className="text-sm text-foreground/80">Permanent data stored</div>
+          </div>
+          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
+            <div className="text-3xl font-heading font-bold text-primary mb-1">~860</div>
+            <div className="text-sm text-foreground/80">Uploads per second</div>
+          </div>
+          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
+            <div className="text-3xl font-heading font-bold text-primary mb-1">99.9%</div>
+            <div className="text-sm text-foreground/80">Gateway uptime</div>
+          </div>
+        </div>
+      </div>
+
       {/* How it Works */}
       <div className="mb-12">
         <div className="text-center mb-12">
@@ -364,9 +401,9 @@ const LandingPage = () => {
           <p className="text-foreground/80">Pay-as-you-go storage with no subscriptions, now with x402</p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+        <div className="grid grid-cols-2 gap-3 md:gap-6 max-w-2xl mx-auto">
           {/* Free Tier */}
-          <div className="bg-card rounded-2xl border border-success/30 p-8 text-center">
+          <div className="bg-card rounded-2xl border border-success/30 p-4 md:p-8 text-center">
             <div className="text-4xl font-heading font-bold text-success mb-2">FREE</div>
             <div className="text-lg text-foreground font-medium mb-1">
               {freeUploadLimitBytes > 0 ? `Up to ${formatFreeLimit(freeUploadLimitBytes)}` : 'Small files'}
@@ -378,12 +415,11 @@ const LandingPage = () => {
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Try it now</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
 
           {/* Per GiB Pricing */}
-          <div className="bg-card rounded-2xl border border-border/20 p-8 text-center">
+          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-8 text-center">
             <div className="text-4xl font-heading font-bold text-primary mb-2">${pricePerGiB}</div>
             <div className="text-lg text-foreground font-medium mb-1">Per GiB</div>
             <div className="text-sm text-foreground/80 mb-4">Larger files & bulk storage</div>
@@ -392,8 +428,7 @@ const LandingPage = () => {
               className="inline-flex items-center gap-1 text-sm text-foreground/80 hover:text-foreground font-medium group"
             >
               <Calculator className="w-3.5 h-3.5" />
-              <span>Calculate custom costs</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <span>Calculate your costs</span>
             </button>
           </div>
         </div>
@@ -553,33 +588,6 @@ const LandingPage = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Service Metrics */}
-      <div className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Service Metrics</h2>
-          <p className="text-foreground/80">Real performance metrics from production infrastructure</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">20B+</div>
-            <div className="text-sm text-foreground/80">Files protected</div>
-          </div>
-          <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">200TiB</div>
-            <div className="text-sm text-foreground/80">Permanent data stored</div>
-          </div>
-          <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">~860</div>
-            <div className="text-sm text-foreground/80">Average uploads per second</div>
-          </div>
-          <div className="bg-card rounded-2xl border border-border/20 p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">99.9%</div>
-            <div className="text-sm text-foreground/80">Gateway uptime</div>
           </div>
         </div>
       </div>
@@ -786,16 +794,6 @@ const LandingPage = () => {
           </a>
         </div>
       </section>
-
-      {/* Trusted by Industry Leaders */}
-      <div className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Trusted by Web3 Leaders</h2>
-          <p className="text-foreground/80">Powering critical infrastructure across the decentralized web</p>
-        </div>
-
-        <CompanyCarousel companies={companies} />
-      </div>
 
       {/* Final CTA Section */}
       <section className="bg-card rounded-2xl border border-border/20 p-8 sm:p-12 text-center">
