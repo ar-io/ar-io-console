@@ -682,6 +682,7 @@ const LandingPage = () => {
                 strokeWidth="6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
               />
             </svg>
 
