@@ -586,128 +586,150 @@ const LandingPage = () => {
 
       {/* Builder's Journey Section */}
       <section className="mb-12">
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Builder's Journey</h2>
           <p className="text-foreground/80">Follow the path from first upload to running your own infrastructure</p>
         </div>
 
-        {/* Timeline */}
-        <div className="max-w-3xl mx-auto">
-          {/* Steps 1-6: Core Journey */}
-          <div className="relative">
-            {/* Connecting line */}
-            <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary via-primary/50 to-primary/20 hidden sm:block" />
+        {/* Arc Layout */}
+        <div className="relative max-w-5xl mx-auto">
+          {/* SVG Arc - Hidden on mobile */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none hidden md:block" viewBox="0 0 800 280" preserveAspectRatio="xMidYMid meet">
+            {/* Main arc path (steps 1-6) */}
+            <path
+              d="M 60 220 Q 200 40, 400 40 Q 600 40, 740 220"
+              fill="none"
+              stroke="url(#arcGradient)"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+            {/* Gradient definition */}
+            <defs>
+              <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#5427C8" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#5427C8" stopOpacity="1" />
+                <stop offset="75%" stopColor="#5427C8" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#23232D" stopOpacity="0.3" />
+              </linearGradient>
+            </defs>
+          </svg>
 
-            {/* Step 1 */}
-            <a href="https://docs.ar.io/learn/what-is-arweave/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 mb-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
-                1
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Learn about ar.io</h4>
-                <p className="text-sm text-foreground/70">Understand permanent storage and the Arweave ecosystem</p>
-              </div>
-            </a>
-
-            {/* Step 2 */}
-            <a href="https://docs.ar.io/build/upload/bundling-services/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 mb-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
-                2
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Upload your first data</h4>
-                <p className="text-sm text-foreground/70">Create your first permanent data integration</p>
-              </div>
-            </a>
-
-            {/* Step 3 */}
-            <a href="https://docs.ar.io/build/guides/hosting-decentralised-apps/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 mb-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
-                3
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Deploy a site or app</h4>
-                <p className="text-sm text-foreground/70">Host your website or web app permanently</p>
-              </div>
-            </a>
-
-            {/* Step 4 */}
-            <a href="https://docs.ar.io/build/guides/working-with-arns/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 mb-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
-                4
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Connect an ArNS domain</h4>
-                <p className="text-sm text-foreground/70">Give your content a human-readable name</p>
-              </div>
-            </a>
-
-            {/* Step 5 */}
-            <a href="https://docs.ar.io/build/access/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 mb-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
-                5
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Access data with Wayfinder</h4>
-                <p className="text-sm text-foreground/70">Resilient data access and verification for your apps</p>
-              </div>
-            </a>
-
-            {/* Step 6 */}
-            <a href="https://docs.ar.io/build/guides/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:scale-110 transition-transform">
-                6
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-primary/50 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Explore more possibilities</h4>
-                <p className="text-sm text-foreground/70">Discover advanced patterns and integrations</p>
-              </div>
-            </a>
-          </div>
-
-          {/* Advanced Section Divider */}
-          <div className="flex items-center gap-4 my-8">
-            <div className="flex-1 h-px bg-border/30" />
-            <div className="px-4 py-1.5 rounded-full bg-foreground/10 text-xs font-medium text-foreground/60 uppercase tracking-wider">
-              Advanced
+          {/* Steps Grid - 2 rows creating arc effect */}
+          <div className="relative z-10">
+            {/* Top row - Steps 2,3,4,5 (peak of arc) */}
+            <div className="hidden md:grid md:grid-cols-4 gap-3 mb-4 px-12">
+              <a href="https://docs.ar.io/build/upload/bundling-services/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-primary/50 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm">2</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">Upload Data</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">First permanent integration</p>
+                </div>
+              </a>
+              <a href="https://docs.ar.io/build/guides/hosting-decentralised-apps/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-primary/50 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm">3</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">Deploy Site</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">Host apps permanently</p>
+                </div>
+              </a>
+              <a href="https://docs.ar.io/build/guides/working-with-arns/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-primary/50 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm">4</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">ArNS Domain</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">Human-readable names</p>
+                </div>
+              </a>
+              <a href="https://docs.ar.io/build/access/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-primary/50 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm">5</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">Wayfinder</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">Resilient data access</p>
+                </div>
+              </a>
             </div>
-            <div className="flex-1 h-px bg-border/30" />
-          </div>
 
-          {/* Steps 7-8: Advanced */}
-          <div className="relative">
-            {/* Connecting line for advanced */}
-            <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-foreground/30 to-foreground/10 hidden sm:block" />
+            {/* Bottom row - Steps 1, 6, 7, 8 (ends of arc) */}
+            <div className="hidden md:grid md:grid-cols-4 gap-3 px-0">
+              <a href="https://docs.ar.io/learn/what-is-arweave/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-primary/50 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm">1</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">Learn ar.io</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">Understand the ecosystem</p>
+                </div>
+              </a>
+              <a href="https://docs.ar.io/build/guides/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-primary/50 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm">6</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">Explore More</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">Advanced patterns</p>
+                </div>
+              </a>
+              <a href="https://docs.ar.io/learn/gateways/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-foreground/30 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-foreground/20 text-foreground flex items-center justify-center font-heading font-bold text-sm">7</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">Gateways</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">Infrastructure deep-dive</p>
+                </div>
+              </a>
+              <a href="https://docs.ar.io/build/run-a-gateway/" target="_blank" rel="noopener noreferrer"
+                 className="group">
+                <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-foreground/30 transition-all group-hover:-translate-y-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-full bg-foreground/20 text-foreground flex items-center justify-center font-heading font-bold text-sm">8</div>
+                    <h4 className="font-heading font-bold text-sm text-foreground">Run a Node</h4>
+                  </div>
+                  <p className="text-xs text-foreground/60">Operate infrastructure</p>
+                </div>
+              </a>
+            </div>
 
-            {/* Step 7 */}
-            <a href="https://docs.ar.io/learn/gateways/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 mb-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-foreground/20 text-foreground flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:bg-foreground/30 transition-colors">
-                7
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-foreground/30 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Understand gateways</h4>
-                <p className="text-sm text-foreground/70">Deep dive into the infrastructure powering the network</p>
-              </div>
-            </a>
-
-            {/* Step 8 */}
-            <a href="https://docs.ar.io/build/run-a-gateway/" target="_blank" rel="noopener noreferrer"
-               className="relative flex items-start gap-4 group">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-foreground/20 text-foreground flex items-center justify-center font-heading font-bold text-lg z-10 group-hover:bg-foreground/30 transition-colors">
-                8
-              </div>
-              <div className="flex-1 bg-card border border-border/20 rounded-2xl p-4 group-hover:border-foreground/30 transition-colors">
-                <h4 className="font-heading font-bold text-foreground mb-1">Run your own node</h4>
-                <p className="text-sm text-foreground/70">Deploy and operate gateway infrastructure</p>
-              </div>
-            </a>
+            {/* Mobile layout - Simple 2x4 grid */}
+            <div className="grid grid-cols-2 gap-3 md:hidden">
+              {[
+                { num: 1, title: 'Learn ar.io', desc: 'Understand the ecosystem', href: 'https://docs.ar.io/learn/what-is-arweave/', primary: true },
+                { num: 2, title: 'Upload Data', desc: 'First integration', href: 'https://docs.ar.io/build/upload/bundling-services/', primary: true },
+                { num: 3, title: 'Deploy Site', desc: 'Host permanently', href: 'https://docs.ar.io/build/guides/hosting-decentralised-apps/', primary: true },
+                { num: 4, title: 'ArNS Domain', desc: 'Readable names', href: 'https://docs.ar.io/build/guides/working-with-arns/', primary: true },
+                { num: 5, title: 'Wayfinder', desc: 'Data access', href: 'https://docs.ar.io/build/access/', primary: true },
+                { num: 6, title: 'Explore More', desc: 'Advanced patterns', href: 'https://docs.ar.io/build/guides/', primary: true },
+                { num: 7, title: 'Gateways', desc: 'Deep-dive', href: 'https://docs.ar.io/learn/gateways/', primary: false },
+                { num: 8, title: 'Run a Node', desc: 'Operate infra', href: 'https://docs.ar.io/build/run-a-gateway/', primary: false },
+              ].map((step) => (
+                <a key={step.num} href={step.href} target="_blank" rel="noopener noreferrer"
+                   className="group">
+                  <div className="bg-card border border-border/20 rounded-xl p-3 group-hover:border-primary/50 transition-colors">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center font-heading font-bold text-xs ${step.primary ? 'bg-primary text-white' : 'bg-foreground/20 text-foreground'}`}>
+                        {step.num}
+                      </div>
+                      <h4 className="font-heading font-bold text-sm text-foreground">{step.title}</h4>
+                    </div>
+                    <p className="text-xs text-foreground/60">{step.desc}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 
