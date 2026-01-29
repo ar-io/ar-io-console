@@ -65,6 +65,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<LandingPage />} />
+          <Route path="login" element={<LandingPage />} />
           <Route path="topup" element={<TopUpPage />} />
           <Route path="upload" element={<UploadPage />} />
           <Route path="capture" element={<CapturePage />} />

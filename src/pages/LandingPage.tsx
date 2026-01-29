@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../hooks/useTheme';
 import WalletSelectionModal from '../components/modals/WalletSelectionModal';
@@ -20,8 +20,20 @@ const LandingPage = () => {
   const { address } = useStore();
   useTheme(); // Initialize theme
   const navigate = useNavigate();
+  const location = useLocation();
   const loggedIn = address !== null;
-  const [showWalletModal, setShowWalletModal] = useState(false);
+
+  // Auto-open wallet modal when accessing /login route
+  const isLoginRoute = location.pathname === '/login';
+  const [showWalletModal, setShowWalletModal] = useState(isLoginRoute);
+
+  // Handle modal close - if on /login, replace URL with home
+  const handleWalletModalClose = () => {
+    setShowWalletModal(false);
+    if (isLoginRoute) {
+      navigate('/', { replace: true });
+    }
+  };
   const [copied, setCopied] = useState(false);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
 
@@ -263,7 +275,7 @@ const LandingPage = () => {
 
         {showWalletModal && (
           <WalletSelectionModal
-            onClose={() => setShowWalletModal(false)}
+            onClose={handleWalletModalClose}
           />
         )}
       </div>
