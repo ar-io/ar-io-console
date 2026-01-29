@@ -707,11 +707,11 @@ const LandingPage = () => {
               {[
                 { num: 2, desc: <><strong className="text-foreground">Upload</strong> your first file permanently</>, href: 'https://docs.ar.io/build/upload/bundling-services/', xOffset: 0, yOffset: 30 },
                 { num: 3, desc: <><strong className="text-foreground">Deploy</strong> a decentralized app</>, href: 'https://docs.ar.io/build/guides/hosting-decentralised-apps/', xOffset: 35, yOffset: 30 },
-                { num: 6, desc: <><strong className="text-foreground">Explore</strong> more patterns</>, href: 'https://docs.ar.io/build/guides/', xOffset: -35, yOffset: 15 },
+                { num: 6, desc: <><strong className="text-foreground">Explore</strong> more patterns</>, href: 'https://docs.ar.io/build/guides/', xOffset: -35, yOffset: 0 },
                 { num: 5, desc: <><strong className="text-foreground">Resolve</strong> and fetch content</>, href: 'https://docs.ar.io/build/access/', xOffset: 0, yOffset: 0 },
                 { num: 4, desc: <>Get a friendly <strong className="text-foreground">domain name</strong></>, href: 'https://docs.ar.io/build/guides/working-with-arns/', xOffset: 35, yOffset: 0 },
                 { num: 7, desc: <>Learn how <strong className="text-foreground">gateways</strong> work</>, href: 'https://docs.ar.io/learn/gateways/', xOffset: -35, yOffset: 20 },
-                { num: 8, desc: <><strong className="text-foreground">Run</strong> your own infra</>, href: 'https://docs.ar.io/build/run-a-gateway/', xOffset: 0, yOffset: 30 },
+                { num: 8, desc: <><strong className="text-foreground">Run</strong> your own infra</>, href: 'https://docs.ar.io/build/run-a-gateway/', xOffset: 0, yOffset: 20 },
               ].map((step) => (
                 <a
                   key={step.num}
