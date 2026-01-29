@@ -51,7 +51,6 @@ const LandingPage = () => {
 
   // Initialize Cal.com embed for scheduling modal
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
     (function (C: any, A: string, L: string) {
       const p = (a: any, ar: any) => { a.q.push(ar); };
@@ -647,7 +646,7 @@ const LandingPage = () => {
       <section className="mb-12">
         <div className="text-center mb-10">
           <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Builder's Journey</h2>
-          <p className="text-foreground/80">Follow the path from first upload to running your own infrastructure</p>
+          <p className="text-foreground/80">Follow the path from first upload to running your own infrastructure. Click any step to explore.</p>
         </div>
 
         {/* Desktop/Tablet: 3x3 Grid with snake line */}
@@ -679,7 +678,7 @@ const LandingPage = () => {
                    L 275 250"
                 fill="none"
                 stroke="url(#journeyGradient)"
-                strokeWidth="6"
+                strokeWidth="8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
@@ -689,7 +688,7 @@ const LandingPage = () => {
             {/* 3x3 Grid - square cells */}
             <div className="grid grid-cols-3 gap-x-12 gap-y-8 relative" style={{ zIndex: 2 }}>
               {/* Cell 1: Learn - special start box (larger) */}
-              <div className="h-32 bg-white border-2 border-primary/30 rounded-xl p-4 relative flex flex-col items-center justify-center shadow-md">
+              <div className="h-36 bg-white border-2 border-primary/30 rounded-xl p-4 relative flex flex-col items-center justify-center shadow-md">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm shadow-md">
                   1
                 </div>
@@ -732,11 +731,11 @@ const LandingPage = () => {
               ))}
 
               {/* Cell 9: Join Community - solid purple background (larger) */}
-              <div className="h-32 bg-primary rounded-xl p-4 relative flex flex-col items-center justify-center shadow-lg">
+              <div className="h-36 bg-primary rounded-xl p-4 relative flex flex-col items-center justify-center shadow-lg">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center font-heading font-bold text-sm shadow-md">
                   9
                 </div>
-                <p className="text-xs text-white/90 text-center mb-3 leading-snug">Join the open source community</p>
+                <p className="text-xs text-white/90 text-center mb-3 leading-snug">Join the ar.io open source community</p>
                 <div className="flex flex-col gap-2 w-full">
                   <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
                      className="flex items-center justify-center gap-1.5 bg-white text-primary rounded-lg px-3 py-2 hover:bg-white/90 transition-all text-xs font-medium">
