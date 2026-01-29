@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -49,6 +49,46 @@ const LandingPage = () => {
   // Get free upload limit from bundler
   const freeUploadLimitBytes = useFreeUploadLimit();
 
+  // Initialize Cal.com embed for scheduling modal
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    (function (C: any, A: string, L: string) {
+      const p = (a: any, ar: any) => { a.q.push(ar); };
+      const d = C.document;
+      C.Cal = C.Cal || function (...args: any[]) {
+        const cal = C.Cal;
+        const ar = args;
+        if (!cal.loaded) {
+          cal.ns = {};
+          cal.q = cal.q || [];
+          d.head.appendChild(d.createElement("script")).src = A;
+          cal.loaded = true;
+        }
+        if (ar[0] === L) {
+          const api: any = function (...innerArgs: any[]) { p(api, innerArgs); };
+          const namespace = ar[1];
+          api.q = api.q || [];
+          if (typeof namespace === "string") {
+            cal.ns[namespace] = cal.ns[namespace] || api;
+            p(cal.ns[namespace], ar);
+            p(cal, ["initNamespace", namespace]);
+          } else {
+            p(cal, ar);
+          }
+          return;
+        }
+        p(cal, ar);
+      };
+    })(w, "https://app.cal.com/embed/embed.js", "init");
+
+    // Initialize with default namespace
+    if (w.Cal) {
+      w.Cal("init", { origin: "https://app.cal.com" });
+      w.Cal("ui", { layout: "month_view" });
+    }
+  }, []);
+
   // Company data for the carousel
   const companies = [
     { name: 'Forward Research', url: 'https://fwd.ar.io/', logo: '/forward-research-logo.jpg', description: 'Arweave core development team' },
@@ -78,9 +118,9 @@ const LandingPage = () => {
     {
       name: 'Top Up',
       icon: CreditCard,
-      title: 'Buy Credits with Fiat & Crypto',
-      description: 'Add credits to your account using credit cards or multiple cryptocurrencies. Instant processing with competitive rates.',
-      benefits: ['Credit cards accepted', 'Multiple cryptocurrencies', 'Instant credits'],
+      title: 'Buy Credits with Cash or Crypto',
+      description: 'Add credits to your account using a credit card, stablecoins or other cryptocurrencies. Instant processing with competitive rates.',
+      benefits: ['Credit cards accepted', 'Pay in ETH, SOL, USDC, ARIO and more', 'Instant credits'],
       action: 'topup',
       loginText: 'Buy Credits',
       connectText: 'Connect Wallet to Top Up'
@@ -197,15 +237,14 @@ const LandingPage = () => {
 
         {/* CTA Section */}
         <div className="relative z-10 mt-7 flex flex-col sm:flex-row items-center gap-4">
-          <a
-            href="https://cal.com/kempsterrrr/ar-io-ecosystem-intro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-lg"
+          <button
+            data-cal-link="kempsterrrr/ar-io-ecosystem-intro"
+            data-cal-config='{"layout":"month_view"}'
+            className="group relative rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-lg cursor-pointer"
           >
             <Phone className="w-5 h-5" />
             <span>Book a Demo</span>
-          </a>
+          </button>
 
           <a
             href="https://docs.ar.io/build/upload/bundling-services"
@@ -284,7 +323,7 @@ const LandingPage = () => {
       <div className="mb-12">
         <div className="text-center mb-8">
           <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Trusted by the Best</h2>
-          <p className="text-foreground/80">Powering critical infrastructure across the decentralized web</p>
+          <p className="text-foreground/80">Powering critical platforms across the web</p>
         </div>
 
         <CompanyCarousel companies={companies} />
@@ -320,9 +359,9 @@ const LandingPage = () => {
       {/* How it Works */}
       <div className="mb-12">
         <div className="text-center mb-12">
-          <h2 className="font-heading font-bold text-3xl mb-3 text-foreground">How does it work?</h2>
+          <h2 className="font-heading font-bold text-2xl mb-2 text-foreground">How does it work?</h2>
           <p className="text-lg text-foreground/80 max-w-3xl mx-auto">
-            ar.io handles the complexity so you don't have to. Fund instantly, upload seamlessly, and access your permanent data through a decentralized CDN.
+            Ar.io handles the complexity so you don't have to. Fund instantly, upload seamlessly, and access your permanent data through a decentralized CDN.
           </p>
         </div>
 
@@ -367,28 +406,28 @@ const LandingPage = () => {
               <h3 className="font-heading font-bold text-xl text-foreground">Access</h3>
             </div>
             <p className="text-sm text-foreground/80">
-              Access your data instantly with CDN-level performance through the ar.io etwork.
+              Access your data instantly with CDN-level performance via the ar.io network.
             </p>
           </div>
         </div>
 
         {/* CTA Section */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="mt-10 flex flex-row items-center justify-center gap-3 sm:gap-4">
           <a
             href="https://ar.io/technology/"
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-lg"
+            className="group relative rounded-full bg-primary px-4 sm:px-8 py-3 sm:py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-sm sm:text-lg"
           >
-            <BookOpen className="w-5 h-5" />
+            <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Learn more</span>
           </a>
 
           <button
-            className="rounded-full border border-border/20 px-8 py-4 font-medium flex items-center gap-2 hover:bg-card hover:border-foreground transition-all group"
+            className="rounded-full border border-border/20 px-4 sm:px-8 py-3 sm:py-4 font-medium flex items-center gap-2 hover:bg-card hover:border-foreground transition-all group text-sm sm:text-lg"
             onClick={() => navigate(loggedIn ? '/upload' : '/try')}
           >
-            <Upload className="w-5 h-5" />
+            <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Try it Out</span>
           </button>
         </div>
@@ -431,6 +470,18 @@ const LandingPage = () => {
               <span>Calculate your costs</span>
             </button>
           </div>
+        </div>
+
+        {/* Private Pricing CTA */}
+        <div className="mt-6 text-center">
+          <button
+            data-cal-link="kempsterrrr/ar-io-intro"
+            data-cal-config='{"layout":"month_view"}'
+            className="inline-flex items-center gap-2 text-sm text-foreground/70 hover:text-primary transition-colors cursor-pointer"
+          >
+            <Phone className="w-4 h-4" />
+            <span>Need custom or enterprise pricing? <span className="underline font-medium">Let's talk</span></span>
+          </button>
         </div>
       </div>
 
@@ -600,7 +651,7 @@ const LandingPage = () => {
         </div>
 
         {/* Desktop/Tablet: 3x3 Grid with snake line */}
-        <div className="hidden md:block max-w-lg mx-auto px-4">
+        <div className="hidden md:block max-w-2xl mx-auto px-4">
           <div className="relative isolate">
             {/* SVG Snake line connecting all cells */}
             <svg
@@ -637,16 +688,16 @@ const LandingPage = () => {
             {/* 3x3 Grid - square cells */}
             <div className="grid grid-cols-3 gap-x-12 gap-y-8 relative" style={{ zIndex: 2 }}>
               {/* Cell 1: Learn - special start box (larger) */}
-              <div className="aspect-square bg-white border-2 border-primary/30 rounded-xl p-3 relative flex flex-col items-center justify-center shadow-md">
-                <div className="absolute -top-2.5 -left-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-xs shadow-md">
+              <div className="h-32 bg-white border-2 border-primary/30 rounded-xl p-4 relative flex flex-col items-center justify-center shadow-md">
+                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm shadow-md">
                   1
                 </div>
-                <p className="text-[11px] text-foreground/80 text-center mb-2 leading-snug">Learn the fundamentals of ar.io and Arweave</p>
+                <p className="text-xs text-foreground/80 text-center mb-3 leading-snug">Learn the fundamentals of ar.io and Arweave</p>
                 <a
                   href="https://docs.ar.io/learn/what-is-arweave/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1 bg-primary text-white rounded-lg px-3 py-1.5 hover:bg-primary/90 transition-all text-[11px] font-medium w-full"
+                  className="flex items-center justify-center gap-1 bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary/90 transition-all text-xs font-medium w-full"
                 >
                   Get Started
                 </a>
@@ -654,13 +705,13 @@ const LandingPage = () => {
 
               {/* Cells 2-8: Regular steps (compact) - row 2 reversed for snake pattern */}
               {[
-                { num: 2, desc: <><strong className="text-foreground">Upload</strong> your first file permanently</>, href: 'https://docs.ar.io/build/upload/bundling-services/', xOffset: 0, yOffset: 20 },
-                { num: 3, desc: <><strong className="text-foreground">Deploy</strong> a decentralized app</>, href: 'https://docs.ar.io/build/guides/hosting-decentralised-apps/', xOffset: 20, yOffset: 20 },
-                { num: 6, desc: <><strong className="text-foreground">Explore</strong> more patterns</>, href: 'https://docs.ar.io/build/guides/', xOffset: -20, yOffset: 0 },
+                { num: 2, desc: <><strong className="text-foreground">Upload</strong> your first file permanently</>, href: 'https://docs.ar.io/build/upload/bundling-services/', xOffset: 0, yOffset: 30 },
+                { num: 3, desc: <><strong className="text-foreground">Deploy</strong> a decentralized app</>, href: 'https://docs.ar.io/build/guides/hosting-decentralised-apps/', xOffset: 35, yOffset: 30 },
+                { num: 6, desc: <><strong className="text-foreground">Explore</strong> more patterns</>, href: 'https://docs.ar.io/build/guides/', xOffset: -35, yOffset: 15 },
                 { num: 5, desc: <><strong className="text-foreground">Resolve</strong> and fetch content</>, href: 'https://docs.ar.io/build/access/', xOffset: 0, yOffset: 0 },
-                { num: 4, desc: <>Get a friendly <strong className="text-foreground">domain name</strong></>, href: 'https://docs.ar.io/build/guides/working-with-arns/', xOffset: 20, yOffset: 0 },
-                { num: 7, desc: <>Learn how <strong className="text-foreground">gateways</strong> work</>, href: 'https://docs.ar.io/learn/gateways/', xOffset: -20, yOffset: 20 },
-                { num: 8, desc: <><strong className="text-foreground">Run</strong> your own infra</>, href: 'https://docs.ar.io/build/run-a-gateway/', xOffset: 0, yOffset: 20 },
+                { num: 4, desc: <>Get a friendly <strong className="text-foreground">domain name</strong></>, href: 'https://docs.ar.io/build/guides/working-with-arns/', xOffset: 35, yOffset: 0 },
+                { num: 7, desc: <>Learn how <strong className="text-foreground">gateways</strong> work</>, href: 'https://docs.ar.io/learn/gateways/', xOffset: -35, yOffset: 20 },
+                { num: 8, desc: <><strong className="text-foreground">Run</strong> your own infra</>, href: 'https://docs.ar.io/build/run-a-gateway/', xOffset: 0, yOffset: 30 },
               ].map((step) => (
                 <a
                   key={step.num}
@@ -670,30 +721,30 @@ const LandingPage = () => {
                   className="group justify-self-center"
                   style={{ transform: `translate(${step.xOffset}px, ${step.yOffset}px)` }}
                 >
-                  <div className="w-20 h-20 bg-card border-2 border-primary/20 rounded-xl p-2 transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary group-hover:shadow-lg relative flex items-center justify-center">
-                    <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-[11px] shadow-md">
+                  <div className="w-24 h-24 bg-card border-2 border-primary/20 rounded-xl p-3 transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary group-hover:shadow-lg relative flex items-center justify-center">
+                    <div className="absolute -top-2.5 -left-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-xs shadow-md">
                       {step.num}
                     </div>
-                    <p className="text-[10px] text-foreground/70 leading-snug text-center">{step.desc}</p>
+                    <p className="text-[11px] text-foreground/70 leading-snug text-center">{step.desc}</p>
                   </div>
                 </a>
               ))}
 
               {/* Cell 9: Join Community - solid purple background (larger) */}
-              <div className="aspect-square bg-primary rounded-xl p-3 relative flex flex-col items-center justify-center shadow-lg">
-                <div className="absolute -top-2.5 -left-2.5 w-7 h-7 rounded-full bg-white text-primary flex items-center justify-center font-heading font-bold text-xs shadow-md">
+              <div className="h-32 bg-primary rounded-xl p-4 relative flex flex-col items-center justify-center shadow-lg">
+                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center font-heading font-bold text-sm shadow-md">
                   9
                 </div>
-                <p className="text-[11px] text-white/90 text-center mb-2 leading-snug">Join the open source community</p>
-                <div className="flex flex-col gap-1.5 w-full">
+                <p className="text-xs text-white/90 text-center mb-3 leading-snug">Join the open source community</p>
+                <div className="flex flex-col gap-2 w-full">
                   <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
-                     className="flex items-center justify-center gap-1 bg-white text-primary rounded-lg px-2 py-1.5 hover:bg-white/90 transition-all text-[11px] font-medium">
-                    <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" className="w-3.5 h-3.5" />
+                     className="flex items-center justify-center gap-1.5 bg-white text-primary rounded-lg px-3 py-2 hover:bg-white/90 transition-all text-xs font-medium">
+                    <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" className="w-4 h-4" />
                     Discord
                   </a>
                   <a href="https://github.com/ar-io" target="_blank" rel="noopener noreferrer"
-                     className="flex items-center justify-center gap-1 bg-white/20 text-white rounded-lg px-2 py-1.5 hover:bg-white/30 transition-all text-[11px]">
-                    <Github className="w-3.5 h-3.5" />
+                     className="flex items-center justify-center gap-1.5 bg-white/20 text-white rounded-lg px-3 py-2 hover:bg-white/30 transition-all text-xs">
+                    <Github className="w-4 h-4" />
                     GitHub
                   </a>
                 </div>
@@ -802,15 +853,14 @@ const LandingPage = () => {
           Talk to our team about custom integrations, enterprise solutions, or technical guidance.
           We'll help you choose the right architecture for permanent data storage at scale.
         </p>
-        <a
-          href="https://cal.com/kempsterrrr/ar-io-ecosystem-intro"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl text-lg"
+        <button
+          data-cal-link="kempsterrrr/ar-io-ecosystem-intro"
+          data-cal-config='{"layout":"month_view"}'
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl text-lg cursor-pointer"
         >
           <Phone className="w-5 h-5" />
           <span>Book a Demo</span>
-        </a>
+        </button>
       </section>
 
     </div>
