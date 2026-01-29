@@ -285,7 +285,7 @@ const LandingPage = () => {
         <div className="text-center mb-12">
           <h2 className="font-heading font-bold text-3xl mb-3 text-foreground">How does it work?</h2>
           <p className="text-lg text-foreground/80 max-w-3xl mx-auto">
-            ar.io handles the complexity so you don't have to. Fund instantly, upload seamlessly, and access your data through a global gateway network.
+            ar.io handles the complexity so you don't have to. Fund instantly, upload seamlessly, and access your permanent data through a decentralized CDN.
           </p>
         </div>
 
@@ -330,7 +330,7 @@ const LandingPage = () => {
               <h3 className="font-heading font-bold text-xl text-foreground">Access</h3>
             </div>
             <p className="text-sm text-foreground/80">
-              Access your data instantly with CDN-level performance through the decentralized AR.IO Network.
+              Access your data instantly with CDN-level performance through the ar.io etwork.
             </p>
           </div>
         </div>
@@ -703,22 +703,17 @@ const LandingPage = () => {
             <a href="https://github.com/ardriveapp/turbo-sdk" target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
               <Github className="w-4 h-4 text-primary" />
-              <span className="font-medium text-sm text-foreground">SDK</span>
+              <span className="font-medium text-sm text-foreground">Upload SDK</span>
             </a>
-            <a href="https://github.com/ardriveapp/turbo-upload-service" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/ar-io/ar-io-sdk" target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
               <Github className="w-4 h-4 text-primary" />
-              <span className="font-medium text-sm text-foreground">Upload Service</span>
-            </a>
-            <a href="https://github.com/ardriveapp/turbo-payment-service" target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
-              <Github className="w-4 h-4 text-primary" />
-              <span className="font-medium text-sm text-foreground">Payment Service</span>
+              <span className="font-medium text-sm text-foreground">Network SDK</span>
             </a>
             <a href="https://github.com/ar-io/ar-io-node" target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 bg-card border border-border/20 rounded-full px-4 py-2 hover:border-primary/50 transition-colors">
               <Github className="w-4 h-4 text-primary" />
-              <span className="font-medium text-sm text-foreground">AR.IO Node</span>
+              <span className="font-medium text-sm text-foreground">Infrastructure</span>
             </a>
           </div>
         </div>
