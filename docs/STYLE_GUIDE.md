@@ -1,6 +1,6 @@
-# ar.io App Style Guide
+# ar.io Console Style Guide
 
-A comprehensive design system guide for maintaining visual consistency across the ar.io application, aligned with the ar.io Network brand identity.
+A comprehensive design system guide for maintaining visual consistency across the ar.io Console, aligned with the ar.io Network brand identity.
 
 ---
 

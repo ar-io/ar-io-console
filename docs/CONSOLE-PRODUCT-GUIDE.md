@@ -23,7 +23,7 @@
 
 ## Overview
 
-The ar.io Console is a unified platform that consolidates all ArDrive Turbo services into a single, powerful interface. Built for the AR.IO Network, it provides seamless access to:
+The ar.io Console is a unified platform that consolidates all Turbo services into a single, powerful interface. Built for the ar.io Network, it provides seamless access to:
 
 - **Credit Management**: Buy, share, and gift Turbo credits with fiat and crypto
 - **File Storage**: Upload files to the permaweb via Arweave with Just-in-Time payments
