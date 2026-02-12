@@ -89,7 +89,7 @@ External resources are available via the navigation menu:
 
 For detailed development guidance including architecture, hooks reference, state management patterns, and critical implementation details, see **[CLAUDE.md](./CLAUDE.md)**.
 
-For styling patterns and component guidelines, see **[STYLE_GUIDE.md](./STYLE_GUIDE.md)**.
+For styling patterns and component guidelines, see **[STYLE_GUIDE.md](./docs/STYLE_GUIDE.md)**.
 
 ## Links
 
