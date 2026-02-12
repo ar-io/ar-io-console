@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings, Server, ScanSearch } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -31,8 +31,9 @@ const utilityServices = [
   { name: 'Search Domains', page: 'domains' as const, icon: Globe },
   { name: 'Pricing Calculator', page: 'calculator' as const, icon: Calculator },
   { name: 'Check Balance', page: 'balances' as const, icon: Search },
-  { name: 'Service Settings', page: 'settings' as const, icon: Settings },
-  { name: 'Developer Resources', href: 'https://docs.ar.io', icon: Code, external: true },
+  { name: 'Network Explorer', href: 'https://scan.ar.io', icon: ScanSearch, external: true },
+  { name: 'Gateway Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
+  { name: 'Developer Docs', href: 'https://docs.ar.io', icon: Code, external: true },
 ];
 
 const Header = () => {
@@ -416,15 +417,45 @@ const Header = () => {
             )}
 
             {/* Actions */}
+            <div className="flex items-center">
+              <button
+                className="flex-1 flex items-center gap-2 pl-6 pr-2 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
+                onClick={() => {
+                  navigate('/account');
+                  close();
+                }}
+              >
+                <User className="w-4 h-4" />
+                My Account
+              </button>
+              <button
+                className="pr-6 pl-2 py-3 text-foreground/40 hover:text-foreground transition-colors"
+                onClick={() => {
+                  let explorerUrl = '';
+                  if (walletType === 'ethereum') {
+                    explorerUrl = `https://etherscan.io/address/${address}`;
+                  } else if (walletType === 'solana') {
+                    explorerUrl = `https://explorer.solana.com/address/${address}`;
+                  } else {
+                    explorerUrl = `https://viewblock.io/arweave/address/${address}`;
+                  }
+                  window.open(explorerUrl, '_blank');
+                }}
+                title="View on Explorer"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            </div>
+
             <button
               className="flex items-center gap-2 px-6 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
               onClick={() => {
-                navigate('/account');
-                close(); // Close the popover when navigating
+                navigate('/settings');
+                close();
               }}
             >
-              <User className="w-4 h-4" />
-              My Account
+              <Settings className="w-4 h-4" />
+              Settings
             </button>
 
             {/* Export Wallet - Show for Privy users */}
@@ -445,27 +476,6 @@ const Header = () => {
                 Export Private Key
               </button>
             )}
-
-            <button
-              className="flex items-center gap-2 px-6 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
-              onClick={() => {
-                let explorerUrl = '';
-
-                if (walletType === 'ethereum') {
-                  explorerUrl = `https://etherscan.io/address/${address}`;
-                } else if (walletType === 'solana') {
-                  explorerUrl = `https://explorer.solana.com/address/${address}`;
-                } else {
-                  // Default to Arweave
-                  explorerUrl = `https://viewblock.io/arweave/address/${address}`;
-                }
-
-                window.open(explorerUrl, '_blank');
-              }}
-            >
-              <ExternalLink className="w-4 h-4" />
-              View on Explorer
-            </button>
 
             <button
               className="px-6 py-3 font-semibold text-error hover:bg-error/10 border-t border-border/20 transition-colors"

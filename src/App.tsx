@@ -14,7 +14,6 @@ import CalculatorPage from './pages/CalculatorPage';
 import ServicesCalculatorPage from './pages/ServicesCalculatorPage';
 import BalanceCheckerPage from './pages/BalanceCheckerPage';
 import RedeemPage from './pages/RedeemPage';
-import { DeveloperPage } from './pages/DeveloperPage';
 import GatewayInfoPage from './pages/GatewayInfoPage';
 import DeploySitePage from './pages/DeploySitePage';
 import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
@@ -78,7 +77,6 @@ function AppRoutes() {
           <Route path="balances" element={<BalanceCheckerPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="redeem" element={<RedeemPage />} />
-          <Route path="developer" element={<DeveloperPage />} />
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
           {/* Catch all route - redirect to home */}

@@ -600,7 +600,7 @@ export default function UploadPanel() {
     if (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') {
       setUploadMessage({
         type: 'error',
-        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.'
+        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in your console settings.'
       });
       return;
     }
@@ -1438,7 +1438,7 @@ export default function UploadPanel() {
                             <div>
                               <div className="font-medium text-warning text-sm mb-1">Ethereum Wallet Required</div>
                               <div className="text-xs text-warning/80">
-                                X402 payments only support Ethereum wallets with BASE-USDC. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.
+                                X402 payments only support Ethereum wallets with BASE-USDC. Please connect an Ethereum wallet or disable x402-only mode in your settings.
                               </div>
                             </div>
                           </div>

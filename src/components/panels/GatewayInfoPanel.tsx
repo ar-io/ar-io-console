@@ -69,9 +69,9 @@ export default function GatewayInfoPanel() {
           <Settings className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Service Settings</h3>
+          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Settings</h3>
           <p className="text-sm text-foreground/80">
-            Configure endpoints and view live service status
+            Configure settings and view live service status
           </p>
         </div>
         <button
