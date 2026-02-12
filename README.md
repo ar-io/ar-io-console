@@ -67,7 +67,8 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 /balances      # Balance checker
 /calculator    # Pricing calculator
 /services-calculator  # Storage + ArNS calculator
-/gateway-info  # Gateway information
+/settings      # Configuration and gateway info
+/try           # Try it now (quick upload demo)
 ```
 
 External resources are available via the navigation menu:
@@ -82,7 +83,7 @@ External resources are available via the navigation menu:
 | Buy Credits (Fiat/Crypto) | ✅ | ✅ | ✅ |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ✅ | ❌ | ❌ |
+| Update ArNS Records | ✅ | ✅ | ❌ |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
 ## Documentation
