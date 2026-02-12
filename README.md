@@ -1,15 +1,14 @@
-# ar.io App
+# ar.io Console
 
 A unified web application for uploading and accessing permanent data through the ar.io Network. Built with React 18, TypeScript, Vite, and multi-chain wallet support.
 
 ## Overview
 
-The ar.io App provides a streamlined interface for:
+The ar.io Console provides a streamlined interface for:
 - **File uploads** to the permaweb with instant confirmation
 - **Site deployment** with ArNS domain support
 - **Credit management** (purchase, share, gift)
 - **ArNS domain** search and management
-- **Developer tools** and API documentation
 
 ## Quick Start
 
@@ -68,9 +67,13 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 /balances      # Balance checker
 /calculator    # Pricing calculator
 /services-calculator  # Storage + ArNS calculator
-/developer     # API docs and dev tools
 /gateway-info  # Gateway information
 ```
+
+External resources are available via the navigation menu:
+- **Developer Docs**: [docs.ar.io](https://docs.ar.io)
+- **Network Explorer**: [scan.ar.io](https://scan.ar.io)
+- **Gateway Dashboard**: [gateways.ar.io](https://gateways.ar.io)
 
 ## Wallet Capabilities
 
@@ -87,3 +90,12 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 For detailed development guidance including architecture, hooks reference, state management patterns, and critical implementation details, see **[CLAUDE.md](./CLAUDE.md)**.
 
 For styling patterns and component guidelines, see **[STYLE_GUIDE.md](./STYLE_GUIDE.md)**.
+
+## Links
+
+- **ar.io Console**: [console.ar.io](https://console.ar.io)
+- **ar.io Website**: [ar.io](https://ar.io)
+- **Documentation**: [docs.ar.io](https://docs.ar.io)
+- **GitHub**: [github.com/ar-io](https://github.com/ar-io)
+- **Discord**: [discord.gg/HGG52EtTc2](https://discord.com/invite/HGG52EtTc2)
+- **Twitter/X**: [@ar_io_network](https://twitter.com/ar_io_network)
