@@ -196,7 +196,7 @@ export const WRITE_OPTIONS = {
   tags: [
     {
       name: 'App-Name',
-      value: 'ar.io App',
+      value: 'ar.io Console',
     },
     {
       name: 'App-Version',

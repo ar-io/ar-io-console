@@ -1,8 +1,8 @@
 {
-  "name": "ario-app",
+  "name": "ar-io-console",
   "version": "1.0.0",
   "type": "module",
-  "description": "ar.io App - Upload and access permanent data through the ar.io Network",
+  "description": "ar.io Console - Upload and access permanent data through the ar.io Network",
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite",
     "prebuild": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc -b",

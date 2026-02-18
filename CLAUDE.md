@@ -60,7 +60,7 @@ npm run clean:all    # Full clean and reinstall
 ## Architecture Overview
 
 ### Application Structure
-ar.io App - a unified application for uploading and accessing permanent data through the ar.io Network:
+ar.io Console - a unified application for uploading and accessing permanent data through the ar.io Network:
 - **File uploads**: Drag & drop with instant confirmation
 - **Site deployment**: Deploy static sites with ArNS domain support
 - **Credit management**: Purchase, share, and gift credits
@@ -184,7 +184,7 @@ const turbo = TurboFactory.authenticated({ signer: injectedSigner, token: 'base-
 All uploads include standardized metadata tags:
 
 **Deployment tool tags (always included):**
-- `Deployed-By`: 'ar.io App' (from `APP_NAME` constant) - identifies the deployment tool
+- `Deployed-By`: 'ar.io Console' (from `APP_NAME` constant) - identifies the deployment tool
 - `Deployed-By-Version`: Dynamic from package.json - version of the deployment tool
 - `App-Feature`: 'File Upload' | 'Deploy Site' | 'Capture'
 
