@@ -203,56 +203,41 @@ export function useGatewayInfo() {
 
         // Compare Turbo's rate vs raw Arweave network cost
         try {
-          console.log('🔍 Calculating ar.io premium vs raw Arweave network cost...');
           const turbo = TurboFactory.unauthenticated(turboConfig);
           const gigabyteInBytes = 1073741824; // 1 GiB in bytes
 
-          // Step 1: Get Turbo's USD rate for 1 GiB
-          console.log('💳 Getting Turbo fiat rates...');
+          // Get Turbo's USD rate for 1 GiB
           const fiatRates = await turbo.getFiatRates();
           const turboUSDPerGiB = fiatRates.fiat?.usd || 0;
-          console.log('💰 Turbo USD per GiB:', turboUSDPerGiB);
 
-          // Step 2: Get raw Arweave network cost (winston) and AR/USD price
+          // Get raw Arweave network cost (winston) and AR/USD price
           let arweaveUSDPerGiB = undefined;
           let arweaveWinstonPerGiB = undefined;
 
           try {
-            // Fetch raw Arweave network price (returns winston - smallest AR unit)
-            // 1 AR = 10^12 winston
+            // Fetch raw Arweave network price (returns winston - 1 AR = 10^12 winston)
             const arweaveResponse = await fetch(`https://arweave.net/price/${gigabyteInBytes}`);
             arweaveWinstonPerGiB = Number(await arweaveResponse.text());
-            console.log('🌐 Raw Arweave winston for 1 GiB:', arweaveWinstonPerGiB);
 
             // Fetch AR/USD price from CoinGecko
             const cgResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd');
             const cgData = await cgResponse.json();
             const arUSDPrice = cgData.arweave?.usd;
-            console.log('📈 AR/USD price:', arUSDPrice);
 
             if (arweaveWinstonPerGiB && arUSDPrice) {
               // Convert winston to AR, then to USD
-              // winston / 10^12 = AR, AR * USD/AR = USD
               const arPerGiB = arweaveWinstonPerGiB / 1e12;
               arweaveUSDPerGiB = arPerGiB * arUSDPrice;
-              console.log('💵 Raw Arweave USD per GiB:', arweaveUSDPerGiB);
             }
           } catch (err) {
-            console.warn('❌ Arweave network pricing fetch failed:', err);
+            console.warn('Arweave network pricing fetch failed:', err);
           }
 
-          // Step 3: Calculate the premium (Turbo vs raw Arweave)
+          // Calculate the premium (Turbo vs raw Arweave)
           let turboFeePercentage = undefined;
 
           if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
-            // Premium = (Turbo price - Arweave price) / Arweave price * 100
             turboFeePercentage = ((turboUSDPerGiB - arweaveUSDPerGiB) / arweaveUSDPerGiB) * 100;
-
-            console.log('🧮 ar.io Premium calculation:', {
-              turboUSDPerGiB,
-              arweaveUSDPerGiB,
-              premiumPercentage: turboFeePercentage
-            });
           }
 
           pricingData = {
@@ -262,10 +247,9 @@ export function useGatewayInfo() {
             turboFeePercentage: turboFeePercentage,
           };
 
-          console.log('💾 Final pricing data:', pricingData);
           setPricingInfo(pricingData);
         } catch (err) {
-          console.warn('❌ Pricing calculation failed:', err);
+          console.warn('Pricing calculation failed:', err);
         }
 
         // Cache the results
@@ -281,7 +265,6 @@ export function useGatewayInfo() {
           timestamp: Date.now(),
         };
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-        console.log('Gateway info cached for 10 minutes');
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch gateway information');
