@@ -763,7 +763,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
           {/* Content viewer - same element in both modes to prevent reload */}
           <div
-            className={isFullscreen ? 'flex-1 overflow-hidden' : 'overflow-hidden rounded-2xl'}
+            className={isFullscreen ? 'flex-1 overflow-hidden' : 'overflow-hidden rounded-2xl border border-border/20'}
             style={isFullscreen ? undefined : { height: 'calc(100vh - 115px)' }}
             key="content-viewer-container"
           >
