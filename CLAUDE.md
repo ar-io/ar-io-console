@@ -10,6 +10,7 @@ npm run dev          # Start dev server at http://localhost:3000
 npm run lint         # ESLint validation
 npm run type-check   # TypeScript checking (strict mode)
 npm run build:prod   # Production build (requires 8GB memory)
+npm run clean:all    # Full clean and reinstall
 ```
 
 **Path alias:** Use `@/` for imports from `src/` (e.g., `import { useStore } from '@/store/useStore'`).
@@ -46,14 +47,16 @@ npm install          # Install dependencies
 npm run dev          # Start dev server at http://localhost:3000
 npm run build:prod   # Production build with type checking (8GB memory)
 npm run build        # Development build
+npm run build:staging # Staging build with source maps
 npm run lint         # ESLint validation
 npm run type-check   # TypeScript checking
 npm run clean:all    # Full clean and reinstall
+npm run preview      # Preview production build
 ```
 
 **Notes:**
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
-- Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (2GB dev, 8GB prod build)
+- Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev, 8GB prod build)
 - No test framework configured
 - Path alias: `@/` maps to `src/` (configured in tsconfig.json and vite.config.ts)
 
@@ -107,7 +110,7 @@ src/
 - `uploadHistory`, `deployHistory`, `uploadStatusCache`
 - `configMode`, `customConfig`, `x402OnlyMode`
 - JIT payment preferences (`jitPaymentEnabled`, `jitMaxTokenAmount`, `jitBufferMultiplier`)
-- Smart Deploy (`smartDeployEnabled`, `fileHashCache`)
+- Smart Deploy (`smartDeployEnabled`, `fileHashCache`) - deduplication via content hashing
 
 **Ephemeral state:**
 - `creditBalance`, payment flow state, UI state
@@ -357,7 +360,7 @@ if (privyWallet) {
 ```typescript
 '/', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share', '/gift',
 '/account', '/domains', '/calculator', '/services-calculator', '/balances', '/redeem',
-'/developer', '/gateway-info'
+'/settings', '/try'
 ```
 
 URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx)
@@ -403,3 +406,10 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 **Other:**
 - `clearEthereumTurboClientCache()` (`hooks/useEthereumTurboClient.ts`) - Clear cached signers/clients
 - `isFileFree()` / `formatFreeLimit()` (`hooks/useFreeUploadLimit.ts`) - Free upload limit checks
+
+## External Links in Navigation
+
+The header navigation includes external links to the ar.io ecosystem:
+- **Developer Docs**: [docs.ar.io](https://docs.ar.io)
+- **Network Explorer**: [scan.ar.io](https://scan.ar.io)
+- **Gateway Dashboard**: [gateways.ar.io](https://gateways.ar.io)

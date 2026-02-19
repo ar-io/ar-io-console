@@ -154,22 +154,26 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
   // Create verification strategy based on config
   const trustedGatewayUrls = config.trustedGateways.map(url => new URL(url));
 
+  // Use the number of trusted gateways as the consensus count
+  // This controls how many gateways are queried for hash verification
+  const consensusCount = trustedGatewayUrls.length;
+
   if (verificationMethod === 'signature') {
     // Signature verification - cryptographically verifies data item signatures
     verificationStrategy = new SignatureVerificationStrategy({
       trustedGateways: trustedGatewayUrls,
-      maxConcurrency: 3,
+      maxConcurrency: consensusCount,
       logger: quietWayfinderLogger,
     });
-    logger.debug(TAG, `Verification strategy: SignatureVerificationStrategy with ${trustedGatewayUrls.length} trusted gateways`);
+    logger.debug(TAG, `Verification strategy: SignatureVerificationStrategy with ${consensusCount} gateway consensus`);
   } else {
     // Hash verification (default) - verifies content hash against trusted gateways
     verificationStrategy = new HashVerificationStrategy({
       trustedGateways: trustedGatewayUrls,
-      maxConcurrency: 3,
+      maxConcurrency: consensusCount,
       logger: quietWayfinderLogger,
     });
-    logger.debug(TAG, `Verification strategy: HashVerificationStrategy with ${trustedGatewayUrls.length} trusted gateways`);
+    logger.debug(TAG, `Verification strategy: HashVerificationStrategy with ${consensusCount} gateway consensus`);
   }
 
   // Create Wayfinder client with SDK verification enabled

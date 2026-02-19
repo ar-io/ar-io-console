@@ -149,7 +149,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
     <div className="px-4 sm:px-6">
       {/* Panel Header - compact */}
       <div className="flex items-center gap-3 mb-3 sm:mb-4">
-        <div className="w-9 h-9 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 border border-border/20">
+        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-border/20">
           <Compass className="w-5 h-5 text-primary" />
         </div>
         <div>
@@ -183,9 +183,11 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
               </div>
               <button
                 type="submit"
-                className="px-5 py-3 bg-primary text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm flex-shrink-0"
+                className="p-3 bg-primary text-white rounded-xl hover:opacity-90 transition-opacity flex-shrink-0"
+                title="Browse"
+                aria-label="Browse content"
               >
-                Browse
+                <Search className="w-5 h-5" />
               </button>
               <button
                 type="button"
@@ -206,7 +208,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
                 { label: 'ar.io Docs', value: 'docs' },
                 { label: 'Permaweb Journal', value: 'permaweb-journal' },
                 { label: 'AO', value: 'ao' },
-                { label: 'CrimRxiv', value: 'crimrxiv' },
+                { label: 'ar.io Whitepaper', value: 'whitepaper' },
                 { label: 'ArDrive', value: 'ardrive' },
               ].map((example) => (
                 <button

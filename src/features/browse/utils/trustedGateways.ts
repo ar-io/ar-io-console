@@ -2,8 +2,9 @@ import { ARIO } from '@ar.io/sdk';
 import type { GatewayWithStake } from '../types';
 
 const CACHE_KEY = 'ar-io-console-trusted-gateways-v2';
+const ALL_GATEWAYS_CACHE_KEY = 'ar-io-console-all-gateways-v1';
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-const TOP_POOL_SIZE = 10; // Always fetch top 10 by stake, then pick from this pool
+const TOP_POOL_SIZE = 20; // Always fetch top 20 by stake, then pick from this pool
 
 interface TrustedGatewayCache {
   gateways: GatewayWithStake[];
@@ -18,9 +19,9 @@ interface TrustedGatewayCache {
  * @returns Array of gateways with URL and stake info
  */
 export async function getTrustedGateways(count: number = 3): Promise<GatewayWithStake[]> {
-  const validCount = Math.max(1, Math.min(10, count));
+  const validCount = Math.max(1, Math.min(20, count));
 
-  // Check cache for the top 10 pool
+  // Check cache for the top 20 pool
   const cached = getCachedGateways();
   if (cached) {
     // Shuffle and pick requested count from cached pool
@@ -73,7 +74,7 @@ export async function getTrustedGateways(count: number = 3): Promise<GatewayWith
 
 /**
  * Get the full pool of top-staked gateways (for display in settings).
- * Returns all top 10 gateways sorted by stake (not shuffled).
+ * Returns all top 20 gateways sorted by stake (not shuffled).
  */
 export async function getTopStakedGateways(): Promise<GatewayWithStake[]> {
   // Check cache
@@ -90,6 +91,86 @@ export async function getTopStakedGateways(): Promise<GatewayWithStake[]> {
   // Now return from cache (sorted)
   const freshCached = getCachedGateways();
   return freshCached || [{ url: 'https://turbo-gateway.com', totalStake: 0 }];
+}
+
+/**
+ * Get ALL joined gateways from the AR.IO network.
+ * Returns all gateways sorted by total stake (operator + delegated).
+ * Used for the gateway selector combobox.
+ */
+export async function getAllJoinedGateways(): Promise<GatewayWithStake[]> {
+  // Check cache first
+  const cached = getCachedAllGateways();
+  if (cached) {
+    return cached;
+  }
+
+  // Fetch from AR.IO network
+  try {
+    const ario = ARIO.mainnet();
+
+    const result = await ario.getGateways({
+      limit: 1000,
+    });
+
+    if (!result.items || result.items.length === 0) {
+      throw new Error('No gateways returned from AR.IO network');
+    }
+
+    // Filter active gateways and calculate total stake (operator + delegated)
+    const gatewaysWithTotalStake = result.items
+      .filter(gateway => gateway.status === 'joined' && gateway.settings?.fqdn)
+      .map(gateway => ({
+        url: `https://${gateway.settings.fqdn}`,
+        totalStake: (gateway.operatorStake || 0) + (gateway.totalDelegatedStake || 0),
+      }));
+
+    // Sort by TOTAL stake descending
+    gatewaysWithTotalStake.sort((a, b) => b.totalStake - a.totalStake);
+
+    if (gatewaysWithTotalStake.length === 0) {
+      throw new Error('No active staked gateways found');
+    }
+
+    // Cache all gateways
+    cacheAllGateways(gatewaysWithTotalStake);
+
+    return gatewaysWithTotalStake;
+  } catch (error) {
+    console.error('[Gateways] Failed to fetch all joined gateways:', error);
+    return [{ url: 'https://turbo-gateway.com', totalStake: 0 }];
+  }
+}
+
+function getCachedAllGateways(): GatewayWithStake[] | null {
+  try {
+    const cached = localStorage.getItem(ALL_GATEWAYS_CACHE_KEY);
+    if (!cached) return null;
+
+    const parsed: TrustedGatewayCache = JSON.parse(cached);
+    const age = Date.now() - parsed.fetchedAt;
+
+    if (age > CACHE_TTL) {
+      localStorage.removeItem(ALL_GATEWAYS_CACHE_KEY);
+      return null;
+    }
+
+    return parsed.gateways;
+  } catch {
+    return null;
+  }
+}
+
+function cacheAllGateways(gateways: GatewayWithStake[]): void {
+  try {
+    const cache: TrustedGatewayCache = {
+      gateways,
+      fetchedAt: Date.now(),
+    };
+    localStorage.setItem(ALL_GATEWAYS_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Silent fail - caching is optional
+  }
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -133,6 +214,7 @@ function cacheGateways(gateways: GatewayWithStake[]): void {
 
 export function clearTrustedGatewayCache(): void {
   localStorage.removeItem(CACHE_KEY);
+  localStorage.removeItem(ALL_GATEWAYS_CACHE_KEY);
 }
 
 /**
