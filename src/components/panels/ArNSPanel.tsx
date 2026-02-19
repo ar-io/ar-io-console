@@ -61,7 +61,7 @@ export default function ArNSPanel() {
             href="https://arns.ar.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-warning hover:opacity-80 transition-colors font-medium"
+            className="flex items-center gap-1 text-xs text-primary hover:opacity-80 transition-colors font-medium"
           >
             <ExternalLink className="w-3 h-3" />
             arns.ar.io
@@ -189,7 +189,7 @@ export default function ArNSPanel() {
             <div>
               <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Global Propagation</h4>
               <p className="text-xs text-foreground/80">
-                Instant propagation across the entire AR.IO Network worldwide.
+                Instant propagation across the entire ar.io network worldwide.
               </p>
             </div>
           </div>
