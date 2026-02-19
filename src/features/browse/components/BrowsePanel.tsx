@@ -174,6 +174,10 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   const [searchInput, setSearchInput] = useState('');
   const [isSearched, setIsSearched] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Ref to track current identifier for filtering stale verification events.
+  // This avoids the closure capture issue in the message handler useEffect.
+  const currentIdentifierRef = useRef<string | null>(null);
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [searchCounter, setSearchCounter] = useState(0);
@@ -199,6 +203,21 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
       window.removeEventListener('offline', handleOffline);
     };
   }, [searchInput, isSearched]);
+
+  // Keep currentIdentifierRef in sync and clear old verification when identifier changes
+  useEffect(() => {
+    const oldIdentifier = currentIdentifierRef.current;
+    const newIdentifier = searchInput || null;
+
+    // Clear OLD verification when switching to a new identifier
+    if (oldIdentifier && oldIdentifier !== newIdentifier && browseConfig.verificationEnabled) {
+      swMessenger.clearVerification(oldIdentifier).catch(() => {
+        // Non-critical
+      });
+    }
+
+    currentIdentifierRef.current = newIdentifier;
+  }, [searchInput, browseConfig.verificationEnabled]);
 
   // Verification state tracking
   const [verificationState, setVerificationState] = useState<VerificationState>('idle');
@@ -315,6 +334,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   // Track if settings changed (not first mount) to restart verification
   const isFirstMount = useRef(true);
   const prevSettingsRef = useRef({
+    verificationEnabled: browseConfig.verificationEnabled,
     routingStrategy: browseConfig.routingStrategy,
     preferredGateway: browseConfig.preferredGateway,
     strictVerification: browseConfig.strictVerification,
@@ -332,6 +352,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
     const prevSettings = prevSettingsRef.current;
     const settingsChanged =
+      prevSettings.verificationEnabled !== browseConfig.verificationEnabled ||
       prevSettings.routingStrategy !== browseConfig.routingStrategy ||
       prevSettings.preferredGateway !== browseConfig.preferredGateway ||
       prevSettings.strictVerification !== browseConfig.strictVerification ||
@@ -341,6 +362,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
     // Update ref for next comparison
     prevSettingsRef.current = {
+      verificationEnabled: browseConfig.verificationEnabled,
       routingStrategy: browseConfig.routingStrategy,
       preferredGateway: browseConfig.preferredGateway,
       strictVerification: browseConfig.strictVerification,
@@ -395,6 +417,13 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
       const { type, event: verificationEvent } = event.data;
       if (type === 'VERIFICATION_EVENT' && verificationEvent) {
         const vEvent = verificationEvent as VerificationEvent;
+
+        // Filter out events for identifiers we're no longer viewing.
+        // This prevents stale verification updates from affecting the UI
+        // when the user has already navigated to a different identifier.
+        if (vEvent.identifier && vEvent.identifier !== currentIdentifierRef.current) {
+          return;
+        }
 
         if (vEvent.type === 'routing-gateway' && vEvent.gatewayUrl) {
           const isTxId = /^[A-Za-z0-9_-]{43}$/.test(vEvent.identifier);
@@ -527,13 +556,9 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
     setIsSingleFileContent(false);
     setRecentVerifiedResources([]);
 
-    if (browseConfig.verificationEnabled && input) {
-      try {
-        await swMessenger.clearVerification(input);
-      } catch {
-        // Non-critical
-      }
-    }
+    // Note: We don't clear verification here because:
+    // 1. The currentIdentifierRef effect handles clearing the OLD identifier
+    // 2. Clearing the NEW identifier before it starts would be wrong
 
     // Update URL with search query
     const url = new URL(window.location.href);
