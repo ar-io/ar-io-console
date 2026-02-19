@@ -67,7 +67,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
   // Results page - compact header
   if (isSearched) {
     return (
-      <div className="w-full bg-background/95 backdrop-blur-sm border-b border-border/20 py-2 sticky top-0 z-10">
+      <div className="w-full bg-background/95 backdrop-blur-sm py-2 sticky top-0 z-10">
         <form onSubmit={handleSubmit} className="max-w-none px-3 sm:px-4">
           <div className="flex gap-1.5 items-center">
             {/* Collapse button */}

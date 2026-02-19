@@ -661,7 +661,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
             <iframe
               key={`${searchInput}-${searchCounter}`}
               src={`/ar-proxy/${searchInput}/`}
-              className={`w-full h-full border-0 bg-white rounded-2xl overflow-hidden ${
+              className={`w-full h-full border-0 bg-white ${
                 verificationState === 'verifying' || verificationState === 'idle'
                   ? 'invisible absolute'
                   : ''
@@ -763,7 +763,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
           {/* Content viewer - same element in both modes to prevent reload */}
           <div
-            className={isFullscreen ? 'flex-1 overflow-hidden' : 'overflow-hidden'}
+            className={isFullscreen ? 'flex-1 overflow-hidden' : 'overflow-hidden rounded-2xl'}
             style={isFullscreen ? undefined : { height: 'calc(100vh - 115px)' }}
             key="content-viewer-container"
           >

@@ -156,7 +156,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   return (
     <iframe
       src={resolvedUrl}
-      className="w-full h-full border-0 bg-white rounded-2xl overflow-hidden"
+      className="w-full h-full border-0 bg-white"
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
       title={`Content for ${input}`}
     />
