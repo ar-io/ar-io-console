@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type AoGateway } from '@ar.io/sdk';
-import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
+import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
 
@@ -201,86 +201,68 @@ export function useGatewayInfo() {
           }
         }
 
-        // Compare fiat payment processing: Turbo's rate vs direct conversion
+        // Compare Turbo's rate vs raw Arweave network cost
         try {
-          console.log('🔍 Comparing Turbo payment processing vs direct rates...');
+          console.log('🔍 Calculating ar.io premium vs raw Arweave network cost...');
           const turbo = TurboFactory.unauthenticated(turboConfig);
           const gigabyteInBytes = 1073741824; // 1 GiB in bytes
-          
-          // Step 1: Get how much winc you get when you PAY Turbo $10 USD (includes their 23% fee)
-          console.log('💳 Getting Turbo payment rate (includes processing fees)...');
-          const turboPaymentRate = await turbo.getWincForFiat({
-            amount: USD(10),
-            promoCodes: []
-          });
-          const turboWincPer10USD = Number(turboPaymentRate.winc);
-          const turboWincPer1USD = turboWincPer10USD / 10;
-          
-          console.log('💰 Turbo payment processing:', {
-            '$10 gets': turboWincPer10USD,
-            'Per $1': turboWincPer1USD,
-            'Includes fees': turboPaymentRate.fees
-          });
-          
-          // Step 2: Get gateway winc cost for 1 GiB (direct gateway call)
-          let gatewayWincFor1GiB = undefined;
-          if (uploadData?.gateway) {
-            try {
-              const gatewayHost = uploadData.gateway.replace('https://', '');
-              const gatewayUrl = `https://${gatewayHost}/price/${gigabyteInBytes}`;
-              console.log('📡 Fetching direct from gateway:', gatewayUrl);
-              const response = await fetch(gatewayUrl);
-              gatewayWincFor1GiB = await response.json();
-              console.log('🌐 Direct gateway winc for 1 GiB:', gatewayWincFor1GiB);
-              
-              // Let's also check what gateway we're actually hitting
-              console.log('🏗️ Gateway we are comparing against:', gatewayHost);
-              
-            } catch (err) {
-              console.warn('❌ Gateway pricing fetch failed:', err);
+
+          // Step 1: Get Turbo's USD rate for 1 GiB
+          console.log('💳 Getting Turbo fiat rates...');
+          const fiatRates = await turbo.getFiatRates();
+          const turboUSDPerGiB = fiatRates.fiat?.usd || 0;
+          console.log('💰 Turbo USD per GiB:', turboUSDPerGiB);
+
+          // Step 2: Get raw Arweave network cost (winston) and AR/USD price
+          let arweaveUSDPerGiB = undefined;
+          let arweaveWinstonPerGiB = undefined;
+
+          try {
+            // Fetch raw Arweave network price (returns winston - smallest AR unit)
+            // 1 AR = 10^12 winston
+            const arweaveResponse = await fetch(`https://arweave.net/price/${gigabyteInBytes}`);
+            arweaveWinstonPerGiB = Number(await arweaveResponse.text());
+            console.log('🌐 Raw Arweave winston for 1 GiB:', arweaveWinstonPerGiB);
+
+            // Fetch AR/USD price from CoinGecko
+            const cgResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd');
+            const cgData = await cgResponse.json();
+            const arUSDPrice = cgData.arweave?.usd;
+            console.log('📈 AR/USD price:', arUSDPrice);
+
+            if (arweaveWinstonPerGiB && arUSDPrice) {
+              // Convert winston to AR, then to USD
+              // winston / 10^12 = AR, AR * USD/AR = USD
+              const arPerGiB = arweaveWinstonPerGiB / 1e12;
+              arweaveUSDPerGiB = arPerGiB * arUSDPrice;
+              console.log('💵 Raw Arweave USD per GiB:', arweaveUSDPerGiB);
             }
-          } else {
-            console.warn('❌ No gateway URL available from upload service');
+          } catch (err) {
+            console.warn('❌ Arweave network pricing fetch failed:', err);
           }
-          
-          // Step 3: Compare payment processing efficiency 
+
+          // Step 3: Calculate the premium (Turbo vs raw Arweave)
           let turboFeePercentage = undefined;
-          let gatewayUSDPer1GiB = undefined;
-          let turboUSDPer1GiB = undefined;
-          
-          if (gatewayWincFor1GiB && gatewayWincFor1GiB > 0 && turboWincPer1USD) {
-            
-            // Calculate how much USD you'd need to buy 1 GiB worth of winc
-            // Through Turbo (with 23% payment processing fee)
-            const usdNeededForGatewayWinc_ViaTurbo = gatewayWincFor1GiB / turboWincPer1USD;
-            
-            // Calculate what the rate WOULD BE without Turbo's 23% processing fee
-            const turboWithoutFees = turboWincPer1USD * 1.23; // Add back the ~23% that Turbo removes
-            const theoreticalDirectUSD = gatewayWincFor1GiB / turboWithoutFees;
-            
-            // Show the difference (should be ~23% markup)
-            turboFeePercentage = ((usdNeededForGatewayWinc_ViaTurbo - theoreticalDirectUSD) / theoreticalDirectUSD) * 100;
-            
-            turboUSDPer1GiB = usdNeededForGatewayWinc_ViaTurbo;
-            gatewayUSDPer1GiB = theoreticalDirectUSD;
-            
-            console.log('🧮 Payment processing comparison:', { 
-              gatewayWincFor1GiB,
-              turboWincPer1USD,
-              turboPaymentProcessingUSD: usdNeededForGatewayWinc_ViaTurbo,
-              theoreticalDirectUSD: theoreticalDirectUSD,
-              turboPaymentProcessingFee: turboFeePercentage
+
+          if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
+            // Premium = (Turbo price - Arweave price) / Arweave price * 100
+            turboFeePercentage = ((turboUSDPerGiB - arweaveUSDPerGiB) / arweaveUSDPerGiB) * 100;
+
+            console.log('🧮 ar.io Premium calculation:', {
+              turboUSDPerGiB,
+              arweaveUSDPerGiB,
+              premiumPercentage: turboFeePercentage
             });
           }
-          
+
           pricingData = {
-            wincPerGiB: gatewayWincFor1GiB?.toString() || '0',
-            usdPerGiB: turboUSDPer1GiB || 0,
-            baseGatewayPrice: gatewayUSDPer1GiB,
+            wincPerGiB: arweaveWinstonPerGiB?.toString() || '0',
+            usdPerGiB: turboUSDPerGiB || 0,
+            baseGatewayPrice: arweaveUSDPerGiB,
             turboFeePercentage: turboFeePercentage,
           };
-          
-          console.log('💾 Final pricing comparison:', pricingData);
+
+          console.log('💾 Final pricing data:', pricingData);
           setPricingInfo(pricingData);
         } catch (err) {
           console.warn('❌ Pricing calculation failed:', err);
@@ -386,53 +368,48 @@ export function useGatewayInfo() {
         }
       }
 
-      // Fetch pricing information (same logic as initial fetch)
+      // Fetch pricing information - compare Turbo vs raw Arweave network cost
       try {
         const turbo = TurboFactory.unauthenticated(turboConfig);
         const gigabyteInBytes = 1073741824; // 1 GiB in bytes
 
-        // Get how much winc you get when you PAY Turbo $10 USD (includes their 23% fee)
-        const turboPaymentRate = await turbo.getWincForFiat({
-          amount: USD(10),
-          promoCodes: []
-        });
-        const turboWincPer10USD = Number(turboPaymentRate.winc);
-        const turboWincPer1USD = turboWincPer10USD / 10;
+        // Step 1: Get Turbo's USD rate for 1 GiB
+        const fiatRates = await turbo.getFiatRates();
+        const turboUSDPerGiB = fiatRates.fiat?.usd || 0;
 
-        // Get gateway winc cost for 1 GiB (direct gateway call)
-        let gatewayWincFor1GiB = undefined;
-        if (uploadData?.gateway) {
-          try {
-            const gatewayHost = uploadData.gateway.replace('https://', '');
-            const response = await fetch(`https://${gatewayHost}/price/${gigabyteInBytes}`);
-            gatewayWincFor1GiB = await response.json();
-          } catch (err) {
-            console.warn('Gateway pricing fetch failed:', err);
+        // Step 2: Get raw Arweave network cost (winston) and AR/USD price
+        let arweaveUSDPerGiB = undefined;
+        let arweaveWinstonPerGiB = undefined;
+
+        try {
+          // Fetch raw Arweave network price (returns winston)
+          const arweaveResponse = await fetch(`https://arweave.net/price/${gigabyteInBytes}`);
+          arweaveWinstonPerGiB = Number(await arweaveResponse.text());
+
+          // Fetch AR/USD price from CoinGecko
+          const cgResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd');
+          const cgData = await cgResponse.json();
+          const arUSDPrice = cgData.arweave?.usd;
+
+          if (arweaveWinstonPerGiB && arUSDPrice) {
+            const arPerGiB = arweaveWinstonPerGiB / 1e12;
+            arweaveUSDPerGiB = arPerGiB * arUSDPrice;
           }
+        } catch (err) {
+          console.warn('Arweave network pricing fetch failed:', err);
         }
 
-        // Calculate pricing
+        // Step 3: Calculate the premium
         let turboFeePercentage = undefined;
-        let gatewayUSDPer1GiB = undefined;
-        let turboUSDPer1GiB = undefined;
 
-        if (gatewayWincFor1GiB && gatewayWincFor1GiB > 0 && turboWincPer1USD) {
-          // Calculate how much USD you'd need to buy 1 GiB worth of winc through Turbo
-          const usdNeededForGatewayWinc_ViaTurbo = gatewayWincFor1GiB / turboWincPer1USD;
-
-          // Calculate what the rate WOULD BE without Turbo's ~23% processing fee
-          const turboWithoutFees = turboWincPer1USD * 1.23;
-          const theoreticalDirectUSD = gatewayWincFor1GiB / turboWithoutFees;
-
-          turboFeePercentage = ((usdNeededForGatewayWinc_ViaTurbo - theoreticalDirectUSD) / theoreticalDirectUSD) * 100;
-          turboUSDPer1GiB = usdNeededForGatewayWinc_ViaTurbo;
-          gatewayUSDPer1GiB = theoreticalDirectUSD;
+        if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
+          turboFeePercentage = ((turboUSDPerGiB - arweaveUSDPerGiB) / arweaveUSDPerGiB) * 100;
         }
 
         pricingDataRefresh = {
-          wincPerGiB: gatewayWincFor1GiB?.toString() || '0',
-          usdPerGiB: turboUSDPer1GiB || 0,
-          baseGatewayPrice: gatewayUSDPer1GiB,
+          wincPerGiB: arweaveWinstonPerGiB?.toString() || '0',
+          usdPerGiB: turboUSDPerGiB || 0,
+          baseGatewayPrice: arweaveUSDPerGiB,
           turboFeePercentage: turboFeePercentage,
         };
         setPricingInfo(pricingDataRefresh);

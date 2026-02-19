@@ -466,7 +466,7 @@ export default function GatewayInfoPanel() {
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
-                    <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Base Rate</div>
+                    <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Arweave Rate</div>
                     <div className="text-lg font-bold text-foreground">
                       {pricingInfo.baseGatewayPrice !== undefined
                         ? pricingInfo.baseGatewayPrice === 0
@@ -475,21 +475,19 @@ export default function GatewayInfoPanel() {
                         : 'Unavailable'
                       }
                     </div>
-                    <div className="text-xs text-foreground/80 mt-1">Per GiB direct to arweave</div>
+                    <div className="text-xs text-foreground/80 mt-1">Per GiB raw network cost</div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Premium</div>
                     <div className="text-lg font-bold text-primary">
-                      {pricingInfo.turboFeePercentage
+                      {pricingInfo.turboFeePercentage !== undefined
                         ? `+${pricingInfo.turboFeePercentage.toFixed(1)}%`
-                        : pricingInfo.baseGatewayPrice === 0
-                          ? 'N/A'
-                          : 'Unavailable'
+                        : 'Unavailable'
                       }
                     </div>
                     <div className="text-xs text-foreground/80 mt-1">
-                      {pricingInfo.baseGatewayPrice === 0 ? 'vs free gateway' : 'Convenience fee'}
+                      vs raw Arweave network
                     </div>
                   </div>
                 </div>
