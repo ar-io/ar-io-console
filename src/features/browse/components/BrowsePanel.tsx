@@ -5,6 +5,7 @@ import {
   createRoutingStrategy,
   TrustedPeersGatewaysProvider,
   SimpleCacheGatewaysProvider,
+  SimpleCacheRoutingStrategy,
   StaticRoutingStrategy,
   type RoutingOption,
 } from '@ar.io/wayfinder-core';
@@ -126,9 +127,16 @@ function WayfinderWrapper({ children, gatewayRefreshCounter }: WayfinderWrapperP
       const strategyName: RoutingOption =
         browseConfig.routingStrategy === 'roundRobin' ? 'balanced' : browseConfig.routingStrategy;
 
-      routingStrategy = createRoutingStrategy({
+      const baseStrategy = createRoutingStrategy({
         strategy: strategyName,
         gatewaysProvider,
+      });
+
+      // Wrap with cache to avoid re-pinging on every request (5 min TTL)
+      // This is especially important for 'fastest' which pings all gateways
+      routingStrategy = new SimpleCacheRoutingStrategy({
+        routingStrategy: baseStrategy,
+        ttlSeconds: 5 * 60, // 5 minutes
       });
     }
 

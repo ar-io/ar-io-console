@@ -10,6 +10,7 @@ import {
   createWayfinderClient,
   createRoutingStrategy,
   StaticRoutingStrategy,
+  SimpleCacheRoutingStrategy,
   HashVerificationStrategy,
   SignatureVerificationStrategy,
 } from '@ar.io/wayfinder-core';
@@ -136,9 +137,16 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
   } else {
     // Map 'roundRobin' to 'balanced' for createRoutingStrategy
     const strategyName = config.routingStrategy === 'roundRobin' ? 'balanced' : config.routingStrategy;
-    routingStrategy = createRoutingStrategy({
+    const baseStrategy = createRoutingStrategy({
       strategy: strategyName as 'random' | 'fastest' | 'balanced',
       gatewaysProvider,
+      logger: quietWayfinderLogger,
+    });
+    // Wrap with cache to avoid re-pinging on every request (5 min TTL)
+    // Critical for 'fastest' strategy which pings all gateways on each selectGateway() call
+    routingStrategy = new SimpleCacheRoutingStrategy({
+      routingStrategy: baseStrategy,
+      ttlSeconds: 5 * 60,
       logger: quietWayfinderLogger,
     });
   }
