@@ -171,6 +171,26 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   const [searchCounter, setSearchCounter] = useState(0);
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [swReady, setSwReady] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Track online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Auto-retry if we were waiting for connection
+      if (searchInput && isSearched) {
+        setSearchCounter((prev) => prev + 1);
+      }
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [searchInput, isSearched]);
 
   // Verification state tracking
   const [verificationState, setVerificationState] = useState<VerificationState>('idle');
@@ -587,6 +607,31 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
   // Render the content viewer (iframe or verification states)
   const renderContentViewer = () => {
+    // Show offline message when network is unavailable
+    if (!isOnline) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-card">
+          <div className="text-center p-8">
+            <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-xl flex items-center justify-center">
+              <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+              </svg>
+            </div>
+            <div className="text-xl font-semibold text-foreground mb-2">
+              You&apos;re Offline
+            </div>
+            <div className="text-foreground/60 max-w-md mb-4">
+              Unable to browse Arweave content without an internet connection.
+              Content will automatically load when you&apos;re back online.
+            </div>
+            <div className="text-sm text-foreground/40">
+              Waiting for connection...
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (browseConfig.verificationEnabled && swReady) {
       return (
         <>

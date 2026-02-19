@@ -82,21 +82,27 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
 
   const isCheckingHealth = !!resolvedUrl && !isLoading && !healthCheckPassed;
 
-  // Auto-retry logic for useWayfinderUrl errors
+  // Auto-retry logic for useWayfinderUrl errors with exponential backoff
   useEffect(() => {
     if (error && !isLoading && retryAttempts < MAX_GATEWAY_AUTO_RETRIES && !hasAutoRetried.current) {
       const isGatewayError =
         error.message.toLowerCase().includes('gateway') ||
         error.message.toLowerCase().includes('network') ||
         error.message.toLowerCase().includes('failed to fetch') ||
-        error.message.toLowerCase().includes('timeout');
+        error.message.toLowerCase().includes('timeout') ||
+        error.message.toLowerCase().includes('offline');
 
       if (isGatewayError) {
         hasAutoRetried.current = true;
+        // Exponential backoff: 500ms, 1s, 2s (with jitter to avoid thundering herd)
+        const baseDelay = 500 * Math.pow(2, retryAttempts);
+        const jitter = Math.random() * 200; // Add 0-200ms jitter
+        const delay = baseDelay + jitter;
+
         const timeoutId = setTimeout(() => {
-          console.log(`Auto-retrying with fresh gateways (attempt ${retryAttempts + 1}/${MAX_GATEWAY_AUTO_RETRIES})...`);
+          console.log(`Auto-retrying with fresh gateways (attempt ${retryAttempts + 1}/${MAX_GATEWAY_AUTO_RETRIES}, delay: ${Math.round(delay)}ms)...`);
           onRetry();
-        }, 500);
+        }, delay);
 
         return () => clearTimeout(timeoutId);
       }

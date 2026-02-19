@@ -32,29 +32,76 @@ export class ServiceWorkerMessenger {
       return;
     }
 
-    try {
-      const registration = await navigator.serviceWorker.register(scriptURL, options);
-      console.log('[SW] Registered:', registration.scope);
+    // Retry with exponential backoff
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-      // Set up message listener (only once)
-      if (!this.messageListenerAttached) {
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          this.handleMessage(event.data);
-        });
-        this.messageListenerAttached = true;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Check if offline before attempting
+        if (!navigator.onLine) {
+          console.warn('[SW] Offline - deferring registration');
+          // Wait for online event before continuing
+          await this.waitForOnline(30000);
+        }
+
+        const registration = await navigator.serviceWorker.register(scriptURL, options);
+        console.log('[SW] Registered:', registration.scope);
+
+        // Set up message listener (only once)
+        if (!this.messageListenerAttached) {
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            this.handleMessage(event.data);
+          });
+          this.messageListenerAttached = true;
+        }
+
+        // Wait for service worker to be ready
+        await navigator.serviceWorker.ready;
+
+        // Wait for controller with robust retry
+        await this.waitForController();
+        return; // Success!
+
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`[SW] Registration attempt ${attempt + 1}/${maxRetries} failed:`, error);
+
+        if (attempt < maxRetries - 1) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-
-      // Wait for service worker to be ready
-      await navigator.serviceWorker.ready;
-
-      // Wait for controller with robust retry
-      await this.waitForController();
-
-    } catch (error) {
-      console.error('[SW] Registration failed:', error);
-      this.registrationPromise = null;
-      throw error;
     }
+
+    console.error('[SW] Registration failed after all retries:', lastError);
+    this.registrationPromise = null;
+    throw lastError;
+  }
+
+  /**
+   * Wait for browser to come online.
+   */
+  private waitForOnline(timeoutMs: number): Promise<void> {
+    if (navigator.onLine) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        window.removeEventListener('online', onOnline);
+        resolve(); // Continue anyway after timeout
+      }, timeoutMs);
+
+      const onOnline = () => {
+        clearTimeout(timeout);
+        window.removeEventListener('online', onOnline);
+        resolve();
+      };
+
+      window.addEventListener('online', onOnline);
+    });
   }
 
   /**
@@ -127,9 +174,9 @@ export class ServiceWorkerMessenger {
   }
 
   /**
-   * Send message to service worker
+   * Send message to service worker with timeout
    */
-  async send(message: ServiceWorkerMessage): Promise<ServiceWorkerMessage> {
+  async send(message: ServiceWorkerMessage, timeoutMs = 30000): Promise<ServiceWorkerMessage> {
     const controller = navigator.serviceWorker.controller;
     if (!controller) {
       throw new Error('No service worker controller');
@@ -137,8 +184,23 @@ export class ServiceWorkerMessenger {
 
     return new Promise((resolve, reject) => {
       const messageChannel = new MessageChannel();
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        messageChannel.port1.onmessage = null;
+      };
+
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error(`Service worker message timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
 
       messageChannel.port1.onmessage = (event) => {
+        cleanup();
         if (event.data.error) {
           reject(new Error(event.data.error));
         } else {
