@@ -11,7 +11,7 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Gift, Ticket, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, Phone, BookOpen, Calculator
+  Camera, Phone, BookOpen, Calculator, Compass
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 import { CompanyCarousel } from '../components/CompanyCarousel';
@@ -153,6 +153,16 @@ const LandingPage = () => {
       action: 'capture',
       loginText: 'Capture Webpage',
       connectText: 'Connect Wallet to Capture'
+    },
+    {
+      name: 'Browse',
+      icon: Compass,
+      title: 'Browse & Verify Arweave Data',
+      description: 'Access any Arweave content by ArNS name or transaction ID. Browse the permaweb with optional cryptographic verification through multiple gateways.',
+      benefits: ['ArNS name resolution', 'Cryptographic verification', 'Multi-gateway routing'],
+      action: 'browse',
+      loginText: 'Browse Data',
+      connectText: 'Browse Data'
     },
     {
       name: 'Share',
@@ -537,7 +547,7 @@ const LandingPage = () => {
                 </div>
                 <button onClick={() => {
                   const feature = features[selectedFeatureIndex];
-                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings') {
+                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     navigate(`/${feature.action}`);
@@ -545,7 +555,7 @@ const LandingPage = () => {
                     setShowWalletModal(true);
                   }
                 }} className={`px-6 py-2 rounded-full font-medium ${getFeatureColor().button}`}>
-                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings')
+                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
                     ? features[selectedFeatureIndex].loginText
                     : loggedIn
                       ? features[selectedFeatureIndex].loginText
@@ -621,7 +631,7 @@ const LandingPage = () => {
                 </div>
                 <button onClick={() => {
                   const feature = features[selectedFeatureIndex];
-                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings') {
+                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     navigate(`/${feature.action}`);
@@ -629,7 +639,7 @@ const LandingPage = () => {
                     setShowWalletModal(true);
                   }
                 }} className={`px-6 py-2 rounded-full font-medium ${getFeatureColor().button}`}>
-                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings')
+                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
                     ? features[selectedFeatureIndex].loginText
                     : loggedIn
                       ? features[selectedFeatureIndex].loginText

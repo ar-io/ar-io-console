@@ -10,10 +10,16 @@ npm run dev          # Start dev server at http://localhost:3000
 npm run lint         # ESLint validation
 npm run type-check   # TypeScript checking (strict mode)
 npm run build:prod   # Production build (requires 8GB memory)
+npm run build:staging # Staging build with source maps
 npm run clean:all    # Full clean and reinstall
+npm run preview      # Preview production build
 ```
 
-**Path alias:** Use `@/` for imports from `src/` (e.g., `import { useStore } from '@/store/useStore'`).
+**Notes:**
+- Uses yarn (packageManager: yarn@1.22.22) but npm works
+- Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev, 8GB prod build)
+- No test framework configured
+- Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 
 ## Critical Gotchas
 
@@ -40,26 +46,6 @@ Before diving in, these are the most common issues:
 
 8. **Async wallet operations may fail**: Always wrap `createEthereumTurboClient()`, `fundAndUpload()`, and similar async wallet operations in try/catch blocks with user-friendly error handling.
 
-## Development Commands
-
-```bash
-npm install          # Install dependencies
-npm run dev          # Start dev server at http://localhost:3000
-npm run build:prod   # Production build with type checking (8GB memory)
-npm run build        # Development build
-npm run build:staging # Staging build with source maps
-npm run lint         # ESLint validation
-npm run type-check   # TypeScript checking
-npm run clean:all    # Full clean and reinstall
-npm run preview      # Preview production build
-```
-
-**Notes:**
-- Uses yarn (packageManager: yarn@1.22.22) but npm works
-- Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev, 8GB prod build)
-- No test framework configured
-- Path alias: `@/` maps to `src/` (configured in tsconfig.json and vite.config.ts)
-
 ## Architecture Overview
 
 ### Application Structure
@@ -68,6 +54,7 @@ ar.io Console - a unified application for uploading and accessing permanent data
 - **Site deployment**: Deploy static sites with ArNS domain support
 - **Credit management**: Purchase, share, and gift credits
 - **ArNS domains**: Search and manage domain names
+- **Browse**: View permaweb content with optional cryptographic verification via Wayfinder
 
 ### Key Directories
 ```text
@@ -78,6 +65,8 @@ src/
 │   ├── panels/crypto/    # Crypto payment panels
 │   ├── modals/           # BaseModal, WalletSelectionModal, ReceiptModal
 │   └── account/          # Account page components
+├── features/
+│   └── browse/           # Browse feature with Wayfinder verification (see below)
 ├── hooks/                # Custom React hooks (Turbo SDK wrappers, pricing, uploads)
 ├── pages/                # React Router page components
 ├── store/useStore.ts     # Zustand state management
@@ -86,6 +75,24 @@ src/
 ├── lib/                  # API clients (turboCaptureClient.ts)
 └── constants.ts          # App config, token definitions, X402_CONFIG
 ```
+
+### Browse Feature (Wayfinder Integration)
+
+The Browse feature allows users to view permaweb content with optional cryptographic verification.
+
+**Key files:**
+- `src/features/browse/components/BrowsePanel.tsx` - Main browse UI
+- `src/features/browse/components/BrowseSearchBar.tsx` - ArNS/TX ID input
+- `src/features/browse/service-worker/service-worker.ts` - SW for content interception
+- `src/features/browse/service-worker/wayfinder-instance.ts` - Wayfinder SDK integration
+
+**How it works:**
+1. User enters ArNS name or transaction ID
+2. Service worker intercepts requests and routes through ar.io gateways
+3. When verification is enabled, Wayfinder validates content signatures
+4. Content displayed in iframe with verification badge
+
+**Dependencies:** `@ar.io/wayfinder-core`, `@ar.io/wayfinder-react`
 
 ### Wallet Integration
 
@@ -346,6 +353,7 @@ if (privyWallet) {
 
 - `@ardrive/turbo-sdk`: Turbo services, multi-chain signing, USDC support
 - `@ar.io/sdk`: ArNS resolution, InjectedEthereumSigner
+- `@ar.io/wayfinder-core` + `@ar.io/wayfinder-react`: Browse content verification
 - `@privy-io/react-auth`: Email auth with embedded wallets
 - `wagmi` + `ethers`: Ethereum wallets
 - `@solana/wallet-adapter-*`: Solana wallets
@@ -360,7 +368,7 @@ if (privyWallet) {
 ```typescript
 '/', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share', '/gift',
 '/account', '/domains', '/calculator', '/services-calculator', '/balances', '/redeem',
-'/settings', '/try'
+'/settings', '/try', '/browse'
 ```
 
 URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx)
