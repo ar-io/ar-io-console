@@ -203,7 +203,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
             <p className="text-xs text-foreground/50 mb-2">Try these examples:</p>
             <div className="flex flex-wrap gap-2">
               {[
-                { label: 'ar.io', value: 'ar-io' },
+                { label: 'ar.io Docs', value: 'docs' },
                 { label: 'Permaweb Journal', value: 'permaweb-journal' },
                 { label: 'AO', value: 'ao' },
                 { label: 'CrimRxiv', value: 'crimrxiv' },
