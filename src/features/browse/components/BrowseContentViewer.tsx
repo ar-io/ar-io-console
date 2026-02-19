@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState, memo, useRef } from 'react';
 import { useWayfinderUrl } from '@ar.io/wayfinder-react';
 import { RoutingLoadingScreen } from './RoutingLoadingScreen';
 import { ErrorDisplay } from './ErrorDisplay';
+import { ContentRenderer } from './ContentRenderer';
 import { detectInputType } from '../utils/detectInputType';
 import { checkGatewayHealth } from '../utils/gatewayHealthCheck';
+import { detectContentType, type ContentCategory } from '../utils/contentTypeUtils';
 import { MAX_GATEWAY_AUTO_RETRIES } from '../utils/constants';
 import { useStore } from '@/store/useStore';
 
@@ -28,6 +30,10 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   const [healthCheckPassed, setHealthCheckPassed] = useState(false);
   const healthCheckStarted = useRef(false);
   const isMounted = useRef(true);
+
+  // Content type detection
+  const [contentCategory, setContentCategory] = useState<ContentCategory>('html');
+  const [isDetectingContentType, setIsDetectingContentType] = useState(false);
 
   // Track mount status to prevent state updates after unmount
   useEffect(() => {
@@ -80,6 +86,36 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
     }
   }, [resolvedUrl, healthCheckPassed, onUrlResolved]);
 
+  // Detect content type when resolvedUrl is available
+  useEffect(() => {
+    if (!resolvedUrl || !healthCheckPassed) {
+      setContentCategory('html');
+      return;
+    }
+
+    let cancelled = false;
+    setIsDetectingContentType(true);
+
+    detectContentType(resolvedUrl)
+      .then(({ category }) => {
+        if (!cancelled && isMounted.current) {
+          setContentCategory(category);
+          setIsDetectingContentType(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && isMounted.current) {
+          // Default to HTML on error (preserves existing behavior for manifests)
+          setContentCategory('html');
+          setIsDetectingContentType(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedUrl, healthCheckPassed]);
+
   const isCheckingHealth = !!resolvedUrl && !isLoading && !healthCheckPassed;
 
   // Auto-retry logic for useWayfinderUrl errors with exponential backoff
@@ -113,8 +149,8 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
     }
   }, [error, isLoading, retryAttempts, onRetry]);
 
-  // Show loading screen during resolution or health check
-  if (isLoading || isCheckingHealth) {
+  // Show loading screen during resolution, health check, or content type detection
+  if (isLoading || isCheckingHealth || isDetectingContentType) {
     return (
       <RoutingLoadingScreen
         identifier={input}
@@ -123,7 +159,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
         preferredGateway={browseConfig.preferredGateway}
         startTime={mountTime}
         onRetry={onRetry}
-        isCheckingHealth={isCheckingHealth}
+        isCheckingHealth={isCheckingHealth || isDetectingContentType}
         retryCount={retryAttempts}
         maxRetries={MAX_GATEWAY_AUTO_RETRIES}
       />
@@ -154,11 +190,10 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   }
 
   return (
-    <iframe
-      src={resolvedUrl}
-      className="w-full h-full border-0 bg-white"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-      title={`Content for ${input}`}
+    <ContentRenderer
+      url={resolvedUrl}
+      category={contentCategory}
+      identifier={input}
     />
   );
 });

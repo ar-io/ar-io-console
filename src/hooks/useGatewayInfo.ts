@@ -237,7 +237,7 @@ export function useGatewayInfo() {
           let turboFeePercentage = undefined;
 
           if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
-            turboFeePercentage = ((turboUSDPerGiB - arweaveUSDPerGiB) / arweaveUSDPerGiB) * 100;
+            turboFeePercentage = (1 - (arweaveUSDPerGiB / turboUSDPerGiB)) * 100;
           }
 
           pricingData = {
@@ -386,7 +386,7 @@ export function useGatewayInfo() {
         let turboFeePercentage = undefined;
 
         if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
-          turboFeePercentage = ((turboUSDPerGiB - arweaveUSDPerGiB) / arweaveUSDPerGiB) * 100;
+          turboFeePercentage = (1 - (arweaveUSDPerGiB / turboUSDPerGiB)) * 100;
         }
 
         pricingDataRefresh = {

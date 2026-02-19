@@ -20,9 +20,11 @@ import {
 } from './VerificationBadge';
 import { VerificationBlockedModal } from './VerificationBlockedModal';
 import { VerificationLoadingScreen } from './VerificationLoadingScreen';
+import { ContentRenderer } from './ContentRenderer';
 import { swMessenger } from '../utils/serviceWorkerMessaging';
 import { getTrustedGateways, getRoutingGateways } from '../utils/trustedGateways';
 import { gatewayHealth } from '../utils/gatewayHealth';
+import { detectContentType, type ContentCategory } from '../utils/contentTypeUtils';
 import type { VerificationEvent } from '../service-worker/types';
 
 interface WayfinderWrapperProps {
@@ -238,6 +240,10 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   const [manifestTxId, setManifestTxId] = useState<string | null>(null);
   const [isSingleFileContent, setIsSingleFileContent] = useState(false);
   const [recentVerifiedResources, setRecentVerifiedResources] = useState<Array<{ path: string; status: 'verified' | 'failed' | 'verifying' }>>([]);
+
+  // Content type detection for non-HTML content (images, video, audio, PDF)
+  const [contentCategory, setContentCategory] = useState<ContentCategory>('html');
+  const [isDetectingContentType, setIsDetectingContentType] = useState(false);
 
   // Initialize from URL query parameter on mount
   useEffect(() => {
@@ -536,6 +542,36 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
     return () => navigator.serviceWorker.removeEventListener('message', handleSwMessage);
   }, [browseConfig.verificationEnabled, browseConfig.strictVerification, userBypassedVerification]);
 
+  // Detect content type when resolvedUrl changes (for non-verification mode or after verification)
+  useEffect(() => {
+    if (!resolvedUrl) {
+      setContentCategory('html');
+      return;
+    }
+
+    let cancelled = false;
+    setIsDetectingContentType(true);
+
+    detectContentType(resolvedUrl)
+      .then(({ category }) => {
+        if (!cancelled) {
+          setContentCategory(category);
+          setIsDetectingContentType(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          // Default to HTML on error (preserves existing behavior for manifests)
+          setContentCategory('html');
+          setIsDetectingContentType(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedUrl]);
+
   const handleSearch = useCallback(async (input: string) => {
     setSearchInput(input);
     setIsSearched(true);
@@ -555,6 +591,8 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
     setManifestTxId(null);
     setIsSingleFileContent(false);
     setRecentVerifiedResources([]);
+    setContentCategory('html');
+    setIsDetectingContentType(false);
 
     // Note: We don't clear verification here because:
     // 1. The currentIdentifierRef effect handles clearing the OLD identifier
@@ -715,16 +753,12 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
           )}
 
           {!shouldBlockContent && (
-            <iframe
+            <ContentRenderer
               key={`${searchInput}-${searchCounter}`}
-              src={`/ar-proxy/${searchInput}/`}
-              className={`w-full h-full border-0 bg-white ${
-                verificationState === 'verifying' || verificationState === 'idle'
-                  ? 'invisible absolute'
-                  : ''
-              }`}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-              title={`Verified content for ${searchInput}`}
+              url={`/ar-proxy/${searchInput}/`}
+              category={contentCategory}
+              identifier={searchInput}
+              isHidden={verificationState === 'verifying' || verificationState === 'idle' || isDetectingContentType}
             />
           )}
 
