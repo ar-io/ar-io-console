@@ -819,9 +819,10 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
           )}
 
           {/* Content viewer - same element in both modes to prevent reload */}
+          {/* Height accounts for: header (~60px), search bar (~50px), footer (~50px), Layout padding (~40px) */}
           <div
             className={isFullscreen ? 'flex-1 overflow-hidden' : 'overflow-hidden rounded-2xl border border-border/20'}
-            style={isFullscreen ? undefined : { height: 'calc(100vh - 115px)' }}
+            style={isFullscreen ? undefined : { height: 'calc(100dvh - 200px)', minHeight: '400px' }}
             key="content-viewer-container"
           >
             {renderContentViewer()}
@@ -834,7 +835,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
                 href={resolvedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground/25 hover:text-foreground/40 text-[11px] font-mono"
+                className="text-foreground/50 hover:text-foreground/70 text-[11px] font-mono"
                 title={resolvedUrl}
               >
                 {new URL(resolvedUrl).hostname}
