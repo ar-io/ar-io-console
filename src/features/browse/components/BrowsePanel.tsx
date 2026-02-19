@@ -564,7 +564,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
     const url = new URL(window.location.href);
     url.searchParams.set('q', input);
     window.history.pushState({}, '', url.toString());
-  }, [browseConfig.verificationEnabled]);
+  }, []);
 
   const handleRetry = useCallback(async () => {
     const newAttempts = retryAttempts + 1;
@@ -608,6 +608,8 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   }, []);
 
   const handleGoBack = useCallback(() => {
+    // Note: Setting searchInput to '' triggers the currentIdentifierRef effect
+    // which clears verification for the old identifier
     setSearchInput('');
     setIsSearched(false);
     setShowBlockedModal(false);
@@ -615,6 +617,13 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
     setVerificationStats({ total: 0, verified: 0, failed: 0, failedResources: [] });
     setVerificationError(undefined);
     setUserBypassedVerification(false);
+    setVerificationPhase('idle');
+    setRoutingGateway(null);
+    setVerificationStartTime(null);
+    setManifestTxId(null);
+    setIsSingleFileContent(false);
+    setRecentVerifiedResources([]);
+    setResolvedUrl(null);
 
     const url = new URL(window.location.href);
     url.searchParams.delete('q');
@@ -664,6 +673,21 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
             </div>
             <div className="text-sm text-foreground/40">
               Waiting for connection...
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // When verification is enabled but SW not ready, show loading state
+    // This prevents loading content via non-verified path while SW initializes
+    if (browseConfig.verificationEnabled && !swReady) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-card">
+          <div className="text-center p-8">
+            <div className="w-12 h-12 mx-auto mb-4 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <div className="text-foreground/60">
+              Initializing verification...
             </div>
           </div>
         </div>
