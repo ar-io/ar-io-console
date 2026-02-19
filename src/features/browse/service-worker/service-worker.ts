@@ -238,16 +238,35 @@ async function handleArweaveProxy(request: Request): Promise<Response> {
 // ============================================================================
 
 /**
+ * Escape HTML entities to prevent XSS.
+ */
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
+}
+
+/**
  * Create a styled HTML error response.
  * Uses ar.io console branding (light theme with purple accents).
  */
 function createErrorResponse(title: string, message: string, identifier: string): Response {
+  // Escape all user-provided content to prevent XSS
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message || 'An unknown error occurred during verification.');
+  const safeIdentifier = escapeHtml(identifier);
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title}</title>
+  <title>${safeTitle}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -318,9 +337,9 @@ function createErrorResponse(title: string, message: string, identifier: string)
 <body>
   <div class="container">
     <div class="icon">🛡️</div>
-    <h1>${title}</h1>
-    <div class="message">${message || 'An unknown error occurred during verification.'}</div>
-    <div class="identifier">${identifier}</div>
+    <h1>${safeTitle}</h1>
+    <div class="message">${safeMessage}</div>
+    <div class="identifier">${safeIdentifier}</div>
     <div class="hint">Try using a different verification method or retry with a different gateway.</div>
   </div>
 </body>

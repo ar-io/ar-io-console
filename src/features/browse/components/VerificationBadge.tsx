@@ -154,11 +154,11 @@ export function VerificationBadge({
                   <div className="h-full flex">
                     <div
                       className="bg-emerald-600 transition-all duration-300"
-                      style={{ width: `${(stats.verified / stats.total) * 100}%` }}
+                      style={{ width: `${Math.min((stats.verified / stats.total) * 100, 100)}%` }}
                     />
                     <div
                       className="bg-red-600 transition-all duration-300"
-                      style={{ width: `${(stats.failed / stats.total) * 100}%` }}
+                      style={{ width: `${Math.min((stats.failed / stats.total) * 100, 100 - Math.min((stats.verified / stats.total) * 100, 100))}%` }}
                     />
                   </div>
                 </div>

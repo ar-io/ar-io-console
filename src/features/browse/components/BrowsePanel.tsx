@@ -417,37 +417,41 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
         }
 
         if (vEvent.type === 'verification-progress' && vEvent.progress) {
+          const { total, current } = vEvent.progress;
           setVerificationStats(prev => ({
             ...prev,
-            total: vEvent.progress!.total,
-            verified: vEvent.progress!.current,
+            total,
+            verified: current,
             currentResource: vEvent.resourcePath,
           }));
           if (vEvent.resourcePath) {
+            const resourcePath = vEvent.resourcePath;
             setRecentVerifiedResources(prev => {
-              const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
-              newList.push({ path: vEvent.resourcePath!, status: 'verified' });
+              const newList = [...prev.filter(r => r.path !== resourcePath)];
+              newList.push({ path: resourcePath, status: 'verified' });
               return newList.slice(-8);
             });
           }
         }
 
         if (vEvent.type === 'manifest-loaded' && vEvent.progress) {
+          const { total } = vEvent.progress;
           setVerificationStats(prev => ({
             ...prev,
-            total: vEvent.progress!.total,
+            total,
           }));
           setManifestTxId(vEvent.manifestTxId || null);
-          setIsSingleFileContent(vEvent.isSingleFile ?? vEvent.progress!.total === 1);
+          setIsSingleFileContent(vEvent.isSingleFile ?? total === 1);
           setVerificationPhase('verifying');
         }
 
         if (vEvent.type === 'verification-complete') {
           if (vEvent.progress) {
+            const { total, current } = vEvent.progress;
             setVerificationStats(prev => ({
               ...prev,
-              total: vEvent.progress!.total,
-              verified: vEvent.progress!.current,
+              total,
+              verified: current,
             }));
           }
 
@@ -467,14 +471,15 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
         if (vEvent.type === 'verification-failed') {
           if (vEvent.resourcePath) {
+            const resourcePath = vEvent.resourcePath;
             setVerificationStats(prev => ({
               ...prev,
               failed: prev.failed + 1,
-              failedResources: [...(prev.failedResources || []), vEvent.resourcePath!],
+              failedResources: [...(prev.failedResources || []), resourcePath],
             }));
             setRecentVerifiedResources(prev => {
-              const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
-              newList.push({ path: vEvent.resourcePath!, status: 'failed' });
+              const newList = [...prev.filter(r => r.path !== resourcePath)];
+              newList.push({ path: resourcePath, status: 'failed' });
               return newList.slice(-8);
             });
           } else {
