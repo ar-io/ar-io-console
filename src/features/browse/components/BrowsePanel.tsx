@@ -661,7 +661,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
             <iframe
               key={`${searchInput}-${searchCounter}`}
               src={`/ar-proxy/${searchInput}/`}
-              className={`w-full h-full border-0 bg-white ${
+              className={`w-full h-full border-0 bg-white rounded-2xl overflow-hidden ${
                 verificationState === 'verifying' || verificationState === 'idle'
                   ? 'invisible absolute'
                   : ''
