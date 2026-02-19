@@ -14,8 +14,8 @@ const PRESET_CONFIGS = {
     stripeKey: 'pk_live_51JUAtwC8apPOWkDLMQqNF9sPpfneNSPnwX8YZ8y1FNDl6v94hZIwzgFSYl27bWE4Oos8CLquunUswKrKcaDhDO6m002Yj9AeKj',
     processId: 'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE',
     tokenMap: {
-      arweave: 'https://arweave.net',
-      ario: 'https://arweave.net',
+      arweave: 'https://turbo-gateway.com',
+      ario: 'https://turbo-gateway.com',
       'base-ario': 'https://mainnet.base.org',
       ethereum: 'https://ethereum.publicnode.com',
       'base-eth': 'https://mainnet.base.org',
@@ -35,8 +35,8 @@ const PRESET_CONFIGS = {
     stripeKey: 'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
     processId: 'agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA',
     tokenMap: {
-      arweave: 'https://arweave.net',
-      ario: 'https://arweave.net',
+      arweave: 'https://turbo-gateway.com',
+      ario: 'https://turbo-gateway.com',
       'base-ario': 'https://sepolia.base.org',
       ethereum: 'https://eth-sepolia.public.blastapi.io',
       'base-eth': 'https://sepolia.base.org',
@@ -112,6 +112,29 @@ export interface PaymentInformation {
 
 export type ConfigMode = 'production' | 'development' | 'custom';
 export type ThemeMode = 'light' | 'dark' | 'system';
+
+// Browse Data feature types
+export type BrowseRoutingStrategy = 'random' | 'fastest' | 'roundRobin' | 'preferred';
+export type BrowseVerificationMethod = 'hash' | 'signature';
+
+export interface BrowseConfig {
+  routingStrategy: BrowseRoutingStrategy;
+  preferredGateway?: string;
+  verificationEnabled: boolean;
+  strictVerification: boolean;
+  verificationConcurrency: number;
+  verificationMethod: BrowseVerificationMethod;
+  trustedGatewayCount: number;
+}
+
+const DEFAULT_BROWSE_CONFIG: BrowseConfig = {
+  routingStrategy: 'random',
+  verificationEnabled: false,
+  strictVerification: false,
+  verificationConcurrency: 10,
+  verificationMethod: 'hash',
+  trustedGatewayCount: 3,
+};
 
 export interface DeveloperConfig {
   paymentServiceUrl: string;
@@ -196,6 +219,9 @@ interface StoreState {
   deployedApps: Record<string, DeployedAppEntry>; // Keyed by app name
   lastDeployedAppName: string | null; // Most recently deployed app for pre-fill
 
+  // Browse Data feature state
+  browseConfig: BrowseConfig;
+
   // Actions
   setAddress: (address: string | null, type: 'arweave' | 'ethereum' | 'solana' | null) => void;
   clearAddress: () => void;
@@ -278,6 +304,10 @@ interface StoreState {
   getDeployedApp: (appName: string) => DeployedAppEntry | null;
   getRecentAppNames: (limit?: number) => string[];
   getLastDeployedApp: () => { appName: string; appVersion: string } | null;
+
+  // Browse Data feature actions
+  setBrowseConfig: (config: Partial<BrowseConfig>) => void;
+  resetBrowseConfig: () => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -311,6 +341,9 @@ export const useStore = create<StoreState>()(
       // App Details state (deployed apps history)
       deployedApps: {},
       lastDeployedAppName: null,
+
+      // Browse Data feature state
+      browseConfig: DEFAULT_BROWSE_CONFIG,
 
       // Payment state
       paymentAmount: undefined,
@@ -606,6 +639,12 @@ export const useStore = create<StoreState>()(
         if (!app) return null;
         return { appName: lastDeployedAppName, appVersion: app.appVersion };
       },
+
+      // Browse Data feature actions
+      setBrowseConfig: (config) => set((state) => ({
+        browseConfig: { ...state.browseConfig, ...config }
+      })),
+      resetBrowseConfig: () => set({ browseConfig: DEFAULT_BROWSE_CONFIG }),
     }),
     {
       name: 'turbo-gateway-store',
@@ -631,6 +670,8 @@ export const useStore = create<StoreState>()(
         // App Details state
         deployedApps: state.deployedApps,
         lastDeployedAppName: state.lastDeployedAppName,
+        // Browse Data feature state
+        browseConfig: state.browseConfig,
       }),
     }
   )
