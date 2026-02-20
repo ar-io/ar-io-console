@@ -310,21 +310,24 @@ export function useTokenBalance(
       const Arweave = (await import('arweave')).default;
 
       const config = getCurrentConfig();
+
+      // Default to configured gateway, fallback to turbo-gateway.com
       const arweaveConfig: any = {
-        host: 'arweave.net',
+        host: 'turbo-gateway.com',
         port: 443,
         protocol: 'https',
       };
 
-      // Use custom gateway if configured (for devnet)
-      if (configMode === 'development' && config.tokenMap['arweave']) {
+      // Use configured gateway from tokenMap or arioGatewayUrl
+      const gatewayUrl = config.tokenMap['arweave'] || config.arioGatewayUrl;
+      if (gatewayUrl) {
         try {
-          const url = new URL(config.tokenMap['arweave']);
+          const url = new URL(gatewayUrl);
           arweaveConfig.host = url.hostname;
-          arweaveConfig.port = url.port || 443;
+          arweaveConfig.port = url.port ? parseInt(url.port) : 443;
           arweaveConfig.protocol = url.protocol.replace(':', '');
         } catch {
-          // Fall back to mainnet if URL parsing fails
+          // Fall back to default if URL parsing fails
         }
       }
 

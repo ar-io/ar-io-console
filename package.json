@@ -1,6 +1,6 @@
 {
   "name": "ar-io-console",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "ar.io Console - Upload and access permanent data through the ar.io Network",
   "scripts": {
@@ -16,7 +16,9 @@
     "type-check": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc --noEmit"
   },
   "dependencies": {
-    "@ar.io/sdk": "^3.19.0-alpha.10",
+    "@ar.io/sdk": "^3.21.0",
+    "@ar.io/wayfinder-core": "^1.9.1",
+    "@ar.io/wayfinder-react": "^1.0.28",
     "@ardrive/turbo-sdk": "^1.39.2",
     "@fontsource-variable/besley": "^5.2.8",
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
@@ -45,6 +47,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.20.1",
+    "uuid": "^13.0.0",
     "validator": "^13.12.0",
     "viem": "2.x",
     "wagmi": "^2.12.5",
@@ -71,7 +74,9 @@
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.3",
     "vite": "^5.4.0",
-    "vite-plugin-node-polyfills": "^0.22.0"
+    "vite-plugin-node-polyfills": "^0.22.0",
+    "vite-plugin-pwa": "^1.2.0",
+    "workbox-window": "^7.4.0"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

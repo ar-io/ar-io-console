@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
-import { getARIO, getANT } from '../utils';
+import { getARIO, getANT, getArweaveUrl } from '../utils';
 
 // Check if address is valid for ArNS operations (Arweave or Ethereum)
 function checkValidAddress(address: string): boolean {
@@ -156,7 +156,7 @@ export function usePrimaryArNSName(address: string | null) {
   // Create the profile object
   const profile: ArNSProfile = {
     name: arnsName,
-    logo: arnsLogo ? `https://arweave.net/${arnsLogo}` : null
+    logo: arnsLogo ? getArweaveUrl(arnsLogo) : null
   };
 
   return { arnsName, arnsLogo, profile, loading };

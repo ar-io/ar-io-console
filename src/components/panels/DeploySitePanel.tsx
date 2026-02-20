@@ -2324,15 +2324,15 @@ export default function DeploySitePanel() {
               <div className="text-sm text-foreground/80 mb-2">Your site URL:</div>
               <div className="flex items-center gap-2 p-3 bg-card rounded border border-border/10">
                 <span className="font-mono text-sm text-foreground flex-1 min-w-0 truncate">
-                  {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ? 
+                  {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
                     `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                    `https://arweave.net/${deploySuccessInfo.manifestId}`
+                    getArweaveUrl(deploySuccessInfo.manifestId)
                   }
                 </span>
                 <CopyButton textToCopy={
-                  deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ? 
+                  deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
                     `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                    `https://arweave.net/${deploySuccessInfo.manifestId}`
+                    getArweaveUrl(deploySuccessInfo.manifestId)
                 } />
               </div>
             </div>
@@ -2366,9 +2366,9 @@ export default function DeploySitePanel() {
           <div className="flex gap-3 mb-4">
             <button
               onClick={() => window.open(
-                deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ? 
+                deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
                   `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                  `https://arweave.net/${deploySuccessInfo.manifestId}`,
+                  getArweaveUrl(deploySuccessInfo.manifestId),
                 '_blank'
               )}
               className="flex-1 py-3 px-4 bg-success text-white rounded-lg font-medium hover:bg-success/90 transition-colors"
@@ -2429,7 +2429,7 @@ export default function DeploySitePanel() {
             <div className="bg-card/50 rounded-lg p-4 mb-4">
               <div className="text-sm text-foreground/80 mb-2">Instead of:</div>
               <div className="font-mono text-xs text-foreground/60 mb-3 break-all">
-                https://arweave.net/{deploySuccessInfo.manifestId}
+                {getArweaveUrl(deploySuccessInfo.manifestId)}
               </div>
               
               <div className="text-sm text-foreground/80 mb-2">Get something like:</div>

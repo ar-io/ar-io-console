@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import fs from 'fs';
 
@@ -27,6 +28,23 @@ export default defineConfig({
       // Essential polyfills for multi-chain unified app (based on actual errors seen)
       include: ['buffer', 'crypto', 'stream', 'os', 'util', 'process', 'fs'],
       protocolImports: true,
+    }),
+    // Service worker for Browse Data verification feature
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src/features/browse/service-worker',
+      filename: 'service-worker.ts',
+      injectManifest: {
+        globPatterns: [],
+        injectionPoint: undefined,
+        rollupFormat: 'iife',
+      },
+      injectRegister: null,
+      manifest: false,
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
     }),
   ],
   resolve: {
@@ -90,6 +108,10 @@ export default defineConfig({
           'vendor-arweave': [
             '@ardrive/turbo-sdk',
             '@ar.io/sdk',
+          ],
+          // Wayfinder (Browse Data feature)
+          'vendor-wayfinder': [
+            '@ar.io/wayfinder-react',
           ],
           // UI libraries
           'vendor-ui': [

@@ -11,7 +11,7 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Gift, Ticket, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, Phone, BookOpen, Calculator
+  Camera, Phone, BookOpen, Calculator, Compass
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 import { CompanyCarousel } from '../components/CompanyCarousel';
@@ -153,6 +153,16 @@ const LandingPage = () => {
       action: 'capture',
       loginText: 'Capture Webpage',
       connectText: 'Connect Wallet to Capture'
+    },
+    {
+      name: 'Browse',
+      icon: Compass,
+      title: 'Browse & Verify Arweave Data',
+      description: 'Access any Arweave content by ArNS name or transaction ID. Browse the permaweb with optional cryptographic verification through multiple gateways.',
+      benefits: ['ArNS name resolution', 'Cryptographic verification', 'Multi-gateway routing'],
+      action: 'browse',
+      loginText: 'Browse Data',
+      connectText: 'Browse Data'
     },
     {
       name: 'Share',
@@ -316,16 +326,6 @@ const LandingPage = () => {
             onClose={handleWalletModalClose}
           />
         )}
-      </div>
-
-      {/* Trusted by the Best */}
-      <div className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Trusted by the Best</h2>
-          <p className="text-foreground/80">Powering critical platforms across the web</p>
-        </div>
-
-        <CompanyCarousel companies={companies} />
       </div>
 
       {/* Service Metrics */}
@@ -537,7 +537,7 @@ const LandingPage = () => {
                 </div>
                 <button onClick={() => {
                   const feature = features[selectedFeatureIndex];
-                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings') {
+                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     navigate(`/${feature.action}`);
@@ -545,7 +545,7 @@ const LandingPage = () => {
                     setShowWalletModal(true);
                   }
                 }} className={`px-6 py-2 rounded-full font-medium ${getFeatureColor().button}`}>
-                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings')
+                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
                     ? features[selectedFeatureIndex].loginText
                     : loggedIn
                       ? features[selectedFeatureIndex].loginText
@@ -621,7 +621,7 @@ const LandingPage = () => {
                 </div>
                 <button onClick={() => {
                   const feature = features[selectedFeatureIndex];
-                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings') {
+                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     navigate(`/${feature.action}`);
@@ -629,7 +629,7 @@ const LandingPage = () => {
                     setShowWalletModal(true);
                   }
                 }} className={`px-6 py-2 rounded-full font-medium ${getFeatureColor().button}`}>
-                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings')
+                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
                     ? features[selectedFeatureIndex].loginText
                     : loggedIn
                       ? features[selectedFeatureIndex].loginText
@@ -845,6 +845,16 @@ const LandingPage = () => {
           </a>
         </div>
       </section>
+
+      {/* Used by the Best */}
+      <div className="mb-12">
+        <div className="text-center mb-8">
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Used by the Best</h2>
+          <p className="text-foreground/80">Powering critical platforms across the web</p>
+        </div>
+
+        <CompanyCarousel companies={companies} />
+      </div>
 
       {/* Final CTA Section */}
       <section className="bg-card rounded-2xl border border-border/20 p-8 sm:p-12 text-center">

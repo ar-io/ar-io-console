@@ -8,6 +8,15 @@ import './styles/globals.css';
 import { suppressPrivyDOMWarnings } from './utils/suppressPrivyWarnings';
 suppressPrivyDOMWarnings();
 
+// Proactively register browse service worker for content verification
+import { swMessenger } from '@/features/browse/utils/serviceWorkerMessaging';
+swMessenger.registerProactive(
+  import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/service-worker.js',
+  import.meta.env.DEV ? { type: 'module' } : undefined
+).catch(err => {
+  console.warn('[Browse] Service worker registration failed:', err);
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

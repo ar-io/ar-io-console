@@ -19,6 +19,7 @@ import DeploySitePage from './pages/DeploySitePage';
 import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
 import AccountPage from './pages/AccountPage';
 import TryItNowPage from './pages/TryItNowPage';
+import BrowsePage from './pages/BrowsePage';
 import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
@@ -79,6 +80,7 @@ function AppRoutes() {
           <Route path="redeem" element={<RedeemPage />} />
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
+          <Route path="browse" element={<BrowsePage />} />
           {/* Catch all route - redirect to home */}
           <Route path="*" element={<LandingPage />} />
         </Route>

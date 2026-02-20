@@ -3,6 +3,7 @@ import { X, ExternalLink, Receipt, FileText, Clock, RefreshCw, CheckCircle, Arch
 import BaseModal from './BaseModal';
 import CopyButton from '../CopyButton';
 import { useUploadStatus, UploadStatus } from '../../hooks/useUploadStatus';
+import { getArweaveUrl } from '../../utils';
 
 interface ReceiptModalProps {
   onClose: () => void;
@@ -257,7 +258,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                   Download Receipt
                 </button>
                 <a
-                  href={`https://arweave.net/${uploadId}`}
+                  href={getArweaveUrl(uploadId)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm hover:bg-primary/90 transition-colors"
