@@ -11,9 +11,38 @@
  * - Other: Download button
  */
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useMemo } from 'react';
 import { Download, ExternalLink, FileText, Music, AlertCircle } from 'lucide-react';
 import type { ContentCategory } from '../utils/contentTypeUtils';
+
+/**
+ * Get appropriate file extension for a content category.
+ */
+function getExtensionForCategory(category: ContentCategory): string {
+  switch (category) {
+    case 'pdf': return '.pdf';
+    case 'image': return '.png';
+    case 'video': return '.mp4';
+    case 'audio': return '.mp3';
+    default: return '';
+  }
+}
+
+/**
+ * Generate a download filename from identifier and category.
+ * If identifier already has an extension, use it as-is.
+ */
+function getDownloadFilename(identifier: string, category: ContentCategory): string {
+  // Check if identifier already has a file extension
+  const hasExtension = /\.\w{2,4}$/.test(identifier);
+  if (hasExtension) {
+    return identifier;
+  }
+
+  // Add appropriate extension based on category
+  const extension = getExtensionForCategory(category);
+  return `${identifier}${extension}`;
+}
 
 interface ContentRendererProps {
   url: string;
@@ -36,6 +65,12 @@ export const ContentRenderer = memo(function ContentRenderer({
   const handleMediaError = useCallback(() => {
     setMediaError(true);
   }, []);
+
+  // Generate proper download filename based on identifier and content type
+  const downloadFilename = useMemo(
+    () => getDownloadFilename(identifier, category),
+    [identifier, category]
+  );
 
   // If media failed to load, show download fallback
   if (mediaError && (category === 'image' || category === 'video' || category === 'audio')) {
@@ -60,7 +95,7 @@ export const ContentRenderer = memo(function ContentRenderer({
           </a>
           <a
             href={url}
-            download
+            download={downloadFilename}
             className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -164,7 +199,7 @@ export const ContentRenderer = memo(function ContentRenderer({
           </a>
           <a
             href={url}
-            download
+            download={downloadFilename}
             className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -197,7 +232,7 @@ export const ContentRenderer = memo(function ContentRenderer({
         </a>
         <a
           href={url}
-          download
+          download={downloadFilename}
           className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
         >
           <Download className="w-4 h-4" />
