@@ -174,12 +174,22 @@ export class ServiceWorkerMessenger {
   }
 
   /**
-   * Send message to service worker with timeout
+   * Send message to service worker with timeout.
+   * Will wait for ongoing registration to complete before sending.
    */
   async send(message: ServiceWorkerMessage, timeoutMs = 30000): Promise<ServiceWorkerMessage> {
+    // Wait for any ongoing registration to complete
+    if (this.registrationPromise) {
+      try {
+        await this.registrationPromise;
+      } catch (error) {
+        throw new Error(`Service worker registration failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
     const controller = navigator.serviceWorker.controller;
     if (!controller) {
-      throw new Error('No service worker controller');
+      throw new Error('No service worker controller. Call registerProactive() first and await its completion.');
     }
 
     return new Promise((resolve, reject) => {
