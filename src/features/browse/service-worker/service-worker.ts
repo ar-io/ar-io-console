@@ -1,15 +1,19 @@
 /// <reference lib="webworker" />
 
 /**
- * Service Worker with manifest-first verification.
+ * Service Worker with manifest-first lazy verification.
  *
  * Flow:
  * 1. Intercept /ar-proxy/{identifier}/ requests
  * 2. Resolve ArNS name to manifest txId (or use txId directly)
- * 3. Fetch and parse manifest
- * 4. Pre-verify ALL resources in manifest
- * 5. Cache verified content
- * 6. Serve from verified cache
+ * 3. Fetch and verify manifest (path→txId mappings)
+ * 4. Eagerly verify the index file
+ * 5. Mark as ready to serve (manifest-verified status)
+ * 6. Verify other resources ON-DEMAND as user accesses them
+ * 7. Cache verified content and serve from cache
+ *
+ * Security: All content is verified before serving. The manifest provides
+ * trusted path→txId mappings, and each resource is verified by its txId.
  */
 
 // CRITICAL: Import polyfills FIRST before any other imports
@@ -20,11 +24,11 @@ import './polyfills/buffer-polyfill';
 import './polyfills/fetch-polyfill';
 
 import { initializeWayfinder, isWayfinderReady, getConfig, waitForInitialization } from './wayfinder-instance';
-import { verifyIdentifier, getVerifiedContent, setVerificationConcurrency } from './manifest-verifier';
+import { verifyIdentifier, getVerifiedContent, setVerificationConcurrency, verifyResourceOnDemand } from './manifest-verifier';
 import {
   getManifestState,
-  isVerificationComplete,
   isVerificationInProgress,
+  isReadyToServe,
   broadcastEvent,
   clearManifestState,
   setActiveIdentifier,
@@ -139,14 +143,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   const activeId = getActiveIdentifier();
-  if (activeId && isVerificationComplete(activeId)) {
+  if (activeId && isReadyToServe(activeId)) {
     // Check if this path exists in the active manifest
     const path = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
     const txId = getActiveTxIdForPath(path);
 
     if (txId) {
       logger.debug(TAG, `Absolute path intercept: ${url.pathname} → ${activeId}`);
-      event.respondWith(serveFromCache(activeId, path));
+      event.respondWith(serveResource(activeId, path));
       return;
     }
   }
@@ -162,6 +166,9 @@ self.addEventListener('fetch', (event) => {
 async function handleArweaveProxy(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const { identifier, resourcePath } = parseProxyPath(url.pathname);
+
+  // Check for download query param (e.g., ?download=whitepaper.pdf)
+  const downloadFilename = url.searchParams.get('download');
 
   if (!identifier) {
     return new Response('Missing identifier in path', { status: 400 });
@@ -194,30 +201,30 @@ async function handleArweaveProxy(request: Request): Promise<Response> {
   }
 
   try {
-    const complete = isVerificationComplete(identifier);
+    // Check current verification state
+    const ready = isReadyToServe(identifier);
     const inProgress = isVerificationInProgress(identifier);
 
-    if (complete) {
-      logger.debug(TAG, `Serving cached: ${identifier}/${resourcePath || 'index'}`);
-      // Set as active so we can intercept absolute path requests from this app
+    if (ready) {
+      // Manifest verified - serve resource (on-demand verification if needed)
+      logger.debug(TAG, `Serving: ${identifier}/${resourcePath || 'index'}`);
       setActiveIdentifier(identifier);
-      return serveFromCache(identifier, resourcePath);
+      return await serveResource(identifier, resourcePath, downloadFilename);
     }
 
     if (inProgress) {
-      logger.debug(TAG, `Waiting for verification: ${identifier}`);
-      await waitForVerification(identifier);
-      // Set as active so we can intercept absolute path requests from this app
+      // Wait for manifest verification to complete (not all resources, just manifest)
+      logger.debug(TAG, `Waiting for manifest: ${identifier}`);
+      await waitForManifestVerification(identifier);
       setActiveIdentifier(identifier);
-      return serveFromCache(identifier, resourcePath);
+      return await serveResource(identifier, resourcePath, downloadFilename);
     }
 
-    // Start new verification
+    // Start new verification (manifest + index only, other resources lazy)
     logger.debug(TAG, `Starting verification: ${identifier}`);
     await startVerification(identifier, config);
-    // Set as active so we can intercept absolute path requests from this app
     setActiveIdentifier(identifier);
-    return serveFromCache(identifier, resourcePath);
+    return await serveResource(identifier, resourcePath, downloadFilename);
 
   } catch (error) {
     logger.error(TAG, 'Verification error:', error);
@@ -399,41 +406,52 @@ async function startVerification(identifier: string, config: SwWayfinderConfig):
 }
 
 /**
- * Wait for an in-progress verification to complete.
+ * Wait for manifest verification to complete (not all resources, just manifest + index).
+ * This is faster than waiting for all resources since we use lazy verification.
  */
-async function waitForVerification(identifier: string): Promise<void> {
+async function waitForManifestVerification(identifier: string): Promise<void> {
   const pending = pendingVerifications.get(identifier);
   if (pending) {
     await pending;
     return;
   }
 
-  // Poll for completion (shouldn't normally happen)
-  const maxWait = 60000; // 60 seconds
-  const pollInterval = 100;
+  // Poll for ready state (manifest verified)
+  const maxWait = 30000; // 30 seconds - manifest should verify quickly
+  const pollInterval = 50;
   let waited = 0;
 
   while (waited < maxWait) {
-    if (isVerificationComplete(identifier)) {
+    if (isReadyToServe(identifier)) {
       return;
     }
-    if (!isVerificationInProgress(identifier)) {
+
+    const state = getManifestState(identifier);
+    if (state?.status === 'failed') {
+      throw new Error(state.error || 'Verification failed');
+    }
+
+    if (!isVerificationInProgress(identifier) && !isReadyToServe(identifier)) {
       throw new Error('Verification stopped unexpectedly');
     }
+
     await new Promise(resolve => setTimeout(resolve, pollInterval));
     waited += pollInterval;
   }
 
-  throw new Error('Verification timeout');
+  throw new Error('Manifest verification timeout');
 }
 
 /**
- * Serve a resource from the verified cache.
- * Works for 'complete' and 'partial' status.
+ * Serve a resource, verifying on-demand if not already in cache.
+ * This is the core of lazy verification - resources are verified as users access them.
+ *
  * For HTML content, injects a location patch script to make the app
  * think it's running at the gateway subdomain.
+ *
+ * @param downloadFilename - If provided, adds Content-Disposition header for download
  */
-function serveFromCache(identifier: string, resourcePath: string): Response {
+async function serveResource(identifier: string, resourcePath: string, downloadFilename?: string | null): Promise<Response> {
   const state = getManifestState(identifier);
 
   if (!state) {
@@ -442,26 +460,90 @@ function serveFromCache(identifier: string, resourcePath: string): Response {
   }
 
   if (state.status === 'failed') {
-    return createErrorResponse('Verification Failed', state.error || 'All resources failed verification.', identifier);
+    return createErrorResponse('Verification Failed', state.error || 'Verification failed.', identifier);
   }
 
-  if (state.status !== 'complete' && state.status !== 'partial') {
-    return createErrorResponse('Verification In Progress', 'Please wait while content is being verified.', identifier);
+  if (!isReadyToServe(identifier)) {
+    return createErrorResponse('Not Ready', 'Manifest not yet verified.', identifier);
   }
 
-  // Pass the location patcher to inject into HTML responses
+  // Normalize path
+  let normalizedPath = resourcePath.startsWith('/') ? resourcePath.slice(1) : resourcePath;
+  if (normalizedPath === '') {
+    normalizedPath = state.indexPath;
+  } else if (normalizedPath.endsWith('/')) {
+    normalizedPath = normalizedPath + state.indexPath;
+  }
+
+  // Look up txId from the verified manifest
+  let txId = state.pathToTxId.get(normalizedPath);
+
+  if (!txId) {
+    // Try fallback
+    const fallbackId = state.pathToTxId.get('__fallback__');
+    if (fallbackId) {
+      txId = fallbackId;
+    } else {
+      logger.warn(TAG, `Path not in manifest: ${resourcePath}`);
+      const availablePaths = Array.from(state.pathToTxId.keys()).slice(0, 10);
+      return createErrorResponse(
+        'Resource Not Found',
+        `Path "${resourcePath}" not in manifest. Available: ${availablePaths.join(', ')}${availablePaths.length >= 10 ? '...' : ''}`,
+        identifier
+      );
+    }
+  }
+
+  // Check if already in cache
+  if (verifiedCache.has(txId)) {
+    logger.debug(TAG, `Cache hit: ${normalizedPath}`);
+    // For downloads, serve directly with Content-Disposition (skip location patching)
+    if (downloadFilename) {
+      const resource = verifiedCache.get(txId);
+      if (resource) {
+        return verifiedCache.toResponse(resource, downloadFilename);
+      }
+    }
+    const response = getVerifiedContent(identifier, resourcePath, injectLocationPatch);
+    if (response) {
+      return response;
+    }
+  }
+
+  // Not in cache - verify on-demand
+  logger.debug(TAG, `Cache miss, verifying on-demand: ${normalizedPath}`);
+
+  const success = await verifyResourceOnDemand(identifier, normalizedPath);
+
+  if (!success) {
+    return createErrorResponse(
+      'Verification Failed',
+      `Failed to verify resource: ${resourcePath}`,
+      identifier
+    );
+  }
+
+  // Now serve from cache
+  // For downloads, serve directly with Content-Disposition (skip location patching)
+  if (downloadFilename) {
+    const resource = verifiedCache.get(txId);
+    if (resource) {
+      return verifiedCache.toResponse(resource, downloadFilename);
+    }
+  }
   const response = getVerifiedContent(identifier, resourcePath, injectLocationPatch);
 
-  if (!response) {
-    logger.warn(TAG, `Resource not found: ${identifier}/${resourcePath}`);
-    const availablePaths = state?.pathToTxId ? Array.from(state.pathToTxId.keys()).slice(0, 10) : [];
-    const pathsHint = availablePaths.length > 0
-      ? `Available paths: ${availablePaths.join(', ')}${availablePaths.length >= 10 ? '...' : ''}`
-      : 'No paths available in manifest.';
-    return createErrorResponse('Resource Not Found', `The path "${resourcePath}" was not found in the manifest. ${pathsHint}`, identifier);
+  if (response) {
+    return response;
   }
 
-  return response;
+  // This shouldn't happen - verification succeeded but resource not in cache
+  logger.error(TAG, `Verification succeeded but cache miss: ${normalizedPath}`);
+  return createErrorResponse(
+    'Internal Error',
+    'Resource verified but not available.',
+    identifier
+  );
 }
 
 // ============================================================================

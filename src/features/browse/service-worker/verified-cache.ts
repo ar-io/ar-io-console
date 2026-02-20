@@ -118,8 +118,9 @@ class VerifiedCacheImpl {
 
   /**
    * Create a Response from a cached resource.
+   * Optionally include Content-Disposition header for downloads.
    */
-  toResponse(resource: VerifiedResource): Response {
+  toResponse(resource: VerifiedResource, downloadFilename?: string): Response {
     const headers = new Headers(resource.headers);
     // Ensure content-type is set
     if (!headers.has('content-type') && resource.contentType) {
@@ -128,6 +129,11 @@ class VerifiedCacheImpl {
     // Add verification header
     headers.set('x-wayfinder-verified', 'true');
     headers.set('x-wayfinder-verified-at', resource.verifiedAt.toString());
+
+    // Add Content-Disposition for downloads if filename provided
+    if (downloadFilename) {
+      headers.set('content-disposition', `attachment; filename="${downloadFilename}"`);
+    }
 
     return new Response(resource.data, {
       status: 200,

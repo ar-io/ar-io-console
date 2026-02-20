@@ -321,12 +321,111 @@ export function isVerificationComplete(identifier: string): boolean {
 
 /**
  * Check if verification is in progress for an identifier.
+ * Note: 'manifest-verified' is NOT in progress - it's ready to serve.
  */
 export function isVerificationInProgress(identifier: string): boolean {
   const state = manifestStates.get(identifier);
   return state?.status === 'resolving' ||
          state?.status === 'fetching-manifest' ||
-         state?.status === 'verifying';
+         state?.status === 'verifying';  // Include 'verifying' - index is being verified
+}
+
+/**
+ * Check if manifest is verified and ready to serve resources on-demand.
+ * Returns true when we can start serving content (manifest + index verified).
+ */
+export function isReadyToServe(identifier: string): boolean {
+  const state = manifestStates.get(identifier);
+  return state?.status === 'manifest-verified' ||
+         state?.status === 'complete' ||
+         state?.status === 'partial';
+}
+
+/**
+ * Mark manifest (and index) as verified, ready for on-demand resource serving.
+ * This is the key state transition for lazy verification.
+ */
+export function setManifestVerified(identifier: string, verificationId: number): void {
+  if (!isCurrentVerification(identifier, verificationId)) {
+    logger.debug(TAG, `Ignoring stale setManifestVerified for ${identifier}`);
+    return;
+  }
+
+  const state = manifestStates.get(identifier)!;
+  state.status = 'manifest-verified';
+
+  const elapsed = Date.now() - state.startedAt;
+  logger.info(TAG, `Manifest verified: ${identifier} (${state.totalResources} resources available, ${elapsed}ms)`);
+
+  broadcastEvent({
+    type: 'manifest-verified',
+    identifier,
+    manifestTxId: state.manifestTxId,
+    progress: { current: state.verifiedResources, total: state.totalResources },
+  });
+}
+
+/**
+ * Record that a resource is being verified on-demand.
+ * Used to show loading state in UI for individual resources.
+ */
+export function recordResourceVerifying(identifier: string, verificationId: number, path: string): void {
+  if (!isCurrentVerification(identifier, verificationId)) {
+    return;
+  }
+
+  logger.debug(TAG, `Verifying on-demand: ${path}`);
+
+  broadcastEvent({
+    type: 'resource-verifying',
+    identifier,
+    resourcePath: path,
+  });
+}
+
+/**
+ * Record that a resource was verified on-demand.
+ * Unlike recordResourceVerified, this doesn't trigger completion checks.
+ */
+export function recordResourceVerifiedOnDemand(identifier: string, verificationId: number, txId: string, path: string): void {
+  if (!isCurrentVerification(identifier, verificationId)) {
+    return;
+  }
+
+  const state = manifestStates.get(identifier)!;
+  state.verifiedResources++;
+
+  logger.debug(TAG, `✓ On-demand: ${path} (${state.verifiedResources}/${state.totalResources})`);
+
+  broadcastEvent({
+    type: 'resource-verified',
+    identifier,
+    manifestTxId: state.manifestTxId,
+    resourcePath: path,
+    progress: { current: state.verifiedResources, total: state.totalResources },
+  });
+}
+
+/**
+ * Record that a resource failed on-demand verification.
+ */
+export function recordResourceFailedOnDemand(identifier: string, verificationId: number, path: string, error: string): void {
+  if (!isCurrentVerification(identifier, verificationId)) {
+    return;
+  }
+
+  const state = manifestStates.get(identifier)!;
+  state.failedResources.push(path);
+
+  logger.warn(TAG, `✗ On-demand: ${path}: ${error}`);
+
+  broadcastEvent({
+    type: 'resource-failed',
+    identifier,
+    resourcePath: path,
+    error,
+    progress: { current: state.verifiedResources, total: state.totalResources },
+  });
 }
 
 /**
@@ -419,8 +518,9 @@ export function cleanupOldStates(maxAgeMs: number = 30 * 60 * 1000): number {
   let cleaned = 0;
 
   for (const [identifier, state] of manifestStates) {
-    // Only clean up completed or failed states
-    if (state.status === 'complete' || state.status === 'partial' || state.status === 'failed') {
+    // Only clean up completed, partial, failed, or manifest-verified states
+    if (state.status === 'complete' || state.status === 'partial' ||
+        state.status === 'failed' || state.status === 'manifest-verified') {
       const age = now - (state.completedAt || state.startedAt);
       if (age > maxAgeMs) {
         manifestStates.delete(identifier);

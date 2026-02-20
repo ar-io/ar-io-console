@@ -72,6 +72,12 @@ export const ContentRenderer = memo(function ContentRenderer({
     [identifier, category]
   );
 
+  // Generate download URL with query param for service worker to add Content-Disposition
+  const downloadUrl = useMemo(() => {
+    const baseUrl = url.split('?')[0]; // Remove any existing query params
+    return `${baseUrl}?download=${encodeURIComponent(downloadFilename)}`;
+  }, [url, downloadFilename]);
+
   // If media failed to load, show download fallback
   if (mediaError && (category === 'image' || category === 'video' || category === 'audio')) {
     return (
@@ -94,8 +100,7 @@ export const ContentRenderer = memo(function ContentRenderer({
             Open in New Tab
           </a>
           <a
-            href={url}
-            download={downloadFilename}
+            href={downloadUrl}
             className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -198,8 +203,7 @@ export const ContentRenderer = memo(function ContentRenderer({
             Open in New Tab
           </a>
           <a
-            href={url}
-            download={downloadFilename}
+            href={downloadUrl}
             className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -231,8 +235,7 @@ export const ContentRenderer = memo(function ContentRenderer({
           Open in New Tab
         </a>
         <a
-          href={url}
-          download={downloadFilename}
+          href={downloadUrl}
           className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
         >
           <Download className="w-4 h-4" />

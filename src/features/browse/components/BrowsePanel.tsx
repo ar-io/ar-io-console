@@ -488,6 +488,60 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
           setVerificationPhase('verifying');
         }
 
+        // Lazy verification: manifest + index verified, ready to serve
+        if (vEvent.type === 'manifest-verified') {
+          if (vEvent.progress) {
+            const { total, current } = vEvent.progress;
+            setVerificationStats(prev => ({
+              ...prev,
+              total,
+              verified: current,
+            }));
+          }
+          setVerificationState('verified');  // Show as verified in badge
+          setVerificationPhase('complete');
+        }
+
+        // On-demand resource verification events
+        if (vEvent.type === 'resource-verifying' && vEvent.resourcePath) {
+          const resourcePath = vEvent.resourcePath;
+          setRecentVerifiedResources(prev => {
+            const newList = [...prev.filter(r => r.path !== resourcePath)];
+            newList.push({ path: resourcePath, status: 'verifying' });
+            return newList.slice(-8);
+          });
+        }
+
+        if (vEvent.type === 'resource-verified' && vEvent.progress) {
+          const { current } = vEvent.progress;
+          setVerificationStats(prev => ({
+            ...prev,
+            verified: current,
+          }));
+          if (vEvent.resourcePath) {
+            const resourcePath = vEvent.resourcePath;
+            setRecentVerifiedResources(prev => {
+              const newList = [...prev.filter(r => r.path !== resourcePath)];
+              newList.push({ path: resourcePath, status: 'verified' });
+              return newList.slice(-8);
+            });
+          }
+        }
+
+        if (vEvent.type === 'resource-failed' && vEvent.resourcePath) {
+          const resourcePath = vEvent.resourcePath;
+          setVerificationStats(prev => ({
+            ...prev,
+            failed: prev.failed + 1,
+            failedResources: [...(prev.failedResources || []), resourcePath],
+          }));
+          setRecentVerifiedResources(prev => {
+            const newList = [...prev.filter(r => r.path !== resourcePath)];
+            newList.push({ path: resourcePath, status: 'failed' });
+            return newList.slice(-8);
+          });
+        }
+
         if (vEvent.type === 'verification-complete') {
           if (vEvent.progress) {
             const { total, current } = vEvent.progress;

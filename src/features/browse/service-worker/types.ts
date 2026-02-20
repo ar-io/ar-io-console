@@ -23,7 +23,7 @@ export interface ManifestVerificationState {
   identifier: string;           // Original ArNS name or txId requested
   verificationId: number;       // Unique ID to detect stale updates from abandoned verifications
   manifestTxId: string;         // Resolved manifest transaction ID
-  status: 'resolving' | 'fetching-manifest' | 'verifying' | 'complete' | 'partial' | 'failed';
+  status: 'resolving' | 'fetching-manifest' | 'manifest-verified' | 'verifying' | 'complete' | 'partial' | 'failed';
   manifest: ArweaveManifest | null;
   totalResources: number;
   verifiedResources: number;
@@ -51,8 +51,12 @@ export interface VerificationEvent {
   type:
     | 'verification-started'      // Started resolving/fetching manifest
     | 'manifest-loaded'           // Manifest parsed, know total resources
-    | 'verification-progress'     // Resource verified, progress update
-    | 'verification-complete'     // All resources verified
+    | 'manifest-verified'         // Manifest + index verified, ready for on-demand
+    | 'resource-verifying'        // On-demand verification starting for a resource
+    | 'resource-verified'         // On-demand verification complete for a resource
+    | 'resource-failed'           // On-demand verification failed for a resource
+    | 'verification-progress'     // Resource verified, progress update (legacy eager mode)
+    | 'verification-complete'     // All resources verified (legacy eager mode)
     | 'verification-failed'       // Verification failed
     | 'routing-gateway';          // Gateway info for display
   identifier: string;             // ArNS name or txId being verified

@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useBrowseConfig } from './useBrowseConfig';
 import type { VerificationEvent } from '../service-worker/types';
 
-export type VerificationPhase = 'idle' | 'resolving' | 'fetching-manifest' | 'verifying' | 'complete';
-export type VerificationStatus = 'idle' | 'verifying' | 'verified' | 'partial' | 'failed';
+export type VerificationPhase = 'idle' | 'resolving' | 'fetching-manifest' | 'verifying' | 'ready' | 'complete';
+export type VerificationStatus = 'idle' | 'verifying' | 'ready' | 'verified' | 'partial' | 'failed';
 
 export interface VerificationStats {
   total: number;
@@ -127,6 +127,63 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
             setManifestTxId(vEvent.manifestTxId || null);
             setIsSingleFile(vEvent.isSingleFile ?? (vEvent.progress?.total === 1));
             setPhase('verifying');
+            break;
+
+          case 'manifest-verified':
+            // Manifest + index verified, ready to serve content on-demand
+            if (vEvent.progress) {
+              setStats(prev => ({
+                ...prev,
+                total: vEvent.progress!.total,
+                verified: vEvent.progress!.current,
+              }));
+            }
+            setStatus('ready');
+            setPhase('ready');
+            break;
+
+          case 'resource-verifying':
+            // On-demand verification starting for a resource
+            if (vEvent.resourcePath) {
+              setRecentResources(prev => {
+                const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
+                newList.push({ path: vEvent.resourcePath!, status: 'verifying' });
+                return newList.slice(-8);
+              });
+            }
+            break;
+
+          case 'resource-verified':
+            // On-demand verification complete for a resource
+            if (vEvent.progress) {
+              setStats(prev => ({
+                ...prev,
+                verified: vEvent.progress!.current,
+              }));
+            }
+            if (vEvent.resourcePath) {
+              setRecentResources(prev => {
+                const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
+                newList.push({ path: vEvent.resourcePath!, status: 'verified' });
+                return newList.slice(-8);
+              });
+            }
+            break;
+
+          case 'resource-failed':
+            // On-demand verification failed for a resource
+            if (vEvent.resourcePath) {
+              setStats(prev => ({
+                ...prev,
+                failed: prev.failed + 1,
+                failedResources: [...(prev.failedResources || []), vEvent.resourcePath!],
+              }));
+              setRecentResources(prev => {
+                const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
+                newList.push({ path: vEvent.resourcePath!, status: 'failed' });
+                return newList.slice(-8);
+              });
+            }
             break;
 
           case 'verification-complete':

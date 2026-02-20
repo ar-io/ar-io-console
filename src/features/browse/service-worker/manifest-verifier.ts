@@ -21,11 +21,15 @@ import {
   startManifestVerification,
   setResolvedTxId,
   setManifestLoaded,
+  setManifestVerified,
   recordResourceVerified,
   recordResourceFailed,
+  recordResourceVerifying,
+  recordResourceVerifiedOnDemand,
+  recordResourceFailedOnDemand,
   failVerification,
-  completeVerification,
   getManifestState,
+  isReadyToServe,
   broadcastEvent,
 } from './verification-state';
 import { getWayfinder, isWayfinderReady, setSelectedGateway, getVerificationStrategy } from './wayfinder-instance';
@@ -43,6 +47,10 @@ const GATEWAY_TIMEOUT_MS = 10000; // 10 seconds
 
 // Current concurrency setting (can be updated via config)
 let maxConcurrentVerifications = DEFAULT_CONCURRENCY;
+
+// Track pending on-demand verifications to prevent duplicate work
+// Key: `${identifier}:${normalizedPath}`
+const pendingOnDemandVerifications = new Map<string, Promise<boolean>>();
 
 /**
  * Set the concurrency limit for parallel resource verification.
@@ -545,10 +553,14 @@ async function verifyAndCacheResource(
  *
  * Uses SDK's HashVerificationStrategy for verification (via getVerificationStrategy()).
  *
+ * NOTE: This function is kept for potential future use (eager verification mode option).
+ * Currently, we use lazy verification (verifyResourceOnDemand) instead.
+ *
  * @param primaryGateway - The primary gateway to use for all resources (already set globally)
  * @param fallbackGateways - Backup gateways to try if primary fails for a resource
  * @param signal - Optional AbortSignal to cancel verification
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function verifyAllResources(
   identifier: string,
   verificationId: number,
@@ -614,6 +626,201 @@ async function verifyAllResources(
   // Wait for in-flight verifications to complete (they'll finish their current work)
   await Promise.allSettled(allResults);
   return false;
+}
+
+/**
+ * Verify a single resource on-demand when requested by the service worker.
+ * This is the core of lazy verification - resources are verified as users access them.
+ *
+ * SECURITY: The manifest must already be verified (status = 'manifest-verified').
+ * This ensures we trust the path→txId mapping before fetching/verifying content.
+ *
+ * @param identifier - The ArNS name or txId being browsed
+ * @param path - The resource path within the manifest
+ * @returns true if verification succeeded, false if failed
+ */
+export async function verifyResourceOnDemand(
+  identifier: string,
+  path: string
+): Promise<boolean> {
+  const state = getManifestState(identifier);
+
+  if (!state) {
+    logger.error(TAG, `No state for on-demand verification: ${identifier}`);
+    return false;
+  }
+
+  if (!isReadyToServe(identifier)) {
+    logger.error(TAG, `Not ready to serve: ${identifier} (status=${state.status})`);
+    return false;
+  }
+
+  // Normalize path
+  let normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  if (normalizedPath === '' || normalizedPath === '/') {
+    normalizedPath = state.indexPath;
+  } else if (normalizedPath.endsWith('/')) {
+    normalizedPath = normalizedPath + state.indexPath;
+  }
+
+  // Look up txId from the verified manifest
+  let txId = state.pathToTxId.get(normalizedPath);
+
+  if (!txId) {
+    // Try fallback
+    txId = state.pathToTxId.get('__fallback__');
+    if (!txId) {
+      logger.warn(TAG, `Path not in manifest: ${normalizedPath}`);
+      return false;
+    }
+    // Use fallback - update normalized path for logging
+    logger.debug(TAG, `Using fallback for: ${normalizedPath}`);
+  }
+
+  // Already in cache? Return immediately - no re-verification needed
+  if (verifiedCache.has(txId)) {
+    logger.debug(TAG, `Cache hit: ${normalizedPath} → ${txId.slice(0, 8)}...`);
+    return true;
+  }
+
+  // Check if there's already a pending verification for this resource
+  // This prevents duplicate concurrent verifications
+  const pendingKey = `${identifier}:${normalizedPath}`;
+  const existingPending = pendingOnDemandVerifications.get(pendingKey);
+  if (existingPending) {
+    logger.debug(TAG, `Joining existing verification: ${normalizedPath}`);
+    return existingPending;
+  }
+
+  // Need to verify - this resource hasn't been accessed before
+  logger.debug(TAG, `On-demand verify: ${normalizedPath} → ${txId.slice(0, 8)}...`);
+
+  const routingGateway = state.routingGateway;
+  if (!routingGateway) {
+    logger.error(TAG, `No routing gateway for: ${identifier}`);
+    return false;
+  }
+
+  // Create the verification promise
+  const verificationPromise = doVerifyResourceOnDemand(
+    identifier,
+    state,
+    normalizedPath,
+    txId,
+    routingGateway
+  );
+
+  // Store it in the pending map
+  pendingOnDemandVerifications.set(pendingKey, verificationPromise);
+
+  // Clean up when done
+  verificationPromise.finally(() => {
+    pendingOnDemandVerifications.delete(pendingKey);
+  });
+
+  return verificationPromise;
+}
+
+/**
+ * Internal function to perform on-demand verification.
+ * Separated from verifyResourceOnDemand to allow promise deduplication.
+ */
+async function doVerifyResourceOnDemand(
+  identifier: string,
+  state: ReturnType<typeof getManifestState>,
+  normalizedPath: string,
+  txId: string,
+  routingGateway: string
+): Promise<boolean> {
+  if (!state) return false;
+
+  // Broadcast that we're verifying this resource
+  recordResourceVerifying(identifier, state.verificationId, normalizedPath);
+
+  // Get fallback gateways from the wayfinder config
+  const wayfinder = getWayfinder();
+  const strategy = getVerificationStrategy();
+  const fallbackGateways = strategy.trustedGateways
+    .map(url => url.toString().replace(/\/+$/, ''))
+    .filter(g => g !== routingGateway.replace(/\/+$/, ''));
+
+  try {
+    // Lock gateway for this fetch
+    setSelectedGateway(routingGateway);
+
+    // Fetch from the locked gateway via Wayfinder
+    const arUrl = `ar://${txId}`;
+    const response = await wayfinder.request(arUrl);
+    const data = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+
+    // Verify using SDK's verification strategy
+    await verifyResourceWithSdk(txId, data, strategy);
+
+    // Cache the verified content
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    verifiedCache.set(txId, { contentType, data, headers });
+
+    // Record success for on-demand verification (updates progress counter)
+    recordResourceVerifiedOnDemand(identifier, state.verificationId, txId, normalizedPath);
+
+    logger.debug(TAG, `✓ On-demand verified: ${normalizedPath}`);
+    return true;
+
+  } catch (primaryError) {
+    // Primary gateway failed, try fallbacks
+    const primaryMsg = primaryError instanceof Error ? primaryError.message : String(primaryError);
+    logger.warn(TAG, `Primary gateway failed for ${normalizedPath}: ${primaryMsg}, trying fallbacks...`);
+
+    for (const gateway of fallbackGateways) {
+      try {
+        const rawUrl = `${gateway}/raw/${txId}`;
+        const response = await fetch(rawUrl, {
+          signal: AbortSignal.timeout(10000),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+
+        // Verify using SDK
+        await verifyResourceWithSdk(txId, data, strategy);
+
+        // Cache it
+        const headers: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+        verifiedCache.set(txId, { contentType, data, headers });
+
+        // Record success
+        recordResourceVerifiedOnDemand(identifier, state.verificationId, txId, normalizedPath);
+
+        logger.info(TAG, `Fallback succeeded for ${normalizedPath} via ${new URL(gateway).hostname}`);
+        return true;
+
+      } catch (fallbackError) {
+        const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        logger.warn(TAG, `Fallback ${new URL(gateway).hostname} failed for ${normalizedPath}: ${fallbackMsg}`);
+        // Continue to next fallback
+      }
+    }
+
+    // All attempts failed
+    const errorMsg = `All gateways failed to verify ${normalizedPath}`;
+    logger.error(TAG, errorMsg);
+    recordResourceFailedOnDemand(identifier, state.verificationId, normalizedPath, errorMsg);
+    return false;
+
+  } finally {
+    setSelectedGateway(null);
+  }
 }
 
 /**
@@ -732,27 +939,55 @@ export async function verifyIdentifier(
       };
 
       setManifestLoaded(identifier, verificationId, singleFileManifest, true /* isSingleFile */);
-      // Record as verified - this triggers completeVerification automatically
-      // since verifiedResources (1) >= totalResources (1)
+      // Record the single file as verified
       recordResourceVerified(identifier, verificationId, txId, 'index');
+      // Mark as ready to serve (single file is fully verified)
+      setManifestVerified(identifier, verificationId);
       return;
     }
 
-    // Manifest case - manifest itself is now verified, proceed to verify resources
+    // Manifest case - manifest itself is now verified
+    // LAZY VERIFICATION: Only verify the index file eagerly, other resources on-demand
     setManifestLoaded(identifier, verificationId, manifest!);
-    const wasEmpty = await verifyAllResources(
-      identifier,
-      verificationId,
-      manifest!,
-      workingGateway,
-      fallbackGateways, // Pass all gateways as potential fallbacks
-      signal
-    );
 
-    // For empty manifests, manually trigger completion since no resources will do it
-    if (wasEmpty) {
-      completeVerification(identifier, verificationId);
+    // Eagerly verify the index file so first page load is instant
+    const indexPath = manifest!.index?.path || 'index.html';
+    const indexEntry = manifest!.paths[indexPath];
+    const indexTxId = typeof indexEntry === 'string' ? indexEntry : indexEntry?.id;
+
+    if (indexTxId) {
+      // Filter out the primary gateway from fallbacks
+      const filteredFallbacks = fallbackGateways.filter(g =>
+        g.replace(/\/+$/, '') !== workingGateway.replace(/\/+$/, '')
+      );
+
+      // Verify index file eagerly
+      if (!verifiedCache.has(indexTxId)) {
+        logger.debug(TAG, `Eagerly verifying index: ${indexPath}`);
+        try {
+          await verifyAndCacheResource(
+            identifier,
+            verificationId,
+            indexTxId,
+            indexPath,
+            filteredFallbacks
+          );
+        } catch (error) {
+          // Index verification failed - this is critical
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          throw new Error(`Failed to verify index file: ${errorMsg}`);
+        }
+      } else {
+        // Index already in cache, just record it
+        recordResourceVerified(identifier, verificationId, indexTxId, indexPath);
+      }
     }
+
+    checkAborted();
+
+    // Mark manifest as verified and ready for on-demand resource serving
+    // Other resources will be verified lazily as the user accesses them
+    setManifestVerified(identifier, verificationId);
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -781,7 +1016,8 @@ export function getVerifiedContent(
   injectLocationPatch?: (html: string, identifier: string, gatewayUrl: string) => string
 ): Response | null {
   const state = getManifestState(identifier);
-  if (!state || (state.status !== 'complete' && state.status !== 'partial')) {
+  // Allow serving from 'manifest-verified' (lazy mode), 'complete', or 'partial'
+  if (!state || !isReadyToServe(identifier)) {
     return null;
   }
 
