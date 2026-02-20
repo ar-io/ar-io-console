@@ -41,8 +41,10 @@ export function VerificationLoadingScreen({
     if (seconds < 60) {
       return `${seconds.toFixed(1)}s`;
     }
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = (seconds % 60).toFixed(0);
+    // Round total seconds first to avoid "1m 60s" edge case
+    const totalSeconds = Math.round(seconds);
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = totalSeconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
   };
 

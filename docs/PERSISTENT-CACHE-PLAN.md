@@ -29,7 +29,7 @@ Use the browser's **Cache API** for response storage and **IndexedDB** for verif
 
 ### Data Flow
 
-```
+```text
 User visits ar://ardrive
     │
     ▼
@@ -57,7 +57,7 @@ User visits ar://ardrive
 
 ### Cache Key Strategy
 
-```
+```text
 Cache API keys (URL-based):
   - arweave-verified://{txId}
 
