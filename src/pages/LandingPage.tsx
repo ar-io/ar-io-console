@@ -328,16 +328,6 @@ const LandingPage = () => {
         )}
       </div>
 
-      {/* Trusted by the Best */}
-      <div className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Trusted by the Best</h2>
-          <p className="text-foreground/80">Powering critical platforms across the web</p>
-        </div>
-
-        <CompanyCarousel companies={companies} />
-      </div>
-
       {/* Service Metrics */}
       <div className="mb-12">
         <div className="text-center mb-8">
@@ -855,6 +845,16 @@ const LandingPage = () => {
           </a>
         </div>
       </section>
+
+      {/* Used by the Best */}
+      <div className="mb-12">
+        <div className="text-center mb-8">
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Used by the Best</h2>
+          <p className="text-foreground/80">Powering critical platforms across the web</p>
+        </div>
+
+        <CompanyCarousel companies={companies} />
+      </div>
 
       {/* Final CTA Section */}
       <section className="bg-card rounded-2xl border border-border/20 p-8 sm:p-12 text-center">
