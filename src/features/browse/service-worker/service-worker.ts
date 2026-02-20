@@ -69,10 +69,14 @@ self.addEventListener('activate', (event) => {
 // ============================================================================
 
 self.addEventListener('message', (event) => {
-  logger.debug(TAG, `Received message: ${event.data?.type}`);
+  // Guard against null/undefined event.data
+  const data = event.data;
+  if (!data || typeof data.type !== 'string') return;
 
-  if (event.data.type === 'INIT_WAYFINDER') {
-    const config: SwWayfinderConfig = event.data.config;
+  logger.debug(TAG, `Received message: ${data.type}`);
+
+  if (data.type === 'INIT_WAYFINDER') {
+    const config: SwWayfinderConfig = data.config;
     initializeWayfinder(config);
     if (config.concurrency) {
       setVerificationConcurrency(config.concurrency);
@@ -80,14 +84,14 @@ self.addEventListener('message', (event) => {
     event.ports[0]?.postMessage({ type: 'WAYFINDER_READY' });
   }
 
-  if (event.data.type === 'CLEAR_CACHE') {
+  if (data.type === 'CLEAR_CACHE') {
     verifiedCache.clear();
     logger.debug(TAG, 'Cache cleared');
     event.ports[0]?.postMessage({ type: 'CACHE_CLEARED' });
   }
 
-  if (event.data.type === 'CLEAR_VERIFICATION') {
-    const identifier = event.data.identifier;
+  if (data.type === 'CLEAR_VERIFICATION') {
+    const identifier = data.identifier;
     if (identifier) {
       // Abort any in-progress verification first
       const controller = abortControllers.get(identifier);
