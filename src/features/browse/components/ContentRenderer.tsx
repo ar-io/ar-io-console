@@ -164,7 +164,8 @@ export const ContentRenderer = memo(function ContentRenderer({
     return (
       <iframe
         src={url}
-        className={`${baseClassName} border-0 bg-white`}
+        className={`${baseClassName} block border-0 bg-white`}
+        style={{ margin: 0, padding: 0 }}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
         title={`Content for ${identifier}`}
       />

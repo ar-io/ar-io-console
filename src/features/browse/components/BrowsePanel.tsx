@@ -424,10 +424,20 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
       if (type === 'VERIFICATION_EVENT' && verificationEvent) {
         const vEvent = verificationEvent as VerificationEvent;
 
+        // Log all verification events for debugging
+        console.log('[Browse] SW event:', vEvent.type, {
+          identifier: vEvent.identifier,
+          currentIdentifier: currentIdentifierRef.current,
+          gatewayUrl: vEvent.gatewayUrl,
+          progress: vEvent.progress,
+          error: vEvent.error,
+        });
+
         // Filter out events for identifiers we're no longer viewing.
         // This prevents stale verification updates from affecting the UI
         // when the user has already navigated to a different identifier.
         if (vEvent.identifier && vEvent.identifier !== currentIdentifierRef.current) {
+          console.log('[Browse] Filtered stale event for:', vEvent.identifier);
           return;
         }
 
@@ -908,7 +918,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
           {/* Content viewer - uses flex-1 to fill remaining space after search bar */}
           <div
-            className={isFullscreen ? 'flex-1 overflow-hidden' : 'flex-1 min-h-0 overflow-hidden rounded-2xl border border-border/20'}
+            className={isFullscreen ? 'flex-1 overflow-hidden' : 'flex-1 min-h-0 overflow-hidden rounded-lg border border-border/20'}
             key="content-viewer-container"
           >
             {renderContentViewer()}

@@ -845,17 +845,21 @@ export async function verifyIdentifier(
 
   try {
     checkAborted();
+    logger.info(TAG, `Verifying: ${identifier}`);
 
     let txId: string;
 
     if (isTxId(identifier)) {
       txId = identifier;
       setResolvedTxId(identifier, verificationId, txId);
+      logger.info(TAG, `Direct txId: ${txId.slice(0, 8)}...`);
     } else {
+      logger.info(TAG, `Resolving ArNS: ${identifier}`);
       const resolved = await resolveArnsToTxId(identifier, config.trustedGateways);
       checkAborted();
       txId = resolved.txId;
       setResolvedTxId(identifier, verificationId, txId, resolved.gateway);
+      logger.info(TAG, `ArNS resolved: ${identifier} → ${txId.slice(0, 8)}...`);
     }
 
     const routingGateways = config.routingGateways && config.routingGateways.length > 0
@@ -900,6 +904,7 @@ export async function verifyIdentifier(
 
     // Step 2: Lock in this gateway for all subsequent requests
     setSelectedGateway(workingGateway);
+    logger.info(TAG, `Selected gateway: ${new URL(workingGateway).hostname}`);
 
     // Store the working gateway in state for later use (e.g., location patching)
     const state = getManifestState(identifier);
@@ -907,6 +912,7 @@ export async function verifyIdentifier(
       state.routingGateway = workingGateway;
     }
 
+    logger.info(TAG, `Broadcasting routing-gateway event`);
     broadcastEvent({
       type: 'routing-gateway',
       identifier,
