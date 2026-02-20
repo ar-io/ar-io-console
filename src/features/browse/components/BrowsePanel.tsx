@@ -866,7 +866,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   const isFullscreen = isShowingResults && isCollapsed;
 
   return (
-    <div className={isShowingResults && !isFullscreen ? '-mt-6 sm:-mt-8 -mb-6 sm:-mb-8 h-[calc(100dvh-120px)] flex flex-col overflow-hidden' : ''}>
+    <div className={isShowingResults && !isFullscreen ? '-mt-6 sm:-mt-8 -mb-6 sm:-mb-8 h-[calc(100dvh-80px)] flex flex-col overflow-hidden' : ''}>
       {/* Normal mode: show search bar */}
       {!isFullscreen && (
         <BrowseSearchBar
