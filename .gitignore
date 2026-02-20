@@ -43,6 +43,9 @@ coverage
 *.swo
 *~
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # OS generated files
 .DS_Store
 .DS_Store?

@@ -15,7 +15,7 @@ interface TrustedGatewayCache {
  * Get trusted gateways for verification, sorted by total stake.
  * Returns gateways with stake info for display purposes.
  *
- * @param count Number of gateways to return (1-10, default 3)
+ * @param count Number of gateways to return (1-20, default 3)
  * @returns Array of gateways with URL and stake info
  */
 export async function getTrustedGateways(count: number = 3): Promise<GatewayWithStake[]> {
@@ -223,7 +223,9 @@ export function clearTrustedGatewayCache(): void {
  */
 export async function getRoutingGateways(): Promise<URL[]> {
   try {
-    const response = await fetch('https://turbo-gateway.com/ar-io/peers');
+    // 5 second timeout to prevent hanging on unresponsive endpoints
+    const signal = AbortSignal.timeout(5000);
+    const response = await fetch('https://turbo-gateway.com/ar-io/peers', { signal });
     if (!response.ok) {
       throw new Error(`Failed to fetch peers: ${response.status}`);
     }

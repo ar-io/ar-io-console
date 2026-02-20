@@ -1,13 +1,18 @@
 import type { InputType } from '../types';
 
+// Transaction ID: Exactly 43 characters, base64url pattern
+const TX_ID_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+// ArNS Name: 1-51 chars, lowercase alphanumeric with hyphens/underscores
+const ARNS_PATTERN = /^[a-z0-9_-]{1,51}$/;
+
 /**
  * Detects whether the input is a transaction ID or ArNS name
  * Transaction ID: Exactly 43 characters, base64url pattern [A-Za-z0-9_-]{43}
  * ArNS Name: Everything else (1-51 chars, lowercase)
  */
 export function detectInputType(input: string): InputType {
-  const txIdPattern = /^[A-Za-z0-9_-]{43}$/;
-  return txIdPattern.test(input) ? 'txId' : 'arnsName';
+  return TX_ID_PATTERN.test(input) ? 'txId' : 'arnsName';
 }
 
 /**
@@ -16,8 +21,5 @@ export function detectInputType(input: string): InputType {
 export function isValidInput(input: string): boolean {
   if (!input || input.trim() === '') return false;
 
-  const txIdPattern = /^[A-Za-z0-9_-]{43}$/;
-  const arnsPattern = /^[a-z0-9_-]{1,51}$/i;
-
-  return txIdPattern.test(input) || arnsPattern.test(input);
+  return TX_ID_PATTERN.test(input) || ARNS_PATTERN.test(input);
 }
