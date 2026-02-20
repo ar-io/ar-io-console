@@ -418,8 +418,11 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   // Listen for service worker verification events
   useEffect(() => {
     if (!browseConfig.verificationEnabled) return;
+    if (!navigator.serviceWorker) return;
 
     const handleSwMessage = (event: MessageEvent) => {
+      // Guard against null/undefined event.data
+      if (!event.data) return;
       const { type, event: verificationEvent } = event.data;
       if (type === 'VERIFICATION_EVENT' && verificationEvent) {
         const vEvent = verificationEvent as VerificationEvent;
