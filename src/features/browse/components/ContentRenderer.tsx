@@ -12,7 +12,7 @@
  */
 
 import { memo, useState, useCallback, useMemo } from 'react';
-import { Download, ExternalLink, FileText, Music, AlertCircle } from 'lucide-react';
+import { Download, ExternalLink, FileText, Music, AlertCircle, Loader2 } from 'lucide-react';
 import type { ContentCategory } from '../utils/contentTypeUtils';
 
 /**
@@ -72,11 +72,54 @@ export const ContentRenderer = memo(function ContentRenderer({
     [identifier, category]
   );
 
+  // Track download state
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Check if URL is a proxy URL (handled by service worker) or external gateway URL
+  const isProxyUrl = url.startsWith('/ar-proxy/');
+
   // Generate download URL with query param for service worker to add Content-Disposition
+  // Only used for proxy URLs
   const downloadUrl = useMemo(() => {
+    if (!isProxyUrl) return url;
     const baseUrl = url.split('?')[0]; // Remove any existing query params
     return `${baseUrl}?download=${encodeURIComponent(downloadFilename)}`;
-  }, [url, downloadFilename]);
+  }, [url, downloadFilename, isProxyUrl]);
+
+  // Handle download - for external URLs, fetch and trigger download via JavaScript
+  const handleDownload = useCallback(async (e: React.MouseEvent) => {
+    // For proxy URLs, let the link work normally (service worker handles it)
+    if (isProxyUrl) return;
+
+    // For external URLs, prevent navigation and download via fetch
+    e.preventDefault();
+    setIsDownloading(true);
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Create temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = downloadFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up blob URL
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback: open in new tab
+      window.open(url, '_blank');
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [url, downloadFilename, isProxyUrl]);
 
   // If media failed to load, show download fallback
   if (mediaError && (category === 'image' || category === 'video' || category === 'audio')) {
@@ -101,10 +144,15 @@ export const ContentRenderer = memo(function ContentRenderer({
           </a>
           <a
             href={downloadUrl}
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
+            onClick={handleDownload}
+            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors disabled:opacity-50"
           >
-            <Download className="w-4 h-4" />
-            Download
+            {isDownloading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isDownloading ? 'Downloading...' : 'Download'}
           </a>
         </div>
       </div>
@@ -204,10 +252,15 @@ export const ContentRenderer = memo(function ContentRenderer({
           </a>
           <a
             href={downloadUrl}
+            onClick={handleDownload}
             className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
           >
-            <Download className="w-4 h-4" />
-            Download
+            {isDownloading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isDownloading ? 'Downloading...' : 'Download'}
           </a>
         </div>
       </div>
@@ -236,10 +289,15 @@ export const ContentRenderer = memo(function ContentRenderer({
         </a>
         <a
           href={downloadUrl}
+          onClick={handleDownload}
           className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
         >
-          <Download className="w-4 h-4" />
-          Download
+          {isDownloading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          {isDownloading ? 'Downloading...' : 'Download'}
         </a>
       </div>
     </div>
