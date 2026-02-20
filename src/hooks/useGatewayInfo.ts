@@ -4,6 +4,50 @@ import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
 
+/**
+ * Fetch with retry and exponential backoff for rate-limited APIs.
+ * Retries on 429 (rate limit) and 5xx errors.
+ */
+async function fetchWithRetry(
+  url: string,
+  options: { maxRetries?: number; initialDelayMs?: number } = {}
+): Promise<Response> {
+  const { maxRetries = 3, initialDelayMs = 1000 } = options;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+
+      // Retry on rate limit or server errors
+      if (response.status === 429 || response.status >= 500) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delayMs = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : initialDelayMs * Math.pow(2, attempt);
+
+        if (attempt < maxRetries - 1) {
+          console.warn(`[GatewayInfo] ${url} returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue;
+        }
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < maxRetries - 1) {
+        const delayMs = initialDelayMs * Math.pow(2, attempt);
+        console.warn(`[GatewayInfo] ${url} failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries}):`, error);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to fetch ${url} after ${maxRetries} attempts`);
+}
+
 interface UploadServiceInfo {
   version: string;
   addresses: {
@@ -215,12 +259,21 @@ export function useGatewayInfo() {
           let arweaveWinstonPerGiB = undefined;
 
           try {
-            // Fetch raw Arweave network price (returns winston - 1 AR = 10^12 winston)
-            const arweaveResponse = await fetch(`https://arweave.net/price/${gigabyteInBytes}`);
+            // Fetch raw Arweave L1 network price (returns winston - 1 AR = 10^12 winston).
+            // NOTE: We intentionally use arweave.net here to get the canonical L1 price
+            // from the Arweave network itself, not a gateway's cached/modified price.
+            const arweaveResponse = await fetchWithRetry(
+              `https://arweave.net/price/${gigabyteInBytes}`,
+              { maxRetries: 2, initialDelayMs: 500 }
+            );
             arweaveWinstonPerGiB = Number(await arweaveResponse.text());
 
-            // Fetch AR/USD price from CoinGecko
-            const cgResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd');
+            // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
+            // Uses retry with backoff to handle 429 responses.
+            const cgResponse = await fetchWithRetry(
+              'https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd',
+              { maxRetries: 3, initialDelayMs: 1000 }
+            );
             const cgData = await cgResponse.json();
             const arUSDPrice = cgData.arweave?.usd;
 
@@ -230,7 +283,7 @@ export function useGatewayInfo() {
               arweaveUSDPerGiB = arPerGiB * arUSDPrice;
             }
           } catch (err) {
-            console.warn('Arweave network pricing fetch failed:', err);
+            console.warn('[GatewayInfo] Arweave network pricing fetch failed:', err);
           }
 
           // Calculate the premium (Turbo vs raw Arweave)
@@ -365,12 +418,21 @@ export function useGatewayInfo() {
         let arweaveWinstonPerGiB = undefined;
 
         try {
-          // Fetch raw Arweave network price (returns winston)
-          const arweaveResponse = await fetch(`https://arweave.net/price/${gigabyteInBytes}`);
+          // Fetch raw Arweave L1 network price (returns winston).
+          // NOTE: We intentionally use arweave.net here to get the canonical L1 price
+          // from the Arweave network itself, not a gateway's cached/modified price.
+          const arweaveResponse = await fetchWithRetry(
+            `https://arweave.net/price/${gigabyteInBytes}`,
+            { maxRetries: 2, initialDelayMs: 500 }
+          );
           arweaveWinstonPerGiB = Number(await arweaveResponse.text());
 
-          // Fetch AR/USD price from CoinGecko
-          const cgResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd');
+          // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
+          // Uses retry with backoff to handle 429 responses.
+          const cgResponse = await fetchWithRetry(
+            'https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd',
+            { maxRetries: 3, initialDelayMs: 1000 }
+          );
           const cgData = await cgResponse.json();
           const arUSDPrice = cgData.arweave?.usd;
 
@@ -379,7 +441,7 @@ export function useGatewayInfo() {
             arweaveUSDPerGiB = arPerGiB * arUSDPrice;
           }
         } catch (err) {
-          console.warn('Arweave network pricing fetch failed:', err);
+          console.warn('[GatewayInfo] Arweave network pricing fetch failed:', err);
         }
 
         // Step 3: Calculate the premium
