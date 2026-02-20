@@ -5,6 +5,8 @@
  * Service workers have their own memory space and cannot share state with the main thread.
  */
 
+import { nativeFetch } from './polyfills/fetch-polyfill';
+
 // Default blacklist duration: 5 minutes
 const DEFAULT_BLACKLIST_DURATION_MS = 5 * 60 * 1000;
 
@@ -123,7 +125,7 @@ export async function checkSwGatewayHealth(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await fetch(url, {
+    const response = await nativeFetch(url, {
       method: 'HEAD',
       signal: controller.signal,
       redirect: 'manual',

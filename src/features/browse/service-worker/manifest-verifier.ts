@@ -17,6 +17,7 @@
 
 import type { ArweaveManifest, ManifestCheckResult, SwWayfinderConfig } from './types';
 import { verifiedCache } from './verified-cache';
+import { nativeFetch } from './polyfills/fetch-polyfill';
 import {
   startManifestVerification,
   setResolvedTxId,
@@ -89,7 +90,7 @@ export async function resolveArnsToTxId(
       const gatewayUrl = new URL(gateway);
       const arnsUrl = `https://${arnsName}.${gatewayUrl.host}`;
 
-      const response = await fetch(arnsUrl, {
+      const response = await nativeFetch(arnsUrl, {
         method: 'HEAD',
         headers: { 'Accept': '*/*' },
         signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
@@ -172,7 +173,7 @@ async function selectWorkingGateway(
 
     try {
       // Use HEAD request with timeout to check if gateway is responsive
-      const response = await fetch(rawUrl, {
+      const response = await nativeFetch(rawUrl, {
         method: 'HEAD',
         signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
       });
@@ -253,7 +254,7 @@ async function fetchTrustedHashForManifest(
       const rawUrl = `${gatewayBase}/raw/${txId}`;
 
       // Try HEAD request first to get hash from header
-      const headResponse = await fetch(rawUrl, {
+      const headResponse = await nativeFetch(rawUrl, {
         method: 'HEAD',
         signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
       });
@@ -272,7 +273,7 @@ async function fetchTrustedHashForManifest(
       }
 
       // No header - need to fetch and compute hash
-      const fullResponse = await fetch(rawUrl, {
+      const fullResponse = await nativeFetch(rawUrl, {
         signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
       });
 
@@ -407,7 +408,7 @@ async function fetchAndVerifyRawContent(
   logger.debug(TAG, `Fetching raw content: ${txId.slice(0, 8)}... from ${new URL(gatewayBase).hostname}`);
 
   // Fetch raw content from routing gateway
-  const response = await fetch(rawUrl, {
+  const response = await nativeFetch(rawUrl, {
     signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
   });
   if (!response.ok) {
@@ -526,7 +527,7 @@ async function verifyAndCacheResource(
     try {
       // Fetch directly from this gateway (bypassing Wayfinder's routing)
       const rawUrl = `${gatewayBase}/raw/${txId}`;
-      const response = await fetch(rawUrl, {
+      const response = await nativeFetch(rawUrl, {
         signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
       });
 
@@ -756,90 +757,70 @@ async function doVerifyResourceOnDemand(
   // Broadcast that we're verifying this resource
   recordResourceVerifying(identifier, state.verificationId, normalizedPath);
 
-  // Get fallback gateways from the wayfinder config
-  const wayfinder = getWayfinder();
+  // Get verification strategy and fallback gateways
   const strategy = getVerificationStrategy();
   const fallbackGateways = strategy.trustedGateways
     .map(url => url.toString().replace(/\/+$/, ''))
     .filter(g => g !== routingGateway.replace(/\/+$/, ''));
 
-  try {
-    // Lock gateway for this fetch
-    setSelectedGateway(routingGateway);
+  // All gateways to try: primary first, then fallbacks
+  const gatewaysToTry = [routingGateway.replace(/\/+$/, ''), ...fallbackGateways];
 
-    // Fetch from the locked gateway via Wayfinder
-    const arUrl = `ar://${txId}`;
-    const response = await wayfinder.request(arUrl);
-    const data = await response.arrayBuffer();
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+  // Try each gateway until one succeeds
+  // NOTE: We fetch directly instead of using Wayfinder's global gateway lock
+  // to avoid race conditions when multiple resources verify concurrently
+  for (const gateway of gatewaysToTry) {
+    try {
+      const rawUrl = `${gateway}/raw/${txId}`;
+      const response = await nativeFetch(rawUrl, {
+        signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
+      });
 
-    // Verify using SDK's verification strategy
-    await verifyResourceWithSdk(txId, data, strategy);
-
-    // Cache the verified content
-    const headers: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
-      headers[key] = value;
-    });
-    verifiedCache.set(txId, { contentType, data, headers });
-
-    // Record success for on-demand verification (updates progress counter)
-    recordResourceVerifiedOnDemand(identifier, state.verificationId, txId, normalizedPath);
-
-    logger.debug(TAG, `✓ On-demand verified: ${normalizedPath}`);
-    return true;
-
-  } catch (primaryError) {
-    // Primary gateway failed, try fallbacks
-    const primaryMsg = primaryError instanceof Error ? primaryError.message : String(primaryError);
-    logger.warn(TAG, `Primary gateway failed for ${normalizedPath}: ${primaryMsg}, trying fallbacks...`);
-
-    for (const gateway of fallbackGateways) {
-      try {
-        const rawUrl = `${gateway}/raw/${txId}`;
-        const response = await fetch(rawUrl, {
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.arrayBuffer();
-        const contentType = response.headers.get('content-type') || 'application/octet-stream';
-
-        // Verify using SDK
-        await verifyResourceWithSdk(txId, data, strategy);
-
-        // Cache it
-        const headers: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-          headers[key] = value;
-        });
-        verifiedCache.set(txId, { contentType, data, headers });
-
-        // Record success
-        recordResourceVerifiedOnDemand(identifier, state.verificationId, txId, normalizedPath);
-
-        logger.info(TAG, `Fallback succeeded for ${normalizedPath} via ${new URL(gateway).hostname}`);
-        return true;
-
-      } catch (fallbackError) {
-        const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-        logger.warn(TAG, `Fallback ${new URL(gateway).hostname} failed for ${normalizedPath}: ${fallbackMsg}`);
-        // Continue to next fallback
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
+
+      const data = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+
+      // Verify using SDK's verification strategy
+      await verifyResourceWithSdk(txId, data, strategy);
+
+      // Cache the verified content
+      const headers: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      verifiedCache.set(txId, { contentType, data, headers });
+
+      // Record success
+      recordResourceVerifiedOnDemand(identifier, state.verificationId, txId, normalizedPath);
+
+      const isPrimary = gateway === routingGateway.replace(/\/+$/, '');
+      if (isPrimary) {
+        logger.debug(TAG, `✓ On-demand verified: ${normalizedPath}`);
+      } else {
+        logger.info(TAG, `Fallback succeeded for ${normalizedPath} via ${new URL(gateway).hostname}`);
+      }
+      return true;
+
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const isPrimary = gateway === routingGateway.replace(/\/+$/, '');
+      if (isPrimary) {
+        logger.warn(TAG, `Primary gateway failed for ${normalizedPath}: ${errMsg}, trying fallbacks...`);
+      } else {
+        logger.warn(TAG, `Fallback ${new URL(gateway).hostname} failed for ${normalizedPath}: ${errMsg}`);
+      }
+      // Continue to next gateway
     }
-
-    // All attempts failed
-    const errorMsg = `All gateways failed to verify ${normalizedPath}`;
-    logger.error(TAG, errorMsg);
-    recordResourceFailedOnDemand(identifier, state.verificationId, normalizedPath, errorMsg);
-    return false;
-
-  } finally {
-    setSelectedGateway(null);
   }
+
+  // All attempts failed
+  const errorMsg = `All gateways failed to verify ${normalizedPath}`;
+  logger.error(TAG, errorMsg);
+  recordResourceFailedOnDemand(identifier, state.verificationId, normalizedPath, errorMsg);
+  return false;
 }
 
 /**

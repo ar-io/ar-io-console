@@ -160,6 +160,11 @@ export const ContentRenderer = memo(function ContentRenderer({
   }
 
   // HTML and text content - use iframe (default behavior)
+  // SECURITY NOTE: allow-same-origin is REQUIRED for service worker interception.
+  // Without it, the sandboxed iframe gets an opaque origin and our SW cannot
+  // intercept /ar-proxy/ requests to verify content. This is secure because:
+  // 1. All content is cryptographically verified before serving
+  // 2. The /ar-proxy/ path is isolated from main app storage/cookies
   if (category === 'html' || category === 'text') {
     return (
       <iframe

@@ -90,12 +90,42 @@ const quietWayfinderLogger = {
 };
 
 /**
+ * Dispose of a resource if it has a dispose/close method.
+ */
+function safeDispose(resource: unknown, name: string): void {
+  if (!resource) return;
+
+  const r = resource as Record<string, unknown>;
+  if (typeof r.dispose === 'function') {
+    try {
+      r.dispose();
+      logger.debug(TAG, `Disposed ${name}`);
+    } catch (err) {
+      logger.warn(TAG, `Failed to dispose ${name}: ${err}`);
+    }
+  } else if (typeof r.close === 'function') {
+    try {
+      r.close();
+      logger.debug(TAG, `Closed ${name}`);
+    } catch (err) {
+      logger.warn(TAG, `Failed to close ${name}: ${err}`);
+    }
+  }
+}
+
+/**
  * Initialize the Wayfinder client with the given configuration.
  */
 export function initializeWayfinder(config: SwWayfinderConfig): void {
   const verificationMethod = config.verificationMethod || 'hash';
 
   logger.info(TAG, `Init: ${verificationMethod}, ${config.trustedGateways.length} verification gateways`);
+
+  // Clean up previous instances to prevent resource leaks
+  safeDispose(wayfinderInstance, 'wayfinderInstance');
+  safeDispose(verificationStrategy, 'verificationStrategy');
+  wayfinderInstance = null;
+  verificationStrategy = null;
 
   currentConfig = config;
 

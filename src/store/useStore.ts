@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { TurboCryptoFundResponse } from '@ardrive/turbo-sdk/web';
 import { PaymentIntent, PaymentIntentResult } from '@stripe/stripe-js';
 import { SupportedTokenType } from '../constants';
+import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 
 // Preset configurations
 const PRESET_CONFIGS = {
@@ -127,14 +128,6 @@ export interface BrowseConfig {
   trustedGatewayCount: number;
 }
 
-const DEFAULT_BROWSE_CONFIG: BrowseConfig = {
-  routingStrategy: 'random',
-  verificationEnabled: false,
-  strictVerification: false,
-  verificationConcurrency: 10,
-  verificationMethod: 'hash',
-  trustedGatewayCount: 3,
-};
 
 export interface DeveloperConfig {
   paymentServiceUrl: string;

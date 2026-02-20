@@ -7,8 +7,9 @@
  * `fetch` function. However, in service workers, the patched version loses its
  * binding to `WorkerGlobalScope`, causing "Illegal invocation" errors.
  *
- * This polyfill captures the native fetch before Zone.js can patch it and
- * restores it to ensure fetch works correctly in the service worker context.
+ * This polyfill captures the native fetch before Zone.js can patch it.
+ * All service worker code should import and use `nativeFetch` directly
+ * rather than relying on the global `fetch`.
  */
 
 declare const self: ServiceWorkerGlobalScope;
@@ -17,13 +18,6 @@ declare const self: ServiceWorkerGlobalScope;
 // This happens at module evaluation time, before Zone.js loads
 const nativeFetch = self.fetch.bind(self);
 
-// Override the global fetch with our bound version
-// This ensures that even if Zone.js tries to patch it, our version persists
-Object.defineProperty(self, 'fetch', {
-  value: nativeFetch,
-  writable: true,
-  configurable: true,
-});
-
-// Also export it for direct use if needed
+// Export for direct use - this is the primary way to use native fetch
+// All call sites in manifest-verifier.ts and gateway-health.ts should import this
 export { nativeFetch };

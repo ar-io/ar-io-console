@@ -229,6 +229,11 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
       }
     };
 
+    // Guard for environments where service workers are unavailable
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker) {
+      return;
+    }
+
     navigator.serviceWorker.addEventListener('message', handleSwMessage);
     return () => navigator.serviceWorker.removeEventListener('message', handleSwMessage);
   }, [config.verificationEnabled]);

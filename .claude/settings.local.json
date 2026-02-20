@@ -69,7 +69,9 @@
       "Bash(git stash:*)",
       "Bash(git pull:*)",
       "Bash(npm run format:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []
