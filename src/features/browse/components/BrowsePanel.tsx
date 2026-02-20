@@ -856,7 +856,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
   const isFullscreen = isShowingResults && isCollapsed;
 
   return (
-    <div className={isShowingResults && !isFullscreen ? '-mt-6 sm:-mt-8 -mb-6 sm:-mb-8 max-h-[calc(100dvh-120px)] overflow-hidden' : ''}>
+    <div className={isShowingResults && !isFullscreen ? '-mt-6 sm:-mt-8 -mb-6 sm:-mb-8 h-[calc(100dvh-120px)] flex flex-col overflow-hidden' : ''}>
       {/* Normal mode: show search bar */}
       {!isFullscreen && (
         <BrowseSearchBar
@@ -874,7 +874,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
         <div
           className={isFullscreen
             ? 'fixed inset-0 z-[100] bg-white flex flex-col'
-            : 'overflow-hidden'
+            : 'flex-1 min-h-0 flex flex-col overflow-hidden'
           }
         >
           {/* Fullscreen toolbar */}
@@ -906,11 +906,9 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
             </div>
           )}
 
-          {/* Content viewer - same element in both modes to prevent reload */}
-          {/* Height accounts for: header (~60px), search bar (~50px), footer (~50px), Layout padding (~40px) */}
+          {/* Content viewer - uses flex-1 to fill remaining space after search bar */}
           <div
-            className={isFullscreen ? 'flex-1 overflow-hidden' : 'overflow-hidden rounded-2xl border border-border/20'}
-            style={isFullscreen ? undefined : { height: 'calc(100dvh - 200px)', minHeight: '400px' }}
+            className={isFullscreen ? 'flex-1 overflow-hidden' : 'flex-1 min-h-0 overflow-hidden rounded-2xl border border-border/20'}
             key="content-viewer-container"
           >
             {renderContentViewer()}
@@ -918,7 +916,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
 
           {/* Gateway URL below iframe (normal mode only) */}
           {!isFullscreen && resolvedUrl && (
-            <div className="h-5 px-3 flex items-center justify-end">
+            <div className="h-5 flex-shrink-0 px-3 flex items-center justify-end">
               <a
                 href={resolvedUrl}
                 target="_blank"
