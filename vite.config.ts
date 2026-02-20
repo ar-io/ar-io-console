@@ -104,14 +104,12 @@ export default defineConfig({
             '@solana/wallet-adapter-wallets',
             '@solana/web3.js',
           ],
-          // Arweave/Turbo SDKs
+          // Arweave/Turbo/Wayfinder SDKs (combined to avoid circular dependency issues)
           'vendor-arweave': [
             '@ardrive/turbo-sdk',
             '@ar.io/sdk',
-          ],
-          // Wayfinder (Browse Data feature)
-          'vendor-wayfinder': [
             '@ar.io/wayfinder-react',
+            '@ar.io/wayfinder-core',
           ],
           // UI libraries
           'vendor-ui': [
