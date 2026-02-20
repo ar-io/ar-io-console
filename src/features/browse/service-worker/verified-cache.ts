@@ -117,6 +117,29 @@ class VerifiedCacheImpl {
   }
 
   /**
+   * Sanitize a filename for safe use in Content-Disposition header.
+   * Prevents header injection by removing/escaping dangerous characters.
+   */
+  private sanitizeFilename(filename: string): string {
+    // Remove any characters that could break out of the header value
+    // - Remove newlines and carriage returns (HTTP header injection)
+    // - Remove double quotes (could break out of quoted string)
+    // - Remove backslashes (escape character)
+    // - Remove control characters (0x00-0x1f)
+    let result = '';
+    for (const char of filename) {
+      const code = char.charCodeAt(0);
+      // Skip control characters (0x00-0x1f), quotes, backslash, newlines
+      if (code < 0x20 || char === '"' || char === '\\' || char === '\r' || char === '\n') {
+        result += '_';
+      } else {
+        result += char;
+      }
+    }
+    return result.slice(0, 255);  // Limit length
+  }
+
+  /**
    * Create a Response from a cached resource.
    * Optionally include Content-Disposition header for downloads.
    */
@@ -131,8 +154,10 @@ class VerifiedCacheImpl {
     headers.set('x-wayfinder-verified-at', resource.verifiedAt.toString());
 
     // Add Content-Disposition for downloads if filename provided
+    // SECURITY: Sanitize filename to prevent header injection
     if (downloadFilename) {
-      headers.set('content-disposition', `attachment; filename="${downloadFilename}"`);
+      const safeFilename = this.sanitizeFilename(downloadFilename);
+      headers.set('content-disposition', `attachment; filename="${safeFilename}"`);
     }
 
     return new Response(resource.data, {

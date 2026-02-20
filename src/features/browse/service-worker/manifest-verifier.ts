@@ -243,13 +243,13 @@ async function fetchTrustedHashForManifest(
   txId: string,
   trustedGateways: URL[]
 ): Promise<string> {
-  const errors: string[] = [];
+  // SECURITY: Query ALL trusted gateways in parallel and require consensus
+  // This prevents a single compromised gateway from returning a malicious hash
+  logger.debug(TAG, `Fetching manifest hash from ${trustedGateways.length} trusted gateways`);
 
-  for (const gateway of trustedGateways) {
-    const gatewayBase = gateway.toString().replace(/\/+$/, '');
-
-    try {
-      // Use /raw/ to get the hash of the actual raw content
+  const results = await Promise.allSettled(
+    trustedGateways.map(async (gateway) => {
+      const gatewayBase = gateway.toString().replace(/\/+$/, '');
       const rawUrl = `${gatewayBase}/raw/${txId}`;
 
       // Try HEAD request first to get hash from header
@@ -268,8 +268,7 @@ async function fetchTrustedHashForManifest(
                          headResponse.headers.get('x-arweave-data-hash');
 
       if (hashHeader) {
-        logger.debug(TAG, `Got trusted hash from ${gateway.hostname}: ${hashHeader.slice(0, 12)}...`);
-        return hashHeader;
+        return { hash: hashHeader, gateway: gateway.hostname };
       }
 
       // No header - need to fetch and compute hash
@@ -283,17 +282,37 @@ async function fetchTrustedHashForManifest(
 
       const data = await fullResponse.arrayBuffer();
       const hash = await computeHash(data);
-      logger.debug(TAG, `Computed trusted hash from ${gateway.hostname}: ${hash.slice(0, 12)}...`);
-      return hash;
+      return { hash, gateway: gateway.hostname };
+    })
+  );
 
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      errors.push(`${gateway.hostname}: ${errMsg}`);
-      logger.debug(TAG, `Trusted gateway ${gateway.hostname} failed: ${errMsg}`);
-    }
+  // Collect successful results
+  const successful = results
+    .filter((r): r is PromiseFulfilledResult<{ hash: string; gateway: string }> =>
+      r.status === 'fulfilled'
+    )
+    .map(r => r.value);
+
+  if (successful.length === 0) {
+    const errors = results
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map(r => r.reason?.message || 'Unknown error');
+    throw new Error(`All trusted gateways failed to provide hash: ${errors.join(', ')}`);
   }
 
-  throw new Error(`All trusted gateways failed to provide hash: ${errors.join(', ')}`);
+  // SECURITY: Verify consensus - all gateways must agree on the hash
+  const hashes = successful.map(r => r.hash);
+  const uniqueHashes = [...new Set(hashes)];
+
+  if (uniqueHashes.length > 1) {
+    logger.error(TAG, `Manifest hash mismatch for ${txId}:`,
+      successful.map(s => `${s.gateway}=${s.hash.slice(0, 12)}`));
+    throw new Error(`Manifest hash mismatch across trusted gateways - security issue`);
+  }
+
+  const trustedHash = uniqueHashes[0];
+  logger.debug(TAG, `Got consensus hash from ${successful.length} gateways: ${trustedHash.slice(0, 12)}...`);
+  return trustedHash;
 }
 
 /**

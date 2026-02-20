@@ -154,6 +154,7 @@ export function VerificationLoadingScreen({
             </span>
           )}
         </div>
+
       </div>
     </div>
   );

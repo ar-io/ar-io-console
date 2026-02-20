@@ -152,6 +152,17 @@ export function VerificationBlockedModal({
                 : 'Proceed Anyway (Not Recommended)'}
             </button>
           </div>
+
+          <div className="mt-3 text-center">
+            <a
+              href="https://docs.ar.io/learn/wayfinder/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-foreground/50 hover:text-primary transition-colors"
+            >
+              Learn more about Wayfinder verification
+            </a>
+          </div>
         </div>
       </div>
     </div>

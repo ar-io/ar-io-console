@@ -230,6 +230,15 @@ export function VerificationBadge({
               View Full Report
             </button>
           )}
+
+          <a
+            href="https://docs.ar.io/learn/wayfinder/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block mt-2 text-center text-xs text-foreground/50 hover:text-primary transition-colors"
+          >
+            Learn more about Wayfinder
+          </a>
         </div>
       )}
     </div>

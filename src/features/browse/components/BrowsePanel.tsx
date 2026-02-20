@@ -424,20 +424,10 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
       if (type === 'VERIFICATION_EVENT' && verificationEvent) {
         const vEvent = verificationEvent as VerificationEvent;
 
-        // Log all verification events for debugging
-        console.log('[Browse] SW event:', vEvent.type, {
-          identifier: vEvent.identifier,
-          currentIdentifier: currentIdentifierRef.current,
-          gatewayUrl: vEvent.gatewayUrl,
-          progress: vEvent.progress,
-          error: vEvent.error,
-        });
-
         // Filter out events for identifiers we're no longer viewing.
         // This prevents stale verification updates from affecting the UI
         // when the user has already navigated to a different identifier.
         if (vEvent.identifier && vEvent.identifier !== currentIdentifierRef.current) {
-          console.log('[Browse] Filtered stale event for:', vEvent.identifier);
           return;
         }
 
@@ -924,9 +914,21 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
             {renderContentViewer()}
           </div>
 
-          {/* Gateway URL below iframe (normal mode only) */}
+          {/* Footer below iframe (normal mode only) */}
           {!isFullscreen && resolvedUrl && (
-            <div className="h-5 flex-shrink-0 px-3 flex items-center justify-end">
+            <div className="h-5 flex-shrink-0 px-3 flex items-center justify-between">
+              {browseConfig.verificationEnabled ? (
+                <a
+                  href="https://docs.ar.io/learn/wayfinder/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-foreground/40 hover:text-primary text-[11px] transition-colors"
+                >
+                  Learn about Wayfinder
+                </a>
+              ) : (
+                <span />
+              )}
               <a
                 href={resolvedUrl}
                 target="_blank"

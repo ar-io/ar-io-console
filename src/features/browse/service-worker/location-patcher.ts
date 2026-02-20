@@ -13,6 +13,21 @@ import { logger } from './logger';
 const TAG = 'LocationPatcher';
 
 /**
+ * Escape a string for safe embedding in JavaScript.
+ * Prevents XSS by escaping characters that could break out of string literals.
+ */
+function escapeForJs(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')     // Backslashes first
+    .replace(/'/g, "\\'")        // Single quotes
+    .replace(/"/g, '\\"')        // Double quotes
+    .replace(/\n/g, '\\n')       // Newlines
+    .replace(/\r/g, '\\r')       // Carriage returns
+    .replace(/</g, '\\x3c')      // Less than (prevents </script> injection)
+    .replace(/>/g, '\\x3e');     // Greater than
+}
+
+/**
  * Create the location patching script.
  *
  * Uses history.replaceState() to actually change location.pathname from
@@ -31,12 +46,17 @@ function createLocationPatchScript(identifier: string, gatewayUrl: string): stri
     gatewayHost = 'turbo-gateway.com';
   }
 
+  // SECURITY: Escape all values to prevent XSS
+  const safeIdentifier = escapeForJs(identifier);
+  const safeGatewayHost = escapeForJs(gatewayHost);
   const simulatedHost = `${identifier}.${gatewayHost}`;
+  const safeSimulatedHost = escapeForJs(simulatedHost);
 
   // The script to inject - runs before any app code
+  // SECURITY: All interpolated values use escaped versions to prevent XSS
   return `<script data-wayfinder-location-patch>
 (function() {
-  const PROXY_PREFIX = '/ar-proxy/${identifier}';
+  const PROXY_PREFIX = '/ar-proxy/${safeIdentifier}';
   const originalPathname = window.location.pathname;
   const originalHref = window.location.href;
 
@@ -63,16 +83,16 @@ function createLocationPatchScript(identifier: string, gatewayUrl: string): stri
     originalPathname: originalPathname,
     originalHref: originalHref,
     rewrittenPathname: window.location.pathname,
-    identifier: '${identifier}',
-    gateway: '${gatewayHost}',
-    simulatedHost: '${simulatedHost}'
+    identifier: '${safeIdentifier}',
+    gateway: '${safeGatewayHost}',
+    simulatedHost: '${safeSimulatedHost}'
   };
 
   // Also expose a helper for apps that want gateway info
   window.__wayfinderContext = {
-    identifier: '${identifier}',
-    gateway: '${gatewayHost}',
-    simulatedOrigin: 'https://${simulatedHost}'
+    identifier: '${safeIdentifier}',
+    gateway: '${safeGatewayHost}',
+    simulatedOrigin: 'https://${safeSimulatedHost}'
   };
 })();
 </script>`;
