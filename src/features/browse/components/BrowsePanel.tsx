@@ -27,6 +27,18 @@ import { gatewayHealth } from '../utils/gatewayHealth';
 import { detectContentType, type ContentCategory } from '../utils/contentTypeUtils';
 import type { VerificationEvent } from '../service-worker/types';
 
+/**
+ * Safely extract hostname from a URL string.
+ * Returns the original string if URL parsing fails.
+ */
+function safeHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 interface WayfinderWrapperProps {
   children: React.ReactNode;
   gatewayRefreshCounter: number;
@@ -939,7 +951,7 @@ function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProp
                 className="text-foreground/50 hover:text-foreground/70 text-[11px] font-mono"
                 title={resolvedUrl}
               >
-                {new URL(resolvedUrl).hostname}
+                {safeHostname(resolvedUrl)}
               </a>
             </div>
           )}
