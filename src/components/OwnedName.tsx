@@ -1,6 +1,6 @@
 import { Calendar, ExternalLink, Globe } from "lucide-react";
 import { daysRemaining, getARIO } from "@/utils";
-import { useQuery } from "wagmi/query";
+import { useQuery } from "@tanstack/react-query";
 import {  AoArNSNameData } from "@ar.io/sdk"
 import { ArNSName } from "@/types";
 
@@ -8,17 +8,16 @@ const OwnedName = ({ domain }: { domain: ArNSName }) => {
 
     const { data: arnsOwnershipData, isLoading:isArnsOwnershipDataLoading } = useQuery({
         queryKey: ["domainOwnershipPeriod", domain.name],
-        queryFn: async(): Promise<AoArNSNameData> => {
+        queryFn: async(): Promise<AoArNSNameData | null> => {
             const ario = getARIO();
             const record = await ario.getArNSRecord({ name: domain.name })
-            return record ;
+            return record ?? null;
         },
          enabled: !!domain.name
     });
 
   return (
     <div
-      key={domain.name}
       className="bg-card rounded-2xl border border-primary/20 p-4"
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -52,9 +51,9 @@ const OwnedName = ({ domain }: { domain: ArNSName }) => {
               <div className="h-4 w-32 bg-foreground/10 rounded animate-pulse" />
             ) : (
                 <span className="text-xs text-foreground/80">
-                {(arnsOwnershipData as any)?.type === "permabuy"
+                {arnsOwnershipData?.type === "permabuy"
                 ? "Permanently owned"
-                : `Leased (expires in ${daysRemaining(new Date((arnsOwnershipData as any)?.endTimestamp ?? 0))} days)`}
+                : `Leased (expires in ${daysRemaining(new Date(arnsOwnershipData?.endTimestamp??0))} days)`}
                 </span>
             )}
           </div>
