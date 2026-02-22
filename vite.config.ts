@@ -80,44 +80,9 @@ export default defineConfig({
     commonjsOptions: {
       transformMixedEsModules: true,
     },
-    rollupOptions: {
-      output: {
-        // Manual chunk splitting for stable vendor bundles
-        // Vendor code rarely changes, so these chunks stay cached between deploys
-        manualChunks: {
-          // React core - very stable
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Ethereum wallet SDKs
-          'vendor-ethereum': [
-            '@privy-io/react-auth',
-            'wagmi',
-            '@wagmi/core',
-            '@wagmi/connectors',
-            'viem',
-            '@rainbow-me/rainbowkit',
-          ],
-          // Solana wallet SDKs
-          'vendor-solana': [
-            '@solana/wallet-adapter-base',
-            '@solana/wallet-adapter-react',
-            '@solana/wallet-adapter-react-ui',
-            '@solana/wallet-adapter-wallets',
-            '@solana/web3.js',
-          ],
-          // Turbo SDK only - @ar.io/sdk excluded because wayfinder packages depend on it
-          // and manual chunking creates circular initialization issues
-          'vendor-turbo': [
-            '@ardrive/turbo-sdk',
-          ],
-          // UI libraries
-          'vendor-ui': [
-            'lucide-react',
-            '@tanstack/react-query',
-            'zustand',
-            '@stripe/react-stripe-js',
-          ],
-        },
-      },
-    },
+    // Note: Manual chunk splitting removed because wayfinder packages have
+    // complex circular dependencies with @ar.io/sdk that cause initialization
+    // errors when split into separate chunks. Letting Rollup handle chunking
+    // automatically avoids these issues (same approach as wayfinder-app).
   },
 });
