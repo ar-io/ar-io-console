@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useFreeUploadLimit } from './hooks/useFreeUploadLimit';
@@ -19,7 +19,9 @@ import DeploySitePage from './pages/DeploySitePage';
 import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
 import AccountPage from './pages/AccountPage';
 import TryItNowPage from './pages/TryItNowPage';
-import BrowsePage from './pages/BrowsePage';
+
+// Lazy-load BrowsePage to isolate wayfinder dependencies and avoid circular dependency issues
+const BrowsePage = lazy(() => import('./pages/BrowsePage'));
 import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
@@ -80,7 +82,11 @@ function AppRoutes() {
           <Route path="redeem" element={<RedeemPage />} />
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
-          <Route path="browse" element={<BrowsePage />} />
+          <Route path="browse" element={
+            <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]">Loading...</div>}>
+              <BrowsePage />
+            </Suspense>
+          } />
           {/* Catch all route - redirect to home */}
           <Route path="*" element={<LandingPage />} />
         </Route>
