@@ -374,7 +374,20 @@ export default function BalanceCheckerPanel() {
         {/* Recent Searches */}
         {recentSearches.length > 0 && (
           <div>
-            <p className="text-xs text-foreground/80 mb-2 uppercase tracking-wider">Recent Searches</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-foreground/80 uppercase tracking-wider">Recent Searches</p>
+              <button
+                onClick={() => {
+                  setRecentSearches([]);
+                  localStorage.removeItem('recentBalanceSearches');
+                }}
+                className="text-xs text-foreground/50 hover:text-foreground/80 transition-colors flex items-center gap-1"
+                title="Clear search history"
+              >
+                <X className="w-3 h-3" />
+                Clear
+              </button>
+            </div>
             <div className="space-y-2">
               {recentSearches.map((address) => (
                 <button
