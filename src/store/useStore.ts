@@ -114,19 +114,12 @@ export interface PaymentInformation {
 export type ConfigMode = 'production' | 'development' | 'custom';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
-// Browse Data feature types
-export type BrowseRoutingStrategy = 'random' | 'fastest' | 'roundRobin' | 'preferred';
-export type BrowseVerificationMethod = 'hash' | 'signature';
-
-export interface BrowseConfig {
-  routingStrategy: BrowseRoutingStrategy;
-  preferredGateway?: string;
-  verificationEnabled: boolean;
-  strictVerification: boolean;
-  verificationConcurrency: number;
-  verificationMethod: BrowseVerificationMethod;
-  trustedGatewayCount: number;
-}
+// Browse Data feature types - imported from browse feature to avoid circular imports
+import type { BrowseConfig, RoutingStrategy, VerificationMethod } from '../features/browse/types/index';
+export type { BrowseConfig };
+// Re-export with original names for backwards compatibility
+export type BrowseRoutingStrategy = RoutingStrategy;
+export type BrowseVerificationMethod = VerificationMethod;
 
 
 export interface DeveloperConfig {

@@ -145,6 +145,13 @@ class VerifiedCacheImpl {
    */
   toResponse(resource: VerifiedResource, downloadFilename?: string): Response {
     const headers = new Headers(resource.headers);
+
+    // Remove frame-blocking headers - we're intentionally embedding in iframe
+    // and content has already been cryptographically verified
+    headers.delete('x-frame-options');
+    headers.delete('content-security-policy');
+    headers.delete('content-security-policy-report-only');
+
     // Ensure content-type is set
     if (!headers.has('content-type') && resource.contentType) {
       headers.set('content-type', resource.contentType);

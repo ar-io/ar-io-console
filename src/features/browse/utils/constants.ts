@@ -1,4 +1,4 @@
-import type { BrowseConfig } from '@/store/useStore';
+import type { BrowseConfig } from '../types/index';
 
 export const STORAGE_KEY = 'ar-io-console-browse-config';
 

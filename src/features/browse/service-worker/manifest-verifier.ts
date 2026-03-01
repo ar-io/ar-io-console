@@ -1070,6 +1070,12 @@ export function getVerifiedContent(
         Object.entries(resource.headers).forEach(([key, value]) => {
           headers.set(key, value);
         });
+
+        // Remove frame-blocking headers - we're intentionally embedding in iframe
+        headers.delete('x-frame-options');
+        headers.delete('content-security-policy');
+        headers.delete('content-security-policy-report-only');
+
         if (!headers.has('content-type')) {
           headers.set('content-type', resource.contentType);
         }

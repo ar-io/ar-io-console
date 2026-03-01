@@ -80,9 +80,11 @@ export default defineConfig({
     commonjsOptions: {
       transformMixedEsModules: true,
     },
-    // Note: Manual chunk splitting removed because wayfinder packages have
-    // complex circular dependencies with @ar.io/sdk that cause initialization
-    // errors when split into separate chunks. Letting Rollup handle chunking
-    // automatically avoids these issues (same approach as wayfinder-app).
+    rollupOptions: {
+      output: {
+        // Let Rollup decide chunking - manual chunks can cause circular dependency issues
+        // when packages have complex interdependencies (like @ar.io/sdk)
+      },
+    },
   },
 });
