@@ -48,6 +48,36 @@ async function fetchWithRetry(
   throw lastError || new Error(`Failed to fetch ${url} after ${maxRetries} attempts`);
 }
 
+/**
+ * Fetch Arweave L1 price with fallback.
+ * Tries arweave.net first, falls back to turbo-gateway.com if it fails.
+ */
+async function fetchArweavePriceWithFallback(bytes: number): Promise<number> {
+  const endpoints = [
+    'https://arweave.net',
+    'https://turbo-gateway.com',
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetchWithRetry(
+        `${endpoint}/price/${bytes}`,
+        { maxRetries: 2, initialDelayMs: 500 }
+      );
+      if (response.ok) {
+        const price = Number(await response.text());
+        if (!isNaN(price) && price > 0) {
+          return price;
+        }
+      }
+    } catch (err) {
+      console.warn(`[GatewayInfo] Failed to fetch price from ${endpoint}:`, err);
+    }
+  }
+
+  throw new Error('Failed to fetch Arweave price from all endpoints');
+}
+
 interface UploadServiceInfo {
   version: string;
   addresses: {
@@ -260,13 +290,8 @@ export function useGatewayInfo() {
 
           try {
             // Fetch raw Arweave L1 network price (returns winston - 1 AR = 10^12 winston).
-            // NOTE: We intentionally use arweave.net here to get the canonical L1 price
-            // from the Arweave network itself, not a gateway's cached/modified price.
-            const arweaveResponse = await fetchWithRetry(
-              `https://arweave.net/price/${gigabyteInBytes}`,
-              { maxRetries: 2, initialDelayMs: 500 }
-            );
-            arweaveWinstonPerGiB = Number(await arweaveResponse.text());
+            // Uses fallback: arweave.net -> turbo-gateway.com
+            arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
 
             // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
             // Uses retry with backoff to handle 429 responses.
@@ -419,13 +444,8 @@ export function useGatewayInfo() {
 
         try {
           // Fetch raw Arweave L1 network price (returns winston).
-          // NOTE: We intentionally use arweave.net here to get the canonical L1 price
-          // from the Arweave network itself, not a gateway's cached/modified price.
-          const arweaveResponse = await fetchWithRetry(
-            `https://arweave.net/price/${gigabyteInBytes}`,
-            { maxRetries: 2, initialDelayMs: 500 }
-          );
-          arweaveWinstonPerGiB = Number(await arweaveResponse.text());
+          // Uses fallback: arweave.net -> turbo-gateway.com
+          arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
 
           // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
           // Uses retry with backoff to handle 429 responses.
