@@ -2,13 +2,13 @@
  * Service Worker Types for Browse Data Verification
  */
 
-export type VerificationMethod = 'hash' | 'signature';
+export type VerificationMethod = "hash" | "signature";
 
 export interface ArweaveManifest {
-  manifest: 'arweave/paths';
+  manifest: "arweave/paths";
   version: string;
   index?: { path: string };
-  paths: Record<string, ManifestPath | string>;  // Can be { id: string } or just the txId string
+  paths: Record<string, ManifestPath | string>; // Can be { id: string } or just the txId string
   fallback?: { id: string };
 }
 
@@ -20,18 +20,25 @@ export interface ManifestPath {
  * State of manifest verification for an identifier (ArNS name or txId)
  */
 export interface ManifestVerificationState {
-  identifier: string;           // Original ArNS name or txId requested
-  verificationId: number;       // Unique ID to detect stale updates from abandoned verifications
-  manifestTxId: string;         // Resolved manifest transaction ID
-  status: 'resolving' | 'fetching-manifest' | 'manifest-verified' | 'verifying' | 'complete' | 'partial' | 'failed';
+  identifier: string; // Original ArNS name or txId requested
+  verificationId: number; // Unique ID to detect stale updates from abandoned verifications
+  manifestTxId: string; // Resolved manifest transaction ID
+  status:
+    | "resolving"
+    | "fetching-manifest"
+    | "manifest-verified"
+    | "verifying"
+    | "complete"
+    | "partial"
+    | "failed";
   manifest: ArweaveManifest | null;
   totalResources: number;
   verifiedResources: number;
-  failedResources: string[];    // List of txIds that failed verification
-  pathToTxId: Map<string, string>;  // path → txId mapping for serving
-  indexPath: string;            // The index path from manifest (e.g., "index.html")
-  isSingleFile: boolean;        // True if this is a single file (not a manifest with multiple paths)
-  routingGateway?: string;      // Gateway used for fetching
+  failedResources: string[]; // List of txIds that failed verification
+  pathToTxId: Map<string, string>; // path → txId mapping for serving
+  indexPath: string; // The index path from manifest (e.g., "index.html")
+  isSingleFile: boolean; // True if this is a single file (not a manifest with multiple paths)
+  routingGateway?: string; // Gateway used for fetching
   error?: string;
   startedAt: number;
   completedAt?: number;
@@ -49,26 +56,26 @@ export interface ManifestCheckResult {
 
 export interface VerificationEvent {
   type:
-    | 'verification-started'      // Started resolving/fetching manifest
-    | 'manifest-loaded'           // Manifest parsed, know total resources
-    | 'manifest-verified'         // Manifest + index verified, ready for on-demand
-    | 'resource-verifying'        // On-demand verification starting for a resource
-    | 'resource-verified'         // On-demand verification complete for a resource
-    | 'resource-failed'           // On-demand verification failed for a resource
-    | 'verification-progress'     // Resource verified, progress update (legacy eager mode)
-    | 'verification-complete'     // All resources verified (legacy eager mode)
-    | 'verification-failed'       // Verification failed
-    | 'routing-gateway';          // Gateway info for display
-  identifier: string;             // ArNS name or txId being verified
-  manifestTxId?: string;          // Resolved manifest txId
-  resourcePath?: string;          // Current resource being verified
+    | "verification-started" // Started resolving/fetching manifest
+    | "manifest-loaded" // Manifest parsed, know total resources
+    | "manifest-verified" // Manifest + index verified, ready for on-demand
+    | "resource-verifying" // On-demand verification starting for a resource
+    | "resource-verified" // On-demand verification complete for a resource
+    | "resource-failed" // On-demand verification failed for a resource
+    | "verification-progress" // Resource verified, progress update (legacy eager mode)
+    | "verification-complete" // All resources verified (legacy eager mode)
+    | "verification-failed" // Verification failed
+    | "routing-gateway"; // Gateway info for display
+  identifier: string; // ArNS name or txId being verified
+  manifestTxId?: string; // Resolved manifest txId
+  resourcePath?: string; // Current resource being verified
   progress?: {
     current: number;
     total: number;
   };
   error?: string;
   gatewayUrl?: string;
-  isSingleFile?: boolean;         // True if content is a single file (not a manifest)
+  isSingleFile?: boolean; // True if content is a single file (not a manifest)
 }
 
 /**

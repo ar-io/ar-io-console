@@ -10,7 +10,7 @@ declare const self: ServiceWorkerGlobalScope;
 const processShim = {
   env: {},
   browser: true,
-  version: '',
+  version: "",
   versions: {},
   nextTick: (fn: () => void) => setTimeout(fn, 0),
 };

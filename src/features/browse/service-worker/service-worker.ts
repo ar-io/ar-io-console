@@ -18,13 +18,23 @@
 
 // CRITICAL: Import polyfills FIRST before any other imports
 // These must run before any dependency code that might reference Node.js globals
-import './polyfills/module-polyfill';
-import './polyfills/process-polyfill';
-import './polyfills/buffer-polyfill';
-import './polyfills/fetch-polyfill';
+import "./polyfills/module-polyfill";
+import "./polyfills/process-polyfill";
+import "./polyfills/buffer-polyfill";
+import "./polyfills/fetch-polyfill";
 
-import { initializeWayfinder, isWayfinderReady, getConfig, waitForInitialization } from './wayfinder-instance';
-import { verifyIdentifier, getVerifiedContent, setVerificationConcurrency, verifyResourceOnDemand } from './manifest-verifier';
+import {
+  initializeWayfinder,
+  isWayfinderReady,
+  getConfig,
+  waitForInitialization,
+} from "./wayfinder-instance";
+import {
+  verifyIdentifier,
+  getVerifiedContent,
+  setVerificationConcurrency,
+  verifyResourceOnDemand,
+} from "./manifest-verifier";
 import {
   getManifestState,
   isVerificationInProgress,
@@ -34,13 +44,13 @@ import {
   setActiveIdentifier,
   getActiveIdentifier,
   getActiveTxIdForPath,
-} from './verification-state';
-import { verifiedCache } from './verified-cache';
-import { logger } from './logger';
-import { injectLocationPatch } from './location-patcher';
-import type { SwWayfinderConfig } from './types';
+} from "./verification-state";
+import { verifiedCache } from "./verified-cache";
+import { logger } from "./logger";
+import { injectLocationPatch } from "./location-patcher";
+import type { SwWayfinderConfig } from "./types";
 
-const TAG = 'SW';
+const TAG = "SW";
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -54,13 +64,13 @@ const abortControllers = new Map<string, AbortController>();
 // Service Worker Lifecycle
 // ============================================================================
 
-self.addEventListener('install', () => {
-  logger.debug(TAG, 'Installing...');
+self.addEventListener("install", () => {
+  logger.debug(TAG, "Installing...");
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  logger.debug(TAG, 'Activating...');
+self.addEventListener("activate", (event) => {
+  logger.debug(TAG, "Activating...");
   event.waitUntil(self.clients.claim());
 });
 
@@ -68,29 +78,29 @@ self.addEventListener('activate', (event) => {
 // Message Handler
 // ============================================================================
 
-self.addEventListener('message', (event) => {
+self.addEventListener("message", (event) => {
   // Guard against null/undefined event.data
   const data = event.data;
-  if (!data || typeof data.type !== 'string') return;
+  if (!data || typeof data.type !== "string") return;
 
   logger.debug(TAG, `Received message: ${data.type}`);
 
-  if (data.type === 'INIT_WAYFINDER') {
+  if (data.type === "INIT_WAYFINDER") {
     const config: SwWayfinderConfig = data.config;
     initializeWayfinder(config);
     if (config.concurrency) {
       setVerificationConcurrency(config.concurrency);
     }
-    event.ports[0]?.postMessage({ type: 'WAYFINDER_READY' });
+    event.ports[0]?.postMessage({ type: "WAYFINDER_READY" });
   }
 
-  if (data.type === 'CLEAR_CACHE') {
+  if (data.type === "CLEAR_CACHE") {
     verifiedCache.clear();
-    logger.debug(TAG, 'Cache cleared');
-    event.ports[0]?.postMessage({ type: 'CACHE_CLEARED' });
+    logger.debug(TAG, "Cache cleared");
+    event.ports[0]?.postMessage({ type: "CACHE_CLEARED" });
   }
 
-  if (data.type === 'CLEAR_VERIFICATION') {
+  if (data.type === "CLEAR_VERIFICATION") {
     const identifier = data.identifier;
     if (identifier) {
       // Abort any in-progress verification first
@@ -118,7 +128,7 @@ self.addEventListener('message', (event) => {
       }
       logger.debug(TAG, `Cleared verification for: ${identifier}`);
     }
-    event.ports[0]?.postMessage({ type: 'VERIFICATION_CLEARED' });
+    event.ports[0]?.postMessage({ type: "VERIFICATION_CLEARED" });
   }
 });
 
@@ -126,11 +136,11 @@ self.addEventListener('message', (event) => {
 // Fetch Handler
 // ============================================================================
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
   // Primary: Intercept /ar-proxy/ requests
-  if (url.pathname.startsWith('/ar-proxy/')) {
+  if (url.pathname.startsWith("/ar-proxy/")) {
     logger.debug(TAG, `Proxy request: ${url.pathname}`);
     event.respondWith(handleArweaveProxy(event.request));
     return;
@@ -142,18 +152,23 @@ self.addEventListener('fetch', (event) => {
   // IMPORTANT: Never intercept navigation requests (mode: 'navigate') as these are for
   // loading the main app itself, not for loading Arweave content resources.
   // The ar-proxy iframe's initial load is already handled by the /ar-proxy/ check above.
-  if (event.request.mode === 'navigate') {
+  if (event.request.mode === "navigate") {
     return;
   }
 
   const activeId = getActiveIdentifier();
   if (activeId && isReadyToServe(activeId)) {
     // Check if this path exists in the active manifest
-    const path = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+    const path = url.pathname.startsWith("/")
+      ? url.pathname.slice(1)
+      : url.pathname;
     const txId = getActiveTxIdForPath(path);
 
     if (txId) {
-      logger.debug(TAG, `Absolute path intercept: ${url.pathname} → ${activeId}`);
+      logger.debug(
+        TAG,
+        `Absolute path intercept: ${url.pathname} → ${activeId}`,
+      );
       event.respondWith(serveResource(activeId, path));
       return;
     }
@@ -172,35 +187,35 @@ async function handleArweaveProxy(request: Request): Promise<Response> {
   const { identifier, resourcePath } = parseProxyPath(url.pathname);
 
   // Check for download query param (e.g., ?download=whitepaper.pdf)
-  const downloadFilename = url.searchParams.get('download');
+  const downloadFilename = url.searchParams.get("download");
 
   if (!identifier) {
-    return new Response('Missing identifier in path', { status: 400 });
+    return new Response("Missing identifier in path", { status: 400 });
   }
 
   // Wait for Wayfinder to be initialized (handles race condition at startup)
   // The app sends INIT_WAYFINDER after registration, so we wait for that
   if (!isWayfinderReady()) {
-    logger.debug(TAG, 'Waiting for Wayfinder initialization...');
+    logger.debug(TAG, "Waiting for Wayfinder initialization...");
     const initialized = await waitForInitialization(10000); // Wait up to 10 seconds
 
     if (!initialized) {
-      logger.warn(TAG, 'Wayfinder initialization timeout');
+      logger.warn(TAG, "Wayfinder initialization timeout");
       return createErrorResponse(
-        'Verification Not Ready',
-        'The verification service is still initializing. Please reload the page or try again.',
-        identifier
+        "Verification Not Ready",
+        "The verification service is still initializing. Please reload the page or try again.",
+        identifier,
       );
     }
-    logger.debug(TAG, 'Wayfinder initialization complete');
+    logger.debug(TAG, "Wayfinder initialization complete");
   }
 
   const config = getConfig();
   if (!config) {
     return createErrorResponse(
-      'Configuration Error',
-      'Verification configuration not available. Please reload the page.',
-      identifier
+      "Configuration Error",
+      "Verification configuration not available. Please reload the page.",
+      identifier,
     );
   }
 
@@ -211,7 +226,7 @@ async function handleArweaveProxy(request: Request): Promise<Response> {
 
     if (ready) {
       // Manifest verified - serve resource (on-demand verification if needed)
-      logger.debug(TAG, `Serving: ${identifier}/${resourcePath || 'index'}`);
+      logger.debug(TAG, `Serving: ${identifier}/${resourcePath || "index"}`);
       setActiveIdentifier(identifier);
       return await serveResource(identifier, resourcePath, downloadFilename);
     }
@@ -229,18 +244,21 @@ async function handleArweaveProxy(request: Request): Promise<Response> {
     await startVerification(identifier, config);
     setActiveIdentifier(identifier);
     return await serveResource(identifier, resourcePath, downloadFilename);
-
   } catch (error) {
-    logger.error(TAG, 'Verification error:', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error(TAG, `Verification error for ${identifier}:`, errorMsg);
+    if (errorStack) {
+      logger.error(TAG, "Stack:", errorStack);
+    }
 
     broadcastEvent({
-      type: 'verification-failed',
+      type: "verification-failed",
       identifier,
       error: errorMsg,
     });
 
-    return createErrorResponse('Verification Failed', errorMsg, identifier);
+    return createErrorResponse("Verification Failed", errorMsg, identifier);
   }
 }
 
@@ -253,11 +271,11 @@ async function handleArweaveProxy(request: Request): Promise<Response> {
  */
 function escapeHtml(text: string): string {
   const htmlEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
   };
   return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
 }
@@ -266,10 +284,16 @@ function escapeHtml(text: string): string {
  * Create a styled HTML error response.
  * Uses ar.io console branding (light theme with purple accents).
  */
-function createErrorResponse(title: string, message: string, identifier: string): Response {
+function createErrorResponse(
+  title: string,
+  message: string,
+  identifier: string,
+): Response {
   // Escape all user-provided content to prevent XSS
   const safeTitle = escapeHtml(title);
-  const safeMessage = escapeHtml(message || 'An unknown error occurred during verification.');
+  const safeMessage = escapeHtml(
+    message || "An unknown error occurred during verification.",
+  );
   const safeIdentifier = escapeHtml(identifier);
 
   const html = `<!DOCTYPE html>
@@ -358,23 +382,30 @@ function createErrorResponse(title: string, message: string, identifier: string)
 
   return new Response(html, {
     status: 500,
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      Pragma: "no-cache",
+    },
   });
 }
 
 /**
  * Parse /ar-proxy/{identifier}/{path...} into components.
  */
-function parseProxyPath(pathname: string): { identifier: string; resourcePath: string } {
+function parseProxyPath(pathname: string): {
+  identifier: string;
+  resourcePath: string;
+} {
   // Remove /ar-proxy/ prefix
-  const fullPath = pathname.slice('/ar-proxy/'.length);
+  const fullPath = pathname.slice("/ar-proxy/".length);
 
   // Split into identifier and resource path
-  const firstSlash = fullPath.indexOf('/');
+  const firstSlash = fullPath.indexOf("/");
 
   if (firstSlash === -1) {
     // Just identifier, no trailing slash
-    return { identifier: fullPath, resourcePath: '' };
+    return { identifier: fullPath, resourcePath: "" };
   }
 
   const identifier = fullPath.slice(0, firstSlash);
@@ -387,7 +418,10 @@ function parseProxyPath(pathname: string): { identifier: string; resourcePath: s
  * Start verification for an identifier.
  * Deduplicates concurrent requests for the same identifier.
  */
-async function startVerification(identifier: string, config: SwWayfinderConfig): Promise<void> {
+async function startVerification(
+  identifier: string,
+  config: SwWayfinderConfig,
+): Promise<void> {
   // Check if already pending
   let pending = pendingVerifications.get(identifier);
   if (pending) {
@@ -399,11 +433,12 @@ async function startVerification(identifier: string, config: SwWayfinderConfig):
   const controller = new AbortController();
   abortControllers.set(identifier, controller);
 
-  pending = verifyIdentifier(identifier, config, controller.signal)
-    .finally(() => {
+  pending = verifyIdentifier(identifier, config, controller.signal).finally(
+    () => {
       pendingVerifications.delete(identifier);
       abortControllers.delete(identifier);
-    });
+    },
+  );
 
   pendingVerifications.set(identifier, pending);
   return pending;
@@ -431,19 +466,19 @@ async function waitForManifestVerification(identifier: string): Promise<void> {
     }
 
     const state = getManifestState(identifier);
-    if (state?.status === 'failed') {
-      throw new Error(state.error || 'Verification failed');
+    if (state?.status === "failed") {
+      throw new Error(state.error || "Verification failed");
     }
 
     if (!isVerificationInProgress(identifier) && !isReadyToServe(identifier)) {
-      throw new Error('Verification stopped unexpectedly');
+      throw new Error("Verification stopped unexpectedly");
     }
 
-    await new Promise(resolve => setTimeout(resolve, pollInterval));
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
     waited += pollInterval;
   }
 
-  throw new Error('Manifest verification timeout');
+  throw new Error("Manifest verification timeout");
 }
 
 /**
@@ -455,27 +490,45 @@ async function waitForManifestVerification(identifier: string): Promise<void> {
  *
  * @param downloadFilename - If provided, adds Content-Disposition header for download
  */
-async function serveResource(identifier: string, resourcePath: string, downloadFilename?: string | null): Promise<Response> {
+async function serveResource(
+  identifier: string,
+  resourcePath: string,
+  downloadFilename?: string | null,
+): Promise<Response> {
   const state = getManifestState(identifier);
 
   if (!state) {
-    logger.error(TAG, `No state for: ${identifier}`);
-    return createErrorResponse('Not Found', 'No verification state found for this content.', identifier);
+    logger.error(TAG, `No state for: ${identifier} - may need to re-verify`);
+    return createErrorResponse(
+      "Not Found",
+      "No verification state found for this content. The content may need to be re-verified. Try refreshing or searching again.",
+      identifier,
+    );
   }
 
-  if (state.status === 'failed') {
-    return createErrorResponse('Verification Failed', state.error || 'Verification failed.', identifier);
+  if (state.status === "failed") {
+    return createErrorResponse(
+      "Verification Failed",
+      state.error || "Verification failed.",
+      identifier,
+    );
   }
 
   if (!isReadyToServe(identifier)) {
-    return createErrorResponse('Not Ready', 'Manifest not yet verified.', identifier);
+    return createErrorResponse(
+      "Not Ready",
+      "Manifest not yet verified.",
+      identifier,
+    );
   }
 
   // Normalize path
-  let normalizedPath = resourcePath.startsWith('/') ? resourcePath.slice(1) : resourcePath;
-  if (normalizedPath === '') {
+  let normalizedPath = resourcePath.startsWith("/")
+    ? resourcePath.slice(1)
+    : resourcePath;
+  if (normalizedPath === "") {
     normalizedPath = state.indexPath;
-  } else if (normalizedPath.endsWith('/')) {
+  } else if (normalizedPath.endsWith("/")) {
     normalizedPath = normalizedPath + state.indexPath;
   }
 
@@ -484,16 +537,16 @@ async function serveResource(identifier: string, resourcePath: string, downloadF
 
   if (!txId) {
     // Try fallback
-    const fallbackId = state.pathToTxId.get('__fallback__');
+    const fallbackId = state.pathToTxId.get("__fallback__");
     if (fallbackId) {
       txId = fallbackId;
     } else {
       logger.warn(TAG, `Path not in manifest: ${resourcePath}`);
       const availablePaths = Array.from(state.pathToTxId.keys()).slice(0, 10);
       return createErrorResponse(
-        'Resource Not Found',
-        `Path "${resourcePath}" not in manifest. Available: ${availablePaths.join(', ')}${availablePaths.length >= 10 ? '...' : ''}`,
-        identifier
+        "Resource Not Found",
+        `Path "${resourcePath}" not in manifest. Available: ${availablePaths.join(", ")}${availablePaths.length >= 10 ? "..." : ""}`,
+        identifier,
       );
     }
   }
@@ -508,7 +561,11 @@ async function serveResource(identifier: string, resourcePath: string, downloadF
         return verifiedCache.toResponse(resource, downloadFilename);
       }
     }
-    const response = getVerifiedContent(identifier, resourcePath, injectLocationPatch);
+    const response = getVerifiedContent(
+      identifier,
+      resourcePath,
+      injectLocationPatch,
+    );
     if (response) {
       return response;
     }
@@ -521,9 +578,9 @@ async function serveResource(identifier: string, resourcePath: string, downloadF
 
   if (!success) {
     return createErrorResponse(
-      'Verification Failed',
+      "Verification Failed",
       `Failed to verify resource: ${resourcePath}`,
-      identifier
+      identifier,
     );
   }
 
@@ -535,7 +592,11 @@ async function serveResource(identifier: string, resourcePath: string, downloadF
       return verifiedCache.toResponse(resource, downloadFilename);
     }
   }
-  const response = getVerifiedContent(identifier, resourcePath, injectLocationPatch);
+  const response = getVerifiedContent(
+    identifier,
+    resourcePath,
+    injectLocationPatch,
+  );
 
   if (response) {
     return response;
@@ -544,9 +605,9 @@ async function serveResource(identifier: string, resourcePath: string, downloadF
   // This shouldn't happen - verification succeeded but resource not in cache
   logger.error(TAG, `Verification succeeded but cache miss: ${normalizedPath}`);
   return createErrorResponse(
-    'Internal Error',
-    'Resource verified but not available.',
-    identifier
+    "Internal Error",
+    "Resource verified but not available.",
+    identifier,
   );
 }
 
@@ -554,4 +615,4 @@ async function serveResource(identifier: string, resourcePath: string, downloadF
 // Startup
 // ============================================================================
 
-logger.info(TAG, 'Service worker loaded');
+logger.info(TAG, "Service worker loaded");

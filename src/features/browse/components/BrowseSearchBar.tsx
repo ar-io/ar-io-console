@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, memo, type FormEvent } from 'react';
-import { Search, Settings, X, ChevronUp, Compass } from 'lucide-react';
-import { isValidInput } from '../utils/detectInputType';
+import { useState, useRef, useEffect, memo, type FormEvent } from "react";
+import { Search, Settings, X, ChevronUp, Compass } from "lucide-react";
+import { isValidInput } from "../utils/detectInputType";
 
 interface BrowseSearchBarProps {
   onSearch: (input: string) => void;
@@ -22,7 +22,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
   verificationBadge,
 }: BrowseSearchBarProps) {
   const [input, setInput] = useState(currentInput);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -39,23 +39,29 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
     const trimmedInput = input.trim();
 
     if (!trimmedInput) {
-      setError('Please enter an ArNS name or transaction ID');
+      setError("Please enter an ArNS name or transaction ID");
       return false;
     }
 
     if (!isValidInput(trimmedInput)) {
-      setError('Invalid input. Please enter a valid ArNS name or 43-character transaction ID');
+      setError(
+        "Invalid input. Please enter a valid ArNS name or 43-character transaction ID",
+      );
       return false;
     }
 
-    setError('');
+    setError("");
     return true;
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (validateInput()) {
-      onSearch(input.trim());
+      const trimmed = input.trim();
+      // ArNS names are case-insensitive, normalize to lowercase
+      // TX IDs (43 chars base64url) are case-sensitive, preserve as-is
+      const isTxId = /^[A-Za-z0-9_-]{43}$/.test(trimmed);
+      onSearch(isTxId ? trimmed : trimmed.toLowerCase());
     }
   };
 
@@ -91,19 +97,19 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
                 value={input}
                 onChange={(e) => {
                   setInput(e.target.value);
-                  setError('');
+                  setError("");
                 }}
                 placeholder="name or tx ID..."
                 className={`w-full pl-12 pr-7 py-1.5 bg-background border text-foreground placeholder:text-foreground/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm ${
-                  error ? 'border-red-500' : 'border-border/20'
+                  error ? "border-red-500" : "border-border/20"
                 }`}
               />
               {input && (
                 <button
                   type="button"
                   onClick={() => {
-                    setInput('');
-                    setError('');
+                    setInput("");
+                    setError("");
                     inputRef.current?.focus();
                   }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-foreground/40 hover:text-foreground transition-colors"
@@ -153,8 +159,12 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
           <Compass className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-xl font-heading font-bold text-foreground">Browse Data</h3>
-          <p className="text-sm text-foreground/60">Access and verify data and apps on the permanent cloud</p>
+          <h3 className="text-xl font-heading font-bold text-foreground">
+            Browse Data
+          </h3>
+          <p className="text-sm text-foreground/60">
+            Access and verify data and apps on the permanent cloud
+          </p>
         </div>
       </div>
 
@@ -173,11 +183,11 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
                   value={input}
                   onChange={(e) => {
                     setInput(e.target.value);
-                    setError('');
+                    setError("");
                   }}
                   placeholder="Enter name or transaction ID..."
                   className={`w-full pl-[4.5rem] pr-4 py-3 bg-background border text-foreground placeholder:text-foreground/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-base ${
-                    error ? 'border-red-500' : 'border-border/20'
+                    error ? "border-red-500" : "border-border/20"
                   }`}
                 />
               </div>
@@ -202,14 +212,16 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
           </div>
 
           <div className="mt-4 pt-3 border-t border-border/20">
-            <p className="text-xs text-foreground/50 mb-2">Try these examples:</p>
+            <p className="text-xs text-foreground/50 mb-2">
+              Try these examples:
+            </p>
             <div className="flex flex-wrap gap-2">
               {[
-                { label: 'ar.io Docs', value: 'docs' },
-                { label: 'Permaweb Journal', value: 'permaweb-journal' },
-                { label: 'AO', value: 'ao' },
-                { label: 'ar.io Whitepaper', value: 'whitepaper' },
-                { label: 'ArDrive', value: 'ardrive' },
+                { label: "ar.io Docs", value: "docs" },
+                { label: "Permaweb Journal", value: "permaweb-journal" },
+                { label: "AO", value: "ao" },
+                { label: "ar.io Whitepaper", value: "whitepaper" },
+                { label: "ArDrive", value: "ardrive" },
               ].map((example) => (
                 <button
                   key={example.value}

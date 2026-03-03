@@ -4,7 +4,10 @@ export interface ServiceWorkerMessage {
 }
 
 export class ServiceWorkerMessenger {
-  private listeners = new Map<string, Set<(data: ServiceWorkerMessage) => void>>();
+  private listeners = new Map<
+    string,
+    Set<(data: ServiceWorkerMessage) => void>
+  >();
   private messageListenerAttached = false;
   private registrationPromise: Promise<void> | null = null;
 
@@ -16,7 +19,10 @@ export class ServiceWorkerMessenger {
    * @param scriptURL - URL to the service worker script
    * @param options - Registration options (e.g., { type: 'module' } for ES module service workers)
    */
-  async registerProactive(scriptURL: string, options?: RegistrationOptions): Promise<void> {
+  async registerProactive(
+    scriptURL: string,
+    options?: RegistrationOptions,
+  ): Promise<void> {
     // Reuse existing registration if in progress
     if (this.registrationPromise) {
       return this.registrationPromise;
@@ -26,9 +32,12 @@ export class ServiceWorkerMessenger {
     return this.registrationPromise;
   }
 
-  private async doRegister(scriptURL: string, options?: RegistrationOptions): Promise<void> {
-    if (!('serviceWorker' in navigator)) {
-      console.warn('[SW] Service workers not supported');
+  private async doRegister(
+    scriptURL: string,
+    options?: RegistrationOptions,
+  ): Promise<void> {
+    if (!("serviceWorker" in navigator)) {
+      console.warn("[SW] Service workers not supported");
       return;
     }
 
@@ -40,17 +49,20 @@ export class ServiceWorkerMessenger {
       try {
         // Check if offline before attempting
         if (!navigator.onLine) {
-          console.warn('[SW] Offline - deferring registration');
+          console.warn("[SW] Offline - deferring registration");
           // Wait for online event before continuing
           await this.waitForOnline(30000);
         }
 
-        const registration = await navigator.serviceWorker.register(scriptURL, options);
-        console.log('[SW] Registered:', registration.scope);
+        const registration = await navigator.serviceWorker.register(
+          scriptURL,
+          options,
+        );
+        console.log("[SW] Registered:", registration.scope);
 
         // Set up message listener (only once)
         if (!this.messageListenerAttached) {
-          navigator.serviceWorker.addEventListener('message', (event) => {
+          navigator.serviceWorker.addEventListener("message", (event) => {
             this.handleMessage(event.data);
           });
           this.messageListenerAttached = true;
@@ -62,20 +74,22 @@ export class ServiceWorkerMessenger {
         // Wait for controller with robust retry
         await this.waitForController();
         return; // Success!
-
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        console.warn(`[SW] Registration attempt ${attempt + 1}/${maxRetries} failed:`, error);
+        console.warn(
+          `[SW] Registration attempt ${attempt + 1}/${maxRetries} failed:`,
+          error,
+        );
 
         if (attempt < maxRetries - 1) {
           // Exponential backoff: 1s, 2s, 4s
           const delay = Math.pow(2, attempt) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
-    console.error('[SW] Registration failed after all retries:', lastError);
+    console.error("[SW] Registration failed after all retries:", lastError);
     this.registrationPromise = null;
     throw lastError;
   }
@@ -90,17 +104,17 @@ export class ServiceWorkerMessenger {
 
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
-        window.removeEventListener('online', onOnline);
+        window.removeEventListener("online", onOnline);
         resolve(); // Continue anyway after timeout
       }, timeoutMs);
 
       const onOnline = () => {
         clearTimeout(timeout);
-        window.removeEventListener('online', onOnline);
+        window.removeEventListener("online", onOnline);
         resolve();
       };
 
-      window.addEventListener('online', onOnline);
+      window.addEventListener("online", onOnline);
     });
   }
 
@@ -120,12 +134,16 @@ export class ServiceWorkerMessenger {
       const onControllerChange = () => {
         if (!resolved) {
           resolved = true;
-          console.log('[SW] Controller acquired');
+          console.log("[SW] Controller acquired");
           resolve(true);
         }
       };
 
-      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange, { once: true });
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        onControllerChange,
+        { once: true },
+      );
 
       // Also poll with exponential backoff as a fallback
       const startTime = Date.now();
@@ -134,21 +152,26 @@ export class ServiceWorkerMessenger {
 
         if (navigator.serviceWorker.controller) {
           resolved = true;
-          console.log('[SW] Controller acquired (poll)');
+          console.log("[SW] Controller acquired (poll)");
           resolve(true);
           return;
         }
 
         if (Date.now() - startTime >= maxWaitMs) {
           resolved = true;
-          console.warn('[SW] Controller not acquired within timeout - will be ready on next page load');
+          console.warn(
+            "[SW] Controller not acquired within timeout - will be ready on next page load",
+          );
           resolve(false);
           return;
         }
 
         // Exponential backoff: 50, 100, 200, 400, 800...
         const elapsed = Date.now() - startTime;
-        const delay = Math.min(50 * Math.pow(2, Math.floor(elapsed / 500)), 800);
+        const delay = Math.min(
+          50 * Math.pow(2, Math.floor(elapsed / 500)),
+          800,
+        );
         setTimeout(poll, delay);
       };
 
@@ -160,7 +183,7 @@ export class ServiceWorkerMessenger {
    * Check if service worker is controlling the page.
    */
   isControlling(): boolean {
-    return 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+    return "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
   }
 
   /**
@@ -169,7 +192,10 @@ export class ServiceWorkerMessenger {
    * @param options - Registration options (e.g., { type: 'module' } for ES module service workers)
    * @deprecated Use registerProactive() instead
    */
-  async register(scriptURL: string, options?: RegistrationOptions): Promise<void> {
+  async register(
+    scriptURL: string,
+    options?: RegistrationOptions,
+  ): Promise<void> {
     return this.registerProactive(scriptURL, options);
   }
 
@@ -177,19 +203,26 @@ export class ServiceWorkerMessenger {
    * Send message to service worker with timeout.
    * Will wait for ongoing registration to complete before sending.
    */
-  async send(message: ServiceWorkerMessage, timeoutMs = 30000): Promise<ServiceWorkerMessage> {
+  async send(
+    message: ServiceWorkerMessage,
+    timeoutMs = 30000,
+  ): Promise<ServiceWorkerMessage> {
     // Wait for any ongoing registration to complete
     if (this.registrationPromise) {
       try {
         await this.registrationPromise;
       } catch (error) {
-        throw new Error(`Service worker registration failed: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Service worker registration failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 
     const controller = navigator.serviceWorker.controller;
     if (!controller) {
-      throw new Error('No service worker controller. Call registerProactive() first and await its completion.');
+      throw new Error(
+        "No service worker controller. Call registerProactive() first and await its completion.",
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -206,7 +239,9 @@ export class ServiceWorkerMessenger {
 
       timeoutId = setTimeout(() => {
         cleanup();
-        reject(new Error(`Service worker message timeout after ${timeoutMs}ms`));
+        reject(
+          new Error(`Service worker message timeout after ${timeoutMs}ms`),
+        );
       }, timeoutMs);
 
       messageChannel.port1.onmessage = (event) => {
@@ -244,7 +279,7 @@ export class ServiceWorkerMessenger {
   private handleMessage(data: ServiceWorkerMessage): void {
     const listeners = this.listeners.get(data.type);
     if (listeners) {
-      listeners.forEach(callback => callback(data));
+      listeners.forEach((callback) => callback(data));
     }
   }
 
@@ -259,10 +294,10 @@ export class ServiceWorkerMessenger {
     enabled: boolean;
     strict: boolean;
     concurrency?: number;
-    verificationMethod?: 'hash' | 'signature';
+    verificationMethod?: "hash" | "signature";
   }): Promise<void> {
     await this.send({
-      type: 'INIT_WAYFINDER',
+      type: "INIT_WAYFINDER",
       config,
     });
   }
@@ -272,7 +307,7 @@ export class ServiceWorkerMessenger {
    */
   async clearCache(): Promise<void> {
     await this.send({
-      type: 'CLEAR_CACHE',
+      type: "CLEAR_CACHE",
     });
   }
 
@@ -282,7 +317,7 @@ export class ServiceWorkerMessenger {
    */
   async clearVerification(identifier: string): Promise<void> {
     await this.send({
-      type: 'CLEAR_VERIFICATION',
+      type: "CLEAR_VERIFICATION",
       identifier,
     });
   }

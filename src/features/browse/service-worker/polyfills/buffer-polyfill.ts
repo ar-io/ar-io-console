@@ -4,7 +4,7 @@
  * Must be imported before any code that might reference Buffer
  */
 
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 
 declare const self: ServiceWorkerGlobalScope;
 

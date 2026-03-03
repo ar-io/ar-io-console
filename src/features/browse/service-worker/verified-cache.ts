@@ -6,9 +6,9 @@
  * Includes LRU eviction when size limit is exceeded.
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
-const TAG = 'Cache';
+const TAG = "Cache";
 
 // Maximum cache size in bytes (100MB)
 const MAX_CACHE_SIZE = 100 * 1024 * 1024;
@@ -30,17 +30,26 @@ class VerifiedCacheImpl {
    * Store a verified resource in cache.
    * Evicts LRU items if cache size limit is exceeded.
    */
-  set(txId: string, resource: Omit<VerifiedResource, 'txId' | 'verifiedAt' | 'lastAccessedAt'>): void {
+  set(
+    txId: string,
+    resource: Omit<VerifiedResource, "txId" | "verifiedAt" | "lastAccessedAt">,
+  ): void {
     const resourceSize = resource.data.byteLength;
 
     // If single resource is larger than cache, don't cache it
     if (resourceSize > MAX_CACHE_SIZE) {
-      logger.warn(TAG, `Too large: ${txId.slice(0, 8)}... (${(resourceSize / 1024 / 1024).toFixed(1)}MB)`);
+      logger.warn(
+        TAG,
+        `Too large: ${txId.slice(0, 8)}... (${(resourceSize / 1024 / 1024).toFixed(1)}MB)`,
+      );
       return;
     }
 
     // Evict LRU items if needed
-    while (this.currentSize + resourceSize > MAX_CACHE_SIZE && this.cache.size > 0) {
+    while (
+      this.currentSize + resourceSize > MAX_CACHE_SIZE &&
+      this.cache.size > 0
+    ) {
       this.evictLRU();
     }
 
@@ -59,7 +68,10 @@ class VerifiedCacheImpl {
     });
     this.currentSize += resourceSize;
 
-    logger.debug(TAG, `Stored: ${txId.slice(0, 8)}... (${(this.currentSize / 1024 / 1024).toFixed(1)}MB total)`);
+    logger.debug(
+      TAG,
+      `Stored: ${txId.slice(0, 8)}... (${(this.currentSize / 1024 / 1024).toFixed(1)}MB total)`,
+    );
   }
 
   /**
@@ -126,17 +138,23 @@ class VerifiedCacheImpl {
     // - Remove double quotes (could break out of quoted string)
     // - Remove backslashes (escape character)
     // - Remove control characters (0x00-0x1f)
-    let result = '';
+    let result = "";
     for (const char of filename) {
       const code = char.charCodeAt(0);
       // Skip control characters (0x00-0x1f), quotes, backslash, newlines
-      if (code < 0x20 || char === '"' || char === '\\' || char === '\r' || char === '\n') {
-        result += '_';
+      if (
+        code < 0x20 ||
+        char === '"' ||
+        char === "\\" ||
+        char === "\r" ||
+        char === "\n"
+      ) {
+        result += "_";
       } else {
         result += char;
       }
     }
-    return result.slice(0, 255);  // Limit length
+    return result.slice(0, 255); // Limit length
   }
 
   /**
@@ -148,23 +166,26 @@ class VerifiedCacheImpl {
 
     // Remove frame-blocking headers - we're intentionally embedding in iframe
     // and content has already been cryptographically verified
-    headers.delete('x-frame-options');
-    headers.delete('content-security-policy');
-    headers.delete('content-security-policy-report-only');
+    headers.delete("x-frame-options");
+    headers.delete("content-security-policy");
+    headers.delete("content-security-policy-report-only");
 
     // Ensure content-type is set
-    if (!headers.has('content-type') && resource.contentType) {
-      headers.set('content-type', resource.contentType);
+    if (!headers.has("content-type") && resource.contentType) {
+      headers.set("content-type", resource.contentType);
     }
     // Add verification header
-    headers.set('x-wayfinder-verified', 'true');
-    headers.set('x-wayfinder-verified-at', resource.verifiedAt.toString());
+    headers.set("x-wayfinder-verified", "true");
+    headers.set("x-wayfinder-verified-at", resource.verifiedAt.toString());
 
     // Add Content-Disposition for downloads if filename provided
     // SECURITY: Sanitize filename to prevent header injection
     if (downloadFilename) {
       const safeFilename = this.sanitizeFilename(downloadFilename);
-      headers.set('content-disposition', `attachment; filename="${safeFilename}"`);
+      headers.set(
+        "content-disposition",
+        `attachment; filename="${safeFilename}"`,
+      );
     }
 
     return new Response(resource.data, {
@@ -194,7 +215,10 @@ class VerifiedCacheImpl {
     const stats = this.getStats();
     this.cache.clear();
     this.currentSize = 0;
-    logger.info(TAG, `Cleared ${stats.count} resources (${(stats.totalBytes / 1024 / 1024).toFixed(1)}MB)`);
+    logger.info(
+      TAG,
+      `Cleared ${stats.count} resources (${(stats.totalBytes / 1024 / 1024).toFixed(1)}MB)`,
+    );
   }
 
   /**
@@ -213,7 +237,10 @@ class VerifiedCacheImpl {
       }
     }
     this.currentSize -= freedBytes;
-    logger.debug(TAG, `Cleared ${cleared} manifest resources (${(freedBytes / 1024 / 1024).toFixed(1)}MB freed)`);
+    logger.debug(
+      TAG,
+      `Cleared ${cleared} manifest resources (${(freedBytes / 1024 / 1024).toFixed(1)}MB freed)`,
+    );
   }
 }
 

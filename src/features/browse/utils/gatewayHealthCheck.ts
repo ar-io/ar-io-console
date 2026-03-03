@@ -5,8 +5,8 @@
  * Used for pre-flight checks before loading content.
  */
 
-import { GATEWAY_HEALTH_CHECK_TIMEOUT_MS } from './constants';
-import { gatewayHealth } from './gatewayHealth';
+import { GATEWAY_HEALTH_CHECK_TIMEOUT_MS } from "./constants";
+import { gatewayHealth } from "./gatewayHealth";
 
 export interface HealthCheckResult {
   healthy: boolean;
@@ -25,7 +25,7 @@ export interface HealthCheckResult {
 export async function checkGatewayHealth(
   url: string,
   timeoutMs: number = GATEWAY_HEALTH_CHECK_TIMEOUT_MS,
-  markUnhealthyOnFail: boolean = true
+  markUnhealthyOnFail: boolean = true,
 ): Promise<HealthCheckResult> {
   const startTime = Date.now();
 
@@ -34,10 +34,10 @@ export async function checkGatewayHealth(
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await fetch(url, {
-      method: 'HEAD',
+      method: "HEAD",
       signal: controller.signal,
       // Don't follow redirects - we just want to check if the gateway responds
-      redirect: 'manual',
+      redirect: "manual",
     });
 
     clearTimeout(timeoutId);
@@ -61,15 +61,15 @@ export async function checkGatewayHealth(
     let error: string;
 
     if (err instanceof Error) {
-      if (err.name === 'AbortError') {
+      if (err.name === "AbortError") {
         error = `Timeout after ${timeoutMs}ms`;
-      } else if (err.message.includes('Failed to fetch')) {
-        error = 'Gateway unreachable';
+      } else if (err.message.includes("Failed to fetch")) {
+        error = "Gateway unreachable";
       } else {
         error = err.message;
       }
     } else {
-      error = 'Unknown error';
+      error = "Unknown error";
     }
 
     if (markUnhealthyOnFail) {

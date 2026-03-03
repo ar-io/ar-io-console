@@ -11,20 +11,32 @@
  * - Other: Download button
  */
 
-import { memo, useState, useCallback, useMemo } from 'react';
-import { Download, ExternalLink, FileText, Music, AlertCircle, Loader2 } from 'lucide-react';
-import type { ContentCategory } from '../utils/contentTypeUtils';
+import { memo, useState, useCallback, useMemo } from "react";
+import {
+  Download,
+  ExternalLink,
+  FileText,
+  Music,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import type { ContentCategory } from "../utils/contentTypeUtils";
 
 /**
  * Get appropriate file extension for a content category.
  */
 function getExtensionForCategory(category: ContentCategory): string {
   switch (category) {
-    case 'pdf': return '.pdf';
-    case 'image': return '.png';
-    case 'video': return '.mp4';
-    case 'audio': return '.mp3';
-    default: return '';
+    case "pdf":
+      return ".pdf";
+    case "image":
+      return ".png";
+    case "video":
+      return ".mp4";
+    case "audio":
+      return ".mp3";
+    default:
+      return "";
   }
 }
 
@@ -32,7 +44,10 @@ function getExtensionForCategory(category: ContentCategory): string {
  * Generate a download filename from identifier and category.
  * If identifier already has an extension, use it as-is.
  */
-function getDownloadFilename(identifier: string, category: ContentCategory): string {
+function getDownloadFilename(
+  identifier: string,
+  category: ContentCategory,
+): string {
   // Check if identifier already has a file extension
   const hasExtension = /\.\w{2,4}$/.test(identifier);
   if (hasExtension) {
@@ -56,10 +71,10 @@ export const ContentRenderer = memo(function ContentRenderer({
   url,
   category,
   identifier,
-  className = '',
+  className = "",
   isHidden = false,
 }: ContentRendererProps) {
-  const baseClassName = `w-full h-full ${className} ${isHidden ? 'invisible absolute' : ''}`;
+  const baseClassName = `w-full h-full ${className} ${isHidden ? "invisible absolute" : ""}`;
   const [mediaError, setMediaError] = useState(false);
 
   const handleMediaError = useCallback(() => {
@@ -69,68 +84,80 @@ export const ContentRenderer = memo(function ContentRenderer({
   // Generate proper download filename based on identifier and content type
   const downloadFilename = useMemo(
     () => getDownloadFilename(identifier, category),
-    [identifier, category]
+    [identifier, category],
   );
 
   // Track download state
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Check if URL is a proxy URL (handled by service worker) or external gateway URL
-  const isProxyUrl = url.startsWith('/ar-proxy/');
+  const isProxyUrl = url.startsWith("/ar-proxy/");
 
   // Generate download URL with query param for service worker to add Content-Disposition
   // Only used for proxy URLs
   const downloadUrl = useMemo(() => {
     if (!isProxyUrl) return url;
-    const baseUrl = url.split('?')[0]; // Remove any existing query params
+    const baseUrl = url.split("?")[0]; // Remove any existing query params
     return `${baseUrl}?download=${encodeURIComponent(downloadFilename)}`;
   }, [url, downloadFilename, isProxyUrl]);
 
   // Handle download - for external URLs, fetch and trigger download via JavaScript
-  const handleDownload = useCallback(async (e: React.MouseEvent) => {
-    // For proxy URLs, let the link work normally (service worker handles it)
-    if (isProxyUrl) return;
+  const handleDownload = useCallback(
+    async (e: React.MouseEvent) => {
+      // For proxy URLs, let the link work normally (service worker handles it)
+      if (isProxyUrl) return;
 
-    // For external URLs, prevent navigation and download via fetch
-    e.preventDefault();
-    setIsDownloading(true);
+      // For external URLs, prevent navigation and download via fetch
+      e.preventDefault();
+      setIsDownloading(true);
 
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
 
-      // Create temporary link and trigger download
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = downloadFilename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        // Create temporary link and trigger download
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = downloadFilename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
-      // Clean up blob URL
-      URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      console.error('Download failed:', error);
-      // Fallback: open in new tab
-      window.open(url, '_blank');
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [url, downloadFilename, isProxyUrl]);
+        // Clean up blob URL
+        URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.error("Download failed:", error);
+        // Fallback: open in new tab
+        window.open(url, "_blank");
+      } finally {
+        setIsDownloading(false);
+      }
+    },
+    [url, downloadFilename, isProxyUrl],
+  );
 
   // If media failed to load, show download fallback
-  if (mediaError && (category === 'image' || category === 'video' || category === 'audio')) {
+  if (
+    mediaError &&
+    (category === "image" || category === "video" || category === "audio")
+  ) {
     return (
-      <div className={`${baseClassName} flex flex-col items-center justify-center bg-card gap-6 p-6`}>
+      <div
+        className={`${baseClassName} flex flex-col items-center justify-center bg-card gap-6 p-6`}
+      >
         <div className="w-20 h-20 sm:w-24 sm:h-24 bg-foreground/10 rounded-2xl flex items-center justify-center">
           <AlertCircle className="w-10 h-10 sm:w-12 sm:h-12 text-foreground/60" />
         </div>
         <div className="text-center px-4">
-          <div className="text-lg sm:text-xl font-semibold text-foreground mb-2 break-all">{identifier}</div>
-          <div className="text-sm text-foreground/60">Unable to load {category}. Try opening directly.</div>
+          <div className="text-lg sm:text-xl font-semibold text-foreground mb-2 break-all">
+            {identifier}
+          </div>
+          <div className="text-sm text-foreground/60">
+            Unable to load {category}. Try opening directly.
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto px-4 sm:px-0">
           <a
@@ -152,7 +179,7 @@ export const ContentRenderer = memo(function ContentRenderer({
             ) : (
               <Download className="w-4 h-4" />
             )}
-            {isDownloading ? 'Downloading...' : 'Download'}
+            {isDownloading ? "Downloading..." : "Download"}
           </a>
         </div>
       </div>
@@ -165,7 +192,7 @@ export const ContentRenderer = memo(function ContentRenderer({
   // intercept /ar-proxy/ requests to verify content. This is secure because:
   // 1. All content is cryptographically verified before serving
   // 2. The /ar-proxy/ path is isolated from main app storage/cookies
-  if (category === 'html' || category === 'text') {
+  if (category === "html" || category === "text") {
     return (
       <iframe
         src={url}
@@ -178,9 +205,11 @@ export const ContentRenderer = memo(function ContentRenderer({
   }
 
   // Images - use img tag
-  if (category === 'image') {
+  if (category === "image") {
     return (
-      <div className={`${baseClassName} flex items-center justify-center bg-foreground/5 overflow-auto`}>
+      <div
+        className={`${baseClassName} flex items-center justify-center bg-foreground/5 overflow-auto`}
+      >
         <img
           src={url}
           alt={`Image: ${identifier}`}
@@ -193,9 +222,11 @@ export const ContentRenderer = memo(function ContentRenderer({
   }
 
   // Video - use video player
-  if (category === 'video') {
+  if (category === "video") {
     return (
-      <div className={`${baseClassName} flex items-center justify-center bg-black`}>
+      <div
+        className={`${baseClassName} flex items-center justify-center bg-black`}
+      >
         <video
           src={url}
           controls
@@ -211,14 +242,18 @@ export const ContentRenderer = memo(function ContentRenderer({
   }
 
   // Audio - use audio player with visual
-  if (category === 'audio') {
+  if (category === "audio") {
     return (
-      <div className={`${baseClassName} flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 gap-6 p-6`}>
+      <div
+        className={`${baseClassName} flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 gap-6 p-6`}
+      >
         <div className="w-24 h-24 sm:w-32 sm:h-32 bg-primary/20 rounded-2xl flex items-center justify-center">
           <Music className="w-12 h-12 sm:w-16 sm:h-16 text-primary" />
         </div>
         <div className="text-center px-4">
-          <div className="text-base sm:text-lg font-medium text-foreground mb-2 break-all">{identifier}</div>
+          <div className="text-base sm:text-lg font-medium text-foreground mb-2 break-all">
+            {identifier}
+          </div>
           <div className="text-sm text-foreground/60">Audio File</div>
         </div>
         <audio
@@ -235,53 +270,66 @@ export const ContentRenderer = memo(function ContentRenderer({
     );
   }
 
-  // PDF - show download/open options
-  if (category === 'pdf') {
+  // PDF - embed using object tag with fallback to download
+  if (category === "pdf") {
     return (
-      <div className={`${baseClassName} flex flex-col items-center justify-center bg-card gap-6 p-6`}>
-        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-primary/10 rounded-2xl flex items-center justify-center">
-          <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
-        </div>
-        <div className="text-center px-4">
-          <div className="text-lg sm:text-xl font-semibold text-foreground mb-2 break-all">{identifier}</div>
-          <div className="text-sm text-foreground/60">PDF Document</div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto px-4 sm:px-0">
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Open in New Tab
-          </a>
-          <a
-            href={downloadUrl}
-            onClick={handleDownload}
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
-          >
-            {isDownloading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
+      <object
+        data={url}
+        type="application/pdf"
+        className={`${baseClassName} block border-0`}
+        title={`PDF: ${identifier}`}
+      >
+        {/* Fallback if browser can't render PDF */}
+        <div className="w-full h-full flex flex-col items-center justify-center bg-card gap-6 p-6">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-primary/10 rounded-2xl flex items-center justify-center">
+            <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
+          </div>
+          <div className="text-center px-4">
+            <div className="text-lg sm:text-xl font-semibold text-foreground mb-2">
+              PDF Preview Unavailable
+            </div>
+            <div className="text-sm text-foreground/60">
+              Your browser cannot display this PDF inline
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto px-4 sm:px-0">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open in New Tab
+            </a>
+            <a
+              href={downloadUrl}
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
+            >
               <Download className="w-4 h-4" />
-            )}
-            {isDownloading ? 'Downloading...' : 'Download'}
-          </a>
+              Download
+            </a>
+          </div>
         </div>
-      </div>
+      </object>
     );
   }
 
   // Download fallback for unknown/binary content
   return (
-    <div className={`${baseClassName} flex flex-col items-center justify-center bg-card gap-6 p-6`}>
+    <div
+      className={`${baseClassName} flex flex-col items-center justify-center bg-card gap-6 p-6`}
+    >
       <div className="w-20 h-20 sm:w-24 sm:h-24 bg-foreground/10 rounded-2xl flex items-center justify-center">
         <Download className="w-10 h-10 sm:w-12 sm:h-12 text-foreground/60" />
       </div>
       <div className="text-center px-4">
-        <div className="text-lg sm:text-xl font-semibold text-foreground mb-2 break-all">{identifier}</div>
-        <div className="text-sm text-foreground/60">This file type cannot be previewed in the browser</div>
+        <div className="text-lg sm:text-xl font-semibold text-foreground mb-2 break-all">
+          {identifier}
+        </div>
+        <div className="text-sm text-foreground/60">
+          This file type cannot be previewed in the browser
+        </div>
       </div>
       <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto px-4 sm:px-0">
         <a
@@ -303,7 +351,7 @@ export const ContentRenderer = memo(function ContentRenderer({
           ) : (
             <Download className="w-4 h-4" />
           )}
-          {isDownloading ? 'Downloading...' : 'Download'}
+          {isDownloading ? "Downloading..." : "Download"}
         </a>
       </div>
     </div>

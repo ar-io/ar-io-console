@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
-import { LoadingSpinner } from './LoadingSpinner';
-import type { InputType, RoutingStrategy } from '../types';
-import { SLOW_THRESHOLD_MS, TIMEOUT_THRESHOLD_MS, MAX_GATEWAY_AUTO_RETRIES } from '../utils/constants';
+import { useEffect, useState } from "react";
+import { LoadingSpinner } from "./LoadingSpinner";
+import type { InputType, RoutingStrategy } from "../types";
+import {
+  SLOW_THRESHOLD_MS,
+  TIMEOUT_THRESHOLD_MS,
+  MAX_GATEWAY_AUTO_RETRIES,
+} from "../utils/constants";
 
 interface RoutingLoadingScreenProps {
   identifier: string;
@@ -53,10 +57,10 @@ export function RoutingLoadingScreen({
 
   const getStrategyLabel = () => {
     switch (routingStrategy) {
-      case 'fastest':
-        return 'Finding fastest gateway';
-      case 'preferred': {
-        let hostname = 'preferred gateway';
+      case "fastest":
+        return "Finding fastest gateway";
+      case "preferred": {
+        let hostname = "preferred gateway";
         if (preferredGateway) {
           try {
             hostname = new URL(preferredGateway).hostname;
@@ -66,10 +70,10 @@ export function RoutingLoadingScreen({
         }
         return `Connecting to ${hostname}`;
       }
-      case 'roundRobin':
-        return 'Selecting next gateway';
+      case "roundRobin":
+        return "Selecting next gateway";
       default:
-        return 'Selecting gateway';
+        return "Selecting gateway";
     }
   };
 
@@ -93,7 +97,9 @@ export function RoutingLoadingScreen({
           </svg>
           <div>
             <h2 className="text-lg font-semibold text-foreground">
-              {isCheckingHealth ? 'Checking Gateway Health' : 'Resolving Content'}
+              {isCheckingHealth
+                ? "Checking Gateway Health"
+                : "Resolving Content"}
             </h2>
             <p className="font-mono text-sm text-foreground/60">{identifier}</p>
           </div>
@@ -103,10 +109,14 @@ export function RoutingLoadingScreen({
         <div className="bg-card rounded-xl p-4 border border-border/20 mb-4">
           <div className="flex items-center justify-center gap-2 text-sm text-foreground/80">
             <LoadingSpinner size="sm" />
-            <span>{isCheckingHealth ? 'Verifying gateway availability...' : getStrategyLabel()}</span>
+            <span>
+              {isCheckingHealth
+                ? "Verifying gateway availability..."
+                : getStrategyLabel()}
+            </span>
           </div>
 
-          {inputType === 'arnsName' && !isCheckingHealth && (
+          {inputType === "arnsName" && !isCheckingHealth && (
             <p className="text-xs text-foreground/50 mt-2">
               Looking up ArNS name on AR.IO Network
             </p>
