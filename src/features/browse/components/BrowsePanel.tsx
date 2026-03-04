@@ -356,24 +356,6 @@ function BrowsePanelContent({
   useEffect(() => {
     let cancelled = false;
 
-    async function waitForController(
-      maxAttempts: number = 10,
-      initialDelayMs: number = 200,
-    ): Promise<boolean> {
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        if (cancelled) return false;
-        if (swMessenger.isControlling()) return true;
-
-        // Exponential backoff: 200ms, 400ms, 800ms, 1600ms... capped at 2s
-        const delay = Math.min(initialDelayMs * Math.pow(2, attempt), 2000);
-        console.log(
-          `[Browse] Waiting for SW controller (attempt ${attempt + 1}/${maxAttempts}, ${delay}ms)`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-      return swMessenger.isControlling();
-    }
-
     async function initServiceWorker() {
       if (!browseConfig.verificationEnabled) {
         // If verification was just disabled, cancel any in-progress verification
@@ -390,13 +372,15 @@ function BrowsePanelContent({
       prevVerificationEnabled.current = true;
 
       try {
-        // Wait for service worker with proper retry
-        const controllerReady = await waitForController();
+        // Wait for service worker registration to complete
+        // This awaits the registration promise from main.tsx instead of polling
+        console.log("[Browse] Waiting for service worker registration...");
+        const controllerReady = await swMessenger.waitForReady();
         if (cancelled) return;
 
         if (!controllerReady) {
           console.error(
-            "[Browse] Service worker controller not available after retries",
+            "[Browse] Service worker controller not available after registration",
           );
           setSwReady(false);
           setVerificationError(
@@ -404,6 +388,8 @@ function BrowsePanelContent({
           );
           return;
         }
+
+        console.log("[Browse] Service worker ready, initializing Wayfinder...");
 
         const trustedGateways = await getTrustedGateways(
           browseConfig.trustedGatewayCount,

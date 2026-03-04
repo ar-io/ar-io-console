@@ -209,6 +209,50 @@ export class ServiceWorkerMessenger {
   }
 
   /**
+   * Wait for service worker registration to complete.
+   * If registration hasn't started, this initiates it as a fallback.
+   * Returns true if SW is controlling, false if registration failed or not supported.
+   */
+  async waitForReady(): Promise<boolean> {
+    if (!("serviceWorker" in navigator)) {
+      console.warn("[SW] Service workers not supported");
+      return false;
+    }
+
+    // If we already have a controller, we're good
+    if (navigator.serviceWorker.controller) {
+      return true;
+    }
+
+    // If registration is in progress, wait for it
+    if (this.registrationPromise) {
+      try {
+        await this.registrationPromise;
+        return this.isControlling();
+      } catch (err) {
+        console.error("[SW] Registration failed:", err);
+        return false;
+      }
+    }
+
+    // No registration in progress and no controller - start registration as fallback
+    // This can happen if main.tsx registration was skipped or failed silently
+    console.warn(
+      "[SW] No registration in progress, starting fallback registration",
+    );
+    try {
+      await this.registerProactive(
+        import.meta.env?.DEV ? "/dev-sw.js?dev-sw" : "/service-worker.js",
+        import.meta.env?.DEV ? { type: "module" } : undefined,
+      );
+      return this.isControlling();
+    } catch (err) {
+      console.error("[SW] Fallback registration failed:", err);
+      return false;
+    }
+  }
+
+  /**
    * Initialize and register service worker (legacy method for compatibility)
    * @param scriptURL - URL to the service worker script
    * @param options - Registration options (e.g., { type: 'module' } for ES module service workers)
