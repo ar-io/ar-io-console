@@ -115,13 +115,13 @@ export class ServiceWorkerMessenger {
         });
 
         // Wait for service worker to be ready (has active worker)
-        await navigator.serviceWorker.ready;
+        const swRegistration = await navigator.serviceWorker.ready;
         console.log("[SW] Service worker ready");
 
         // Wait for controller - either from our listener or with timeout fallback
         await Promise.race([
           controllerPromise,
-          new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+          new Promise<void>((resolve) => setTimeout(resolve, 3000)),
         ]);
 
         if (navigator.serviceWorker.controller) {
@@ -129,7 +129,48 @@ export class ServiceWorkerMessenger {
           return; // Success!
         }
 
-        // Controller not available after waiting - this is a problem
+        // Controller not available - SW might be active but not controlling
+        // This can happen if SW was registered before but page loaded without it
+        // Ask the active SW to claim this client
+        console.log(
+          "[SW] No controller after registration, requesting claim...",
+        );
+
+        if (swRegistration.active) {
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const messageChannel = new MessageChannel();
+              const timeout = setTimeout(() => {
+                reject(new Error("Claim request timeout"));
+              }, 3000);
+
+              messageChannel.port1.onmessage = (event) => {
+                clearTimeout(timeout);
+                if (event.data?.type === "CLIENTS_CLAIMED") {
+                  resolve();
+                } else {
+                  reject(new Error("Unexpected response"));
+                }
+              };
+
+              swRegistration.active!.postMessage({ type: "CLAIM_CLIENTS" }, [
+                messageChannel.port2,
+              ]);
+            });
+
+            // Give a moment for controller to be set
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            if (navigator.serviceWorker.controller) {
+              console.log("[SW] Controller acquired after explicit claim");
+              return; // Success!
+            }
+          } catch (claimError) {
+            console.warn("[SW] Claim request failed:", claimError);
+          }
+        }
+
+        // Still no controller - this is a problem
         throw new Error(
           "Service worker registered but not controlling. Please refresh the page.",
         );

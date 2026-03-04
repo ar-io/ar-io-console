@@ -64,13 +64,15 @@ const abortControllers = new Map<string, AbortController>();
 // Service Worker Lifecycle
 // ============================================================================
 
-self.addEventListener("install", () => {
+self.addEventListener("install", (event) => {
   logger.debug(TAG, "Installing...");
-  self.skipWaiting();
+  // skipWaiting must be awaited to ensure the SW activates immediately
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
   logger.debug(TAG, "Activating...");
+  // clients.claim() makes this SW take control of all pages in scope
   event.waitUntil(self.clients.claim());
 });
 
@@ -89,6 +91,15 @@ self.addEventListener("message", (event) => {
   if (data.type === "SKIP_WAITING") {
     logger.info(TAG, "Skip waiting requested - activating new version");
     self.skipWaiting();
+    return;
+  }
+
+  // Handle claim clients request (for when SW is active but not controlling)
+  if (data.type === "CLAIM_CLIENTS") {
+    logger.info(TAG, "Claim clients requested");
+    self.clients.claim().then(() => {
+      event.ports[0]?.postMessage({ type: "CLIENTS_CLAIMED" });
+    });
     return;
   }
 
