@@ -354,6 +354,26 @@ function BrowsePanelContent({
 
   // Initialize service worker for verification
   useEffect(() => {
+    let cancelled = false;
+
+    async function waitForController(
+      maxAttempts: number = 10,
+      initialDelayMs: number = 200,
+    ): Promise<boolean> {
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        if (cancelled) return false;
+        if (swMessenger.isControlling()) return true;
+
+        // Exponential backoff: 200ms, 400ms, 800ms, 1600ms... capped at 2s
+        const delay = Math.min(initialDelayMs * Math.pow(2, attempt), 2000);
+        console.log(
+          `[Browse] Waiting for SW controller (attempt ${attempt + 1}/${maxAttempts}, ${delay}ms)`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+      return swMessenger.isControlling();
+    }
+
     async function initServiceWorker() {
       if (!browseConfig.verificationEnabled) {
         // If verification was just disabled, cancel any in-progress verification
@@ -370,22 +390,28 @@ function BrowsePanelContent({
       prevVerificationEnabled.current = true;
 
       try {
-        if (!swMessenger.isControlling()) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+        // Wait for service worker with proper retry
+        const controllerReady = await waitForController();
+        if (cancelled) return;
 
-          if (!swMessenger.isControlling()) {
-            console.warn(
-              "[Browse] Controller not ready yet - will retry on next render",
-            );
-            setSwReady(false);
-            return;
-          }
+        if (!controllerReady) {
+          console.error(
+            "[Browse] Service worker controller not available after retries",
+          );
+          setSwReady(false);
+          setVerificationError(
+            "Service worker not ready. Try refreshing the page.",
+          );
+          return;
         }
 
         const trustedGateways = await getTrustedGateways(
           browseConfig.trustedGatewayCount,
         );
+        if (cancelled) return;
+
         const routingGateways = await getRoutingGateways();
+        if (cancelled) return;
 
         await swMessenger.initializeWayfinder({
           trustedGateways: trustedGateways.map((gw) => gw.url),
@@ -398,14 +424,23 @@ function BrowsePanelContent({
           verificationMethod: browseConfig.verificationMethod,
         });
 
+        if (cancelled) return;
         setSwReady(true);
       } catch (error) {
+        if (cancelled) return;
         console.error("[Browse] SW initialization failed:", error);
         setSwReady(false);
+        setVerificationError(
+          error instanceof Error ? error.message : "Initialization failed",
+        );
       }
     }
 
     initServiceWorker();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     browseConfig.verificationEnabled,
     browseConfig.routingStrategy,
@@ -929,11 +964,53 @@ function BrowsePanelContent({
     if (browseConfig.verificationEnabled && !swReady) {
       return (
         <div className="w-full h-full flex items-center justify-center bg-card">
-          <div className="text-center p-8">
-            <div className="w-12 h-12 mx-auto mb-4 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-            <div className="text-foreground/60">
-              Initializing verification...
-            </div>
+          <div className="text-center p-8 max-w-sm">
+            {verificationError ? (
+              <>
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="text-foreground font-medium mb-2">
+                  Verification Unavailable
+                </div>
+                <div className="text-foreground/60 text-sm mb-4">
+                  {verificationError}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerificationError(undefined);
+                    // Force re-run of initialization by toggling a dependency
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Refresh Page
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 mx-auto mb-4 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <div className="text-foreground/60">
+                  Initializing verification...
+                </div>
+                <div className="text-foreground/40 text-xs mt-2">
+                  Preparing secure content verification
+                </div>
+              </>
+            )}
           </div>
         </div>
       );
