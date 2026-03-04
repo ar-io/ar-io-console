@@ -57,6 +57,30 @@ export class ServiceWorkerMessenger {
           await this.waitForOnline(30000);
         }
 
+        // IMPORTANT: Set up controllerchange listener BEFORE registration
+        // The event fires when clients.claim() runs during SW activation,
+        // and we need to catch it even if registration hasn't returned yet
+        const controllerPromise = new Promise<void>((resolve) => {
+          if (navigator.serviceWorker.controller) {
+            console.log("[SW] Already have controller");
+            resolve();
+            return;
+          }
+
+          const onControllerChange = () => {
+            console.log("[SW] Controller change event fired");
+            navigator.serviceWorker.removeEventListener(
+              "controllerchange",
+              onControllerChange,
+            );
+            resolve();
+          };
+          navigator.serviceWorker.addEventListener(
+            "controllerchange",
+            onControllerChange,
+          );
+        });
+
         const registration = await navigator.serviceWorker.register(
           scriptURL,
           options,
@@ -90,12 +114,25 @@ export class ServiceWorkerMessenger {
           }
         });
 
-        // Wait for service worker to be ready
+        // Wait for service worker to be ready (has active worker)
         await navigator.serviceWorker.ready;
+        console.log("[SW] Service worker ready");
 
-        // Wait for controller with robust retry
-        await this.waitForController();
-        return; // Success!
+        // Wait for controller - either from our listener or with timeout fallback
+        await Promise.race([
+          controllerPromise,
+          new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+        ]);
+
+        if (navigator.serviceWorker.controller) {
+          console.log("[SW] Controller acquired successfully");
+          return; // Success!
+        }
+
+        // Controller not available after waiting - this is a problem
+        throw new Error(
+          "Service worker registered but not controlling. Please refresh the page.",
+        );
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         console.warn(
