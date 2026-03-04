@@ -7,6 +7,7 @@ import { makePossessive } from '../utils';
 import BalanceCardsGrid from '../components/account/BalanceCardsGrid';
 import CreditSharingSection from '../components/account/CreditSharingSection';
 import ActivityOverview from '../components/account/ActivityOverview';
+import OwnedName from '@/components/OwnedName';
 
 export default function MyAccountPage() {
   const { address, walletType, isPaymentServiceAvailable } = useStore();
@@ -120,57 +121,7 @@ export default function MyAccountPage() {
             ) : (
               <>
                 <div className="grid gap-4 mb-6">
-                  {ownedNames.slice(0, 5).map((domain) => (
-                    <div key={domain.name} className="bg-card rounded-2xl border border-primary/20 p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        {/* Domain Info */}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <Globe className="w-5 h-5 text-primary flex-shrink-0" />
-                            <div>
-                              <h3 className="font-heading font-bold text-lg text-foreground">
-                                {domain.displayName}.ar.io
-                              </h3>
-                              {domain.displayName !== domain.name && (
-                                <p className="text-xs text-foreground/80">Raw name: {domain.name}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2 text-sm">
-                            {domain.lastUpdated && (
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-foreground/80" />
-                                <span className="text-foreground/80">
-                                  Registered: {domain.lastUpdated.toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                            {/* TODO: Add lease expiration when that data is available in the domain object */}
-                            <span className="text-xs text-foreground/80">Permanently owned</span>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-2 sm:flex-shrink-0">
-                          <button
-                            onClick={() => window.open(`https://${domain.name}.ar.io`, '_blank')}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            Visit
-                          </button>
-                          <button
-                            onClick={() => window.open(`https://arns.ar.io/#/manage/names/${domain.name}`, '_blank')}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-card border border-primary/30 rounded-full text-foreground hover:bg-primary/10 transition-colors"
-                          >
-                            <Globe className="w-4 h-4" />
-                            Manage
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  {ownedNames.slice(0, 5).map((domain) => <OwnedName key={domain.name} domain={domain}/>)}
                 </div>
 
                 {/* View All Domains Button - Always show if user has domains */}

@@ -5,6 +5,7 @@ import { createAoSigner } from '@ar.io/sdk/web';
 import { useWallets } from '@privy-io/react-auth';
 import { useAccount, useConfig } from 'wagmi';
 import { getConnectorClient } from 'wagmi/actions';
+import { ArNSName } from '@/types';
 
 // Helper to decode punycode names for better display
 const decodePunycode = (name: string): string => {
@@ -22,17 +23,6 @@ const decodePunycode = (name: string): string => {
     return name;
   }
 };
-
-interface ArNSName {
-  name: string;           // e.g., "my-blog" or "xn--gmq235b10p"
-  displayName: string;    // Decoded punycode name for UI
-  processId: string;      // ANT process ID
-  currentTarget?: string; // Current transaction ID (fetched on-demand)
-  lastUpdated?: Date;
-  undernames?: string[];  // Available undernames (fetched on-demand)
-  ttl?: number;           // TTL in seconds for base name (@)
-  undernameTTLs?: Record<string, number>; // TTL for each undername
-}
 
 interface ArNSUpdateResult {
   success: boolean;

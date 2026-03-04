@@ -316,3 +316,12 @@ export type { WalletAddressType, AddressValidationResult } from './addressValida
 
 // Export AR.IO configuration helpers
 export { getARIO, getANT, WRITE_OPTIONS, createContractSigner } from './arIOConfig';
+
+export const daysRemaining = (expirationDate: Date): number => {
+  if (!Number.isFinite(expirationDate.getTime())) {
+    return 0;
+  }
+  const now = new Date();
+  const timeDiff = expirationDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
+}
