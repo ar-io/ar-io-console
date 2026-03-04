@@ -294,6 +294,7 @@ function BrowsePanelContent({
       total: 0,
       verified: 0,
       failed: 0,
+      cachedHits: 0,
       failedResources: [],
     },
   );
@@ -477,6 +478,7 @@ function BrowsePanelContent({
         total: 0,
         verified: 0,
         failed: 0,
+        cachedHits: 0,
         failedResources: [],
       });
       setVerificationError(undefined);
@@ -629,6 +631,13 @@ function BrowsePanelContent({
               return newList.slice(-8);
             });
           }
+        }
+
+        if (vEvent.type === "resource-cache-hit") {
+          setVerificationStats((prev) => ({
+            ...prev,
+            cachedHits: (prev.cachedHits || 0) + 1,
+          }));
         }
 
         if (vEvent.type === "resource-failed" && vEvent.resourcePath) {

@@ -561,6 +561,14 @@ async function serveResource(
   // Check if already in cache
   if (verifiedCache.has(txId)) {
     logger.debug(TAG, `Cache hit: ${normalizedPath}`);
+
+    // Broadcast cache hit event for UI tracking
+    broadcastEvent({
+      type: "resource-cache-hit",
+      identifier,
+      resourcePath: normalizedPath,
+    });
+
     // For downloads, serve directly with Content-Disposition (skip location patching)
     if (downloadFilename) {
       const resource = verifiedCache.get(txId);

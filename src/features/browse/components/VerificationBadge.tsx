@@ -13,6 +13,7 @@ export interface VerificationStats {
   total: number;
   verified: number;
   failed: number;
+  cachedHits?: number;
   currentResource?: string;
   failedResources?: string[];
 }
@@ -205,6 +206,14 @@ export function VerificationBadge({
                   {stats.verified}
                 </span>
               </div>
+              {(stats.cachedHits ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-foreground/60">From Cache:</span>
+                  <span className="font-mono text-primary">
+                    {stats.cachedHits}
+                  </span>
+                </div>
+              )}
               {stats.failed > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-foreground/60">Failed:</span>

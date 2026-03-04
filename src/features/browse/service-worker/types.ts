@@ -62,6 +62,7 @@ export interface VerificationEvent {
     | "resource-verifying" // On-demand verification starting for a resource
     | "resource-verified" // On-demand verification complete for a resource
     | "resource-failed" // On-demand verification failed for a resource
+    | "resource-cache-hit" // Resource served from verified cache
     | "verification-progress" // Resource verified, progress update (legacy eager mode)
     | "verification-complete" // All resources verified (legacy eager mode)
     | "verification-failed" // Verification failed
