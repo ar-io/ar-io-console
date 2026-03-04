@@ -238,6 +238,7 @@ function BrowsePanelContent({
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [swReady, setSwReady] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
 
   // Track online/offline status
   useEffect(() => {
@@ -257,6 +258,14 @@ function BrowsePanelContent({
       window.removeEventListener("offline", handleOffline);
     };
   }, [searchInput, isSearched]);
+
+  // Listen for service worker updates
+  useEffect(() => {
+    if (!browseConfig.verificationEnabled) return;
+    return swMessenger.onUpdateAvailable(() => {
+      setSwUpdateAvailable(true);
+    });
+  }, [browseConfig.verificationEnabled]);
 
   // Keep currentIdentifierRef in sync and clear old verification when identifier changes
   useEffect(() => {
@@ -846,6 +855,10 @@ function BrowsePanelContent({
     setShowBlockedModal(false);
   }, []);
 
+  const handleApplyUpdate = useCallback(() => {
+    swMessenger.applyUpdate();
+  }, []);
+
   const shouldBlockContent =
     browseConfig.verificationEnabled &&
     browseConfig.strictVerification &&
@@ -1025,6 +1038,24 @@ function BrowsePanelContent({
           verificationBadge={verificationBadgeElement}
         />
       )}
+
+      {/* SW Update notification - minimal banner */}
+      {swUpdateAvailable &&
+        browseConfig.verificationEnabled &&
+        !isFullscreen && (
+          <div className="mx-auto max-w-xl mb-3 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between gap-3">
+            <span className="text-sm text-foreground/80">
+              A new version is available
+            </span>
+            <button
+              type="button"
+              onClick={handleApplyUpdate}
+              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Update now
+            </button>
+          </div>
+        )}
 
       {isShowingResults && (
         <div

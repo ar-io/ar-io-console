@@ -10,6 +10,9 @@ export class ServiceWorkerMessenger {
   >();
   private messageListenerAttached = false;
   private registrationPromise: Promise<void> | null = null;
+  private registration: ServiceWorkerRegistration | null = null;
+  private updateAvailable = false;
+  private updateCallbacks: Set<() => void> = new Set();
 
   /**
    * Proactively register service worker at app startup.
@@ -59,6 +62,7 @@ export class ServiceWorkerMessenger {
           options,
         );
         console.log("[SW] Registered:", registration.scope);
+        this.registration = registration;
 
         // Set up message listener (only once)
         if (!this.messageListenerAttached) {
@@ -67,6 +71,24 @@ export class ServiceWorkerMessenger {
           });
           this.messageListenerAttached = true;
         }
+
+        // Listen for updates
+        registration.addEventListener("updatefound", () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener("statechange", () => {
+              if (
+                newWorker.state === "installed" &&
+                navigator.serviceWorker.controller
+              ) {
+                // New version available
+                console.log("[SW] Update available");
+                this.updateAvailable = true;
+                this.updateCallbacks.forEach((cb) => cb());
+              }
+            });
+          }
+        });
 
         // Wait for service worker to be ready
         await navigator.serviceWorker.ready;
@@ -320,6 +342,78 @@ export class ServiceWorkerMessenger {
       type: "CLEAR_VERIFICATION",
       identifier,
     });
+  }
+
+  /**
+   * Check if a service worker update is available.
+   */
+  hasUpdate(): boolean {
+    return this.updateAvailable;
+  }
+
+  /**
+   * Register a callback to be notified when an update becomes available.
+   * Returns an unsubscribe function.
+   */
+  onUpdateAvailable(callback: () => void): () => void {
+    this.updateCallbacks.add(callback);
+    // If update is already available, call immediately
+    if (this.updateAvailable) {
+      callback();
+    }
+    return () => {
+      this.updateCallbacks.delete(callback);
+    };
+  }
+
+  private isApplyingUpdate = false;
+
+  /**
+   * Apply the pending update by activating the new service worker.
+   * This will cause the page to reload with the new version.
+   */
+  applyUpdate(): void {
+    // Guard against multiple calls
+    if (this.isApplyingUpdate) {
+      console.log("[SW] Update already in progress");
+      return;
+    }
+
+    if (!this.registration?.waiting) {
+      console.warn("[SW] No waiting worker to activate");
+      return;
+    }
+
+    this.isApplyingUpdate = true;
+
+    // Listen for controller change and reload (before posting message)
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      () => {
+        console.log("[SW] Controller changed, reloading...");
+        window.location.reload();
+      },
+      { once: true },
+    );
+
+    // Tell the waiting worker to skip waiting
+    this.registration.waiting.postMessage({ type: "SKIP_WAITING" });
+  }
+
+  /**
+   * Check for updates manually.
+   */
+  async checkForUpdate(): Promise<boolean> {
+    if (!this.registration) {
+      return false;
+    }
+    try {
+      await this.registration.update();
+      return this.updateAvailable;
+    } catch (err) {
+      console.warn("[SW] Update check failed:", err);
+      return false;
+    }
   }
 }
 

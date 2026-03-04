@@ -18,6 +18,26 @@ declare const self: ServiceWorkerGlobalScope;
 // This happens at module evaluation time, before Zone.js loads
 const nativeFetch = self.fetch.bind(self);
 
+/**
+ * Create an AbortSignal that times out after the specified milliseconds.
+ * Provides fallback for browsers that don't support AbortSignal.timeout()
+ * (Chrome < 103, Firefox < 100, Safari < 16).
+ *
+ * @param ms - Timeout in milliseconds
+ * @returns AbortSignal that will abort after the timeout
+ */
+function createTimeoutSignal(ms: number): AbortSignal {
+  // Use native AbortSignal.timeout if available (modern browsers)
+  if (typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(ms);
+  }
+
+  // Fallback for older browsers
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
 // Export for direct use - this is the primary way to use native fetch
 // All call sites in manifest-verifier.ts and gateway-health.ts should import this
-export { nativeFetch };
+export { nativeFetch, createTimeoutSignal };

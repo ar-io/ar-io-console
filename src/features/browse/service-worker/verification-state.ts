@@ -50,15 +50,26 @@ export function getActiveIdentifier(): string | null {
 
 /**
  * Broadcast verification event to all clients.
+ * Handles errors gracefully - message delivery is best-effort.
  */
 export async function broadcastEvent(event: VerificationEvent): Promise<void> {
-  const clients = await self.clients.matchAll();
-  clients.forEach((client) => {
-    client.postMessage({
-      type: "VERIFICATION_EVENT",
-      event,
-    });
-  });
+  try {
+    const clients = await self.clients.matchAll();
+    for (const client of clients) {
+      try {
+        client.postMessage({
+          type: "VERIFICATION_EVENT",
+          event,
+        });
+      } catch (err) {
+        // Individual client message failure - continue with others
+        logger.debug(TAG, `Failed to post message to client: ${err}`);
+      }
+    }
+  } catch (err) {
+    // matchAll failed - this is unusual but not fatal
+    logger.warn(TAG, `Failed to get clients for broadcast: ${err}`);
+  }
 }
 
 /**

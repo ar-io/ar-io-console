@@ -85,6 +85,13 @@ self.addEventListener("message", (event) => {
 
   logger.debug(TAG, `Received message: ${data.type}`);
 
+  // Handle skip waiting request from client (for SW updates)
+  if (data.type === "SKIP_WAITING") {
+    logger.info(TAG, "Skip waiting requested - activating new version");
+    self.skipWaiting();
+    return;
+  }
+
   if (data.type === "INIT_WAYFINDER") {
     const config: SwWayfinderConfig = data.config;
     initializeWayfinder(config);
