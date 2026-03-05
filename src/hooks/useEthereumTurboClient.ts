@@ -369,18 +369,11 @@ export function useEthereumTurboClient() {
 
 /**
  * Utility function to clear the Ethereum signer and client caches from outside React components
- * Also clears the X402 signer cache to ensure consistency
+ * Note: Callers should also clear the X402 signer cache separately via clearX402SignerCache()
  */
 export function clearEthereumTurboClientCache() {
   sharedEthereumSignerCache = null;
   sharedEthereumClientCache.clear();
-
-  // Also clear X402 signer cache - import dynamically to avoid circular dependency
-  import('./useX402Upload').then(({ clearX402SignerCache }) => {
-    clearX402SignerCache();
-  }).catch(() => {
-    // Module not loaded yet, that's fine
-  });
 }
 
 /**

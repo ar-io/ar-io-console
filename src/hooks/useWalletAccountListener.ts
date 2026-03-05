@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { clearEthereumTurboClientCache } from './useEthereumTurboClient';
+import { clearX402SignerCache } from './useX402Upload';
 
 /**
  * Hook that listens for wallet account changes across all supported wallet types
@@ -44,6 +45,7 @@ export function useWalletAccountListener() {
       // Only clear cache if there was a previous address (actual switch, not initial load)
       if (address) {
         clearEthereumTurboClientCache();
+        clearX402SignerCache();
       }
 
       setAddress(ethAddress, 'ethereum');
@@ -58,6 +60,7 @@ export function useWalletAccountListener() {
 
       // Clear cached Turbo clients since we have a new wallet
       clearEthereumTurboClientCache();
+      clearX402SignerCache();
 
       // Update to new address
       setAddress(ethAddress, 'ethereum');
@@ -77,6 +80,7 @@ export function useWalletAccountListener() {
       console.log('[Wallet Listener] Ethereum connector changed:', { from: prevConnectorRef.current, to: currentConnectorId });
       // Clear cached Turbo clients when switching wallet apps
       clearEthereumTurboClientCache();
+      clearX402SignerCache();
     }
 
     prevConnectorRef.current = currentConnectorId;
@@ -163,6 +167,7 @@ export function useWalletAccountListener() {
 
         // Clear cached Turbo clients since we have a new wallet
         clearEthereumTurboClientCache();
+        clearX402SignerCache();
 
         // Update to new address
         setAddress(accounts[0], 'ethereum');
