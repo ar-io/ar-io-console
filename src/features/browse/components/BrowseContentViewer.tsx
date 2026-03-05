@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState, memo, useRef } from 'react';
-import { useWayfinderUrl } from '@ar.io/wayfinder-react';
-import { RoutingLoadingScreen } from './RoutingLoadingScreen';
-import { ErrorDisplay } from './ErrorDisplay';
-import { ContentRenderer } from './ContentRenderer';
-import { detectInputType } from '../utils/detectInputType';
-import { checkGatewayHealth } from '../utils/gatewayHealthCheck';
-import { detectContentType, type ContentCategory } from '../utils/contentTypeUtils';
-import { MAX_GATEWAY_AUTO_RETRIES } from '../utils/constants';
-import { useStore } from '@/store/useStore';
+import { useEffect, useMemo, useState, memo, useRef } from "react";
+import { useWayfinderUrl } from "@ar.io/wayfinder-react";
+import { RoutingLoadingScreen } from "./RoutingLoadingScreen";
+import { ErrorDisplay } from "./ErrorDisplay";
+import { ContentRenderer } from "./ContentRenderer";
+import { detectInputType } from "../utils/detectInputType";
+import { checkGatewayHealth } from "../utils/gatewayHealthCheck";
+import {
+  detectContentType,
+  type ContentCategory,
+} from "../utils/contentTypeUtils";
+import { MAX_GATEWAY_AUTO_RETRIES } from "../utils/constants";
+import { useStore } from "@/store/useStore";
 
 interface BrowseContentViewerProps {
   input: string;
@@ -32,7 +35,8 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   const isMounted = useRef(true);
 
   // Content type detection
-  const [contentCategory, setContentCategory] = useState<ContentCategory>('html');
+  const [contentCategory, setContentCategory] =
+    useState<ContentCategory>("html");
   const [isDetectingContentType, setIsDetectingContentType] = useState(false);
 
   // Track mount status to prevent state updates after unmount
@@ -44,8 +48,8 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   }, []);
 
   const params = useMemo(
-    () => (inputType === 'txId' ? { txId: input } : { arnsName: input }),
-    [inputType, input]
+    () => (inputType === "txId" ? { txId: input } : { arnsName: input }),
+    [inputType, input],
   );
 
   const { resolvedUrl, isLoading, error } = useWayfinderUrl(params);
@@ -68,7 +72,9 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
       } else {
         console.log(`[ContentViewer] Gateway unhealthy: ${result.error}`);
         if (retryAttempts < MAX_GATEWAY_AUTO_RETRIES) {
-          console.log(`[ContentViewer] Health check failed, retrying with different gateway (attempt ${retryAttempts + 1}/${MAX_GATEWAY_AUTO_RETRIES})`);
+          console.log(
+            `[ContentViewer] Health check failed, retrying with different gateway (attempt ${retryAttempts + 1}/${MAX_GATEWAY_AUTO_RETRIES})`,
+          );
           onRetry();
         } else {
           setHealthCheckPassed(true);
@@ -89,7 +95,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   // Detect content type when resolvedUrl is available
   useEffect(() => {
     if (!resolvedUrl || !healthCheckPassed) {
-      setContentCategory('html');
+      setContentCategory("html");
       return;
     }
 
@@ -106,7 +112,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
       .catch(() => {
         if (!cancelled && isMounted.current) {
           // Default to HTML on error (preserves existing behavior for manifests)
-          setContentCategory('html');
+          setContentCategory("html");
           setIsDetectingContentType(false);
         }
       });
@@ -120,13 +126,18 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
 
   // Auto-retry logic for useWayfinderUrl errors with exponential backoff
   useEffect(() => {
-    if (error && !isLoading && retryAttempts < MAX_GATEWAY_AUTO_RETRIES && !hasAutoRetried.current) {
+    if (
+      error &&
+      !isLoading &&
+      retryAttempts < MAX_GATEWAY_AUTO_RETRIES &&
+      !hasAutoRetried.current
+    ) {
       const isGatewayError =
-        error.message.toLowerCase().includes('gateway') ||
-        error.message.toLowerCase().includes('network') ||
-        error.message.toLowerCase().includes('failed to fetch') ||
-        error.message.toLowerCase().includes('timeout') ||
-        error.message.toLowerCase().includes('offline');
+        error.message.toLowerCase().includes("gateway") ||
+        error.message.toLowerCase().includes("network") ||
+        error.message.toLowerCase().includes("failed to fetch") ||
+        error.message.toLowerCase().includes("timeout") ||
+        error.message.toLowerCase().includes("offline");
 
       if (isGatewayError) {
         hasAutoRetried.current = true;
@@ -136,7 +147,9 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
         const delay = baseDelay + jitter;
 
         const timeoutId = setTimeout(() => {
-          console.log(`Auto-retrying with fresh gateways (attempt ${retryAttempts + 1}/${MAX_GATEWAY_AUTO_RETRIES}, delay: ${Math.round(delay)}ms)...`);
+          console.log(
+            `Auto-retrying with fresh gateways (attempt ${retryAttempts + 1}/${MAX_GATEWAY_AUTO_RETRIES}, delay: ${Math.round(delay)}ms)...`,
+          );
           onRetry();
         }, delay);
 

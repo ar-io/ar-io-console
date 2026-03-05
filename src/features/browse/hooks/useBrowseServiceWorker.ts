@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { swMessenger } from '../utils/serviceWorkerMessaging';
-import { getTrustedGateways, getRoutingGateways } from '../utils/trustedGateways';
-import { useBrowseConfig } from './useBrowseConfig';
+import { useState, useEffect, useCallback } from "react";
+import { swMessenger } from "../utils/serviceWorkerMessaging";
+import {
+  getTrustedGateways,
+  getRoutingGateways,
+} from "../utils/trustedGateways";
+import { useBrowseConfig } from "./useBrowseConfig";
 
 interface UseBrowseServiceWorkerResult {
   isReady: boolean;
@@ -33,7 +36,7 @@ export function useBrowseServiceWorker(): UseBrowseServiceWorkerResult {
       // Check if SW is already controlling
       if (!swMessenger.isControlling()) {
         // Wait a moment for proactive registration to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         if (!swMessenger.isControlling()) {
           // SW not ready yet - this is recoverable
@@ -44,15 +47,17 @@ export function useBrowseServiceWorker(): UseBrowseServiceWorkerResult {
       }
 
       // Get trusted gateways (top-staked, for hash verification)
-      const trustedGateways = await getTrustedGateways(config.trustedGatewayCount);
+      const trustedGateways = await getTrustedGateways(
+        config.trustedGatewayCount,
+      );
 
       // Get routing gateways (broader pool, for content fetching)
       const routingGateways = await getRoutingGateways();
 
       // Initialize Wayfinder in service worker
       await swMessenger.initializeWayfinder({
-        trustedGateways: trustedGateways.map(gw => gw.url),
-        routingGateways: routingGateways.map(u => u.toString()),
+        trustedGateways: trustedGateways.map((gw) => gw.url),
+        routingGateways: routingGateways.map((u) => u.toString()),
         routingStrategy: config.routingStrategy,
         preferredGateway: config.preferredGateway,
         enabled: true,
@@ -63,7 +68,7 @@ export function useBrowseServiceWorker(): UseBrowseServiceWorkerResult {
 
       setIsReady(true);
     } catch (err) {
-      console.error('[Browse] Service worker initialization failed:', err);
+      console.error("[Browse] Service worker initialization failed:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsReady(false);
     } finally {

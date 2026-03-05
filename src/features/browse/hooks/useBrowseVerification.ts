@@ -1,9 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useBrowseConfig } from './useBrowseConfig';
-import type { VerificationEvent } from '../service-worker/types';
+import { useState, useEffect, useCallback } from "react";
+import { useBrowseConfig } from "./useBrowseConfig";
+import type { VerificationEvent } from "../service-worker/types";
 
-export type VerificationPhase = 'idle' | 'resolving' | 'fetching-manifest' | 'verifying' | 'ready' | 'complete';
-export type VerificationStatus = 'idle' | 'verifying' | 'ready' | 'verified' | 'partial' | 'failed';
+export type VerificationPhase =
+  | "idle"
+  | "resolving"
+  | "fetching-manifest"
+  | "verifying"
+  | "ready"
+  | "complete";
+export type VerificationStatus =
+  | "idle"
+  | "verifying"
+  | "ready"
+  | "verified"
+  | "partial"
+  | "failed";
 
 export interface VerificationStats {
   total: number;
@@ -15,7 +27,7 @@ export interface VerificationStats {
 
 export interface RecentResource {
   path: string;
-  status: 'verified' | 'failed' | 'verifying';
+  status: "verified" | "failed" | "verifying";
 }
 
 interface UseBrowseVerificationResult {
@@ -38,8 +50,8 @@ interface UseBrowseVerificationResult {
 export function useBrowseVerification(): UseBrowseVerificationResult {
   const { config } = useBrowseConfig();
 
-  const [status, setStatus] = useState<VerificationStatus>('idle');
-  const [phase, setPhase] = useState<VerificationPhase>('idle');
+  const [status, setStatus] = useState<VerificationStatus>("idle");
+  const [phase, setPhase] = useState<VerificationPhase>("idle");
   const [stats, setStats] = useState<VerificationStats>({
     total: 0,
     verified: 0,
@@ -54,8 +66,8 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
   const [recentResources, setRecentResources] = useState<RecentResource[]>([]);
 
   const reset = useCallback(() => {
-    setStatus('idle');
-    setPhase('idle');
+    setStatus("idle");
+    setPhase("idle");
     setStats({ total: 0, verified: 0, failed: 0, failedResources: [] });
     setError(undefined);
     setGateway(null);
@@ -71,19 +83,19 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
     const handleSwMessage = (event: MessageEvent) => {
       const { type, event: verificationEvent } = event.data;
 
-      if (type === 'VERIFICATION_EVENT' && verificationEvent) {
+      if (type === "VERIFICATION_EVENT" && verificationEvent) {
         const vEvent = verificationEvent as VerificationEvent;
 
         switch (vEvent.type) {
-          case 'routing-gateway':
+          case "routing-gateway":
             if (vEvent.gatewayUrl) {
               setGateway(vEvent.gatewayUrl);
-              setPhase('fetching-manifest');
+              setPhase("fetching-manifest");
             }
             break;
 
-          case 'verification-started':
-            setStatus('verifying');
+          case "verification-started":
+            setStatus("verifying");
             setStats({
               total: vEvent.progress?.total || 1,
               verified: 0,
@@ -91,16 +103,16 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
               failedResources: [],
             });
             setError(undefined);
-            setPhase('resolving');
+            setPhase("resolving");
             setStartTime(Date.now());
             setManifestTxId(null);
             setIsSingleFile(false);
             setRecentResources([]);
             break;
 
-          case 'verification-progress':
+          case "verification-progress":
             if (vEvent.progress) {
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 total: vEvent.progress!.total,
                 verified: vEvent.progress!.current,
@@ -108,87 +120,109 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
               }));
 
               if (vEvent.resourcePath) {
-                setRecentResources(prev => {
-                  const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
-                  newList.push({ path: vEvent.resourcePath!, status: 'verified' });
+                setRecentResources((prev) => {
+                  const newList = [
+                    ...prev.filter((r) => r.path !== vEvent.resourcePath),
+                  ];
+                  newList.push({
+                    path: vEvent.resourcePath!,
+                    status: "verified",
+                  });
                   return newList.slice(-8);
                 });
               }
             }
             break;
 
-          case 'manifest-loaded':
+          case "manifest-loaded":
             if (vEvent.progress) {
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 total: vEvent.progress!.total,
               }));
             }
             setManifestTxId(vEvent.manifestTxId || null);
-            setIsSingleFile(vEvent.isSingleFile ?? (vEvent.progress?.total === 1));
-            setPhase('verifying');
+            setIsSingleFile(
+              vEvent.isSingleFile ?? vEvent.progress?.total === 1,
+            );
+            setPhase("verifying");
             break;
 
-          case 'manifest-verified':
+          case "manifest-verified":
             // Manifest + index verified, ready to serve content on-demand
             if (vEvent.progress) {
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 total: vEvent.progress!.total,
                 verified: vEvent.progress!.current,
               }));
             }
-            setStatus('ready');
-            setPhase('ready');
+            setStatus("ready");
+            setPhase("ready");
             break;
 
-          case 'resource-verifying':
+          case "resource-verifying":
             // On-demand verification starting for a resource
             if (vEvent.resourcePath) {
-              setRecentResources(prev => {
-                const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
-                newList.push({ path: vEvent.resourcePath!, status: 'verifying' });
+              setRecentResources((prev) => {
+                const newList = [
+                  ...prev.filter((r) => r.path !== vEvent.resourcePath),
+                ];
+                newList.push({
+                  path: vEvent.resourcePath!,
+                  status: "verifying",
+                });
                 return newList.slice(-8);
               });
             }
             break;
 
-          case 'resource-verified':
+          case "resource-verified":
             // On-demand verification complete for a resource
             if (vEvent.progress) {
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 verified: vEvent.progress!.current,
               }));
             }
             if (vEvent.resourcePath) {
-              setRecentResources(prev => {
-                const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
-                newList.push({ path: vEvent.resourcePath!, status: 'verified' });
+              setRecentResources((prev) => {
+                const newList = [
+                  ...prev.filter((r) => r.path !== vEvent.resourcePath),
+                ];
+                newList.push({
+                  path: vEvent.resourcePath!,
+                  status: "verified",
+                });
                 return newList.slice(-8);
               });
             }
             break;
 
-          case 'resource-failed':
+          case "resource-failed":
             // On-demand verification failed for a resource
             if (vEvent.resourcePath) {
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 failed: prev.failed + 1,
-                failedResources: [...(prev.failedResources || []), vEvent.resourcePath!],
+                failedResources: [
+                  ...(prev.failedResources || []),
+                  vEvent.resourcePath!,
+                ],
               }));
-              setRecentResources(prev => {
-                const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
-                newList.push({ path: vEvent.resourcePath!, status: 'failed' });
+              setRecentResources((prev) => {
+                const newList = [
+                  ...prev.filter((r) => r.path !== vEvent.resourcePath),
+                ];
+                newList.push({ path: vEvent.resourcePath!, status: "failed" });
                 return newList.slice(-8);
               });
             }
             break;
 
-          case 'verification-complete':
+          case "verification-complete":
             if (vEvent.progress) {
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 total: vEvent.progress!.total,
                 verified: vEvent.progress!.current,
@@ -197,32 +231,37 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
 
             if (vEvent.error) {
               const verifiedCount = vEvent.progress?.current ?? 0;
-              setStatus(verifiedCount > 0 ? 'partial' : 'failed');
+              setStatus(verifiedCount > 0 ? "partial" : "failed");
               setError(vEvent.error);
             } else {
-              setStatus('verified');
+              setStatus("verified");
             }
-            setPhase('complete');
+            setPhase("complete");
             break;
 
-          case 'verification-failed':
+          case "verification-failed":
             if (vEvent.resourcePath) {
               // Individual resource failure
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 failed: prev.failed + 1,
-                failedResources: [...(prev.failedResources || []), vEvent.resourcePath!],
+                failedResources: [
+                  ...(prev.failedResources || []),
+                  vEvent.resourcePath!,
+                ],
               }));
-              setRecentResources(prev => {
-                const newList = [...prev.filter(r => r.path !== vEvent.resourcePath)];
-                newList.push({ path: vEvent.resourcePath!, status: 'failed' });
+              setRecentResources((prev) => {
+                const newList = [
+                  ...prev.filter((r) => r.path !== vEvent.resourcePath),
+                ];
+                newList.push({ path: vEvent.resourcePath!, status: "failed" });
                 return newList.slice(-8);
               });
             } else {
               // Top-level failure
               setError(vEvent.error);
-              setStatus('failed');
-              setPhase('complete');
+              setStatus("failed");
+              setPhase("complete");
             }
             break;
         }
@@ -230,12 +269,13 @@ export function useBrowseVerification(): UseBrowseVerificationResult {
     };
 
     // Guard for environments where service workers are unavailable
-    if (typeof navigator === 'undefined' || !navigator.serviceWorker) {
+    if (typeof navigator === "undefined" || !navigator.serviceWorker) {
       return;
     }
 
-    navigator.serviceWorker.addEventListener('message', handleSwMessage);
-    return () => navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+    navigator.serviceWorker.addEventListener("message", handleSwMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", handleSwMessage);
   }, [config.verificationEnabled]);
 
   return {

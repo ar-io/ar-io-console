@@ -82,45 +82,8 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Manual chunk splitting for stable vendor bundles
-        // Vendor code rarely changes, so these chunks stay cached between deploys
-        manualChunks: {
-          // React core - very stable
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Ethereum wallet SDKs
-          'vendor-ethereum': [
-            '@privy-io/react-auth',
-            'wagmi',
-            '@wagmi/core',
-            '@wagmi/connectors',
-            'viem',
-            '@rainbow-me/rainbowkit',
-          ],
-          // Solana wallet SDKs
-          'vendor-solana': [
-            '@solana/wallet-adapter-base',
-            '@solana/wallet-adapter-react',
-            '@solana/wallet-adapter-react-ui',
-            '@solana/wallet-adapter-wallets',
-            '@solana/web3.js',
-          ],
-          // Arweave/Turbo SDKs
-          'vendor-arweave': [
-            '@ardrive/turbo-sdk',
-            '@ar.io/sdk',
-          ],
-          // Wayfinder (Browse Data feature)
-          'vendor-wayfinder': [
-            '@ar.io/wayfinder-react',
-          ],
-          // UI libraries
-          'vendor-ui': [
-            'lucide-react',
-            '@tanstack/react-query',
-            'zustand',
-            '@stripe/react-stripe-js',
-          ],
-        },
+        // Let Rollup decide chunking - manual chunks can cause circular dependency issues
+        // when packages have complex interdependencies (like @ar.io/sdk)
       },
     },
   },

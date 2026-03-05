@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { X, Shield, Route, Compass } from 'lucide-react';
-import { useStore, type BrowseConfig } from '@/store/useStore';
-import { ROUTING_STRATEGY_OPTIONS } from '../utils/constants';
-import { getTopStakedGateways, getAllJoinedGateways } from '../utils/trustedGateways';
-import { GatewayCombobox } from './GatewayCombobox';
-import type { GatewayWithStake } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { X, Shield, Route, Compass } from "lucide-react";
+import { useStore, type BrowseConfig } from "@/store/useStore";
+import { ROUTING_STRATEGY_OPTIONS } from "../utils/constants";
+import {
+  getTopStakedGateways,
+  getAllJoinedGateways,
+} from "../utils/trustedGateways";
+import { GatewayCombobox } from "./GatewayCombobox";
+import type { GatewayWithStake } from "../types";
 
 // Feature flag: Signature verification is hidden until SDK fixes ANS-104 data item support
 // The SDK's SignatureVerificationStrategy uses /tx/{txId} which only works for L1 transactions
@@ -15,7 +18,10 @@ interface BrowseSettingsFlyoutProps {
   onClose: () => void;
 }
 
-export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutProps) {
+export function BrowseSettingsFlyout({
+  isOpen,
+  onClose,
+}: BrowseSettingsFlyoutProps) {
   const browseConfig = useStore((state) => state.browseConfig);
   const setBrowseConfig = useStore((state) => state.setBrowseConfig);
 
@@ -35,7 +41,7 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
 
   // Update draft config (does not persist until Done is clicked)
   const updateDraft = useCallback((updates: Partial<BrowseConfig>) => {
-    setDraftConfig(prev => ({ ...prev, ...updates }));
+    setDraftConfig((prev) => ({ ...prev, ...updates }));
   }, []);
 
   // Apply draft to store and close
@@ -48,10 +54,7 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
   useEffect(() => {
     if (isOpen && topGateways.length === 0) {
       setIsLoadingGateways(true);
-      Promise.all([
-        getTopStakedGateways(),
-        getAllJoinedGateways(),
-      ])
+      Promise.all([getTopStakedGateways(), getAllJoinedGateways()])
         .then(([top, all]) => {
           setTopGateways(top);
           setAllGateways(all);
@@ -64,7 +67,7 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
   useEffect(() => {
     if (isOpen) {
       const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = originalOverflow;
       };
@@ -83,16 +86,13 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
     } else if (arioStake >= 1) {
       return `${arioStake.toFixed(0)}`;
     }
-    return '<1';
+    return "<1";
   };
 
   return (
     <div className="fixed inset-0 z-[110]">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       {/* Panel */}
       <div className="absolute right-0 top-0 h-full w-full max-w-md bg-background shadow-xl overflow-hidden flex flex-col">
@@ -102,7 +102,9 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
               <Compass className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Browse Settings</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              Browse Settings
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -113,7 +115,10 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6" style={{ scrollbarGutter: 'stable' }}>
+        <div
+          className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
+          style={{ scrollbarGutter: "stable" }}
+        >
           {/* Routing Strategy */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
@@ -126,8 +131,8 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
                   key={option.value}
                   className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                     draftConfig.routingStrategy === option.value
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border/20 hover:border-border/40'
+                      ? "border-primary bg-primary/5"
+                      : "border-border/20 hover:border-border/40"
                   }`}
                 >
                   <input
@@ -135,19 +140,25 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
                     name="routingStrategy"
                     value={option.value}
                     checked={draftConfig.routingStrategy === option.value}
-                    onChange={() => updateDraft({ routingStrategy: option.value })}
+                    onChange={() =>
+                      updateDraft({ routingStrategy: option.value })
+                    }
                     className="mt-1 text-primary focus:ring-primary"
                   />
                   <div>
-                    <div className="font-medium text-foreground">{option.label}</div>
-                    <div className="text-sm text-foreground/60">{option.description}</div>
+                    <div className="font-medium text-foreground">
+                      {option.label}
+                    </div>
+                    <div className="text-sm text-foreground/60">
+                      {option.description}
+                    </div>
                   </div>
                 </label>
               ))}
             </div>
 
             {/* Preferred Gateway Selector */}
-            {draftConfig.routingStrategy === 'preferred' && (
+            {draftConfig.routingStrategy === "preferred" && (
               <div className="mt-4">
                 <label className="block text-sm text-foreground/60 mb-2">
                   Select Gateway
@@ -172,7 +183,9 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
             {/* Enable Verification */}
             <label className="flex items-center justify-between p-3 rounded-xl border border-border/20 cursor-pointer hover:border-border/40 transition-colors">
               <div>
-                <div className="font-medium text-foreground">Enable Verification</div>
+                <div className="font-medium text-foreground">
+                  Enable Verification
+                </div>
                 <div className="text-sm text-foreground/60">
                   Cryptographically verify content before displaying
                 </div>
@@ -180,7 +193,9 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
               <input
                 type="checkbox"
                 checked={draftConfig.verificationEnabled}
-                onChange={(e) => updateDraft({ verificationEnabled: e.target.checked })}
+                onChange={(e) =>
+                  updateDraft({ verificationEnabled: e.target.checked })
+                }
                 className="w-5 h-5 text-primary rounded focus:ring-primary"
               />
             </label>
@@ -190,7 +205,9 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
                 {/* Strict Mode */}
                 <label className="flex items-center justify-between p-3 rounded-xl border border-border/20 cursor-pointer hover:border-border/40 transition-colors">
                   <div>
-                    <div className="font-medium text-foreground">Strict Mode</div>
+                    <div className="font-medium text-foreground">
+                      Strict Mode
+                    </div>
                     <div className="text-sm text-foreground/60">
                       Block content that fails verification
                     </div>
@@ -198,7 +215,9 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
                   <input
                     type="checkbox"
                     checked={draftConfig.strictVerification}
-                    onChange={(e) => updateDraft({ strictVerification: e.target.checked })}
+                    onChange={(e) =>
+                      updateDraft({ strictVerification: e.target.checked })
+                    }
                     className="w-5 h-5 text-primary rounded focus:ring-primary"
                   />
                 </label>
@@ -211,26 +230,36 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => updateDraft({ verificationMethod: 'hash' })}
+                        onClick={() =>
+                          updateDraft({ verificationMethod: "hash" })
+                        }
                         className={`p-3 rounded-xl border text-left transition-colors ${
-                          draftConfig.verificationMethod === 'hash'
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border/20 hover:border-border/40'
+                          draftConfig.verificationMethod === "hash"
+                            ? "border-primary bg-primary/5"
+                            : "border-border/20 hover:border-border/40"
                         }`}
                       >
                         <div className="font-medium text-foreground">Hash</div>
-                        <div className="text-xs text-foreground/60">Fast, compares hashes</div>
+                        <div className="text-xs text-foreground/60">
+                          Fast, compares hashes
+                        </div>
                       </button>
                       <button
-                        onClick={() => updateDraft({ verificationMethod: 'signature' })}
+                        onClick={() =>
+                          updateDraft({ verificationMethod: "signature" })
+                        }
                         className={`p-3 rounded-xl border text-left transition-colors ${
-                          draftConfig.verificationMethod === 'signature'
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border/20 hover:border-border/40'
+                          draftConfig.verificationMethod === "signature"
+                            ? "border-primary bg-primary/5"
+                            : "border-border/20 hover:border-border/40"
                         }`}
                       >
-                        <div className="font-medium text-foreground">Signature</div>
-                        <div className="text-xs text-foreground/60">Cryptographic proof</div>
+                        <div className="font-medium text-foreground">
+                          Signature
+                        </div>
+                        <div className="text-xs text-foreground/60">
+                          Cryptographic proof
+                        </div>
                       </button>
                     </div>
                   </div>
@@ -243,29 +272,41 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
                   </label>
                   <input
                     type="range"
-                    min="1"
-                    max="20"
-                    value={draftConfig.trustedGatewayCount}
-                    onChange={(e) => updateDraft({ trustedGatewayCount: parseInt(e.target.value) })}
+                    min="2"
+                    max="10"
+                    value={Math.max(
+                      2,
+                      Math.min(10, draftConfig.trustedGatewayCount),
+                    )}
+                    onChange={(e) =>
+                      updateDraft({
+                        trustedGatewayCount: parseInt(e.target.value),
+                      })
+                    }
                     className="w-full accent-primary"
                   />
                   <div className="flex justify-between text-xs text-foreground/40 mt-1">
-                    <span>1 (faster)</span>
-                    <span>20 (more secure)</span>
+                    <span>2 (faster)</span>
+                    <span>10 (more secure)</span>
                   </div>
                 </div>
 
                 {/* Concurrency */}
                 <div>
                   <label className="block text-sm text-foreground/60 mb-2">
-                    Verification Concurrency: {draftConfig.verificationConcurrency}
+                    Verification Concurrency:{" "}
+                    {draftConfig.verificationConcurrency}
                   </label>
                   <input
                     type="range"
                     min="1"
                     max="20"
                     value={draftConfig.verificationConcurrency}
-                    onChange={(e) => updateDraft({ verificationConcurrency: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      updateDraft({
+                        verificationConcurrency: parseInt(e.target.value),
+                      })
+                    }
                     className="w-full accent-primary"
                   />
                   <div className="flex justify-between text-xs text-foreground/40 mt-1">
@@ -280,38 +321,45 @@ export function BrowseSettingsFlyout({ isOpen, onClose }: BrowseSettingsFlyoutPr
                     Consensus Gateways
                   </div>
                   {isLoadingGateways ? (
-                    <div className="text-xs text-foreground/50">Loading gateways...</div>
+                    <div className="text-xs text-foreground/50">
+                      Loading gateways...
+                    </div>
                   ) : topGateways.length > 0 ? (
                     <div className="space-y-1.5">
-                      {topGateways.slice(0, draftConfig.trustedGatewayCount).map((gateway, index) => (
-                        <div
-                          key={gateway.url}
-                          className="flex items-center gap-2 text-xs"
-                        >
-                          <span className="text-primary font-mono w-5 flex-shrink-0">#{index + 1}</span>
-                          <a
-                            href={gateway.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-foreground/80 hover:text-primary truncate font-mono flex-1 min-w-0"
-                            title={gateway.url}
+                      {topGateways
+                        .slice(0, draftConfig.trustedGatewayCount)
+                        .map((gateway, index) => (
+                          <div
+                            key={gateway.url}
+                            className="flex items-center gap-2 text-xs"
                           >
-                            {gateway.url.replace('https://', '')}
-                          </a>
-                          <span className="text-foreground/50 font-mono whitespace-nowrap flex-shrink-0">
-                            {formatStake(gateway.totalStake)} ARIO
-                          </span>
-                        </div>
-                      ))}
+                            <span className="text-primary font-mono w-5 flex-shrink-0">
+                              #{index + 1}
+                            </span>
+                            <a
+                              href={gateway.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-foreground/80 hover:text-primary truncate font-mono flex-1 min-w-0"
+                              title={gateway.url}
+                            >
+                              {gateway.url.replace("https://", "")}
+                            </a>
+                            <span className="text-foreground/50 font-mono whitespace-nowrap flex-shrink-0">
+                              {formatStake(gateway.totalStake)} ARIO
+                            </span>
+                          </div>
+                        ))}
                     </div>
                   ) : (
-                    <div className="text-xs text-foreground/50">No gateways available</div>
+                    <div className="text-xs text-foreground/50">
+                      No gateways available
+                    </div>
                   )}
                 </div>
               </div>
             )}
           </div>
-
         </div>
 
         {/* Footer */}

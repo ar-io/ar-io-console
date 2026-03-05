@@ -1,4 +1,4 @@
-import { LoadingSpinner } from './LoadingSpinner';
+import { LoadingSpinner } from "./LoadingSpinner";
 
 interface ErrorDisplayProps {
   error: Error | { message: string };
@@ -35,11 +35,11 @@ export function ErrorDisplay({
         </div>
 
         <h3 className="text-lg font-semibold text-foreground mb-2">
-          {isAutoRetrying ? 'Retrying...' : 'Error Loading Content'}
+          {isAutoRetrying ? "Retrying..." : "Error Loading Content"}
         </h3>
 
         <p className="text-sm text-foreground/60 mb-4">
-          {error.message || 'An unexpected error occurred'}
+          {error.message || "An unexpected error occurred"}
         </p>
 
         {isAutoRetrying && (

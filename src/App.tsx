@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useFreeUploadLimit } from './hooks/useFreeUploadLimit';
@@ -19,10 +19,43 @@ import DeploySitePage from './pages/DeploySitePage';
 import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
 import AccountPage from './pages/AccountPage';
 import TryItNowPage from './pages/TryItNowPage';
-import BrowsePage from './pages/BrowsePage';
+
+// Lazy-load BrowsePage to isolate wayfinder dependencies and avoid circular dependency issues
+const BrowsePage = lazy(() => import('./pages/BrowsePage'));
 import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
+
+// Loading screen for Browse page while lazy-loading
+function BrowsePageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <div className="relative inline-block mb-4">
+          {/* Shield icon */}
+          <svg
+            className="w-12 h-12 text-primary/30"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            />
+          </svg>
+          {/* Spinner overlay */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+          </div>
+        </div>
+        <p className="text-foreground/60 text-sm">Loading Browse...</p>
+      </div>
+    </div>
+  );
+}
 
 // Payment callback handler component
 function PaymentCallbackHandler() {
@@ -80,7 +113,11 @@ function AppRoutes() {
           <Route path="redeem" element={<RedeemPage />} />
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
-          <Route path="browse" element={<BrowsePage />} />
+          <Route path="browse" element={
+            <Suspense fallback={<BrowsePageLoader />}>
+              <BrowsePage />
+            </Suspense>
+          } />
           {/* Catch all route - redirect to home */}
           <Route path="*" element={<LandingPage />} />
         </Route>

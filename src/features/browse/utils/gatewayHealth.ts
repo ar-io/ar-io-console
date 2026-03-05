@@ -5,7 +5,7 @@
  * Gateways are blacklisted for a configurable duration after failures.
  */
 
-import { GATEWAY_BLACKLIST_DURATION_MS } from './constants';
+import { GATEWAY_BLACKLIST_DURATION_MS } from "./constants";
 
 interface GatewayHealthEntry {
   failedAt: number;
@@ -39,7 +39,11 @@ class GatewayHealthCache {
   /**
    * Mark a gateway as unhealthy for the specified duration.
    */
-  markUnhealthy(gateway: string, durationMs: number = GATEWAY_BLACKLIST_DURATION_MS, error?: string): void {
+  markUnhealthy(
+    gateway: string,
+    durationMs: number = GATEWAY_BLACKLIST_DURATION_MS,
+    error?: string,
+  ): void {
     const hostname = extractHostname(gateway);
     const now = Date.now();
 
@@ -49,7 +53,9 @@ class GatewayHealthCache {
       error,
     });
 
-    console.log(`[GatewayHealth] Marked ${hostname} as unhealthy for ${durationMs / 1000}s${error ? `: ${error}` : ''}`);
+    console.log(
+      `[GatewayHealth] Marked ${hostname} as unhealthy for ${durationMs / 1000}s${error ? `: ${error}` : ""}`,
+    );
   }
 
   /**
@@ -76,7 +82,7 @@ class GatewayHealthCache {
    * Filter a list of gateways to only include healthy ones.
    */
   filterHealthy(gateways: string[]): string[] {
-    return gateways.filter(gateway => this.isHealthy(gateway));
+    return gateways.filter((gateway) => this.isHealthy(gateway));
   }
 
   /**

@@ -8,9 +8,9 @@
  * to make the app think it's running at {identifier}.{gateway-host}
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
-const TAG = 'LocationPatcher';
+const TAG = "LocationPatcher";
 
 /**
  * Escape a string for safe embedding in JavaScript.
@@ -18,13 +18,13 @@ const TAG = 'LocationPatcher';
  */
 function escapeForJs(str: string): string {
   return str
-    .replace(/\\/g, '\\\\')     // Backslashes first
-    .replace(/'/g, "\\'")        // Single quotes
-    .replace(/"/g, '\\"')        // Double quotes
-    .replace(/\n/g, '\\n')       // Newlines
-    .replace(/\r/g, '\\r')       // Carriage returns
-    .replace(/</g, '\\x3c')      // Less than (prevents </script> injection)
-    .replace(/>/g, '\\x3e');     // Greater than
+    .replace(/\\/g, "\\\\") // Backslashes first
+    .replace(/'/g, "\\'") // Single quotes
+    .replace(/"/g, '\\"') // Double quotes
+    .replace(/\n/g, "\\n") // Newlines
+    .replace(/\r/g, "\\r") // Carriage returns
+    .replace(/</g, "\\x3c") // Less than (prevents </script> injection)
+    .replace(/>/g, "\\x3e"); // Greater than
 }
 
 /**
@@ -37,13 +37,16 @@ function escapeForJs(str: string): string {
  *    from the active identifier's verified cache
  * 3. The app sees location.pathname === '/' and routes correctly
  */
-function createLocationPatchScript(identifier: string, gatewayUrl: string): string {
+function createLocationPatchScript(
+  identifier: string,
+  gatewayUrl: string,
+): string {
   // Parse the gateway URL to get the host (for debugging/future use)
   let gatewayHost: string;
   try {
     gatewayHost = new URL(gatewayUrl).host;
   } catch {
-    gatewayHost = 'turbo-gateway.com';
+    gatewayHost = "turbo-gateway.com";
   }
 
   // SECURITY: Escape all values to prevent XSS
@@ -105,7 +108,7 @@ function createLocationPatchScript(identifier: string, gatewayUrl: string): stri
 export function injectLocationPatch(
   html: string,
   identifier: string,
-  gatewayUrl: string
+  gatewayUrl: string,
 ): string {
   const patchScript = createLocationPatchScript(identifier, gatewayUrl);
 
@@ -113,7 +116,8 @@ export function injectLocationPatch(
   const headMatch = html.match(/<head[^>]*>/i);
   if (headMatch) {
     const insertPos = headMatch.index! + headMatch[0].length;
-    const result = html.slice(0, insertPos) + patchScript + html.slice(insertPos);
+    const result =
+      html.slice(0, insertPos) + patchScript + html.slice(insertPos);
     logger.debug(TAG, `Injected location patch for ${identifier}`);
     return result;
   }
@@ -122,13 +126,20 @@ export function injectLocationPatch(
   const htmlMatch = html.match(/<html[^>]*>/i);
   if (htmlMatch) {
     const insertPos = htmlMatch.index! + htmlMatch[0].length;
-    const result = html.slice(0, insertPos) + patchScript + html.slice(insertPos);
-    logger.debug(TAG, `Injected location patch for ${identifier} (after html tag)`);
+    const result =
+      html.slice(0, insertPos) + patchScript + html.slice(insertPos);
+    logger.debug(
+      TAG,
+      `Injected location patch for ${identifier} (after html tag)`,
+    );
     return result;
   }
 
   // Last resort: prepend to document
-  logger.warn(TAG, `Could not find injection point, prepending patch for ${identifier}`);
+  logger.warn(
+    TAG,
+    `Could not find injection point, prepending patch for ${identifier}`,
+  );
   return patchScript + html;
 }
 
@@ -136,5 +147,5 @@ export function injectLocationPatch(
  * Check if content type is HTML.
  */
 export function isHtmlContent(contentType: string): boolean {
-  return contentType.toLowerCase().includes('text/html');
+  return contentType.toLowerCase().includes("text/html");
 }
