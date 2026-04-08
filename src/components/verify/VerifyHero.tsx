@@ -1,8 +1,8 @@
 import { Check, Clock, ShieldCheck, Share2 } from 'lucide-react';
 import { useState } from 'react';
-import CopyButton from '../CopyButton';
 import { type VerificationResult, getPdfUrl } from '../../services/verificationService';
 import { useStore } from '../../store/useStore';
+import { relativeTime, formatBytes, formatDate, contentLabel } from './utils';
 
 interface Props {
   result: VerificationResult;
@@ -29,40 +29,11 @@ function getChecks(r: VerificationResult): { label: string; status: Status }[] {
   ];
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function contentLabel(ct: string | null): string {
-  if (!ct) return 'data';
-  if (ct.startsWith('image/')) return ct.replace('image/', '').toUpperCase() + ' image';
-  if (ct.startsWith('video/')) return ct.replace('video/', '').toUpperCase() + ' video';
-  if (ct === 'application/pdf') return 'PDF document';
-  if (ct.startsWith('text/')) return 'text file';
-  return 'file';
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-const LEVEL_CONFIG = {
+const LEVEL_CONFIG: Record<number, {
+  bg: string; border: string; iconColor: string;
+  headColor: string; textColor: string; title: string;
+  desc: string; Icon: typeof ShieldCheck;
+}> = {
   3: {
     bg: 'bg-success/10',
     border: 'border-success/20',
@@ -103,7 +74,7 @@ const PILL_STYLES: Record<Status, string> = {
 
 export default function VerifyHero({ result, onReverify, reverifying }: Props) {
   const [copied, setCopied] = useState(false);
-  const cfg = LEVEL_CONFIG[result.level];
+  const cfg = LEVEL_CONFIG[result.level] || LEVEL_CONFIG[1];
   const checks = getChecks(result);
   const { getCurrentConfig } = useStore();
 
@@ -117,7 +88,7 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
   // Plain summary
   const parts: string[] = [];
   const type = contentLabel(result.metadata.contentType);
-  const size = result.metadata.dataSize ? ` (${formatSize(result.metadata.dataSize)})` : '';
+  const size = result.metadata.dataSize ? ` (${formatBytes(result.metadata.dataSize)})` : '';
   parts.push(`This ${type}${size}`);
   if (result.existence.blockTimestamp) {
     parts.push(`was stored on Arweave on ${formatDate(result.existence.blockTimestamp)}`);

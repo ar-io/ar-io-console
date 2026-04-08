@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ShieldCheck,
   Loader2,
@@ -13,6 +13,7 @@ import CopyButton from '../CopyButton';
 import VerifyHero from '../verify/VerifyHero';
 import AuthenticitySection from '../verify/AuthenticitySection';
 import ProvenanceChain from '../verify/ProvenanceChain';
+import { formatBytes, relativeTime, bufferToBase64Url } from '../verify/utils';
 
 const TX_ID_PATTERN = /^[a-zA-Z0-9_-]{43}$/;
 
@@ -22,37 +23,6 @@ const EXAMPLES = [
   { txId: 'Yh10aRkLW0s5yJX4X6-DO1T6JYkLtslWBIOHAFziSzs', label: 'PNG' },
   { txId: 'mltyfIZ-mD3Lc50Y_QfdaJ7SM6aBKquG0ORfQ3dEb0Q', label: 'Video' },
 ];
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return months < 12 ? `${months}mo ago` : `${Math.floor(months / 12)}y ago`;
-}
-
-function bufferToBase64Url(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
 
 export default function VerifyPanel() {
   const [txId, setTxId] = useState('');
@@ -67,13 +37,15 @@ export default function VerifyPanel() {
   } | null>(null);
   const [hashing, setHashing] = useState(false);
 
-  // Deep link
+  // Deep link — run once on mount if ?tx= is present
+  const deepLinkRan = useRef(false);
   useEffect(() => {
-    if (txParam && TX_ID_PATTERN.test(txParam) && !result && !isVerifying) {
+    if (!deepLinkRan.current && txParam && TX_ID_PATTERN.test(txParam)) {
+      deepLinkRan.current = true;
       setTxId(txParam);
       verify(txParam);
     }
-  }, [txParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [txParam, verify]);
 
   const handleVerify = () => {
     const trimmed = txId.trim();
@@ -300,6 +272,7 @@ export default function VerifyPanel() {
                       <input
                         type="file"
                         className="hidden"
+                        aria-label="Select file to compare"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) handleFileDrop(file);
@@ -342,7 +315,7 @@ export default function VerifyPanel() {
                     </summary>
                     <div className="mt-2 max-h-48 overflow-auto rounded-2xl bg-background p-2">
                       {result.metadata.tags.map((tag, i) => (
-                        <div key={i} className="flex gap-2 py-0.5 text-xs">
+                        <div key={`${tag.name}-${i}`} className="flex gap-2 py-0.5 text-xs">
                           <span className="font-medium text-foreground/60">
                             {tag.name}:
                           </span>

@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
   verifyTransaction,
   type VerificationResult,
 } from '../services/verificationService';
+
+const VERIFY_TIMEOUT_MS = 60_000;
 
 export function useVerification() {
   const [result, setResult] = useState<VerificationResult | null>(null);
@@ -14,6 +16,13 @@ export function useVerification() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { getCurrentConfig } = useStore();
   const [searchParams] = useSearchParams();
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const verify = useCallback(
     async (txId: string) => {
@@ -27,18 +36,31 @@ export function useVerification() {
         setElapsed(Math.floor((Date.now() - start) / 1000));
       }, 1000);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+
       try {
         const config = getCurrentConfig();
-        const baseUrl = config.verifyApiUrl;
-        const verification = await verifyTransaction(baseUrl, txId);
+        const verification = await verifyTransaction(
+          config.verifyApiUrl,
+          txId,
+          controller.signal
+        );
         setResult(verification);
       } catch (err) {
+        const isNetworkError =
+          err instanceof TypeError ||
+          (err instanceof DOMException && err.name === 'AbortError');
         const msg = err instanceof Error ? err.message : String(err);
-        if (
-          msg.includes('fetch') ||
-          msg.includes('network') ||
+
+        if (isNetworkError || msg.includes('aborted')) {
+          setError(
+            'The verification service is not responding. Check your connection and try again.'
+          );
+        } else if (
           msg.includes('502') ||
-          msg.includes('Failed')
+          msg.includes('503') ||
+          msg.includes('504')
         ) {
           setError(
             'The verification service is temporarily unavailable. Please try again in a moment.'
@@ -47,6 +69,7 @@ export function useVerification() {
           setError(msg || 'Verification failed');
         }
       } finally {
+        clearTimeout(timeoutId);
         if (timerRef.current) clearInterval(timerRef.current);
         setIsVerifying(false);
       }
@@ -60,8 +83,7 @@ export function useVerification() {
     setElapsed(0);
   }, []);
 
-  // Deep link param
-  const txParam = searchParams.get('tx');
+  const txParam = searchParams.get('tx') || null;
 
   return { verify, result, isVerifying, elapsed, error, reset, txParam };
 }

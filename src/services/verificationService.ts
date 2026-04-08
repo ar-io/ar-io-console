@@ -54,12 +54,14 @@ export interface VerificationResult {
 
 export async function verifyTransaction(
   baseUrl: string,
-  txId: string
+  txId: string,
+  signal?: AbortSignal
 ): Promise<VerificationResult> {
   const res = await fetch(`${baseUrl}/api/v1/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ txId }),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Unknown error' }));
