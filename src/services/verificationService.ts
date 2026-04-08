@@ -45,6 +45,14 @@ export interface VerificationResult {
     hops: number | null;
   };
 
+  attestation: {
+    operator: string;
+    gateway: string;
+    signature: string;
+    payloadHash: string;
+    attestedAt: string;
+  } | null;
+
   links: {
     dashboard: string | null;
     pdf: string | null;

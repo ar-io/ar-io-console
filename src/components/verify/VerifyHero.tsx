@@ -153,6 +153,14 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
       </div>
 
       <p className="mt-4 text-sm leading-relaxed text-foreground/70">{summary}</p>
+
+      {result.attestation && (
+        <p className="mt-2 text-xs text-primary/70">
+          <ShieldCheck className="mr-1 inline h-3 w-3" />
+          Attested by gateway operator {result.attestation.operator.substring(0, 8)}...{result.attestation.operator.substring(result.attestation.operator.length - 4)} ({result.attestation.gateway})
+        </p>
+      )}
+
       <p className="mt-2 text-[11px] text-foreground/30">Verified {relativeTime(result.timestamp)}</p>
     </div>
   );
