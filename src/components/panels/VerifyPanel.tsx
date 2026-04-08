@@ -9,6 +9,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useVerification } from '../../hooks/useVerification';
+import { useStore } from '../../store/useStore';
 import CopyButton from '../CopyButton';
 import VerifyHero from '../verify/VerifyHero';
 import AuthenticitySection from '../verify/AuthenticitySection';
@@ -36,6 +37,7 @@ export default function VerifyPanel() {
     match: boolean;
   } | null>(null);
   const [hashing, setHashing] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   // Deep link — run once on mount if ?tx= is present
   const deepLinkRan = useRef(false);
@@ -47,9 +49,19 @@ export default function VerifyPanel() {
     }
   }, [txParam, verify]);
 
+  const [inputError, setInputError] = useState<string | null>(null);
+
   const handleVerify = () => {
     const trimmed = txId.trim();
-    if (!trimmed || !TX_ID_PATTERN.test(trimmed)) return;
+    setInputError(null);
+    if (!trimmed) {
+      setInputError('Please enter a transaction ID.');
+      return;
+    }
+    if (!TX_ID_PATTERN.test(trimmed)) {
+      setInputError('Invalid format. Transaction IDs are 43 base64url characters.');
+      return;
+    }
     verify(trimmed);
   };
 
@@ -84,6 +96,8 @@ export default function VerifyPanel() {
     },
     [result]
   );
+
+  const { getCurrentConfig } = useStore();
 
   // ── Report view ──
   if (result) {
@@ -206,6 +220,23 @@ export default function VerifyPanel() {
             </div>
           </div>
 
+          {/* Image preview */}
+          {result.metadata.contentType?.startsWith('image/') && (
+            <div>
+              <h3 className="mb-3 font-heading text-base font-bold text-foreground/70">
+                Data preview
+              </h3>
+              <div className="rounded-2xl border border-border/20 bg-card p-4 overflow-hidden">
+                <img
+                  src={`${getCurrentConfig().verifyApiUrl}/raw/${result.txId}`}
+                  alt={`Verified: ${result.txId.substring(0, 8)}...`}
+                  className="max-h-64 w-full rounded-xl object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* File comparison */}
           {dataHash && (
             <div>
@@ -214,13 +245,17 @@ export default function VerifyPanel() {
               </h3>
               <div
                 className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 transition-colors ${
-                  hashing
-                    ? 'border-primary/30 bg-primary/5'
-                    : 'border-border/20 bg-card'
+                  dragOver
+                    ? 'border-primary bg-primary/5'
+                    : hashing
+                      ? 'border-primary/30 bg-primary/5'
+                      : 'border-border/20 bg-card'
                 }`}
-                onDragOver={(e) => e.preventDefault()}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => {
                   e.preventDefault();
+                  setDragOver(false);
                   const file = e.dataTransfer.files[0];
                   if (file) handleFileDrop(file);
                 }}
@@ -419,7 +454,7 @@ export default function VerifyPanel() {
             id="txId"
             type="text"
             value={txId}
-            onChange={(e) => setTxId(e.target.value)}
+            onChange={(e) => { setTxId(e.target.value); setInputError(null); }}
             onKeyDown={(e) =>
               e.key === 'Enter' && !isVerifying && handleVerify()
             }
@@ -429,10 +464,10 @@ export default function VerifyPanel() {
           />
         </div>
 
-        {error && (
+        {(error || inputError) && (
           <div className="flex items-center gap-2 rounded-2xl bg-error/10 border border-error/20 p-3 text-sm text-error">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            {error}
+            {error || inputError}
           </div>
         )}
 

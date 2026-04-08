@@ -121,7 +121,7 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
         <div className="flex shrink-0 gap-2">
           <a
             href={getPdfUrl(getCurrentConfig().verifyApiUrl, result.verificationId)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-white hover:opacity-90"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
             download
           >
             Certificate
