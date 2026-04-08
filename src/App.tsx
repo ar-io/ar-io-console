@@ -19,6 +19,7 @@ import DeploySitePage from './pages/DeploySitePage';
 import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
 import AccountPage from './pages/AccountPage';
 import TryItNowPage from './pages/TryItNowPage';
+import VerifyPage from './pages/VerifyPage';
 
 // Lazy-load BrowsePage to isolate wayfinder dependencies and avoid circular dependency issues
 const BrowsePage = lazy(() => import('./pages/BrowsePage'));
@@ -113,6 +114,7 @@ function AppRoutes() {
           <Route path="redeem" element={<RedeemPage />} />
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
+          <Route path="verify" element={<VerifyPage />} />
           <Route path="browse" element={
             <Suspense fallback={<BrowsePageLoader />}>
               <BrowsePage />
