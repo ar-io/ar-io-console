@@ -1,3 +1,6 @@
+// Force @ar.io/sdk to initialize first to avoid circular dependency issues in bundled output
+import '@ar.io/sdk/web';
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
