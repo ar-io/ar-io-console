@@ -27,7 +27,7 @@ const EXAMPLES = [
 
 export default function VerifyPanel() {
   const [txId, setTxId] = useState('');
-  const { verify, result, isVerifying, elapsed, error, reset, txParam } =
+  const { verify, cancel, result, isVerifying, elapsed, error, reset, txParam } =
     useVerification();
 
   // File compare state
@@ -49,19 +49,9 @@ export default function VerifyPanel() {
     }
   }, [txParam, verify]);
 
-  const [inputError, setInputError] = useState<string | null>(null);
-
   const handleVerify = () => {
     const trimmed = txId.trim();
-    setInputError(null);
-    if (!trimmed) {
-      setInputError('Please enter a transaction ID.');
-      return;
-    }
-    if (!TX_ID_PATTERN.test(trimmed)) {
-      setInputError('Invalid format. Transaction IDs are 43 base64url characters.');
-      return;
-    }
+    if (!trimmed || !TX_ID_PATTERN.test(trimmed)) return;
     verify(trimmed);
   };
 
@@ -156,7 +146,7 @@ export default function VerifyPanel() {
                           ? 'Pending'
                           : 'Not Found'}
                     </p>
-                    {result.existence.blockHeight && (
+                    {result.existence.blockHeight !== null && (
                       <a
                         href={`https://viewblock.io/arweave/block/${result.existence.blockHeight}`}
                         target="_blank"
@@ -454,7 +444,7 @@ export default function VerifyPanel() {
             id="txId"
             type="text"
             value={txId}
-            onChange={(e) => { setTxId(e.target.value); setInputError(null); }}
+            onChange={(e) => setTxId(e.target.value)}
             onKeyDown={(e) =>
               e.key === 'Enter' && !isVerifying && handleVerify()
             }
@@ -464,23 +454,23 @@ export default function VerifyPanel() {
           />
         </div>
 
-        {(error || inputError) && (
+        {error && (
           <div className="flex items-center gap-2 rounded-2xl bg-error/10 border border-error/20 p-3 text-sm text-error">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            {error || inputError}
+            {error}
           </div>
         )}
 
         <button
           onClick={handleVerify}
           disabled={isVerifying || !txId.trim()}
-          className="w-full rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isVerifying ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
               Verifying...
-            </span>
+            </>
           ) : (
             'Verify'
           )}
@@ -488,21 +478,31 @@ export default function VerifyPanel() {
 
         {/* Progress */}
         {isVerifying && elapsed > 0 && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm text-foreground/60">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              {elapsed < 5
-                ? 'Locating and verifying...'
-                : elapsed < 15
-                  ? 'Downloading and hashing raw data...'
-                  : 'Waiting for gateway to index...'}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-foreground/60">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                {elapsed < 5
+                  ? 'Locating and verifying...'
+                  : elapsed < 15
+                    ? 'Downloading and hashing raw data...'
+                    : elapsed < 30
+                      ? 'Verifying signatures and hashes...'
+                      : 'Waiting for gateway to index...'}
+              </div>
+              <button
+                onClick={cancel}
+                className="text-xs text-foreground/40 hover:text-foreground/70 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
-            {elapsed >= 8 && (
+            {elapsed >= 3 && (
               <div className="h-1 w-full overflow-hidden rounded-full bg-foreground/5">
                 <div
                   className="h-full rounded-full bg-primary/40 transition-all duration-1000"
                   style={{
-                    width: `${Math.min((elapsed / 30) * 100, 95)}%`,
+                    width: `${Math.min((elapsed / 55) * 100, 95)}%`,
                   }}
                 />
               </div>

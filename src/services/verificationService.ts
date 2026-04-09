@@ -75,18 +75,10 @@ export async function verifyTransaction(
     const err = await res.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(err.error || `HTTP ${res.status}`);
   }
-  return res.json();
-}
-
-export async function getVerification(
-  baseUrl: string,
-  id: string
-): Promise<VerificationResult> {
-  const res = await fetch(`${baseUrl}/api/v1/verify/${id}`);
-  if (!res.ok) {
-    throw new Error('Verification not found');
-  }
-  return res.json();
+  const data: VerificationResult = await res.json();
+  // Defensive: ensure tags is always an array even if API omits it
+  data.metadata.tags = data.metadata.tags ?? [];
+  return data;
 }
 
 export function getPdfUrl(baseUrl: string, id: string): string {

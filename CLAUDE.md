@@ -9,8 +9,10 @@ npm install          # Install dependencies
 npm run dev          # Start dev server at http://localhost:3000
 npm run lint         # ESLint validation
 npm run type-check   # TypeScript checking (strict mode)
-npm run build:prod   # Production build (requires 8GB memory)
-npm run build:staging # Staging build with source maps
+npm run build        # Dev build (no type check, 4GB memory)
+npm run build:prod   # Production build with type check (8GB memory)
+npm run build:staging # Staging build with source maps (8GB memory)
+npm run clean        # Remove dist and caches
 npm run clean:all    # Full clean and reinstall
 npm run preview      # Preview production build
 ```
@@ -20,6 +22,8 @@ npm run preview      # Preview production build
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev, 8GB prod build)
 - No test framework configured
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
+- Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
+- BrowsePage is lazy-loaded (`React.lazy`) to isolate wayfinder dependencies
 
 ## Critical Gotchas
 
@@ -60,15 +64,17 @@ ar.io Console - a unified application for uploading and accessing permanent data
 ```text
 src/
 ├── components/
-│   ├── panels/           # Feature panels (TopUpPanel, UploadPanel, etc.)
+│   ├── panels/           # Feature panels (TopUpPanel, UploadPanel, VerifyPanel, etc.)
 │   ├── panels/fiat/      # Fiat payment flow (3-panel: Details→Confirm→Success)
 │   ├── panels/crypto/    # Crypto payment panels
 │   ├── modals/           # BaseModal, WalletSelectionModal, ReceiptModal
+│   ├── verify/           # Verify sub-components (VerifyHero, ProvenanceChain, etc.)
 │   └── account/          # Account page components
 ├── features/
 │   └── browse/           # Browse feature with Wayfinder verification (see below)
 ├── hooks/                # Custom React hooks (Turbo SDK wrappers, pricing, uploads)
 ├── pages/                # React Router page components
+├── services/             # Backend service clients (paymentService, verificationService)
 ├── store/useStore.ts     # Zustand state management
 ├── providers/            # WalletProviders.tsx (Wagmi, Solana, Privy, Stripe, React Query)
 ├── utils/                # Helpers (addressValidation, token utilities, jitPayment)
@@ -124,12 +130,30 @@ The Browse feature allows users to view permaweb content with optional cryptogra
 
 **Cache expiry:** ArNS names (24h), owned names (6h), upload status (1h confirmed, 24h finalized)
 
+### Verify Feature
+
+The Verify tool (`/verify`) lets users verify permaweb transaction authenticity and provenance.
+
+**Key files:**
+- `src/components/panels/VerifyPanel.tsx` - Main UI with TX ID input, examples, file comparison
+- `src/hooks/useVerification.ts` - Verification hook (60s timeout, abort controller)
+- `src/services/verificationService.ts` - API client for verify backend
+- `src/components/verify/` - Sub-components (VerifyHero, AuthenticitySection, ProvenanceChain)
+
+**How it works:**
+1. User enters a transaction ID (or uses `?tx=` deep link)
+2. Calls `verifyApiUrl` from config (production: `vilenarios.com/local/verify`)
+3. Returns gateway attestation data, provenance chain, content hashes
+4. Optional: user can compare a local file hash against the on-chain hash
+
 ### Configuration System
 
 Three modes via `configMode` in store:
 - **production**: Mainnet endpoints, production Stripe key
 - **development**: Testnet/devnet endpoints, test Stripe key
 - **custom**: User-defined for testing
+
+Config includes: `paymentServiceUrl`, `uploadServiceUrl`, `captureServiceUrl`, `verifyApiUrl`, `arioGatewayUrl`, `stripeKey`, `processId`, `tokenMap`.
 
 Access via `useTurboConfig(tokenType)` hook or `getCurrentConfig()` from store.
 
@@ -286,6 +310,14 @@ VITE_SOLANA_RPC=...             # Optional, has default
 
 Service URLs managed by store's configuration system, overridable via Developer Resources panel.
 
+## ESLint Configuration
+
+Notable relaxed rules in `eslint.config.js`:
+- `@typescript-eslint/no-explicit-any`: **off** — `any` is used liberally, especially for SDK interop
+- `@typescript-eslint/no-non-null-assertion`: **off** — `!` assertions are allowed
+- `no-console`: **off** — console.log is used in production code
+- `react-hooks/exhaustive-deps`: **warn** (not error)
+
 ## Styling
 
 ### ar.io Brand Colors (Light Mode)
@@ -308,7 +340,7 @@ Service URLs managed by store's configuration system, overridable via Developer 
 
 - `src/styles/globals.css` - CSS custom properties
 - `tailwind.config.js` - Tailwind color tokens and font families
-- `STYLE_GUIDE.md` - Comprehensive component patterns
+- `docs/STYLE_GUIDE.md` - Comprehensive component patterns (colors, spacing, buttons, modals, forms)
 
 ## Common Patterns
 
@@ -368,10 +400,10 @@ if (privyWallet) {
 ```typescript
 '/', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share', '/gift',
 '/account', '/domains', '/calculator', '/services-calculator', '/balances', '/redeem',
-'/settings', '/try', '/browse'
+'/settings', '/try', '/browse', '/verify', '/gateway-info'
 ```
 
-URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx)
+URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx), `?tx=<txId>` (deep link for Verify page)
 
 ## Custom Events
 
@@ -385,12 +417,14 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 - `useEthereumTurboClient()` - Create authenticated Turbo client for ETH wallets (with caching + network switching)
 - `useTurboWallets()` - Unified wallet detection across Arweave/Ethereum/Solana
 - `useWalletAccountListener()` - Listens for wallet changes, clears caches on switch
+- `useTheme()` - Theme management
 
 **Upload Hooks:**
 - `useFileUpload()` - Multi-chain file upload logic
 - `useFolderUpload()` - Folder upload with manifest generation
 - `useX402Upload()` - X402 protocol uploads
 - `useFreeUploadLimit()` - Fetch bundler's free upload limit
+- `useUploadStatus()` - Track upload confirmation/finalization status
 
 **Pricing Hooks:**
 - `useWincForOneGiB()` - Storage pricing (returns `string | undefined`!)
@@ -399,10 +433,15 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 - `useX402Pricing(bytes)` - Calculate USDC cost for X402
 - `useTokenBalance(tokenType)` - User's token balance for crypto payments
 - `useCryptoPrice(tokenType)` - Current USD price for a token
+- `useArNSPricing()` - ArNS domain pricing
 
 **ArNS Hooks:**
 - `usePrimaryArNSName(address)` - Fetch primary ArNS name
 - `useOwnedArNSNames(address)` - Fetch all owned ArNS names
+
+**Other Hooks:**
+- `useVerification()` - Transaction verification (verify data integrity)
+- `useGatewayInfo()` - Gateway information and status
 
 ## Important Utilities
 
@@ -415,9 +454,6 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 - `clearEthereumTurboClientCache()` (`hooks/useEthereumTurboClient.ts`) - Clear cached signers/clients
 - `isFileFree()` / `formatFreeLimit()` (`hooks/useFreeUploadLimit.ts`) - Free upload limit checks
 
-## External Links in Navigation
+## Node Polyfills
 
-The header navigation includes external links to the ar.io ecosystem:
-- **Developer Docs**: [docs.ar.io](https://docs.ar.io)
-- **Network Explorer**: [scan.ar.io](https://scan.ar.io)
-- **Gateway Dashboard**: [gateways.ar.io](https://gateways.ar.io)
+Vite config includes `vite-plugin-node-polyfills` for browser compatibility with Node.js APIs used by crypto/wallet SDKs. Polyfilled: `buffer`, `crypto`, `stream`, `os`, `util`, `process`, `fs`. If a new SDK import fails with "module not found" errors for Node builtins, check the polyfill `include` list in `vite.config.ts`.

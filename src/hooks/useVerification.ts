@@ -14,30 +14,52 @@ export function useVerification() {
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { getCurrentConfig } = useStore();
   const [searchParams] = useSearchParams();
 
-  // Cleanup timer on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (abortRef.current) abortRef.current.abort();
     };
+  }, []);
+
+  const cancel = useCallback(() => {
+    if (abortRef.current) abortRef.current.abort();
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timerRef.current = null;
+    abortRef.current = null;
+    timeoutRef.current = null;
+    setIsVerifying(false);
+    setElapsed(0);
   }, []);
 
   const verify = useCallback(
     async (txId: string) => {
+      // Abort any in-flight request and clear its timer
+      if (abortRef.current) abortRef.current.abort();
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
       setIsVerifying(true);
       setError(null);
       setResult(null);
       setElapsed(0);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       const start = Date.now();
       timerRef.current = setInterval(() => {
         setElapsed(Math.floor((Date.now() - start) / 1000));
       }, 1000);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+      timeoutRef.current = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
 
       try {
         const config = getCurrentConfig();
@@ -47,7 +69,15 @@ export function useVerification() {
           controller.signal
         );
         setResult(verification);
+
+        // Update URL for deep-linking / sharing
+        const url = new URL(window.location.href);
+        url.searchParams.set('tx', txId);
+        window.history.replaceState({}, '', url.toString());
       } catch (err) {
+        // Ignore errors from aborted requests (user cancelled or re-verified)
+        if (controller.signal.aborted) return;
+
         const isNetworkError =
           err instanceof TypeError ||
           (err instanceof DOMException && err.name === 'AbortError');
@@ -69,8 +99,11 @@ export function useVerification() {
           setError(msg || 'Verification failed');
         }
       } finally {
-        clearTimeout(timeoutId);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (timerRef.current) clearInterval(timerRef.current);
+        timeoutRef.current = null;
+        timerRef.current = null;
+        abortRef.current = null;
         setIsVerifying(false);
       }
     },
@@ -85,5 +118,5 @@ export function useVerification() {
 
   const txParam = searchParams.get('tx') || null;
 
-  return { verify, result, isVerifying, elapsed, error, reset, txParam };
+  return { verify, cancel, result, isVerifying, elapsed, error, reset, txParam };
 }

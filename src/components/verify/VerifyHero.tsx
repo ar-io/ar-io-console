@@ -82,6 +82,8 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Clipboard API unavailable (e.g. iframe/permissions policy)
     });
   };
 
@@ -121,7 +123,7 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
         <div className="flex shrink-0 gap-2">
           <a
             href={getPdfUrl(getCurrentConfig().verifyApiUrl, result.verificationId)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary/90"
             download
           >
             Certificate

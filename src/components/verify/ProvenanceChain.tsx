@@ -21,7 +21,7 @@ function buildSteps(result: VerificationResult): Step[] {
 
   steps.push({
     label: 'Confirmed',
-    detail: result.existence.blockHeight ? `Block ${result.existence.blockHeight.toLocaleString()}` : result.existence.status === 'pending' ? 'Pending' : 'Not found',
+    detail: result.existence.blockHeight !== null ? `Block ${result.existence.blockHeight.toLocaleString()}` : result.existence.status === 'pending' ? 'Pending' : 'Not found',
     status: result.existence.status === 'confirmed' ? 'complete' : result.existence.status === 'pending' ? 'partial' : 'unavailable',
   });
 
