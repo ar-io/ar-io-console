@@ -4,6 +4,7 @@
   "type": "module",
   "description": "ar.io Console - Upload and access permanent data through the ar.io Network",
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite",
     "prebuild": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc -b",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite build",

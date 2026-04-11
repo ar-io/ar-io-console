@@ -1,0 +1,58 @@
+diff --git a/node_modules/@ar.io/sdk/lib/esm/common/ant-registry.js b/node_modules/@ar.io/sdk/lib/esm/common/ant-registry.js
+index 0a8f8c9..ae4b12d 100644
+--- a/node_modules/@ar.io/sdk/lib/esm/common/ant-registry.js
++++ b/node_modules/@ar.io/sdk/lib/esm/common/ant-registry.js
+@@ -16,7 +16,8 @@
+ import { ANT_REGISTRY_ID } from '../constants.js';
+ import { isProcessConfiguration, isProcessIdConfiguration, } from '../types/index.js';
+ import { createAoSigner } from '../utils/ao.js';
+-import { AOProcess, InvalidContractConfigurationError } from './index.js';
++import { AOProcess } from './contracts/ao-process.js';
++import { InvalidContractConfigurationError } from './error.js';
+ import { Logger } from './logger.js';
+ export class ANTRegistry {
+     static init(config) {
+diff --git a/node_modules/@ar.io/sdk/lib/esm/common/ant.js b/node_modules/@ar.io/sdk/lib/esm/common/ant.js
+index e37baac..4a1fe7a 100644
+--- a/node_modules/@ar.io/sdk/lib/esm/common/ant.js
++++ b/node_modules/@ar.io/sdk/lib/esm/common/ant.js
+@@ -22,7 +22,10 @@ import { convertHyperBeamStateToAoANTState, isHyperBeamANTState, sortANTRecords,
+ import { createAoSigner, forkANT, spawnANT } from '../utils/ao.js';
+ import { parseSchemaResult } from '../utils/schema.js';
+ import { ANTVersions } from './ant-versions.js';
+-import { AOProcess, ARIO, InvalidContractConfigurationError, Logger, } from './index.js';
++import { AOProcess } from './contracts/ao-process.js';
++import { ARIO } from './io.js';
++import { InvalidContractConfigurationError } from './error.js';
++import { Logger } from './logger.js';
+ export class ANT {
+     /**
+      * Versions of ANTs according to the ANT registry.
+diff --git a/node_modules/@ar.io/sdk/lib/esm/utils/ao.js b/node_modules/@ar.io/sdk/lib/esm/utils/ao.js
+index 2141b08..56ad833 100644
+--- a/node_modules/@ar.io/sdk/lib/esm/utils/ao.js
++++ b/node_modules/@ar.io/sdk/lib/esm/utils/ao.js
+@@ -19,7 +19,9 @@ import { z } from 'zod';
+ import { ANTRegistry } from '../common/ant-registry.js';
+ import { ANTVersions } from '../common/ant-versions.js';
+ import { defaultArweave } from '../common/arweave.js';
+-import { ANT, AOProcess, Logger } from '../common/index.js';
++import { ANT } from '../common/ant.js';
++import { AOProcess } from '../common/contracts/ao-process.js';
++import { Logger } from '../common/logger.js';
+ import { ANT_LUA_ID, ANT_REGISTRY_ID, AO_AUTHORITY, DEFAULT_SCHEDULER_ID, } from '../constants.js';
+ import { SpawnANTStateSchema } from '../types/ant.js';
+ import { parseSchemaResult } from './schema.js';
+diff --git a/node_modules/@ar.io/sdk/lib/esm/utils/processes.js b/node_modules/@ar.io/sdk/lib/esm/utils/processes.js
+index e6a01bd..00ad557 100644
+--- a/node_modules/@ar.io/sdk/lib/esm/utils/processes.js
++++ b/node_modules/@ar.io/sdk/lib/esm/utils/processes.js
+@@ -17,7 +17,7 @@ import { connect } from '@permaweb/aoconnect';
+ import { EventEmitter } from 'eventemitter3';
+ import { ANTRegistry } from '../common/ant-registry.js';
+ import { ANT } from '../common/ant.js';
+-import { AOProcess } from '../common/index.js';
++import { AOProcess } from '../common/contracts/ao-process.js';
+ import { ARIO } from '../common/io.js';
+ import { Logger } from '../common/logger.js';
+ import { ARIO_MAINNET_PROCESS_ID } from '../constants.js';

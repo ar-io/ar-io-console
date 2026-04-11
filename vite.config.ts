@@ -82,13 +82,8 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          // @ar.io/sdk must be in its own chunk: Rollup's single-chunk output
-          // places the SDK namespace re-export object before class declarations
-          // (e.g. ANTRegistry), causing a TDZ ReferenceError at runtime.
-          // Separate chunk = SDK initializes fully before main chunk references it.
-          'ar-io-sdk': ['@ar.io/sdk', '@ar.io/sdk/web'],
-        },
+        // Let Rollup decide chunking - manual chunks can cause circular dependency issues
+        // when packages have complex interdependencies (like @ar.io/sdk)
       },
     },
   },
