@@ -1,6 +1,6 @@
 {
   "name": "ar-io-console",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "ar.io Console - Upload and access permanent data through the ar.io Network",
   "scripts": {
