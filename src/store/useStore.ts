@@ -33,7 +33,7 @@ const PRESET_CONFIGS = {
     paymentServiceUrl: 'https://payment.ardrive.dev',
     uploadServiceUrl: 'https://upload.ardrive.dev',
     captureServiceUrl: 'https://vilenarios.com/local/capture',
-    verifyApiUrl: 'http://localhost:4001',
+    verifyApiUrl: 'https://vilenarios.com/local/verify',
     arioGatewayUrl: 'https://turbo-gateway.com',
     stripeKey: 'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
     processId: 'agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA',
