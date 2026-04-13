@@ -99,12 +99,16 @@ export function useVerification() {
           setError(msg || 'Verification failed');
         }
       } finally {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        if (timerRef.current) clearInterval(timerRef.current);
-        timeoutRef.current = null;
-        timerRef.current = null;
-        abortRef.current = null;
-        setIsVerifying(false);
+        // Only clean up if this is still the active request —
+        // a newer verify() call may have replaced our refs already
+        if (abortRef.current === controller) {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+          timeoutRef.current = null;
+          timerRef.current = null;
+          abortRef.current = null;
+          setIsVerifying(false);
+        }
       }
     },
     [getCurrentConfig]

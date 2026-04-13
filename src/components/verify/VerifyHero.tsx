@@ -1,32 +1,19 @@
-import { Check, Clock, ShieldCheck, Share2 } from 'lucide-react';
+import { Check, Clock, Download, ShieldCheck, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { type VerificationResult, getPdfUrl } from '../../services/verificationService';
 import { useStore } from '../../store/useStore';
-import { relativeTime, formatBytes, formatDate, contentLabel } from './utils';
+import {
+  relativeTime,
+  formatBytes,
+  contentLabel,
+  rawDataUrl,
+  downloadFilename,
+} from './utils';
 
 interface Props {
   result: VerificationResult;
   onReverify: () => void;
   reverifying: boolean;
-}
-
-type Status = 'pass' | 'partial' | 'unavailable';
-
-function getChecks(r: VerificationResult): { label: string; status: Status }[] {
-  return [
-    {
-      label: 'On-chain',
-      status: r.existence.status === 'confirmed' ? 'pass' : r.existence.status === 'pending' ? 'partial' : 'unavailable',
-    },
-    {
-      label: 'Authentic',
-      status: r.authenticity.status === 'signature_verified' ? 'pass' : r.authenticity.status === 'hash_verified' ? 'partial' : 'unavailable',
-    },
-    {
-      label: 'Signed',
-      status: r.authenticity.signatureValid === true ? 'pass' : r.owner.address ? 'partial' : 'unavailable',
-    },
-  ];
 }
 
 const LEVEL_CONFIG: Record<number, {
@@ -66,17 +53,11 @@ const LEVEL_CONFIG: Record<number, {
   },
 };
 
-const PILL_STYLES: Record<Status, string> = {
-  pass: 'bg-success/10 text-success',
-  partial: 'bg-primary/10 text-primary',
-  unavailable: 'bg-foreground/5 text-foreground/25',
-};
-
 export default function VerifyHero({ result, onReverify, reverifying }: Props) {
   const [copied, setCopied] = useState(false);
   const cfg = LEVEL_CONFIG[result.level] || LEVEL_CONFIG[1];
-  const checks = getChecks(result);
   const { getCurrentConfig } = useStore();
+  const config = getCurrentConfig();
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -87,43 +68,35 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
     });
   };
 
-  // Plain summary
-  const parts: string[] = [];
+  // Content type + size one-liner
   const type = contentLabel(result.metadata.contentType);
-  const size = result.metadata.dataSize ? ` (${formatBytes(result.metadata.dataSize)})` : '';
-  parts.push(`This ${type}${size}`);
-  if (result.existence.blockTimestamp) {
-    parts.push(`was stored on Arweave on ${formatDate(result.existence.blockTimestamp)}`);
-  } else if (result.existence.status === 'confirmed') {
-    parts.push('is confirmed on Arweave');
-  } else {
-    parts.push('was found on the Arweave network');
-  }
-  if (result.owner.address) {
-    const addr = result.owner.address;
-    const short = `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
-    parts.push(result.authenticity.signatureValid ? `and signed by wallet ${short}` : `by wallet ${short}`);
-  }
-  if (result.authenticity.status === 'signature_verified') {
-    parts.push('and has not been modified since');
-  }
-  const summary = parts.join(' ') + '.';
+  const size = result.metadata.dataSize !== null ? formatBytes(result.metadata.dataSize) : null;
+  const typeSummary = size ? `${type} \u00b7 ${size}` : type;
 
   return (
     <div className={`rounded-2xl border ${cfg.border} ${cfg.bg} p-6`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <cfg.Icon className={`h-8 w-8 shrink-0 ${cfg.iconColor}`} />
+          <cfg.Icon className={`h-6 w-6 shrink-0 ${cfg.iconColor}`} />
           <div>
-            <h2 className={`font-heading text-xl font-extrabold ${cfg.headColor}`}>{cfg.title}</h2>
+            <h2 className={`font-heading text-xl font-bold ${cfg.headColor}`}>{cfg.title}</h2>
             <p className={`mt-0.5 text-sm ${cfg.textColor}`}>{cfg.desc}</p>
+            <p className="mt-1.5 text-xs text-foreground/50">{typeSummary}</p>
           </div>
         </div>
 
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <a
-            href={getPdfUrl(getCurrentConfig().verifyApiUrl, result.verificationId)}
+            href={rawDataUrl(config.verifyApiUrl, result.txId)}
+            download={downloadFilename(result.txId, result.metadata.contentType)}
             className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary/90"
+          >
+            <Download className="h-3 w-3" />
+            Download
+          </a>
+          <a
+            href={getPdfUrl(config.verifyApiUrl, result.verificationId)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/20 bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-foreground/5"
             download
           >
             Certificate
@@ -138,32 +111,14 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
           <button
             onClick={onReverify}
             disabled={reverifying}
-            className="rounded-full border border-border/20 bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-foreground/5 disabled:opacity-50"
+            className="inline-flex items-center rounded-full border border-border/20 bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-foreground/5 disabled:opacity-50"
           >
             {reverifying ? 'Verifying...' : 'Re-verify'}
           </button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {checks.map((c) => (
-          <span key={c.label} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${PILL_STYLES[c.status]}`}>
-            {c.status === 'pass' ? <Check className="h-3 w-3" /> : null}
-            {c.label}
-          </span>
-        ))}
-      </div>
-
-      <p className="mt-4 text-sm leading-relaxed text-foreground/70">{summary}</p>
-
-      {result.attestation && (
-        <p className="mt-2 text-xs text-primary/70">
-          <ShieldCheck className="mr-1 inline h-3 w-3" />
-          Attested by gateway operator {result.attestation.operator.substring(0, 8)}...{result.attestation.operator.substring(result.attestation.operator.length - 4)} ({result.attestation.gateway})
-        </p>
-      )}
-
-      <p className="mt-2 text-[11px] text-foreground/30">Verified {relativeTime(result.timestamp)}</p>
+      <p className="mt-3 text-xs text-foreground/30">Verified {relativeTime(result.timestamp)}</p>
     </div>
   );
 }

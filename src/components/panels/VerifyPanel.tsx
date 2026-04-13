@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ShieldCheck,
   Loader2,
-  ExternalLink,
   Check,
   AlertCircle,
   ArrowLeft,
@@ -14,7 +13,16 @@ import CopyButton from '../CopyButton';
 import VerifyHero from '../verify/VerifyHero';
 import AuthenticitySection from '../verify/AuthenticitySection';
 import ProvenanceChain from '../verify/ProvenanceChain';
-import { formatBytes, relativeTime, bufferToBase64Url } from '../verify/utils';
+import {
+  formatBytes,
+  formatDate,
+  relativeTime,
+  bufferToBase64Url,
+  viewblockTxUrl,
+  viewblockBlockUrl,
+  rawDataUrl,
+  shortId,
+} from '../verify/utils';
 
 const TX_ID_PATTERN = /^[a-zA-Z0-9_-]{43}$/;
 
@@ -24,6 +32,12 @@ const EXAMPLES = [
   { txId: 'Yh10aRkLW0s5yJX4X6-DO1T6JYkLtslWBIOHAFziSzs', label: 'PNG' },
   { txId: 'mltyfIZ-mD3Lc50Y_QfdaJ7SM6aBKquG0ORfQ3dEb0Q', label: 'Video' },
 ];
+
+const EXISTENCE_STYLES: Record<string, { icon: typeof Check; color: string; label: string }> = {
+  confirmed: { icon: Check, color: 'text-success', label: 'Confirmed' },
+  pending: { icon: Loader2, color: 'text-primary/70', label: 'Pending' },
+  not_found: { icon: AlertCircle, color: 'text-error', label: 'Not Found' },
+};
 
 export default function VerifyPanel() {
   const [txId, setTxId] = useState('');
@@ -92,6 +106,9 @@ export default function VerifyPanel() {
   // ── Report view ──
   if (result) {
     const dataHash = result.authenticity.dataHash;
+    const config = getCurrentConfig();
+    const es = EXISTENCE_STYLES[result.existence.status] ?? EXISTENCE_STYLES.not_found;
+    const StatusIcon = es.icon;
 
     return (
       <div className="px-4 sm:px-6">
@@ -124,89 +141,74 @@ export default function VerifyPanel() {
               />
 
               {/* Existence card */}
-              <div className="rounded-2xl border border-border/20 bg-card p-5">
+              <div className="flex flex-col rounded-2xl border border-border/20 bg-card p-5">
                 <h3 className="mb-3 text-sm font-medium text-foreground/50">
                   Is this data on Arweave?
                 </h3>
-                <div className="flex items-center gap-2">
-                  {result.existence.status === 'confirmed' ? (
-                    <Check className="h-6 w-6 text-success" />
-                  ) : result.existence.status === 'pending' ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-primary/70" />
-                  ) : (
-                    <AlertCircle className="h-6 w-6 text-error" />
-                  )}
+
+                <div className="flex items-start gap-2">
+                  <StatusIcon
+                    className={`h-5 w-5 shrink-0 mt-0.5 ${es.color} ${result.existence.status === 'pending' ? 'animate-spin' : ''}`}
+                  />
                   <div>
-                    <p
-                      className={`font-semibold ${result.existence.status === 'confirmed' ? 'text-success' : result.existence.status === 'pending' ? 'text-primary/70' : 'text-error'}`}
-                    >
-                      {result.existence.status === 'confirmed'
-                        ? 'Confirmed'
-                        : result.existence.status === 'pending'
-                          ? 'Pending'
-                          : 'Not Found'}
-                    </p>
+                    <p className={`font-semibold ${es.color}`}>{es.label}</p>
                     {result.existence.blockHeight !== null && (
                       <a
-                        href={`https://viewblock.io/arweave/block/${result.existence.blockHeight}`}
+                        href={viewblockBlockUrl(result.existence.blockHeight)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
+                        className="text-xs text-foreground/60 hover:text-primary hover:underline"
                       >
                         Block {result.existence.blockHeight.toLocaleString()}
                       </a>
                     )}
+                    {result.existence.blockTimestamp && (
+                      <p className="text-xs text-foreground/40">
+                        {formatDate(result.existence.blockTimestamp)}
+                        <span className="ml-1">
+                          ({relativeTime(result.existence.blockTimestamp)})
+                        </span>
+                      </p>
+                    )}
                   </div>
                 </div>
-                {result.existence.blockTimestamp && (
-                  <p className="mt-2 text-xs text-foreground/50">
-                    {new Date(result.existence.blockTimestamp).toUTCString()}
-                    <span className="ml-1 text-foreground/30">
-                      ({relativeTime(result.existence.blockTimestamp)})
-                    </span>
-                  </p>
-                )}
-                <div className="mt-2 flex items-center gap-1 text-xs">
-                  <span className="font-mono text-foreground/50">
-                    {result.txId.substring(0, 12)}...
-                    {result.txId.substring(result.txId.length - 6)}
-                  </span>
-                  <CopyButton textToCopy={result.txId} />
-                  <a
-                    href={`https://viewblock.io/arweave/tx/${result.txId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary/80"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              </div>
 
-              {/* Bundle card */}
-              {result.bundle.isBundled && (
-                <div className="rounded-2xl border border-border/20 bg-card p-5">
-                  <h3 className="mb-3 text-sm font-medium text-foreground/50">
-                    Bundle
-                  </h3>
-                  <p className="text-sm text-foreground/70">
-                    This is a bundled data item. Its signature and integrity are
-                    verified independently. The bundle anchors it to the
-                    blockchain.
-                  </p>
-                  {result.bundle.rootTransactionId && (
-                    <div className="mt-2 flex items-center gap-1 text-xs">
-                      <span className="text-foreground/40">Root TX:</span>
-                      <span className="font-mono text-foreground/50">
-                        {result.bundle.rootTransactionId.substring(0, 12)}...
+                {/* Transaction ID + bundle root at the bottom */}
+                <div className="mt-auto pt-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-foreground/40">Transaction ID</span>
+                    <a
+                      href={viewblockTxUrl(result.txId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-foreground/60 hover:text-primary hover:underline"
+                    >
+                      {shortId(result.txId, 12, 6)}
+                    </a>
+                    <CopyButton textToCopy={result.txId} />
+                  </div>
+
+                  {result.bundle.isBundled && result.bundle.rootTransactionId && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span
+                        className="text-foreground/40"
+                        title="This is a bundled data item. The bundle root TX anchors it to the blockchain."
+                      >
+                        Bundle root
                       </span>
-                      <CopyButton
-                        textToCopy={result.bundle.rootTransactionId}
-                      />
+                      <a
+                        href={viewblockTxUrl(result.bundle.rootTransactionId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-foreground/60 hover:text-primary hover:underline"
+                      >
+                        {shortId(result.bundle.rootTransactionId, 12, 6)}
+                      </a>
+                      <CopyButton textToCopy={result.bundle.rootTransactionId} />
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
@@ -218,8 +220,8 @@ export default function VerifyPanel() {
               </h3>
               <div className="rounded-2xl border border-border/20 bg-card p-4 overflow-hidden">
                 <img
-                  src={`${getCurrentConfig().verifyApiUrl}/raw/${result.txId}`}
-                  alt={`Verified: ${result.txId.substring(0, 8)}...`}
+                  src={rawDataUrl(config.verifyApiUrl, result.txId)}
+                  alt={`Verified: ${shortId(result.txId, 8, 0)}`}
                   className="max-h-64 w-full rounded-xl object-contain"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
@@ -273,10 +275,10 @@ export default function VerifyPanel() {
                         <span className="font-semibold">Hash mismatch</span>
                       </div>
                     )}
-                    <p className="font-mono text-xs text-foreground/30">
+                    <p className="font-mono text-xs text-foreground/50">
                       File: {compareResult.fileHash}
                     </p>
-                    <p className="font-mono text-xs text-foreground/30">
+                    <p className="font-mono text-xs text-foreground/50">
                       On-chain: {dataHash}
                     </p>
                     <button
@@ -338,7 +340,7 @@ export default function VerifyPanel() {
                       {result.metadata.tags.length} tag
                       {result.metadata.tags.length !== 1 ? 's' : ''}
                     </summary>
-                    <div className="mt-2 max-h-48 overflow-auto rounded-2xl bg-background p-2">
+                    <div className="mt-2 max-h-48 overflow-auto rounded-xl bg-foreground/5 p-2">
                       {result.metadata.tags.map((tag, i) => (
                         <div key={`${tag.name}-${i}`} className="flex gap-2 py-0.5 text-xs">
                           <span className="font-medium text-foreground/60">
@@ -354,9 +356,10 @@ export default function VerifyPanel() {
                 )}
               </div>
 
-              {/* Gateway signals — always show in console (users are technical) */}
+              {/* Gateway signals */}
               {(result.gatewayAssessment.trusted !== null ||
-                result.gatewayAssessment.hops !== null) && (
+                result.gatewayAssessment.hops !== null ||
+                result.gatewayAssessment.verified !== null) && (
                 <div className="rounded-2xl border border-border/20 bg-card p-5">
                   <h3 className="mb-3 text-sm font-medium text-foreground/50">
                     Gateway signals
@@ -395,18 +398,10 @@ export default function VerifyPanel() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-border/20 pt-4">
-            <p className="text-xs text-foreground/30">
+          <div className="border-t border-border/20 pt-4">
+            <p className="text-xs text-foreground/40">
               {result.verificationId}
             </p>
-            <a
-              href={`https://viewblock.io/arweave/tx/${result.txId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline"
-            >
-              View on Viewblock
-            </a>
           </div>
         </div>
       </div>

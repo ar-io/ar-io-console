@@ -47,3 +47,62 @@ export function bufferToBase64Url(buf: ArrayBuffer): string {
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 }
+
+// ── Viewblock URLs ───────────────────────────────────────
+const VIEWBLOCK_BASE = 'https://viewblock.io/arweave';
+export const viewblockTxUrl = (txId: string) => `${VIEWBLOCK_BASE}/tx/${txId}`;
+export const viewblockAddressUrl = (addr: string) => `${VIEWBLOCK_BASE}/address/${addr}`;
+export const viewblockBlockUrl = (h: number) => `${VIEWBLOCK_BASE}/block/${h}`;
+
+// ── Verify API URLs ──────────────────────────────────────
+export const rawDataUrl = (verifyApiUrl: string, txId: string) =>
+  `${verifyApiUrl}/raw/${txId}`;
+
+// ── String helpers ───────────────────────────────────────
+export function shortId(id: string, head = 12, tail = 6): string {
+  return id.length > head + tail + 3
+    ? `${id.substring(0, head)}...${id.substring(id.length - tail)}`
+    : id;
+}
+
+// ── Download filename derivation ─────────────────────────
+const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'image/avif': 'avif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/ogg': 'ogg',
+  'application/pdf': 'pdf',
+  'application/json': 'json',
+  'application/zip': 'zip',
+  'application/octet-stream': 'bin',
+  'text/plain': 'txt',
+  'text/html': 'html',
+  'text/css': 'css',
+  'text/javascript': 'js',
+  'application/javascript': 'js',
+  'application/xml': 'xml',
+  'text/xml': 'xml',
+};
+
+function extensionForContentType(contentType: string | null): string | null {
+  if (!contentType) return null;
+  // Strip parameters like "; charset=utf-8"
+  const base = contentType.split(';')[0].trim().toLowerCase();
+  if (CONTENT_TYPE_EXTENSIONS[base]) return CONTENT_TYPE_EXTENSIONS[base];
+  // Fall back to the subtype (e.g. "image/heic" → "heic")
+  const subtype = base.split('/')[1];
+  return subtype || null;
+}
+
+export function downloadFilename(txId: string, contentType: string | null): string {
+  const ext = extensionForContentType(contentType);
+  return ext ? `${txId}.${ext}` : txId;
+}
