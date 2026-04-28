@@ -16,10 +16,14 @@ export interface BannerConfig {
 
 export const BANNER_CONFIG: BannerConfig = {
   enabled: true,
-  id: 'console-rebrand-feb-2025',
-  message: 'The Turbo app is now the ar.io Console — same tools, new home.',
-  link: undefined,
-  variant: 'subtle',
+  id: 'solana-migration-apr-2026',
+  message: 'Ar.io is migrating to Solana! Register before the May 15, 2026 snapshot!',
+  link: {
+    text: 'Learn More →',
+    href: 'https://ar.io/solana-migration/',
+    external: true,
+  },
+  variant: 'prominent',
 };
 
 // LocalStorage key for tracking dismissed banners

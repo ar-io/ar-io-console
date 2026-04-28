@@ -24,6 +24,7 @@ npm run preview      # Preview production build
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
 - BrowsePage is lazy-loaded (`React.lazy`) to isolate wayfinder dependencies
+- `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
 
 ## Critical Gotchas
 
@@ -295,7 +296,7 @@ Network-specific settings in `constants.ts`:
 | Buy Credits (Crypto) | ✅ AR/ARIO | ✅ ETH/Base-ETH/Base-ARIO/POL/USDC | ✅ SOL |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ✅ | ❌ | ❌ |
+| Update ArNS Records | ✅ | ✅ | ❌ |
 | JIT Payments | ✅ ARIO | ✅ Base-ARIO, Base-ETH, Base-USDC | ✅ SOL |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
@@ -398,10 +399,12 @@ if (privyWallet) {
 ## Routes
 
 ```typescript
-'/', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share', '/gift',
+'/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share', '/gift',
 '/account', '/domains', '/calculator', '/services-calculator', '/balances', '/redeem',
-'/settings', '/try', '/browse', '/verify', '/gateway-info'
+'/settings', '/try', '/browse', '/verify'
 ```
+
+Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unknown routes redirect to home.
 
 URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx), `?tx=<txId>` (deep link for Verify page)
 
