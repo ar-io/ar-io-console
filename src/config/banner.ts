@@ -19,7 +19,7 @@ export const BANNER_CONFIG: BannerConfig = {
   id: 'solana-migration-apr-2026',
   message: 'Ar.io is migrating to Solana! Register before the May 15, 2026 snapshot!',
   link: {
-    text: 'Learn More →',
+    text: 'Learn More',
     href: 'https://ar.io/solana-migration/',
     external: true,
   },
