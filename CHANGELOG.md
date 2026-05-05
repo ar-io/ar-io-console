@@ -2,6 +2,11 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [1.2.3] - 2026-05-05
+
+### Changed
+- Update Solana migration snapshot date to June 1, 2026
+
 ## [1.2.2] - 2026-04-28
 
 ### Added
