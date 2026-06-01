@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { type AoGateway } from '@ar.io/sdk';
+import { type Gateway } from '@ar.io/sdk';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
@@ -121,7 +121,7 @@ interface GatewayInfo {
 }
 
 // Use the actual AR.IO SDK type
-type ArIOGatewayInfo = AoGateway;
+type ArIOGatewayInfo = Gateway;
 
 interface PricingInfo {
   wincPerGiB: string;

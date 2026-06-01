@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { TurboFactory, TurboAuthenticatedClient } from '@ardrive/turbo-sdk/web';
-import { InjectedEthereumSigner } from '@ar.io/sdk/web';
+import { InjectedEthereumSigner } from '@dha-team/arbundles';
 import { ethers } from 'ethers';
 import { useWallets } from '@privy-io/react-auth';
 import { useAccount, useConfig } from 'wagmi';

@@ -1,5 +1,5 @@
 import { TurboFactory, ArconnectSigner, ARToTokenAmount, ARIOToTokenAmount, ETHToTokenAmount, SOLToTokenAmount, POLToTokenAmount } from '@ardrive/turbo-sdk/web';
-import { InjectedEthereumSigner } from '@ar.io/sdk/web';
+import { InjectedEthereumSigner } from '@dha-team/arbundles';
 import { useState } from 'react';
 import { Clock, RefreshCw, Wallet, AlertCircle, CheckCircle, Users, Loader2, XCircle } from 'lucide-react';
 import { useStore } from '../../../store/useStore';

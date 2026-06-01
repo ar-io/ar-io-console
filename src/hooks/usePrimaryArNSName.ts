@@ -2,14 +2,10 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getARIO, getANT, getArweaveUrl } from '../utils';
 
-// Check if address is valid for ArNS operations (Arweave or Ethereum)
+// Check if address is valid for ArNS operations (Solana base58 public key)
 function checkValidAddress(address: string): boolean {
-  // Arweave addresses: 43 characters, base64-like
-  const arweavePattern = /^[a-zA-Z0-9_-]{43}$/;
-  // Ethereum addresses: 42 characters, starts with 0x
-  const ethereumPattern = /^0x[a-fA-F0-9]{40}$/;
-  
-  return arweavePattern.test(address) || ethereumPattern.test(address);
+  const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  return solanaPattern.test(address);
 }
 
 // Helper to decode punycode names for better display
@@ -42,8 +38,8 @@ export function usePrimaryArNSName(address: string | null) {
 
   useEffect(() => {
     async function fetchArNSProfile() {
-      // Skip if no address or if it's a Solana wallet (no ArNS support)
-      if (!address || walletType === 'solana' || !checkValidAddress(address)) {
+      // ArNS now resolves against Solana addresses only
+      if (!address || walletType !== 'solana' || !checkValidAddress(address)) {
         setArnsName(null);
         setArnsLogo(null);
         return;
@@ -106,7 +102,7 @@ export function usePrimaryArNSName(address: string | null) {
                 if (record && record.processId) {
                   console.log('Initializing ANT client with processId:', record.processId);
                   // Initialize ANT client and get logo
-                  const ant = getANT(record.processId);
+                  const ant = await getANT(record.processId);
                   const logo = await ant.getLogo();
                   console.log('ANT logo result:', logo);
                   

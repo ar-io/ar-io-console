@@ -269,18 +269,27 @@ export function useTokenBalance(
 
   /**
    * Fetch ARIO balance using AR.IO SDK
-   * ARIO is an AO token, so we query the balance from the ARIO process
+    * ARIO is on Solana, queried via the Solana AR.IO backend
    */
   const fetchArioBalance = useCallback(async (arweaveAddress: string): Promise<{ readable: number; smallest: number }> => {
     try {
-      // Import AR.IO SDK dynamically
-      const { ARIO, ARIO_TESTNET_PROCESS_ID } = await import('@ar.io/sdk');
+      // Import Solana AR.IO SDK + kit dynamically
+      const [{ ARIO }, { createSolanaRpc }] = await Promise.all([
+        import('@ar.io/sdk/solana'),
+        import('@solana/kit'),
+      ]);
 
-      // Create ARIO client (mainnet or testnet based on config mode)
-      // Use testnet for development, mainnet for production
-      const ario = configMode === 'development'
-        ? ARIO.init({ processId: ARIO_TESTNET_PROCESS_ID })
-        : ARIO.mainnet();
+      const config = getCurrentConfig();
+      const rpcUrl = config.tokenMap?.solana || 'https://api.mainnet-beta.solana.com';
+      const rpc = createSolanaRpc(rpcUrl);
+
+      const ario = ARIO.init({
+        rpc,
+        coreProgramId: config.coreProgramId as any,
+        garProgramId: config.garProgramId as any,
+        arnsProgramId: config.arnsProgramId as any,
+        antProgramId: config.antProgramId as any,
+      });
 
       // Get ARIO token balance for the wallet address
       const balanceInSmallest = await ario.getBalance({
@@ -298,7 +307,7 @@ export function useTokenBalance(
       console.error('Failed to fetch ARIO balance:', err);
       throw new Error('Unable to fetch ARIO balance. Please try again.');
     }
-  }, [configMode]);
+  }, [getCurrentConfig]);
 
   /**
    * Fetch AR balance using Arweave SDK
@@ -348,7 +357,7 @@ export function useTokenBalance(
       console.error('Failed to fetch AR balance:', err);
       throw new Error('Unable to fetch AR balance. Please try again.');
     }
-  }, [getCurrentConfig, configMode]);
+  }, [getCurrentConfig]);
 
   /**
    * Fetch SOL balance using Solana web3.js

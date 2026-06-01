@@ -1,4 +1,4 @@
-import { ARIO } from "@ar.io/sdk";
+import { getARIO } from "@/utils";
 import type { GatewayWithStake } from "../types";
 
 const CACHE_KEY = "ar-io-console-trusted-gateways-v2";
@@ -33,7 +33,7 @@ export async function getTrustedGateways(
 
   // Fetch from AR.IO network
   try {
-    const ario = ARIO.mainnet();
+    const ario = getARIO();
 
     // Fetch ALL gateways since the SDK can't sort by total stake (operator + delegated)
     const result = await ario.getGateways({
@@ -47,16 +47,16 @@ export async function getTrustedGateways(
     // Filter active gateways and calculate total stake (operator + delegated)
     const gatewaysWithTotalStake = result.items
       .filter(
-        (gateway) => gateway.status === "joined" && gateway.settings?.fqdn,
+        (gateway: any) => gateway.status === "joined" && gateway.settings?.fqdn,
       )
-      .map((gateway) => ({
+      .map((gateway: any) => ({
         url: `https://${gateway.settings.fqdn}`,
         totalStake:
           (gateway.operatorStake || 0) + (gateway.totalDelegatedStake || 0),
       }));
 
     // Sort by TOTAL stake descending
-    gatewaysWithTotalStake.sort((a, b) => b.totalStake - a.totalStake);
+    gatewaysWithTotalStake.sort((a: GatewayWithStake, b: GatewayWithStake) => b.totalStake - a.totalStake);
 
     // Take top N by total stake for the pool
     const topPool = gatewaysWithTotalStake.slice(0, TOP_POOL_SIZE);
@@ -112,7 +112,7 @@ export async function getAllJoinedGateways(): Promise<GatewayWithStake[]> {
 
   // Fetch from AR.IO network
   try {
-    const ario = ARIO.mainnet();
+    const ario = getARIO();
 
     const result = await ario.getGateways({
       limit: 1000,
@@ -125,16 +125,16 @@ export async function getAllJoinedGateways(): Promise<GatewayWithStake[]> {
     // Filter active gateways and calculate total stake (operator + delegated)
     const gatewaysWithTotalStake = result.items
       .filter(
-        (gateway) => gateway.status === "joined" && gateway.settings?.fqdn,
+        (gateway: any) => gateway.status === "joined" && gateway.settings?.fqdn,
       )
-      .map((gateway) => ({
+      .map((gateway: any) => ({
         url: `https://${gateway.settings.fqdn}`,
         totalStake:
           (gateway.operatorStake || 0) + (gateway.totalDelegatedStake || 0),
       }));
 
     // Sort by TOTAL stake descending
-    gatewaysWithTotalStake.sort((a, b) => b.totalStake - a.totalStake);
+    gatewaysWithTotalStake.sort((a: GatewayWithStake, b: GatewayWithStake) => b.totalStake - a.totalStake);
 
     if (gatewaysWithTotalStake.length === 0) {
       throw new Error("No active staked gateways found");

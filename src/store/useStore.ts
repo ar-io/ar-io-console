@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TurboCryptoFundResponse } from '@ardrive/turbo-sdk/web';
 import { PaymentIntent, PaymentIntentResult } from '@stripe/stripe-js';
+import {
+  ARIO_CORE_PROGRAM_ID,
+  ARIO_GAR_PROGRAM_ID,
+  ARIO_ARNS_PROGRAM_ID,
+  ARIO_ANT_PROGRAM_ID,
+  ARIO_ANT_ESCROW_PROGRAM_ID,
+  DEVNET_PROGRAM_IDS,
+} from '@ar.io/sdk/solana';
 import { SupportedTokenType } from '../constants';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 
@@ -15,6 +23,11 @@ const PRESET_CONFIGS = {
     arioGatewayUrl: 'https://turbo-gateway.com',
     stripeKey: 'pk_live_51JUAtwC8apPOWkDLMQqNF9sPpfneNSPnwX8YZ8y1FNDl6v94hZIwzgFSYl27bWE4Oos8CLquunUswKrKcaDhDO6m002Yj9AeKj',
     processId: 'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE',
+    coreProgramId: ARIO_CORE_PROGRAM_ID,
+    garProgramId: ARIO_GAR_PROGRAM_ID,
+    arnsProgramId: ARIO_ARNS_PROGRAM_ID,
+    antProgramId: ARIO_ANT_PROGRAM_ID,
+    antEscrowProgramId: ARIO_ANT_ESCROW_PROGRAM_ID,
     tokenMap: {
       arweave: 'https://turbo-gateway.com',
       ario: 'https://turbo-gateway.com',
@@ -37,6 +50,11 @@ const PRESET_CONFIGS = {
     arioGatewayUrl: 'https://turbo-gateway.com',
     stripeKey: 'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
     processId: 'agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA',
+    coreProgramId: DEVNET_PROGRAM_IDS.core,
+    garProgramId: DEVNET_PROGRAM_IDS.gar,
+    arnsProgramId: DEVNET_PROGRAM_IDS.arns,
+    antProgramId: DEVNET_PROGRAM_IDS.ant,
+    antEscrowProgramId: DEVNET_PROGRAM_IDS.antEscrow,
     tokenMap: {
       arweave: 'https://turbo-gateway.com',
       ario: 'https://turbo-gateway.com',
@@ -132,6 +150,11 @@ export interface DeveloperConfig {
   arioGatewayUrl: string;
   stripeKey: string;
   processId: string;
+  coreProgramId: string;
+  garProgramId: string;
+  arnsProgramId: string;
+  antProgramId: string;
+  antEscrowProgramId: string;
   tokenMap: Record<SupportedTokenType, string>;
 }
 

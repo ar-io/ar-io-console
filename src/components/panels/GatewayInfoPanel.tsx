@@ -320,22 +320,98 @@ export default function GatewayInfoPanel() {
                   )}
                 </div>
 
-                {/* Process ID */}
+                {/* Solana Program IDs */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO Process ID</label>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO Core Program ID</label>
                   {configMode === 'custom' ? (
                     <input
                       type="text"
-                      value={currentConfig.processId}
-                      onChange={(e) => updateCustomConfig('processId', e.target.value)}
+                      value={currentConfig.coreProgramId}
+                      onChange={(e) => updateCustomConfig('coreProgramId', e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   ) : (
                     <div className="flex items-center gap-2">
                       <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
-                        {currentConfig.processId}
+                        {currentConfig.coreProgramId}
                       </code>
-                      <CopyButton textToCopy={currentConfig.processId} />
+                      <CopyButton textToCopy={currentConfig.coreProgramId} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO GAR Program ID</label>
+                  {configMode === 'custom' ? (
+                    <input
+                      type="text"
+                      value={currentConfig.garProgramId}
+                      onChange={(e) => updateCustomConfig('garProgramId', e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                        {currentConfig.garProgramId}
+                      </code>
+                      <CopyButton textToCopy={currentConfig.garProgramId} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO ArNS Program ID</label>
+                  {configMode === 'custom' ? (
+                    <input
+                      type="text"
+                      value={currentConfig.arnsProgramId}
+                      onChange={(e) => updateCustomConfig('arnsProgramId', e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                        {currentConfig.arnsProgramId}
+                      </code>
+                      <CopyButton textToCopy={currentConfig.arnsProgramId} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO ANT Program ID</label>
+                  {configMode === 'custom' ? (
+                    <input
+                      type="text"
+                      value={currentConfig.antProgramId}
+                      onChange={(e) => updateCustomConfig('antProgramId', e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                        {currentConfig.antProgramId}
+                      </code>
+                      <CopyButton textToCopy={currentConfig.antProgramId} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO ANT Escrow Program ID</label>
+                  {configMode === 'custom' ? (
+                    <input
+                      type="text"
+                      value={currentConfig.antEscrowProgramId}
+                      onChange={(e) => updateCustomConfig('antEscrowProgramId', e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                        {currentConfig.antEscrowProgramId}
+                      </code>
+                      <CopyButton textToCopy={currentConfig.antEscrowProgramId} />
                     </div>
                   )}
                 </div>

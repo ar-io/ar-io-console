@@ -315,7 +315,7 @@ export { validateWalletAddress, getWalletTypeLabel, formatWalletAddress as forma
 export type { WalletAddressType, AddressValidationResult } from './addressValidation';
 
 // Export AR.IO configuration helpers
-export { getARIO, getANT, WRITE_OPTIONS, createContractSigner } from './arIOConfig';
+export { getARIO, getANT, getWritableANT, WRITE_OPTIONS, createWalletAdapterTransactionSendingSigner } from './arIOConfig';
 
 export const daysRemaining = (expirationDate: Date): number => {
   if (!Number.isFinite(expirationDate.getTime())) {

@@ -17,7 +17,7 @@
     "type-check": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc --noEmit"
   },
   "dependencies": {
-    "@ar.io/sdk": "^3.21.0",
+    "@ar.io/sdk": "4.0.0-solana.23",
     "@ar.io/wayfinder-core": "^1.9.1",
     "@ar.io/wayfinder-react": "^1.0.28",
     "@ardrive/turbo-sdk": "^1.39.2",
@@ -33,6 +33,7 @@
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",
     "@solana/wallet-adapter-wallets": "^0.19.32",
+    "@solana/kit": "^6.9.0",
     "@solana/web3.js": "^1.95.2",
     "@stripe/react-stripe-js": "^2.8.0",
     "@stripe/stripe-js": "^4.3.0",

@@ -1,14 +1,14 @@
 import { Calendar, ExternalLink, Globe } from "lucide-react";
 import { daysRemaining, getARIO } from "@/utils";
 import { useQuery } from "@tanstack/react-query";
-import {  AoArNSNameData } from "@ar.io/sdk"
+import { ArNSNameData } from "@ar.io/sdk"
 import { ArNSName } from "@/types";
 
 const OwnedName = ({ domain }: { domain: ArNSName }) => {
 
     const { data: arnsOwnershipData, isLoading:isArnsOwnershipDataLoading } = useQuery({
         queryKey: ["domainOwnershipPeriod", domain.name],
-        queryFn: async(): Promise<AoArNSNameData | null> => {
+      queryFn: async(): Promise<ArNSNameData | null> => {
             const ario = getARIO();
             const record = await ario.getArNSRecord({ name: domain.name })
             return record ?? null;

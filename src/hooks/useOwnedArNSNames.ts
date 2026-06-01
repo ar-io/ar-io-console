@@ -1,10 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { getARIO, getANT, WRITE_OPTIONS, createContractSigner } from '../utils';
-import { createAoSigner } from '@ar.io/sdk/web';
-import { useWallets } from '@privy-io/react-auth';
-import { useAccount, useConfig } from 'wagmi';
-import { getConnectorClient } from 'wagmi/actions';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { getARIO, getANT, getWritableANT, WRITE_OPTIONS, createWalletAdapterTransactionSendingSigner } from '../utils';
 import { ArNSName } from '@/types';
 
 // Helper to decode punycode names for better display
@@ -36,39 +33,12 @@ export function useOwnedArNSNames() {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
-
-  // Ethereum wallet hooks for provider access
-  const { wallets } = useWallets();
-  const wagmiConfig = useConfig();
-  const ethAccount = useAccount();
-
-  // Helper to get Ethereum provider for ArNS signing (supports Privy, WalletConnect, injected)
-  const getEthereumProvider = useCallback(async (): Promise<any> => {
-    // Priority 1: Privy embedded wallet
-    const privyWallet = wallets.find((w) => w.walletClientType === 'privy');
-    if (privyWallet) {
-      return await privyWallet.getEthereumProvider();
-    }
-
-    // Priority 2: RainbowKit/Wagmi connected wallet
-    if (ethAccount.isConnected && ethAccount.connector) {
-      try {
-        const connectorClient = await getConnectorClient(wagmiConfig, {
-          connector: ethAccount.connector,
-        });
-        return connectorClient.transport;
-      } catch {
-        // Fall through to window.ethereum
-      }
-    }
-
-    // Priority 3: Injected wallet (MetaMask, etc.)
-    return window.ethereum;
-  }, [wallets, wagmiConfig, ethAccount.isConnected, ethAccount.connector]);
+  const { connection: solanaConnection } = useConnection();
+  const { publicKey: solanaPublicKey, sendTransaction: solanaSendTransaction } = useWallet();
 
   // Fetch names owned by current address
   const fetchOwnedNames = useCallback(async (forceRefresh: boolean = false): Promise<ArNSName[]> => {
-    if (!address || (walletType !== 'arweave' && walletType !== 'ethereum')) return []; // Fetch names for Arweave and Ethereum wallets
+    if (!address || walletType !== 'solana') return []; // ArNS ownership now resolves via Solana addresses
     
     // Check cache first (unless forcing refresh)
     if (!forceRefresh) {
@@ -177,17 +147,17 @@ export function useOwnedArNSNames() {
     setUpdating(prev => ({ ...prev, [name]: true }));
 
     try {
-      // Get Ethereum provider for non-injected wallets (Privy, WalletConnect, etc.)
-      const ethereumProvider = walletType === 'ethereum' ? await getEthereumProvider() : undefined;
+      if (walletType !== 'solana' || !solanaPublicKey) {
+        return { success: false, error: 'Connect a Solana wallet to update ArNS records.' };
+      }
 
-      // Create wallet-specific contract signer (async for Ethereum setup)
-      const contractSigner = await createContractSigner(walletType, ethereumProvider);
+      const signer = createWalletAdapterTransactionSendingSigner(
+        solanaPublicKey.toBase58(),
+        solanaConnection,
+        solanaSendTransaction
+      );
 
-      // Create AO signer using SDK helper (like reference app)
-      const aoSigner = createAoSigner(contractSigner);
-      
-      // Initialize ANT with custom CU URL and proper signer
-      const ant = getANT(nameRecord.processId, aoSigner) as any;
+      const ant = await getWritableANT(nameRecord.processId, signer) as any;
 
       // Determine TTL to use: custom > existing > default (600)
       let ttlToUse: number;
@@ -231,7 +201,7 @@ export function useOwnedArNSNames() {
             // Get fresh ANT state for just this name
             const nameRecord = names.find(n => n.name === name);
             if (nameRecord) {
-              const ant = getANT(nameRecord.processId);
+              const ant = await getANT(nameRecord.processId);
               const freshState = await ant.getState();
               
               const updatedTarget = freshState.Records?.['@']?.transactionId;
@@ -294,7 +264,7 @@ export function useOwnedArNSNames() {
     } finally {
       setUpdating(prev => ({ ...prev, [name]: false }));
     }
-  }, [names, address, fetchOwnedNames, getOwnedArNSNames, setOwnedArNSNames, getEthereumProvider]);
+  }, [names, address, fetchOwnedNames, getOwnedArNSNames, setOwnedArNSNames, solanaPublicKey, solanaConnection, solanaSendTransaction]);
 
   // Fetch ANT details for a specific name (on-demand)
   const fetchNameDetails = useCallback(async (name: string): Promise<ArNSName | null> => {
@@ -311,7 +281,7 @@ export function useOwnedArNSNames() {
     
     try {
       console.log('Fetching ANT details on-demand for:', name);
-      const ant = getANT(nameRecord.processId);
+      const ant = await getANT(nameRecord.processId);
       const state = await ant.getState();
 
       const currentTarget = state.Records?.['@']?.transactionId;
@@ -410,7 +380,7 @@ export function useOwnedArNSNames() {
     }
     
     try {
-      const ant = getANT(nameRecord.processId);
+      const ant = await getANT(nameRecord.processId);
       const freshState = await ant.getState();
 
       const updatedTarget = freshState.Records?.['@']?.transactionId;
@@ -476,7 +446,7 @@ export function useOwnedArNSNames() {
 
   // Auto-fetch on address/wallet change - proactive loading for better UX
   useEffect(() => {
-    if (address && (walletType === 'arweave' || walletType === 'ethereum')) {
+    if (address && walletType === 'solana') {
       // Fetch names immediately when user connects
       fetchOwnedNames();
     }

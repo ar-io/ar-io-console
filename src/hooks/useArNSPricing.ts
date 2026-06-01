@@ -129,7 +129,6 @@ export function useArNSPricing(): UseArNSPricingReturn {
       const cost = await ario.getTokenCost({
         intent: 'Buy-Name',
         name,
-        type,
         ...(type === 'lease' ? { years } : {})
       });
 

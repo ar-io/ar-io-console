@@ -90,7 +90,7 @@ export const tokenNetworkLabels: Record<SupportedTokenType, string> = {
 // Network descriptions for user clarity
 export const tokenNetworkDescriptions: Record<SupportedTokenType, string> = {
   arweave: 'Native AR tokens on the Arweave blockchain',
-  ario: 'ARIO tokens on the AO Super Computer',
+  ario: 'ARIO tokens on the Solana network',
   'base-ario': 'ARIO tokens bridged to Base Layer 2 network',
   ethereum: 'ETH on Ethereum Layer 1 mainnet',
   'base-eth': 'ETH on Base Layer 2 network',
@@ -116,7 +116,7 @@ export const tokenProcessingTimes: Record<SupportedTokenType, {
   ario: {
     time: 'near instant-3 minutes',
     speed: 'fast',
-    description: 'ARIO transfers on AO are typically fast'
+    description: 'ARIO transfers on Solana are typically fast'
   },
   'base-ario': {
     time: 'near instant-3 minutes',
