@@ -8,7 +8,10 @@ export function formatUploadError(error: Error | string): string {
   const lowerMessage = message.toLowerCase();
 
   // Insufficient balance errors
-  if (lowerMessage.includes('insufficient balance') || lowerMessage.includes('insufficient funds')) {
+  if (
+    lowerMessage.includes('insufficient balance') ||
+    lowerMessage.includes('insufficient funds')
+  ) {
     return 'Insufficient credits. Please top up your balance or increase your JIT payment limit.';
   }
 
@@ -21,7 +24,11 @@ export function formatUploadError(error: Error | string): string {
   }
 
   // Network/connection errors
-  if (lowerMessage.includes('network') || lowerMessage.includes('fetch failed') || lowerMessage.includes('failed to fetch')) {
+  if (
+    lowerMessage.includes('network') ||
+    lowerMessage.includes('fetch failed') ||
+    lowerMessage.includes('failed to fetch')
+  ) {
     return 'Network error. Please check your connection and try again.';
   }
 

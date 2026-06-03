@@ -10,22 +10,19 @@ import GiftPaymentConfirmationPanel from './fiat/GiftPaymentConfirmationPanel';
 import GiftPaymentSuccessPanel from './fiat/GiftPaymentSuccessPanel';
 
 export default function GiftPanel() {
-  const { 
-    paymentIntent,
-    setPaymentAmount,
-    setPaymentIntent,
-    clearAllPaymentState
-  } = useStore();
-  
+  const { paymentIntent, setPaymentAmount, setPaymentIntent, clearAllPaymentState } = useStore();
+
   const [usdAmount, setUsdAmount] = useState(defaultUSDAmount);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   // Gift flow state
-  const [giftFlowStep, setGiftFlowStep] = useState<'form' | 'details' | 'confirmation' | 'success'>('form');
-  
+  const [giftFlowStep, setGiftFlowStep] = useState<'form' | 'details' | 'confirmation' | 'success'>(
+    'form',
+  );
+
   const debouncedUsdAmount = useDebounce(usdAmount);
   const [credits] = useCreditsForFiat(debouncedUsdAmount, setErrorMessage);
 
@@ -44,10 +41,10 @@ export default function GiftPanel() {
 
   const handleSendGift = async () => {
     if (!canSubmit) return;
-    
+
     setIsProcessing(true);
     setErrorMessage('');
-    
+
     try {
       // Create gift payment intent
       const result = await getGiftPaymentIntent({
@@ -55,11 +52,11 @@ export default function GiftPanel() {
         recipientEmail,
         giftMessage: giftMessage || undefined,
       });
-      
+
       // Store payment intent and amount in store
       setPaymentIntent(result.paymentSession);
       setPaymentAmount(usdAmount);
-      
+
       // Move to payment details step
       setGiftFlowStep('details');
     } catch (error) {
@@ -74,12 +71,13 @@ export default function GiftPanel() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const canSubmit = credits && recipientEmail && isValidEmail(recipientEmail) && usdAmount >= minUSDAmount;
+  const canSubmit =
+    credits && recipientEmail && isValidEmail(recipientEmail) && usdAmount >= minUSDAmount;
 
   // Handle flow step rendering
   if (giftFlowStep === 'details') {
     return (
-      <GiftPaymentDetailsPanel 
+      <GiftPaymentDetailsPanel
         usdAmount={usdAmount}
         recipientEmail={recipientEmail}
         giftMessage={giftMessage}
@@ -95,7 +93,7 @@ export default function GiftPanel() {
 
   if (giftFlowStep === 'confirmation') {
     return (
-      <GiftPaymentConfirmationPanel 
+      <GiftPaymentConfirmationPanel
         usdAmount={usdAmount}
         recipientEmail={recipientEmail}
         giftMessage={giftMessage}
@@ -108,7 +106,7 @@ export default function GiftPanel() {
 
   if (giftFlowStep === 'success') {
     return (
-      <GiftPaymentSuccessPanel 
+      <GiftPaymentSuccessPanel
         usdAmount={usdAmount}
         recipientEmail={recipientEmail}
         giftMessage={giftMessage}
@@ -141,91 +139,88 @@ export default function GiftPanel() {
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
-      {/* Amount Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-3">Gift Amount (USD)</label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground text-lg font-medium">$</div>
-          <input
-            type="number"
-            value={usdAmount}
-            onChange={handleAmountChange}
-            className="w-full p-3 pl-8 rounded-2xl border border-border/20 bg-card text-foreground font-medium text-lg focus:border-foreground focus:outline-none transition-colors"
-            placeholder="10.00"
-            min={minUSDAmount}
-            max={maxUSDAmount}
-          />
-        </div>
-        {credits && (
-          <div className="text-sm text-foreground/80 mt-2">
-            Recipient will receive: {credits.toLocaleString()} Credits
+        {/* Amount Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3">Gift Amount (USD)</label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground text-lg font-medium">
+              $
+            </div>
+            <input
+              type="number"
+              value={usdAmount}
+              onChange={handleAmountChange}
+              className="w-full p-3 pl-8 rounded-2xl border border-border/20 bg-card text-foreground font-medium text-lg focus:border-foreground focus:outline-none transition-colors"
+              placeholder="10.00"
+              min={minUSDAmount}
+              max={maxUSDAmount}
+            />
           </div>
-        )}
-      </div>
-
-      {/* Recipient Email */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-3">Recipient Email</label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
-          <input
-            type="email"
-            value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
-            className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
-            placeholder="recipient@example.com"
-          />
+          {credits && (
+            <div className="text-sm text-foreground/80 mt-2">
+              Recipient will receive: {credits.toLocaleString()} Credits
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Gift Message */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-3">Gift Message (Optional)</label>
-        <div className="relative">
-          <MessageSquare className="absolute left-3 top-3 w-5 h-5 text-foreground/50" />
-          <textarea
-            value={giftMessage}
-            onChange={(e) => setGiftMessage(e.target.value)}
-            className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground min-h-[100px] focus:border-foreground focus:outline-none transition-colors resize-none"
-            placeholder="Add a personal message..."
-            maxLength={500}
-          />
+        {/* Recipient Email */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3">Recipient Email</label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
+            <input
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
+              placeholder="recipient@example.com"
+            />
+          </div>
         </div>
-        <div className="text-xs text-foreground/80 mt-1">
-          {giftMessage.length}/500 characters
+
+        {/* Gift Message */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3">Gift Message (Optional)</label>
+          <div className="relative">
+            <MessageSquare className="absolute left-3 top-3 w-5 h-5 text-foreground/50" />
+            <textarea
+              value={giftMessage}
+              onChange={(e) => setGiftMessage(e.target.value)}
+              className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground min-h-[100px] focus:border-foreground focus:outline-none transition-colors resize-none"
+              placeholder="Add a personal message..."
+              maxLength={500}
+            />
+          </div>
+          <div className="text-xs text-foreground/80 mt-1">{giftMessage.length}/500 characters</div>
         </div>
-      </div>
 
-      {/* Error Message */}
-      {errorMessage && (
-        <div className="text-error text-sm mb-4">{errorMessage}</div>
-      )}
+        {/* Error Message */}
+        {errorMessage && <div className="text-error text-sm mb-4">{errorMessage}</div>}
 
-      {/* Send Button */}
-      <button
-        onClick={handleSendGift}
-        className="w-full py-4 px-6 rounded-2xl bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        disabled={!canSubmit || isProcessing}
-      >
-        {isProcessing ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Creating Gift...
-          </>
-        ) : (
-          <>
-            <Send className="w-5 h-5" />
-            Send Gift
-          </>
-        )}
-      </button>
+        {/* Send Button */}
+        <button
+          onClick={handleSendGift}
+          className="w-full py-4 px-6 rounded-2xl bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          disabled={!canSubmit || isProcessing}
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Creating Gift...
+            </>
+          ) : (
+            <>
+              <Send className="w-5 h-5" />
+              Send Gift
+            </>
+          )}
+        </button>
 
-      {/* Stripe Security Notice */}
-      <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-foreground/80">
-        <Lock className="w-3.5 h-3.5" />
-        <span>Secure payment powered by Stripe</span>
-      </div>
+        {/* Stripe Security Notice */}
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-foreground/80">
+          <Lock className="w-3.5 h-3.5" />
+          <span>Secure payment powered by Stripe</span>
+        </div>
       </div>
 
       {/* Gift Process Info */}

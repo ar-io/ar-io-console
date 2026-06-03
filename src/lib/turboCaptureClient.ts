@@ -22,11 +22,11 @@ export interface CaptureOptions {
 }
 
 export interface CaptureResult {
-  screenshot: string;      // Base64-encoded PNG
-  finalUrl: string;       // Final URL after redirects
-  title: string;          // Page title
-  size: number;           // Screenshot size in bytes
-  capturedAt: string;     // ISO timestamp
+  screenshot: string; // Base64-encoded PNG
+  finalUrl: string; // Final URL after redirects
+  title: string; // Page title
+  size: number; // Screenshot size in bytes
+  capturedAt: string; // ISO timestamp
   viewport: {
     width: number;
     height: number;
@@ -63,9 +63,7 @@ export async function checkHealth(): Promise<HealthStatus> {
 /**
  * Capture a screenshot of a URL
  */
-export async function captureScreenshot(
-  options: CaptureOptions
-): Promise<CaptureResult> {
+export async function captureScreenshot(options: CaptureOptions): Promise<CaptureResult> {
   const baseUrl = getCaptureServiceUrl();
   const response = await fetch(`${baseUrl}/screenshot`, {
     method: 'POST',

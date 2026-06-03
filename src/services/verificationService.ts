@@ -63,7 +63,7 @@ export interface VerificationResult {
 export async function verifyTransaction(
   baseUrl: string,
   txId: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<VerificationResult> {
   const res = await fetch(`${baseUrl}/api/v1/verify`, {
     method: 'POST',

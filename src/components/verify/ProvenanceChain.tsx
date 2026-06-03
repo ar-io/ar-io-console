@@ -51,15 +51,21 @@ function buildSteps(result: VerificationResult): Step[] {
   const pending = result.existence.status === 'pending';
   steps.push({
     label: 'Stored',
-    detail: result.existence.blockHeight !== null
-      ? `Block ${result.existence.blockHeight.toLocaleString()}`
-      : pending ? 'Pending' : 'Not found',
+    detail:
+      result.existence.blockHeight !== null
+        ? `Block ${result.existence.blockHeight.toLocaleString()}`
+        : pending
+          ? 'Pending'
+          : 'Not found',
     subdetail: result.existence.blockTimestamp
       ? formatDate(result.existence.blockTimestamp)
-      : pending ? 'Awaiting confirmation' : null,
-    href: result.existence.blockHeight !== null
-      ? viewblockBlockUrl(result.existence.blockHeight)
-      : null,
+      : pending
+        ? 'Awaiting confirmation'
+        : null,
+    href:
+      result.existence.blockHeight !== null
+        ? viewblockBlockUrl(result.existence.blockHeight)
+        : null,
     status: confirmed ? 'complete' : pending ? 'partial' : 'unavailable',
   });
 
@@ -103,7 +109,9 @@ export default function ProvenanceChain({ result }: { result: VerificationResult
             <div className="flex w-full items-center">
               {i > 0 && <div className={`h-0.5 flex-1 ${LINE[step.status]}`} />}
               <div className={`relative z-10 h-3 w-3 shrink-0 rounded-full ${DOT[step.status]}`} />
-              {i < steps.length - 1 && <div className={`h-0.5 flex-1 ${LINE[steps[i + 1].status]}`} />}
+              {i < steps.length - 1 && (
+                <div className={`h-0.5 flex-1 ${LINE[steps[i + 1].status]}`} />
+              )}
             </div>
             <p className="mt-2 text-xs font-semibold text-foreground/70">{step.label}</p>
             {step.href ? (

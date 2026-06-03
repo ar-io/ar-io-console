@@ -12,11 +12,7 @@ import { getTurboBalance, resolveEthereumAddress } from '../../utils';
 import { clearEthereumTurboClientCache } from '../../hooks/useEthereumTurboClient';
 import { Mail } from 'lucide-react';
 
-const WalletSelectionModal = ({
-  onClose,
-}: {
-  onClose: () => void;
-}) => {
+const WalletSelectionModal = ({ onClose }: { onClose: () => void }) => {
   const { setAddress } = useStore();
   const [connectingWallet, setConnectingWallet] = useState<string>();
   const [intentionalSolanaConnect, setIntentionalSolanaConnect] = useState(false);
@@ -55,9 +51,7 @@ const WalletSelectionModal = ({
   const { login } = useLogin({
     onComplete: async ({ user }) => {
       // Check if user already has a wallet in linkedAccounts
-      const existingWallet = user?.linkedAccounts?.find(
-        account => account.type === 'wallet'
-      );
+      const existingWallet = user?.linkedAccounts?.find((account) => account.type === 'wallet');
 
       if (existingWallet) {
         await setEthereumAddress(existingWallet.address);
@@ -89,17 +83,18 @@ const WalletSelectionModal = ({
     onError: () => {
       setConnectingWallet(undefined);
       setWaitingForPrivyWallet(false);
-    }
+    },
   });
 
   // Watch for Privy wallet to become available after login
   useEffect(() => {
     if (waitingForPrivyWallet && privyWallets && privyWallets.length > 0) {
       // Look for any embedded wallet, not just 'privy' type
-      const privyWallet = privyWallets.find(w =>
-        w.walletClientType === 'privy' ||
-        w.walletClientType === 'embedded' ||
-        w.imported === false // Non-imported wallets are embedded
+      const privyWallet = privyWallets.find(
+        (w) =>
+          w.walletClientType === 'privy' ||
+          w.walletClientType === 'embedded' ||
+          w.imported === false, // Non-imported wallets are embedded
       );
 
       if (privyWallet) {
@@ -129,7 +124,7 @@ const WalletSelectionModal = ({
     const { address: currentAddress } = useStore.getState();
 
     if (authenticated && privyWallets && privyWallets.length > 0 && !currentAddress) {
-      const privyWallet = privyWallets.find(w => w.walletClientType === 'privy');
+      const privyWallet = privyWallets.find((w) => w.walletClientType === 'privy');
 
       if (privyWallet && privyWallet.address !== currentAddress) {
         setEthereumAddress(privyWallet.address).then(() => {
@@ -168,15 +163,17 @@ const WalletSelectionModal = ({
       clearEthereumTurboClientCache();
 
       // Resolve and set Ethereum address (handles checksummed vs lowercase)
-      setEthereumAddress(ethAccount.address).then(() => {
-        setIntentionalEthConnect(false);
-        handleConnectionSuccess();
-      }).catch((error) => {
-        console.error('[Wallet Connection] Failed to set Ethereum address:', error);
-        // Still close modal on error - address was set via fallback in setEthereumAddress
-        setIntentionalEthConnect(false);
-        handleConnectionSuccess();
-      });
+      setEthereumAddress(ethAccount.address)
+        .then(() => {
+          setIntentionalEthConnect(false);
+          handleConnectionSuccess();
+        })
+        .catch((error) => {
+          console.error('[Wallet Connection] Failed to set Ethereum address:', error);
+          // Still close modal on error - address was set via fallback in setEthereumAddress
+          setIntentionalEthConnect(false);
+          handleConnectionSuccess();
+        });
     }
   }, [ethAccount.isConnected, ethAccount.address, intentionalEthConnect, onClose]);
 
@@ -222,9 +219,7 @@ const WalletSelectionModal = ({
       }
 
       // Try to find and directly select Phantom
-      const phantomWallet = wallets.find(wallet =>
-        wallet.adapter.name === 'Phantom'
-      );
+      const phantomWallet = wallets.find((wallet) => wallet.adapter.name === 'Phantom');
 
       if (phantomWallet) {
         // Found Phantom wallet, selecting and connecting
@@ -237,7 +232,7 @@ const WalletSelectionModal = ({
         let attempts = 0;
         const maxAttempts = 10;
         while (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
 
           // Check if wallet is now selected and ready
           if (wallet?.adapter.name === 'Phantom') {
@@ -262,7 +257,6 @@ const WalletSelectionModal = ({
         onClose();
         setSolanaModalVisible(true);
       }
-
     } catch {
       // Failed to connect Phantom wallet
       setIntentionalSolanaConnect(false); // Reset flag on error
@@ -274,10 +268,8 @@ const WalletSelectionModal = ({
   const connectWithEmail = async () => {
     // If already authenticated, just use the existing wallet
     if (authenticated && privyWallets && privyWallets.length > 0) {
-      const privyWallet = privyWallets.find(w =>
-        w.walletClientType === 'privy' ||
-        w.walletClientType === 'embedded' ||
-        !w.imported
+      const privyWallet = privyWallets.find(
+        (w) => w.walletClientType === 'privy' || w.walletClientType === 'embedded' || !w.imported,
       );
 
       if (privyWallet) {
@@ -343,7 +335,7 @@ const WalletSelectionModal = ({
         clearEthereumTurboClientCache();
         await disconnectAsync();
         // Small delay to allow disconnection to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       // Set the intentional connect flag so we capture the connection in useEffect
@@ -361,14 +353,13 @@ const WalletSelectionModal = ({
 
   return (
     <BaseModal onClose={onClose} showCloseButton={true}>
-      <div className="flex flex-col items-center justify-center text-foreground p-6 sm:p-8" style={{ minWidth: 'min(85vw, 480px)', maxWidth: '95vw' }}>
+      <div
+        className="flex flex-col items-center justify-center text-foreground p-6 sm:p-8"
+        style={{ minWidth: 'min(85vw, 480px)', maxWidth: '95vw' }}
+      >
         {/* Header with logo and title */}
         <div className="mb-6 sm:mb-8 text-center">
-          <img
-            src="/brand/ario-full-black.svg"
-            alt="ar.io"
-            className="h-8 sm:h-10 mx-auto mb-4"
-          />
+          <img src="/brand/ario-full-black.svg" alt="ar.io" className="h-8 sm:h-10 mx-auto mb-4" />
           <h2 className="text-xl sm:text-2xl font-heading font-bold text-foreground">
             Sign in to your account
           </h2>
@@ -400,7 +391,11 @@ const WalletSelectionModal = ({
             className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
             onClick={connectWander}
           >
-            <img src="/wander-logo.png" alt="Wander" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+            <img
+              src="/wander-logo.png"
+              alt="Wander"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+            />
             <div className="min-w-0 flex-1">
               <div className="font-semibold mb-1 text-base">Wander</div>
               <div className="text-xs sm:text-sm text-foreground/70">Arweave wallet</div>
@@ -412,13 +407,19 @@ const WalletSelectionModal = ({
             onClick={connectEthereumWallet}
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#627EEA] rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" />
               </svg>
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-semibold mb-1 text-base">Ethereum Wallets</div>
-              <div className="text-xs sm:text-sm text-foreground/70">MetaMask, WalletConnect, Coinbase</div>
+              <div className="text-xs sm:text-sm text-foreground/70">
+                MetaMask, WalletConnect, Coinbase
+              </div>
             </div>
           </button>
 
@@ -426,7 +427,11 @@ const WalletSelectionModal = ({
             className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
             onClick={connectPhantom}
           >
-            <img src="/phantom-logo.svg" alt="Phantom" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
+            <img
+              src="/phantom-logo.svg"
+              alt="Phantom"
+              className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0"
+            />
             <div className="min-w-0 flex-1">
               <div className="font-semibold mb-1 text-base">Phantom / Solflare</div>
               <div className="text-xs sm:text-sm text-foreground/70">Solana wallets</div>

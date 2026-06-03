@@ -5,9 +5,44 @@ import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { wincPerCredit, SupportedTokenType, tokenLabels } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Globe, XCircle, Loader2, RefreshCw, Info, Receipt, ChevronDown, ChevronUp, CheckCircle, Folder, File, FileText, Image, Code, ExternalLink, Home, AlertTriangle, Archive, Clock, HelpCircle, MoreVertical, Zap, ArrowRight, Copy, X, Wallet, CreditCard, Sparkles, Package } from 'lucide-react';
+import {
+  Globe,
+  XCircle,
+  Loader2,
+  RefreshCw,
+  Info,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle,
+  Folder,
+  File,
+  FileText,
+  Image,
+  Code,
+  ExternalLink,
+  Home,
+  AlertTriangle,
+  Archive,
+  Clock,
+  HelpCircle,
+  MoreVertical,
+  Zap,
+  ArrowRight,
+  Copy,
+  X,
+  Wallet,
+  CreditCard,
+  Sparkles,
+  Package,
+} from 'lucide-react';
 import { useTokenBalance } from '../../hooks/useTokenBalance';
-import { supportsJitPayment, calculateRequiredTokenAmount, formatTokenAmount, getTokenConverter } from '../../utils/jitPayment';
+import {
+  supportsJitPayment,
+  calculateRequiredTokenAmount,
+  formatTokenAmount,
+  getTokenConverter,
+} from '../../utils/jitPayment';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { getArweaveUrl, getArweaveRawUrl } from '../../utils';
@@ -97,8 +132,8 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
   const filteredSuggestions = useMemo(() => {
     if (!localName.trim()) return recentAppNames;
     const lowerInput = localName.toLowerCase();
-    return recentAppNames.filter(name =>
-      name.toLowerCase().includes(lowerInput) && name.toLowerCase() !== lowerInput
+    return recentAppNames.filter(
+      (name) => name.toLowerCase().includes(lowerInput) && name.toLowerCase() !== lowerInput,
     );
   }, [localName, recentAppNames]);
 
@@ -136,7 +171,9 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
         {/* Suggestions Dropdown */}
         {showSuggestions && filteredSuggestions.length > 0 && (
           <div className="absolute z-10 w-full mt-1 bg-card border border-border/20 rounded-lg shadow-lg overflow-hidden">
-            <div className="px-3 py-1.5 text-xs text-foreground/80 border-b border-border/10">Recent Apps</div>
+            <div className="px-3 py-1.5 text-xs text-foreground/80 border-b border-border/10">
+              Recent Apps
+            </div>
             {filteredSuggestions.map((name) => {
               const app = deployedApps[name];
               return (
@@ -212,7 +249,7 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
   const [bufferPercentage, setBufferPercentage] = useState(1); // Default 1% buffer
 
   const tokenLabel = tokenLabels[tokenType];
-  const BUFFER_MULTIPLIER = 1 + (bufferPercentage / 100); // Adjustable buffer
+  const BUFFER_MULTIPLIER = 1 + bufferPercentage / 100; // Adjustable buffer
 
   // Fetch wallet balance
   const {
@@ -267,7 +304,7 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
       }
     };
 
-    const hasCost = (creditsNeeded > 0) || (totalCost > 0);
+    const hasCost = creditsNeeded > 0 || totalCost > 0;
     if (hasCost) {
       calculate();
     } else {
@@ -276,7 +313,15 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
       onMaxTokenAmountChange(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditsNeeded, totalCost, tokenType, bufferPercentage, x402Pricing?.usdcAmount, x402Pricing?.loading, x402Pricing?.error]);
+  }, [
+    creditsNeeded,
+    totalCost,
+    tokenType,
+    bufferPercentage,
+    x402Pricing?.usdcAmount,
+    x402Pricing?.loading,
+    x402Pricing?.error,
+  ]);
 
   // Validate balance and update shortage info
   useEffect(() => {
@@ -318,9 +363,20 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
     } else {
       onShortageUpdate(null);
     }
-  }, [tokenBalance, estimatedCost, balanceError, isNetworkError, balanceLoading, tokenType, onBalanceValidation, onShortageUpdate]);
+  }, [
+    tokenBalance,
+    estimatedCost,
+    balanceError,
+    isNetworkError,
+    balanceLoading,
+    tokenType,
+    onBalanceValidation,
+    onShortageUpdate,
+  ]);
 
-  const afterDeployment = estimatedCost ? Math.max(0, tokenBalance - estimatedCost.tokenAmountReadable) : tokenBalance;
+  const afterDeployment = estimatedCost
+    ? Math.max(0, tokenBalance - estimatedCost.tokenAmountReadable)
+    : tokenBalance;
 
   return (
     <div className="mb-4">
@@ -338,9 +394,11 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
                     ~{formatTokenAmount(estimatedCost.tokenAmountReadable, tokenType)} {tokenLabel}
                     {estimatedCost.estimatedUSD && estimatedCost.estimatedUSD > 0 && (
                       <span className="text-xs text-foreground/80 ml-2">
-                        (≈ ${estimatedCost.estimatedUSD < 0.01
+                        (≈ $
+                        {estimatedCost.estimatedUSD < 0.01
                           ? estimatedCost.estimatedUSD.toFixed(4)
-                          : estimatedCost.estimatedUSD.toFixed(2)})
+                          : estimatedCost.estimatedUSD.toFixed(2)}
+                        )
                       </span>
                     )}
                   </>
@@ -384,9 +442,7 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
               <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
                 <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-warning font-medium mb-1">
-                    {balanceError}
-                  </div>
+                  <div className="text-xs text-warning font-medium mb-1">{balanceError}</div>
                 </div>
               </div>
             </div>
@@ -467,7 +523,9 @@ interface DeployConfirmationModalProps {
   paymentTab: 'credits' | 'crypto';
   onPaymentTabChange: (tab: 'credits' | 'crypto') => void;
   cryptoShortage: { amount: number; tokenType: SupportedTokenType } | null;
-  onCryptoShortageUpdate: (shortage: { amount: number; tokenType: SupportedTokenType } | null) => void;
+  onCryptoShortageUpdate: (
+    shortage: { amount: number; tokenType: SupportedTokenType } | null,
+  ) => void;
   // X402 mode props
   x402OnlyMode: boolean;
   isPaymentServiceAvailable: () => boolean;
@@ -573,7 +631,10 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-foreground/80">App:</span>
                   <span className="text-xs text-foreground font-medium">
-                    {appName}{appVersion && <span className="text-foreground/80 font-normal ml-1">v{appVersion}</span>}
+                    {appName}
+                    {appVersion && (
+                      <span className="text-foreground/80 font-normal ml-1">v{appVersion}</span>
+                    )}
                   </span>
                 </div>
               )}
@@ -583,7 +644,8 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-foreground/80">Domain:</span>
                   <span className="text-xs text-foreground">
-                    {undername ? undername + '_' : ''}{arnsName}.ar.io
+                    {undername ? undername + '_' : ''}
+                    {arnsName}.ar.io
                   </span>
                 </div>
               )}
@@ -597,7 +659,9 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                 <span className="text-xs text-foreground">
                   {fileCount} file{fileCount !== 1 ? 's' : ''}
                   {(() => {
-                    const freeFilesCount = Array.from(files).filter(file => isFileFree(file.size, freeUploadLimitBytes)).length;
+                    const freeFilesCount = Array.from(files).filter((file) =>
+                      isFileFree(file.size, freeUploadLimitBytes),
+                    ).length;
                     const parts: React.ReactNode[] = [];
                     if (smartDeployEnabled && cachedFilesCount > 0) {
                       parts.push(<span key="cached">{cachedFilesCount} cached</span>);
@@ -606,7 +670,15 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       parts.push(<span key="free">{freeFilesCount} free</span>);
                     }
                     return parts.length > 0 ? (
-                      <span className="text-success"> ({parts.reduce<React.ReactNode[]>((prev, curr, i) => i === 0 ? [curr] : [...prev, ', ', curr], [])})</span>
+                      <span className="text-success">
+                        {' '}
+                        (
+                        {parts.reduce<React.ReactNode[]>(
+                          (prev, curr, i) => (i === 0 ? [curr] : [...prev, ', ', curr]),
+                          [],
+                        )}
+                        )
+                      </span>
                     ) : null;
                   })()}
                 </span>
@@ -642,7 +714,12 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       const savingsMB = savings / 1024 / 1024;
                       return (
                         <span className="text-success">
-                          {' '}(saving {savingsMB < 1 ? `${(savings / 1024).toFixed(1)}KB` : `${savingsMB.toFixed(1)}MB`})
+                          {' '}
+                          (saving{' '}
+                          {savingsMB < 1
+                            ? `${(savings / 1024).toFixed(1)}KB`
+                            : `${savingsMB.toFixed(1)}MB`}
+                          )
                         </span>
                       );
                     }
@@ -691,68 +768,88 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
               )}
 
               {/* Payment Details Section - Credits Tab (hide in x402-only mode) */}
-              {paymentTab === 'credits' && canUseJit && !isFreeDeployment && isPaymentServiceAvailable() && !x402OnlyMode && (
-                <div className="mb-4">
-                  <div className="bg-card rounded-lg border border-border/20 p-4">
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-foreground/80">Cost:</span>
-                        <span className="text-sm text-foreground font-medium">
-                          {totalCost === 0 ? (
-                            <span className="text-success font-medium">FREE</span>
-                          ) : typeof totalCost === 'number' ? (
-                            <>{totalCost.toFixed(6)} Credits</>
-                          ) : (
-                            'Calculating...'
-                          )}
-                        </span>
-                      </div>
+              {paymentTab === 'credits' &&
+                canUseJit &&
+                !isFreeDeployment &&
+                isPaymentServiceAvailable() &&
+                !x402OnlyMode && (
+                  <div className="mb-4">
+                    <div className="bg-card rounded-lg border border-border/20 p-4">
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-foreground/80">Cost:</span>
+                          <span className="text-sm text-foreground font-medium">
+                            {totalCost === 0 ? (
+                              <span className="text-success font-medium">FREE</span>
+                            ) : typeof totalCost === 'number' ? (
+                              <>{totalCost.toFixed(6)} Credits</>
+                            ) : (
+                              'Calculating...'
+                            )}
+                          </span>
+                        </div>
 
-                      {/* Only show balance info for non-free deployments */}
-                      {!isFreeDeployment && (
-                        <>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-foreground/80">Current Balance:</span>
-                            <span className="text-sm text-foreground font-medium">
-                              {currentBalance.toFixed(6)} Credits
-                            </span>
-                          </div>
-                          {typeof totalCost === 'number' && (
-                            <div className="flex justify-between items-center pt-2 border-t border-border/10">
-                              <span className="text-xs text-foreground/80">After Deployment:</span>
+                        {/* Only show balance info for non-free deployments */}
+                        {!isFreeDeployment && (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-foreground/80">Current Balance:</span>
                               <span className="text-sm text-foreground font-medium">
-                                {Math.max(0, currentBalance - totalCost).toFixed(6)} Credits
+                                {currentBalance.toFixed(6)} Credits
                               </span>
                             </div>
-                          )}
-                        </>
-                      )}
-
-                      {/* Insufficient Credits Warning */}
-                      {!isFreeDeployment && !hasSufficientCredits && typeof totalCost === 'number' && (
-                        <div className="pt-3 mt-3 border-t border-border/10">
-                          <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
-                            <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs text-error font-medium mb-1">
-                                Need {creditsNeeded.toFixed(6)} more credits
+                            {typeof totalCost === 'number' && (
+                              <div className="flex justify-between items-center pt-2 border-t border-border/10">
+                                <span className="text-xs text-foreground/80">
+                                  After Deployment:
+                                </span>
+                                <span className="text-sm text-foreground font-medium">
+                                  {Math.max(0, currentBalance - totalCost).toFixed(6)} Credits
+                                </span>
                               </div>
-                              <div className="text-xs text-error/80">
-                                {canUseJit && (
-                                  <>
-                                    • Switch to <button onClick={handleCryptoTabClick} className="underline hover:text-error/80">Crypto tab</button> to pay with crypto<br />
-                                  </>
-                                )}
-                                • <a href="/topup" className="underline hover:text-error/80">Top up credits</a> to continue
+                            )}
+                          </>
+                        )}
+
+                        {/* Insufficient Credits Warning */}
+                        {!isFreeDeployment &&
+                          !hasSufficientCredits &&
+                          typeof totalCost === 'number' && (
+                            <div className="pt-3 mt-3 border-t border-border/10">
+                              <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
+                                <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs text-error font-medium mb-1">
+                                    Need {creditsNeeded.toFixed(6)} more credits
+                                  </div>
+                                  <div className="text-xs text-error/80">
+                                    {canUseJit && (
+                                      <>
+                                        • Switch to{' '}
+                                        <button
+                                          onClick={handleCryptoTabClick}
+                                          className="underline hover:text-error/80"
+                                        >
+                                          Crypto tab
+                                        </button>{' '}
+                                        to pay with crypto
+                                        <br />
+                                      </>
+                                    )}
+                                    •{' '}
+                                    <a href="/topup" className="underline hover:text-error/80">
+                                      Top up credits
+                                    </a>{' '}
+                                    to continue
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      )}
+                          )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Payment Details Section - Crypto Tab (always show in x402-only mode) */}
               {(paymentTab === 'crypto' || x402OnlyMode) && canUseJit && !isFreeDeployment && (
@@ -763,9 +860,13 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                         <div>
-                          <div className="font-medium text-warning text-sm mb-1">Ethereum Wallet Required</div>
+                          <div className="font-medium text-warning text-sm mb-1">
+                            Ethereum Wallet Required
+                          </div>
                           <div className="text-xs text-warning/80">
-                            X402 payments only support Ethereum wallets with BASE-USDC. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.
+                            X402 payments only support Ethereum wallets with BASE-USDC. Please
+                            connect an Ethereum wallet or disable x402-only mode in Developer
+                            Resources.
                           </div>
                         </div>
                       </div>
@@ -841,21 +942,27 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       )}
 
                       {/* Insufficient Credits Warning */}
-                      {!isFreeDeployment && !hasSufficientCredits && typeof totalCost === 'number' && (
-                        <div className="pt-3 mt-3 border-t border-border/10">
-                          <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
-                            <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs text-error font-medium mb-1">
-                                Need {creditsNeeded.toFixed(6)} more credits
-                              </div>
-                              <div className="text-xs text-error/80">
-                                • <a href="/topup" className="underline hover:text-error/80">Top up credits</a> to continue
+                      {!isFreeDeployment &&
+                        !hasSufficientCredits &&
+                        typeof totalCost === 'number' && (
+                          <div className="pt-3 mt-3 border-t border-border/10">
+                            <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
+                              <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs text-error font-medium mb-1">
+                                  Need {creditsNeeded.toFixed(6)} more credits
+                                </div>
+                                <div className="text-xs text-error/80">
+                                  •{' '}
+                                  <a href="/topup" className="underline hover:text-error/80">
+                                    Top up credits
+                                  </a>{' '}
+                                  to continue
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   </div>
                 </div>
@@ -871,9 +978,22 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                         Insufficient {tokenLabels[cryptoShortage.tokenType]} balance
                       </div>
                       <div className="text-xs text-error/80">
-                        • Switch to <button onClick={handleCreditsTabClick} className="underline hover:text-error/80">Credits tab</button> to use credits<br />
-                        • Add {formatTokenAmount(cryptoShortage.amount, cryptoShortage.tokenType)} {tokenLabels[cryptoShortage.tokenType]} to your wallet<br />
-                        • <a href="/topup" className="underline hover:text-error/80">Buy credits</a> instead
+                        • Switch to{' '}
+                        <button
+                          onClick={handleCreditsTabClick}
+                          className="underline hover:text-error/80"
+                        >
+                          Credits tab
+                        </button>{' '}
+                        to use credits
+                        <br />• Add{' '}
+                        {formatTokenAmount(cryptoShortage.amount, cryptoShortage.tokenType)}{' '}
+                        {tokenLabels[cryptoShortage.tokenType]} to your wallet
+                        <br />•{' '}
+                        <a href="/topup" className="underline hover:text-error/80">
+                          Buy credits
+                        </a>{' '}
+                        instead
                       </div>
                     </div>
                   </div>
@@ -950,7 +1070,10 @@ export default function DeploySitePanel() {
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
-  const [deployMessage, setDeployMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [deployMessage, setDeployMessage] = useState<{
+    type: 'error' | 'success' | 'info';
+    text: string;
+  } | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showFolderContents, setShowFolderContents] = useState(false);
   const [indexFile, setIndexFile] = useState<string>('');
@@ -967,7 +1090,13 @@ export default function DeploySitePanel() {
   const [appName, setAppName] = useState('');
   const [appVersion, setAppVersion] = useState('');
   const [showDeployResults, setShowDeployResults] = useState(true);
-  const [deploySuccessInfo, setDeploySuccessInfo] = useState<{manifestId: string; arnsConfigured: boolean; arnsName?: string; undername?: string; arnsTransactionId?: string} | null>(null);
+  const [deploySuccessInfo, setDeploySuccessInfo] = useState<{
+    manifestId: string;
+    arnsConfigured: boolean;
+    arnsName?: string;
+    undername?: string;
+    arnsTransactionId?: string;
+  } | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [currentDeployResult, setCurrentDeployResult] = useState<any>(null);
   const [postDeployArNSName, setPostDeployArNSName] = useState('');
@@ -1045,15 +1174,15 @@ export default function DeploySitePanel() {
     hashingProgress,
     hashingStage,
     deduplicationStats,
-    resetAnalysis
+    resetAnalysis,
   } = useFolderUpload();
-  const { 
-    checkUploadStatus, 
-    checkMultipleStatuses, 
-    statusChecking, 
-    uploadStatuses, 
+  const {
+    checkUploadStatus,
+    checkMultipleStatuses,
+    statusChecking,
+    uploadStatuses,
     getStatusIcon,
-    initializeFromCache
+    initializeFromCache,
   } = useUploadStatus();
   const { updateArNSRecord, refreshSpecificName, names: userArnsNames } = useOwnedArNSNames();
 
@@ -1094,7 +1223,7 @@ export default function DeploySitePanel() {
   // Generate preview URLs for image files in the folder
   const imagePreviewUrls = useMemo(() => {
     // Revoke old URLs first
-    previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     previewUrlsRef.current.clear();
 
     if (!selectedFolder) return new Map<string, string>();
@@ -1102,7 +1231,7 @@ export default function DeploySitePanel() {
     const newUrls = new Map<string, string>();
     let imageCount = 0;
 
-    Array.from(selectedFolder).forEach(file => {
+    Array.from(selectedFolder).forEach((file) => {
       if (imageCount >= MAX_FOLDER_PREVIEWS) return;
 
       const path = file.webkitRelativePath || file.name;
@@ -1120,13 +1249,18 @@ export default function DeploySitePanel() {
   // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
       previewUrlsRef.current.clear();
     };
   }, []);
 
   // Handle successful domain assignment from modal
-  const handleAssignDomainSuccess = (manifestId: string, arnsName: string, undername?: string, transactionId?: string) => {
+  const handleAssignDomainSuccess = (
+    manifestId: string,
+    arnsName: string,
+    undername?: string,
+    transactionId?: string,
+  ) => {
     // Add ArNS update to deploy history
     const arnsUpdateRecord = {
       type: 'arns-update' as const,
@@ -1137,60 +1271,62 @@ export default function DeploySitePanel() {
       targetId: manifestId,
       timestamp: Date.now(),
       arnsStatus: 'success' as const,
-      arnsError: undefined
+      arnsError: undefined,
     };
-    
+
     addDeployResults([arnsUpdateRecord]);
-    
+
     // Refresh the specific ArNS name state
     setTimeout(() => {
       refreshSpecificName(arnsName);
     }, 3000);
-    
+
     // Close modal and show success message
     setShowAssignDomainModal(null);
     const existingAssociation = getArNSAssociation(manifestId);
     const isUpdate = existingAssociation && existingAssociation.arnsName;
     setDeployMessage({
       type: 'success',
-      text: `Domain ${undername ? undername + '_' : ''}${arnsName}.ar.io ${isUpdate ? 'updated' : 'assigned'} successfully!`
+      text: `Domain ${undername ? undername + '_' : ''}${arnsName}.ar.io ${isUpdate ? 'updated' : 'assigned'} successfully!`,
     });
   };
 
   // Memoize deployment grouping to prevent lag
   const deploymentGroups = useMemo(() => {
-    const groups: { [manifestId: string]: { manifest?: any, files?: any } } = {};
-    
-    deployHistory.forEach(result => {
+    const groups: { [manifestId: string]: { manifest?: any; files?: any } } = {};
+
+    deployHistory.forEach((result) => {
       const manifestId = result.manifestId || result.id;
       if (!manifestId) return;
-      
+
       if (!groups[manifestId]) {
         groups[manifestId] = {};
       }
-      
+
       if (result.type === 'manifest') {
         groups[manifestId].manifest = result;
       } else if (result.type === 'files') {
         groups[manifestId].files = result;
       }
     });
-    
+
     return groups;
   }, [deployHistory]);
 
-  // Limit recent deployments to 5 for this page  
+  // Limit recent deployments to 5 for this page
   const recentDeploymentEntries = useMemo(() => {
     return Object.entries(deploymentGroups).slice(0, 5);
   }, [deploymentGroups]);
 
   // Helper to find ArNS association for a manifest
-  const getArNSAssociation = useCallback((manifestId: string) => {
-    return deployHistory.find(record => 
-      record.type === 'arns-update' && 
-      record.manifestId === manifestId
-    );
-  }, [deployHistory]);
+  const getArNSAssociation = useCallback(
+    (manifestId: string) => {
+      return deployHistory.find(
+        (record) => record.type === 'arns-update' && record.manifestId === manifestId,
+      );
+    },
+    [deployHistory],
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -1241,11 +1377,11 @@ export default function DeploySitePanel() {
                         // Set both name and webkitRelativePath to match native file input behavior
                         Object.defineProperty(file, 'name', {
                           writable: true,
-                          value: fullPath
+                          value: fullPath,
                         });
                         Object.defineProperty(file, 'webkitRelativePath', {
                           writable: true,
-                          value: webkitPath
+                          value: webkitPath,
                         });
                         files.push(file);
                         resolveFile();
@@ -1278,21 +1414,31 @@ export default function DeploySitePanel() {
             setDeployMessage(null);
 
             // Auto-detect index and fallback files - call directly since it's defined below
-            const htmlFiles = files.filter(file => {
+            const htmlFiles = files.filter((file) => {
               const name = file.name.toLowerCase();
               return name.endsWith('.html') || name.endsWith('.htm');
             });
 
             // Look for common index files
-            const indexFile = htmlFiles.find(file => {
+            const indexFile = htmlFiles.find((file) => {
               const name = file.name.toLowerCase();
-              return name === 'index.html' || name === 'index.htm' || name.endsWith('/index.html') || name.endsWith('/index.htm');
+              return (
+                name === 'index.html' ||
+                name === 'index.htm' ||
+                name.endsWith('/index.html') ||
+                name.endsWith('/index.htm')
+              );
             });
 
             // Look for common error/404 pages
-            const fallbackFile = htmlFiles.find(file => {
+            const fallbackFile = htmlFiles.find((file) => {
               const name = file.name.toLowerCase();
-              return name === '404.html' || name === 'error.html' || name.endsWith('/404.html') || name.endsWith('/error.html');
+              return (
+                name === '404.html' ||
+                name === 'error.html' ||
+                name.endsWith('/404.html') ||
+                name.endsWith('/error.html')
+              );
             });
 
             if (indexFile) {
@@ -1305,7 +1451,10 @@ export default function DeploySitePanel() {
           }
         } catch (error) {
           console.error('Error reading dropped folder:', error);
-          setDeployMessage({ type: 'error', text: 'Failed to read folder contents. Please try using the browse button.' });
+          setDeployMessage({
+            type: 'error',
+            text: 'Failed to read folder contents. Please try using the browse button.',
+          });
         }
 
         break; // Only process the first folder
@@ -1317,7 +1466,7 @@ export default function DeploySitePanel() {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFolder(e.target.files);
       setDeployMessage(null);
-      
+
       // Auto-detect index and fallback files
       const files = Array.from(e.target.files);
       autoDetectManifestFiles(files);
@@ -1326,7 +1475,7 @@ export default function DeploySitePanel() {
 
   // Smart detection for index and fallback files
   const autoDetectManifestFiles = (files: File[]) => {
-    const htmlFiles = files.filter(file => {
+    const htmlFiles = files.filter((file) => {
       const name = file.name.toLowerCase();
       return name.endsWith('.html') || name.endsWith('.htm');
     });
@@ -1335,9 +1484,10 @@ export default function DeploySitePanel() {
     let detectedIndex = '';
     const indexCandidates = ['index.html', 'index.htm', 'home.html', 'main.html'];
     for (const candidate of indexCandidates) {
-      const found = htmlFiles.find(file => 
-        file.webkitRelativePath.toLowerCase().endsWith(candidate) ||
-        file.name.toLowerCase() === candidate
+      const found = htmlFiles.find(
+        (file) =>
+          file.webkitRelativePath.toLowerCase().endsWith(candidate) ||
+          file.name.toLowerCase() === candidate,
       );
       if (found) {
         detectedIndex = found.webkitRelativePath || found.name;
@@ -1345,31 +1495,36 @@ export default function DeploySitePanel() {
       }
     }
 
-    // Auto-detect fallback file  
+    // Auto-detect fallback file
     let detectedFallback = '';
     const fallbackCandidates = ['404.html', 'fallback.html', 'error.html', 'not-found.html'];
     for (const candidate of fallbackCandidates) {
-      const found = htmlFiles.find(file => 
-        file.webkitRelativePath.toLowerCase().endsWith(candidate) ||
-        file.name.toLowerCase() === candidate
+      const found = htmlFiles.find(
+        (file) =>
+          file.webkitRelativePath.toLowerCase().endsWith(candidate) ||
+          file.name.toLowerCase() === candidate,
       );
       if (found) {
         detectedFallback = found.webkitRelativePath || found.name;
         break;
       }
     }
-    
+
     // If no dedicated fallback found and this looks like a SPA, suggest index.html
     if (!detectedFallback && detectedIndex) {
       // Check for common SPA indicators (React, Vue, Angular build artifacts)
-      const hasBuildArtifacts = files.some(file => {
+      const hasBuildArtifacts = files.some((file) => {
         const name = file.name.toLowerCase();
         const path = file.webkitRelativePath?.toLowerCase() || '';
-        return name.includes('chunk') || name.includes('bundle') || 
-               path.includes('assets/') || path.includes('static/') ||
-               name.endsWith('.js') && name.includes('app');
+        return (
+          name.includes('chunk') ||
+          name.includes('bundle') ||
+          path.includes('assets/') ||
+          path.includes('static/') ||
+          (name.endsWith('.js') && name.includes('app'))
+        );
       });
-      
+
       if (hasBuildArtifacts) {
         detectedFallback = detectedIndex; // Suggest same as index for SPA routing
       }
@@ -1377,7 +1532,6 @@ export default function DeploySitePanel() {
 
     setIndexFile(detectedIndex);
     setFallbackFile(detectedFallback);
-    
   };
 
   const calculateTotalSize = (): number => {
@@ -1385,25 +1539,24 @@ export default function DeploySitePanel() {
     return Array.from(selectedFolder).reduce((total, file) => total + file.size, 0);
   };
 
-
   const calculateTotalCost = (): number => {
     if (!wincForOneGiB || !selectedFolder) return 0;
 
     // If Smart Deploy is enabled and we have stats, use pre-calculated billableSize
     // This accounts for cached files being skipped
     if (smartDeployEnabled && deduplicationStats) {
-      const gibSize = deduplicationStats.billableSize / (1024 ** 3);
+      const gibSize = deduplicationStats.billableSize / 1024 ** 3;
       const totalWinc = gibSize * Number(wincForOneGiB);
       return totalWinc / wincPerCredit;
     }
 
     // Smart Deploy disabled OR no stats yet: charge for ALL files (minus free tier)
     let totalWinc = 0;
-    Array.from(selectedFolder).forEach(file => {
+    Array.from(selectedFolder).forEach((file) => {
       if (isFileFree(file.size, freeUploadLimitBytes)) {
         return; // FREE - under free limit
       }
-      const gibSize = file.size / (1024 ** 3);
+      const gibSize = file.size / 1024 ** 3;
       const fileWinc = gibSize * Number(wincForOneGiB);
       totalWinc += fileWinc;
     });
@@ -1415,31 +1568,31 @@ export default function DeploySitePanel() {
   const calculateBillableSizeWithoutSmartDeploy = (): number => {
     if (!selectedFolder) return 0;
     return Array.from(selectedFolder)
-      .filter(file => !isFileFree(file.size, freeUploadLimitBytes))
+      .filter((file) => !isFileFree(file.size, freeUploadLimitBytes))
       .reduce((sum, file) => sum + file.size, 0);
   };
 
   // Organize files into folder structure
   const organizeFolderStructure = () => {
     if (!selectedFolder) return {};
-    
+
     const structure: Record<string, Array<{ file: File; path: string }>> = {};
-    
-    Array.from(selectedFolder).forEach(file => {
+
+    Array.from(selectedFolder).forEach((file) => {
       const fullPath = file.webkitRelativePath || file.name;
       const pathParts = fullPath.split('/');
       const folderPath = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : 'root';
-      
+
       if (!structure[folderPath]) {
         structure[folderPath] = [];
       }
-      
+
       structure[folderPath].push({
         file,
-        path: fullPath
+        path: fullPath,
       });
     });
-    
+
     return structure;
   };
 
@@ -1467,36 +1620,36 @@ export default function DeploySitePanel() {
     if (storedContentType && storedContentType !== 'application/octet-stream') {
       return storedContentType;
     }
-    
+
     // Apply smart detection based on file extension
     const extension = filePath.split('.').pop()?.toLowerCase();
     const mimeTypes: Record<string, string> = {
       // Images
-      'png': 'image/png',
-      'jpg': 'image/jpeg', 
-      'jpeg': 'image/jpeg',
-      'gif': 'image/gif',
-      'svg': 'image/svg+xml',
-      'webp': 'image/webp',
-      'ico': 'image/x-icon',
-      
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      svg: 'image/svg+xml',
+      webp: 'image/webp',
+      ico: 'image/x-icon',
+
       // Documents
-      'html': 'text/html',
-      'css': 'text/css',
-      'js': 'application/javascript',
-      'json': 'application/json',
-      'txt': 'text/plain',
-      'md': 'text/markdown',
-      
+      html: 'text/html',
+      css: 'text/css',
+      js: 'application/javascript',
+      json: 'application/json',
+      txt: 'text/plain',
+      md: 'text/markdown',
+
       // Fonts
-      'woff': 'font/woff',
-      'woff2': 'font/woff2',
-      'ttf': 'font/ttf',
-      
+      woff: 'font/woff',
+      woff2: 'font/woff2',
+      ttf: 'font/ttf',
+
       // Other
-      'pdf': 'application/pdf',
+      pdf: 'application/pdf',
     };
-    
+
     return mimeTypes[extension || ''] || storedContentType || 'application/octet-stream';
   };
 
@@ -1504,16 +1657,18 @@ export default function DeploySitePanel() {
     if (deployHistory.length === 0) return;
 
     // Group deployments by manifest ID like we do in the UI
-    const deploymentGroups: { [manifestId: string]: { manifest?: any, files?: any } } = {};
-    
-    deployHistory.forEach(result => {
+    const deploymentGroups: {
+      [manifestId: string]: { manifest?: any; files?: any };
+    } = {};
+
+    deployHistory.forEach((result) => {
       const manifestId = result.manifestId || result.id;
       if (!manifestId) return;
-      
+
       if (!deploymentGroups[manifestId]) {
         deploymentGroups[manifestId] = {};
       }
-      
+
       if (result.type === 'manifest') {
         deploymentGroups[manifestId].manifest = result;
       } else if (result.type === 'files') {
@@ -1523,7 +1678,7 @@ export default function DeploySitePanel() {
 
     const headers = [
       'Deployment Type',
-      'Manifest ID', 
+      'Manifest ID',
       'Site URL',
       'Deployment Date',
       'File Path',
@@ -1533,24 +1688,28 @@ export default function DeploySitePanel() {
       'Content Type',
       'Owner Address',
       'Total Files in Site',
-      'Total Site Size'
+      'Total Site Size',
     ];
 
     const rows: string[][] = [];
 
     Object.entries(deploymentGroups).forEach(([manifestId, group]) => {
-      const deployDate = group.manifest?.timestamp ? 
-        new Date(group.manifest.timestamp).toLocaleString() : 
-        'Unknown';
-      
+      const deployDate = group.manifest?.timestamp
+        ? new Date(group.manifest.timestamp).toLocaleString()
+        : 'Unknown';
+
       const siteUrl = getArweaveUrl(manifestId, group.manifest?.receipt?.dataCaches);
       const totalFiles = group.files?.files?.length || 0;
-      const totalSize = group.files?.files?.reduce((sum: number, file: any) => sum + file.size, 0) || 0;
-      const totalSizeHuman = totalSize > 0 ? (
-        totalSize < 1024 ? `${totalSize}B` :
-        totalSize < 1024 * 1024 ? `${(totalSize / 1024).toFixed(1)}KB` :
-        `${(totalSize / 1024 / 1024).toFixed(1)}MB`
-      ) : '0B';
+      const totalSize =
+        group.files?.files?.reduce((sum: number, file: any) => sum + file.size, 0) || 0;
+      const totalSizeHuman =
+        totalSize > 0
+          ? totalSize < 1024
+            ? `${totalSize}B`
+            : totalSize < 1024 * 1024
+              ? `${(totalSize / 1024).toFixed(1)}KB`
+              : `${(totalSize / 1024 / 1024).toFixed(1)}MB`
+          : '0B';
 
       // Add manifest row
       rows.push([
@@ -1561,22 +1720,26 @@ export default function DeploySitePanel() {
         'manifest.json',
         manifestId,
         'Unknown',
-        'Unknown', 
+        'Unknown',
         'application/x.arweave-manifest+json',
         group.manifest?.receipt?.owner || 'Unknown',
         totalFiles.toString(),
-        `${totalSize} (${totalSizeHuman})`
+        `${totalSize} (${totalSizeHuman})`,
       ]);
 
-      // Add individual file rows  
+      // Add individual file rows
       if (group.files?.files) {
         group.files.files.forEach((file: any) => {
-          const fileSizeHuman = file.size < 1024 ? `${file.size}B` :
-            file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)}KB` :
-            `${(file.size / 1024 / 1024).toFixed(1)}MB`;
-          
-          const contentType = file.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value || 
-                              'application/octet-stream';
+          const fileSizeHuman =
+            file.size < 1024
+              ? `${file.size}B`
+              : file.size < 1024 * 1024
+                ? `${(file.size / 1024).toFixed(1)}KB`
+                : `${(file.size / 1024 / 1024).toFixed(1)}MB`;
+
+          const contentType =
+            file.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value ||
+            'application/octet-stream';
 
           rows.push([
             'File',
@@ -1590,7 +1753,7 @@ export default function DeploySitePanel() {
             contentType,
             file.receipt?.owner || 'Unknown',
             totalFiles.toString(),
-            `${totalSize} (${totalSizeHuman})`
+            `${totalSize} (${totalSizeHuman})`,
           ]);
         });
       }
@@ -1599,7 +1762,7 @@ export default function DeploySitePanel() {
     // Create CSV content
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
     // Create and download file
@@ -1623,7 +1786,7 @@ export default function DeploySitePanel() {
         if (group.files?.files) ids.push(...group.files.files.map((f: any) => f.id));
         return ids;
       });
-      
+
       // Initialize from cache only (no API calls)
       initializeFromCache(allIds);
     }
@@ -1634,12 +1797,18 @@ export default function DeploySitePanel() {
   const handleConfirmDeploy = async () => {
     setShowConfirmModal(false);
     if (!selectedFolder || selectedFolder.length === 0) {
-      setDeployMessage({ type: 'error', text: 'Please select a folder to deploy' });
+      setDeployMessage({
+        type: 'error',
+        text: 'Please select a folder to deploy',
+      });
       return;
     }
 
     if (!address) {
-      setDeployMessage({ type: 'error', text: 'Please connect your wallet first' });
+      setDeployMessage({
+        type: 'error',
+        text: 'Please connect your wallet first',
+      });
       return;
     }
 
@@ -1650,7 +1819,7 @@ export default function DeploySitePanel() {
     if (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') {
       setDeployMessage({
         type: 'error',
-        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.'
+        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.',
       });
       return;
     }
@@ -1676,42 +1845,50 @@ export default function DeploySitePanel() {
       setDeploySuccessInfo(null); // Clear any previous success info
       setArnsUpdateCancelled(false); // Reset cancel state for new deployment
       // Pre-topup flow for crypto payments (one payment for all files)
-      const result = await deployFolder(Array.from(selectedFolder), {
-        indexFile: indexFile || undefined,
-        fallbackFile: fallbackFile || undefined,
-        cryptoPayment: shouldEnableJit,
-        tokenAmount: jitMaxTokenAmountSmallest,
-        selectedToken: selectedJitToken,
-        appName: appName.trim() || undefined,
-        appVersion: appVersion.trim() || undefined,
-      }, smartDeployEnabled);
+      const result = await deployFolder(
+        Array.from(selectedFolder),
+        {
+          indexFile: indexFile || undefined,
+          fallbackFile: fallbackFile || undefined,
+          cryptoPayment: shouldEnableJit,
+          tokenAmount: jitMaxTokenAmountSmallest,
+          selectedToken: selectedJitToken,
+          appName: appName.trim() || undefined,
+          appVersion: appVersion.trim() || undefined,
+        },
+        smartDeployEnabled,
+      );
 
       // Save app details to store for future pre-fill
       if (appName.trim()) {
         saveDeployedApp(appName.trim(), appVersion.trim());
       }
-      
+
       if (result.manifestId) {
         // Add results to store for persistence
         addDeployResults(result.results || []);
-        
+
         // Store current deployment result for cancel button access
         setCurrentDeployResult(result);
-        
+
         // Handle ArNS update if enabled and not cancelled
         if (arnsEnabled && selectedArnsName && !arnsUpdateCancelled) {
           try {
             // Keep deployment progress visible and update stage to show ArNS update
             updateDeployStage('updating-arns');
-            console.log('Updating ArNS record:', { name: selectedArnsName, manifestId: result.manifestId, undername: selectedUndername });
-            
+            console.log('Updating ArNS record:', {
+              name: selectedArnsName,
+              manifestId: result.manifestId,
+              undername: selectedUndername,
+            });
+
             const arnsResult = await updateArNSRecord(
               selectedArnsName,
               result.manifestId,
               selectedUndername || undefined,
-              customTTL
+              customTTL,
             );
-            
+
             // Add ArNS update to deploy history
             const arnsUpdateRecord = {
               type: 'arns-update' as const,
@@ -1721,12 +1898,12 @@ export default function DeploySitePanel() {
               undername: selectedUndername || undefined,
               targetId: result.manifestId,
               timestamp: Date.now(),
-              arnsStatus: arnsResult.success ? 'success' as const : 'failed' as const,
-              arnsError: arnsResult.error
+              arnsStatus: arnsResult.success ? ('success' as const) : ('failed' as const),
+              arnsError: arnsResult.error,
             };
-            
+
             addDeployResults([arnsUpdateRecord]);
-            
+
             if (arnsResult.success) {
               // Mark deployment as complete and store success info
               updateDeployStage('complete');
@@ -1735,9 +1912,9 @@ export default function DeploySitePanel() {
                 arnsConfigured: true,
                 arnsName: selectedArnsName,
                 undername: selectedUndername || undefined,
-                arnsTransactionId: arnsResult.transactionId
+                arnsTransactionId: arnsResult.transactionId,
               });
-              
+
               // Refresh the specific ArNS name to get latest state
               setTimeout(() => {
                 refreshSpecificName(selectedArnsName);
@@ -1748,11 +1925,11 @@ export default function DeploySitePanel() {
               // Site deployed successfully but ArNS failed - still show success with error info
               setDeploySuccessInfo({
                 manifestId: result.manifestId,
-                arnsConfigured: false // Failed ArNS = show enhancement option
+                arnsConfigured: false, // Failed ArNS = show enhancement option
               });
               setDeployMessage({
                 type: 'error',
-                text: `ArNS update failed: ${arnsResult.error}. Site is deployed successfully.`
+                text: `ArNS update failed: ${arnsResult.error}. Site is deployed successfully.`,
               });
             }
           } catch (arnsError) {
@@ -1762,11 +1939,11 @@ export default function DeploySitePanel() {
             // Still show success since site deployed, just note ArNS failed
             setDeploySuccessInfo({
               manifestId: result.manifestId,
-              arnsConfigured: false
+              arnsConfigured: false,
             });
             setDeployMessage({
               type: 'error',
-              text: 'ArNS update failed. Site is deployed successfully.'
+              text: 'ArNS update failed. Site is deployed successfully.',
             });
           }
         } else {
@@ -1774,10 +1951,10 @@ export default function DeploySitePanel() {
           updateDeployStage('complete');
           setDeploySuccessInfo({
             manifestId: result.manifestId,
-            arnsConfigured: false
+            arnsConfigured: false,
           });
         }
-        
+
         // Clear the folder selection since deployment is complete
         setSelectedFolder(null);
         setShowFolderContents(false);
@@ -1791,15 +1968,15 @@ export default function DeploySitePanel() {
         setPostDeployArNSName('');
         setPostDeployUndername('');
         setPostDeployArNSEnabled(false);
-        
+
         // Trigger balance refresh after successful deployment
         window.dispatchEvent(new CustomEvent('refresh-balance'));
       }
     } catch (error) {
       console.error('Deploy failed:', error);
-      setDeployMessage({ 
-        type: 'error', 
-        text: error instanceof Error ? error.message : 'Deploy failed' 
+      setDeployMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Deploy failed',
       });
     }
   };
@@ -1827,10 +2004,9 @@ export default function DeploySitePanel() {
           </div>
           <div>
             <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
-              {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                'Site Deployed with Domain' :
-                'Site Deployed'
-              }
+              {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName
+                ? 'Site Deployed with Domain'
+                : 'Site Deployed'}
             </h3>
             <p className="text-sm text-foreground/80">
               Success! Your site is live on the permanent cloud.
@@ -1855,47 +2031,44 @@ export default function DeploySitePanel() {
       {/* Main Content Container with Red Gradient - Hide during success and deployment */}
       {!deploySuccessInfo && !deploying && (
         <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
-        {/* Dynamic Zone: Drop Zone OR Selected Folder */}
-        {!selectedFolder || selectedFolder.length === 0 ? (
-          /* Drop Zone when no folder selected */
-          <div
-            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
-              isDragging
-                ? 'border-primary bg-primary/10'
-                : 'border-primary/30 bg-card/80 hover:border-primary/50'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <div className="mb-4">
-              <Zap className="w-12 h-12 text-primary mx-auto mb-2" />
-              <p className="text-lg font-medium mb-2">
-                Drop site folder here or click to browse
-              </p>
-              <p className="text-sm text-foreground/80">
-                Select your site folder (HTML, CSS, JS, assets) for deployment
-              </p>
-            </div>
-            <input
-              type="file"
-              {...({ webkitdirectory: 'true', directory: 'true' } as any)}
-              multiple
-              onChange={handleFolderSelect}
-              className="hidden"
-              id="folder-upload"
-            />
-            <label
-              htmlFor="folder-upload"
-              className="inline-block px-4 py-2 rounded-full bg-foreground text-card font-medium cursor-pointer hover:bg-foreground/90 transition-colors"
+          {/* Dynamic Zone: Drop Zone OR Selected Folder */}
+          {!selectedFolder || selectedFolder.length === 0 ? (
+            /* Drop Zone when no folder selected */
+            <div
+              className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
+                isDragging
+                  ? 'border-primary bg-primary/10'
+                  : 'border-primary/30 bg-card/80 hover:border-primary/50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
-              Select Site Folder
-            </label>
-          </div>
-        ) : (
-          /* Selected Folder Card - replaces drop zone */
-          <div className="bg-card rounded-xl border border-primary/20 p-4">
+              <div className="mb-4">
+                <Zap className="w-12 h-12 text-primary mx-auto mb-2" />
+                <p className="text-lg font-medium mb-2">Drop site folder here or click to browse</p>
+                <p className="text-sm text-foreground/80">
+                  Select your site folder (HTML, CSS, JS, assets) for deployment
+                </p>
+              </div>
+              <input
+                type="file"
+                {...({ webkitdirectory: 'true', directory: 'true' } as any)}
+                multiple
+                onChange={handleFolderSelect}
+                className="hidden"
+                id="folder-upload"
+              />
+              <label
+                htmlFor="folder-upload"
+                className="inline-block px-4 py-2 rounded-full bg-foreground text-card font-medium cursor-pointer hover:bg-foreground/90 transition-colors"
+              >
+                Select Site Folder
+              </label>
+            </div>
+          ) : (
+            /* Selected Folder Card - replaces drop zone */
+            <div className="bg-card rounded-xl border border-primary/20 p-4">
               {/* Folder Header Row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1905,12 +2078,14 @@ export default function DeploySitePanel() {
                   <div>
                     <span className="font-medium text-foreground">{folderName}</span>
                     <span className="text-xs text-foreground/80 ml-2">
-                      · {selectedFolder?.length} files · {
-                        totalFileSize < 1024 ? `${totalFileSize} B` :
-                        totalFileSize < 1024 * 1024 ? `${(totalFileSize / 1024).toFixed(1)} KB` :
-                        totalFileSize < 1024 * 1024 * 1024 ? `${(totalFileSize / 1024 / 1024).toFixed(1)} MB` :
-                        `${(totalFileSize / 1024 / 1024 / 1024).toFixed(2)} GB`
-                      }
+                      · {selectedFolder?.length} files ·{' '}
+                      {totalFileSize < 1024
+                        ? `${totalFileSize} B`
+                        : totalFileSize < 1024 * 1024
+                          ? `${(totalFileSize / 1024).toFixed(1)} KB`
+                          : totalFileSize < 1024 * 1024 * 1024
+                            ? `${(totalFileSize / 1024 / 1024).toFixed(1)} MB`
+                            : `${(totalFileSize / 1024 / 1024 / 1024).toFixed(2)} GB`}
                     </span>
                   </div>
                 </div>
@@ -1920,7 +2095,9 @@ export default function DeploySitePanel() {
                     className="p-1.5 text-foreground/80 hover:text-foreground transition-colors rounded hover:bg-card/50"
                     title={showFolderContents ? 'Hide folder contents' : 'Show folder contents'}
                   >
-                    <ChevronDown className={`w-4 h-4 transition-transform ${showFolderContents ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${showFolderContents ? 'rotate-180' : ''}`}
+                    />
                   </button>
                   <button
                     onClick={() => {
@@ -1931,7 +2108,9 @@ export default function DeploySitePanel() {
                       setFallbackFile('');
                       setAppName('');
                       setAppVersion('');
-                      const fileInput = document.getElementById('folder-upload') as HTMLInputElement;
+                      const fileInput = document.getElementById(
+                        'folder-upload',
+                      ) as HTMLInputElement;
                       if (fileInput) {
                         fileInput.value = '';
                       }
@@ -1954,255 +2133,294 @@ export default function DeploySitePanel() {
                       style={{ width: `${hashingProgress}%` }}
                     />
                   </div>
-                  <span className="text-xs text-foreground/80 flex-shrink-0">{hashingProgress}%</span>
+                  <span className="text-xs text-foreground/80 flex-shrink-0">
+                    {hashingProgress}%
+                  </span>
                 </div>
               )}
 
               {/* Expandable Content: App Details + Smart Deploy + File Tree */}
               {showFolderContents && (
-                  <div className="mt-3 p-3 bg-card rounded-lg border border-border/20 max-h-96 overflow-y-auto">
-                    {/* App Details Fields - Memoized for performance */}
-                    <AppDetailsFields
-                      appName={appName}
-                      appVersion={appVersion}
-                      onAppNameChange={setAppName}
-                      onAppVersionChange={setAppVersion}
-                      deployedApps={deployedApps}
-                    />
+                <div className="mt-3 p-3 bg-card rounded-lg border border-border/20 max-h-96 overflow-y-auto">
+                  {/* App Details Fields - Memoized for performance */}
+                  <AppDetailsFields
+                    appName={appName}
+                    appVersion={appVersion}
+                    onAppNameChange={setAppName}
+                    onAppVersionChange={setAppVersion}
+                    deployedApps={deployedApps}
+                  />
 
-                    {/* Smart Deploy Row - inside expanded area */}
-                    {deduplicationStats && deduplicationStats.cachedFiles > 0 && hashingStage === 'complete' && (
+                  {/* Smart Deploy Row - inside expanded area */}
+                  {deduplicationStats &&
+                    deduplicationStats.cachedFiles > 0 &&
+                    hashingStage === 'complete' && (
                       <div className="flex items-center justify-between py-2 mb-3 border-b border-border/20 pb-3">
                         <div className="flex items-center gap-2 text-sm">
                           <Sparkles className="w-4 h-4 text-foreground" />
                           <span className="text-foreground/80">
-                            {smartDeployEnabled
-                              ? <>
-                                  <span>{deduplicationStats.cachedFiles} cached</span>
-                                  <span className="text-foreground/60 ml-1">
-                                    ({deduplicationStats.cachedSize < 1024 * 1024
-                                      ? `${(deduplicationStats.cachedSize / 1024).toFixed(1)}KB`
-                                      : `${(deduplicationStats.cachedSize / 1024 / 1024).toFixed(1)}MB`})
-                                  </span>
-                                  <span className="mx-1">·</span>
-                                  {deduplicationStats.newFiles} new
-                                  <span className="text-foreground/60 ml-1">
-                                    ({deduplicationStats.newSize < 1024 * 1024
-                                      ? `${(deduplicationStats.newSize / 1024).toFixed(1)}KB`
-                                      : `${(deduplicationStats.newSize / 1024 / 1024).toFixed(1)}MB`})
-                                  </span>
-                                </>
-                              : <span className="text-foreground/60">Smart Deploy off — all {deduplicationStats.cachedFiles + deduplicationStats.newFiles} files will upload</span>
-                            }
+                            {smartDeployEnabled ? (
+                              <>
+                                <span>{deduplicationStats.cachedFiles} cached</span>
+                                <span className="text-foreground/60 ml-1">
+                                  (
+                                  {deduplicationStats.cachedSize < 1024 * 1024
+                                    ? `${(deduplicationStats.cachedSize / 1024).toFixed(1)}KB`
+                                    : `${(deduplicationStats.cachedSize / 1024 / 1024).toFixed(1)}MB`}
+                                  )
+                                </span>
+                                <span className="mx-1">·</span>
+                                {deduplicationStats.newFiles} new
+                                <span className="text-foreground/60 ml-1">
+                                  (
+                                  {deduplicationStats.newSize < 1024 * 1024
+                                    ? `${(deduplicationStats.newSize / 1024).toFixed(1)}KB`
+                                    : `${(deduplicationStats.newSize / 1024 / 1024).toFixed(1)}MB`}
+                                  )
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-foreground/60">
+                                Smart Deploy off — all{' '}
+                                {deduplicationStats.cachedFiles + deduplicationStats.newFiles} files
+                                will upload
+                              </span>
+                            )}
                           </span>
                         </div>
                         <button
                           onClick={() => setSmartDeployEnabled(!smartDeployEnabled)}
-                          className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${
-                            smartDeployEnabled ? 'bg-success' : 'bg-card border border-border/10'
-                          }`}
-                          title={smartDeployEnabled ? 'Disable Smart Deploy' : 'Enable Smart Deploy'}
+                          className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${smartDeployEnabled ? 'bg-success' : 'bg-card border border-border/10'}`}
+                          title={
+                            smartDeployEnabled ? 'Disable Smart Deploy' : 'Enable Smart Deploy'
+                          }
                         >
                           <div
                             className={`absolute top-0.5 w-3 h-3 rounded-full transition-transform ${
-                              smartDeployEnabled ? 'translate-x-4 bg-background' : 'translate-x-0.5 bg-foreground'
+                              smartDeployEnabled
+                                ? 'translate-x-4 bg-background'
+                                : 'translate-x-0.5 bg-foreground'
                             }`}
                           />
                         </button>
                       </div>
                     )}
-                    <div className="space-y-1 text-xs font-mono">
-                      {(() => {
-                        const structure = organizeFolderStructure();
-                        const sortedFolders = Object.keys(structure).sort();
-                        
-                        return sortedFolders.map(folderPath => (
-                          <div key={folderPath}>
-                            {/* Folder Header */}
-                            {folderPath !== 'root' && (
-                              <div className="flex items-center gap-2 text-foreground font-medium mb-1">
-                                <Folder className="w-3 h-3 text-foreground" />
-                                <span>{folderPath}/</span>
-                              </div>
-                            )}
-                            
-                            {/* Files in Folder */}
-                            <div className={folderPath !== 'root' ? 'ml-4 space-y-0.5' : 'space-y-0.5'}>
-                              {structure[folderPath]
-                                .sort((a, b) => a.file.name.localeCompare(b.file.name))
-                                .map(({ file, path }, index) => {
-                                  const FileIcon = getFileIcon(file.name);
-                                  const fileName = path.split('/').pop() || file.name;
-                                  const fileSize = file.size < 1024
+                  <div className="space-y-1 text-xs font-mono">
+                    {(() => {
+                      const structure = organizeFolderStructure();
+                      const sortedFolders = Object.keys(structure).sort();
+
+                      return sortedFolders.map((folderPath) => (
+                        <div key={folderPath}>
+                          {/* Folder Header */}
+                          {folderPath !== 'root' && (
+                            <div className="flex items-center gap-2 text-foreground font-medium mb-1">
+                              <Folder className="w-3 h-3 text-foreground" />
+                              <span>{folderPath}/</span>
+                            </div>
+                          )}
+
+                          {/* Files in Folder */}
+                          <div
+                            className={folderPath !== 'root' ? 'ml-4 space-y-0.5' : 'space-y-0.5'}
+                          >
+                            {structure[folderPath]
+                              .sort((a, b) => a.file.name.localeCompare(b.file.name))
+                              .map(({ file, path }, index) => {
+                                const FileIcon = getFileIcon(file.name);
+                                const fileName = path.split('/').pop() || file.name;
+                                const fileSize =
+                                  file.size < 1024
                                     ? `${file.size}B`
                                     : file.size < 1024 * 1024
-                                    ? `${(file.size / 1024).toFixed(1)}KB`
-                                    : `${(file.size / 1024 / 1024).toFixed(1)}MB`;
+                                      ? `${(file.size / 1024).toFixed(1)}KB`
+                                      : `${(file.size / 1024 / 1024).toFixed(1)}MB`;
 
-                                  const fullPath = file.webkitRelativePath || file.name;
-                                  const isHtml = fileName.toLowerCase().endsWith('.html') || fileName.toLowerCase().endsWith('.htm');
-                                  const isIndex = indexFile === fullPath;
-                                  const isFallback = fallbackFile === fullPath;
-                                  const previewUrl = imagePreviewUrls.get(fullPath);
-                                  const isImage = isPreviewableImage(file.name);
+                                const fullPath = file.webkitRelativePath || file.name;
+                                const isHtml =
+                                  fileName.toLowerCase().endsWith('.html') ||
+                                  fileName.toLowerCase().endsWith('.htm');
+                                const isIndex = indexFile === fullPath;
+                                const isFallback = fallbackFile === fullPath;
+                                const previewUrl = imagePreviewUrls.get(fullPath);
+                                const isImage = isPreviewableImage(file.name);
 
-                                  return (
-                                    <div key={index} className="flex items-center justify-between text-foreground/80 hover:text-foreground transition-colors py-1 px-1 rounded">
-                                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        {/* Thumbnail for images, icon for others */}
-                                        {isImage && previewUrl ? (
-                                          <div className="w-6 h-6 rounded overflow-hidden bg-card border border-border/20 flex-shrink-0">
-                                            <img
-                                              src={previewUrl}
-                                              alt={fileName}
-                                              className="w-full h-full object-cover"
-                                            />
-                                          </div>
-                                        ) : (
-                                          <FileIcon className="w-3 h-3 text-foreground/80 flex-shrink-0" />
-                                        )}
-                                        <span className="truncate">{fileName}</span>
-                                        
-                                        {/* Badges for selected files */}
-                                        {isIndex && (
-                                          <div className="flex items-center gap-1 px-2 py-0.5 bg-success/20 text-success rounded text-xs font-medium">
-                                            <Home className="w-3 h-3" />
-                                            INDEX
-                                          </div>
-                                        )}
-                                        {isFallback && (
-                                          <div className="flex items-center gap-1 px-2 py-0.5 bg-warning/20 text-warning rounded text-xs font-medium">
-                                            <AlertTriangle className="w-3 h-3" />
-                                            FALLBACK
-                                          </div>
-                                        )}
-                                      </div>
-                                      
-                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                return (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between text-foreground/80 hover:text-foreground transition-colors py-1 px-1 rounded"
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      {/* Thumbnail for images, icon for others */}
+                                      {isImage && previewUrl ? (
+                                        <div className="w-6 h-6 rounded overflow-hidden bg-card border border-border/20 flex-shrink-0">
+                                          <img
+                                            src={previewUrl}
+                                            alt={fileName}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <FileIcon className="w-3 h-3 text-foreground/80 flex-shrink-0" />
+                                      )}
+                                      <span className="truncate">{fileName}</span>
 
-                                        {/* Action buttons for HTML files */}
-                                        {isHtml && (
-                                          <div className="flex items-center gap-1">
-                                            {!isIndex && (
-                                              <button
-                                                onClick={() => setIndexFile(fullPath)}
-                                                className="px-2 py-0.5 text-xs bg-success/10 text-success rounded hover:bg-success/20 transition-colors"
-                                                title="Set as Index"
-                                              >
-                                                Set Index
-                                              </button>
-                                            )}
-                                            {!isFallback && (
-                                              <button
-                                                onClick={() => setFallbackFile(fullPath)}
-                                                className="px-2 py-0.5 text-xs bg-warning/10 text-warning rounded hover:bg-warning/20 transition-colors"
-                                                title="Set as Fallback"
-                                              >
-                                                Set Fallback
-                                              </button>
-                                            )}
-                                          </div>
-                                        )}
-                                        
-                                        {/* Clear buttons for selected files */}
-                                        {isIndex && (
-                                          <button
-                                            onClick={() => setIndexFile('')}
-                                            className="px-2 py-0.5 text-xs text-foreground/80 hover:text-error rounded transition-colors"
-                                            title="Clear Index"
-                                          >
-                                            Clear
-                                          </button>
-                                        )}
-                                        {isFallback && (
-                                          <button
-                                            onClick={() => setFallbackFile('')}
-                                            className="px-2 py-0.5 text-xs text-foreground/80 hover:text-error rounded transition-colors"
-                                            title="Clear Fallback"
-                                          >
-                                            Clear
-                                          </button>
-                                        )}
-
-                                        <span className="text-foreground/60 text-xs">
-                                          {fileSize}
-                                          {isFileFree(file.size, freeUploadLimitBytes) && <span className="ml-1 text-success">• FREE</span>}
-                                        </span>
-                                        
-                                      </div>
+                                      {/* Badges for selected files */}
+                                      {isIndex && (
+                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-success/20 text-success rounded text-xs font-medium">
+                                          <Home className="w-3 h-3" />
+                                          INDEX
+                                        </div>
+                                      )}
+                                      {isFallback && (
+                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-warning/20 text-warning rounded text-xs font-medium">
+                                          <AlertTriangle className="w-3 h-3" />
+                                          FALLBACK
+                                        </div>
+                                      )}
                                     </div>
-                                  );
-                                })}
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-                )}
 
-            {/* SPA Routing Info - Only show when we couldn't auto-detect proper fallback */}
-            {(!indexFile || !fallbackFile || fallbackFile !== indexFile) && (
-              <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-foreground/80">
-                    <strong className="text-foreground">SPA Routing Configuration:</strong> We couldn't automatically detect your fallback file. For React/Vue/Angular apps, set the <strong>Fallback</strong> to your main HTML file (usually{' '}
-                    <code className="px-1 py-0.5 bg-primary/20 rounded text-primary font-mono text-xs">index.html</code>
-                    ) to enable client-side routing. This ensures URLs like{' '}
-                    <code className="px-1 py-0.5 bg-primary/20 rounded text-primary font-mono text-xs">/topup</code>
-                    {' '}work correctly instead of showing 404 errors.
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      {/* Action buttons for HTML files */}
+                                      {isHtml && (
+                                        <div className="flex items-center gap-1">
+                                          {!isIndex && (
+                                            <button
+                                              onClick={() => setIndexFile(fullPath)}
+                                              className="px-2 py-0.5 text-xs bg-success/10 text-success rounded hover:bg-success/20 transition-colors"
+                                              title="Set as Index"
+                                            >
+                                              Set Index
+                                            </button>
+                                          )}
+                                          {!isFallback && (
+                                            <button
+                                              onClick={() => setFallbackFile(fullPath)}
+                                              className="px-2 py-0.5 text-xs bg-warning/10 text-warning rounded hover:bg-warning/20 transition-colors"
+                                              title="Set as Fallback"
+                                            >
+                                              Set Fallback
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Clear buttons for selected files */}
+                                      {isIndex && (
+                                        <button
+                                          onClick={() => setIndexFile('')}
+                                          className="px-2 py-0.5 text-xs text-foreground/80 hover:text-error rounded transition-colors"
+                                          title="Clear Index"
+                                        >
+                                          Clear
+                                        </button>
+                                      )}
+                                      {isFallback && (
+                                        <button
+                                          onClick={() => setFallbackFile('')}
+                                          className="px-2 py-0.5 text-xs text-foreground/80 hover:text-error rounded transition-colors"
+                                          title="Clear Fallback"
+                                        >
+                                          Clear
+                                        </button>
+                                      )}
+
+                                      <span className="text-foreground/60 text-xs">
+                                        {fileSize}
+                                        {isFileFree(file.size, freeUploadLimitBytes) && (
+                                          <span className="ml-1 text-success">• FREE</span>
+                                        )}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+
+              {/* SPA Routing Info - Only show when we couldn't auto-detect proper fallback */}
+              {(!indexFile || !fallbackFile || fallbackFile !== indexFile) && (
+                <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-foreground/80">
+                      <strong className="text-foreground">SPA Routing Configuration:</strong> We
+                      couldn't automatically detect your fallback file. For React/Vue/Angular apps,
+                      set the <strong>Fallback</strong> to your main HTML file (usually{' '}
+                      <code className="px-1 py-0.5 bg-primary/20 rounded text-primary font-mono text-xs">
+                        index.html
+                      </code>
+                      ) to enable client-side routing. This ensures URLs like{' '}
+                      <code className="px-1 py-0.5 bg-primary/20 rounded text-primary font-mono text-xs">
+                        /topup
+                      </code>{' '}
+                      work correctly instead of showing 404 errors.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* ArNS Association Panel - Show for all users, but only Arweave wallets can actually update records */}
-      {selectedFolder && selectedFolder.length > 0 && (walletType === 'arweave' || walletType === 'ethereum') && !deploySuccessInfo && !deploying && (
-        <ArNSAssociationPanel
-          enabled={arnsEnabled}
-          onEnabledChange={setArnsEnabled}
-          selectedName={selectedArnsName}
-          onNameChange={setSelectedArnsName}
-          selectedUndername={selectedUndername}
-          onUndernameChange={setSelectedUndername}
-          customTTL={customTTL}
-          onCustomTTLChange={setCustomTTL}
-          showUndername={showUndername}
-          onShowUndernameChange={setShowUndername}
-        />
-      )}
+      {selectedFolder &&
+        selectedFolder.length > 0 &&
+        (walletType === 'arweave' || walletType === 'ethereum') &&
+        !deploySuccessInfo &&
+        !deploying && (
+          <ArNSAssociationPanel
+            enabled={arnsEnabled}
+            onEnabledChange={setArnsEnabled}
+            selectedName={selectedArnsName}
+            onNameChange={setSelectedArnsName}
+            selectedUndername={selectedUndername}
+            onUndernameChange={setSelectedUndername}
+            customTTL={customTTL}
+            onCustomTTLChange={setCustomTTL}
+            showUndername={showUndername}
+            onShowUndernameChange={setShowUndername}
+          />
+        )}
 
       {/* Summary Panel - After ArNS configuration, hide during success and deployment */}
       {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
         <div className="mt-4 p-4 bg-card rounded-lg border border-primary/20">
-            <div className="flex justify-between mb-2">
-              <span className="text-xs text-foreground/80">Total Size:</span>
-              <span className="text-xs text-foreground">{(totalFileSize / 1024 / 1024).toFixed(2)} MB</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-xs text-foreground/80">Estimated Cost:</span>
-              <span className="text-xs text-foreground">
-                {totalCost === 0 ? (
-                  <span className="text-success font-medium">FREE</span>
-                ) : (
-                  <span>{totalCost.toFixed(6)} Credits</span>
-                )}
-              </span>
-            </div>
+          <div className="flex justify-between mb-2">
+            <span className="text-xs text-foreground/80">Total Size:</span>
+            <span className="text-xs text-foreground">
+              {(totalFileSize / 1024 / 1024).toFixed(2)} MB
+            </span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-xs text-foreground/80">Estimated Cost:</span>
+            <span className="text-xs text-foreground">
+              {totalCost === 0 ? (
+                <span className="text-success font-medium">FREE</span>
+              ) : (
+                <span>{totalCost.toFixed(6)} Credits</span>
+              )}
+            </span>
+          </div>
+        </div>
       )}
-
 
       {/* Deploy Button - Hide during success display and deployment */}
       {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
         <button
           onClick={() => setShowConfirmModal(true)}
-          disabled={deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername)}
+          disabled={
+            deploying ||
+            hashingStage === 'hashing' ||
+            (arnsEnabled && !selectedArnsName) ||
+            (arnsEnabled && showUndername && !selectedUndername)
+          }
           className="w-full mt-4 py-4 px-6 rounded-lg bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {deploying ? (
@@ -2253,7 +2471,8 @@ export default function DeploySitePanel() {
               </div>
               <span className="text-sm text-foreground/80">
                 {deployStage === 'manifest' && 'Finalizing deployment...'}
-                {deployStage === 'updating-arns' && `Updating ${selectedUndername ? selectedUndername + '_' : ''}${selectedArnsName}.ar.io`}
+                {deployStage === 'updating-arns' &&
+                  `Updating ${selectedUndername ? selectedUndername + '_' : ''}${selectedArnsName}.ar.io`}
                 {deployStage === 'complete' && 'Deployment complete!'}
               </span>
             </div>
@@ -2278,7 +2497,10 @@ export default function DeploySitePanel() {
                 {deployStage === 'updating-arns' && (
                   <>
                     <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />
-                    <span>Connecting {selectedUndername ? selectedUndername + '_' : ''}{selectedArnsName}.ar.io to your site...</span>
+                    <span>
+                      Connecting {selectedUndername ? selectedUndername + '_' : ''}
+                      {selectedArnsName}.ar.io to your site...
+                    </span>
                   </>
                 )}
               </div>
@@ -2294,11 +2516,11 @@ export default function DeploySitePanel() {
                     // Show success info since deployment was successful
                     setDeploySuccessInfo({
                       manifestId: currentDeployResult?.manifestId || '',
-                      arnsConfigured: false
+                      arnsConfigured: false,
                     });
                     setDeployMessage({
                       type: 'info',
-                      text: 'Site deployed successfully! ArNS update was cancelled.'
+                      text: 'Site deployed successfully! ArNS update was cancelled.',
                     });
                   }}
                   className="px-4 py-2 text-sm bg-card border border-border/20 rounded-lg text-foreground/80 hover:text-foreground hover:border-border/10 transition-colors"
@@ -2316,24 +2538,23 @@ export default function DeploySitePanel() {
       {/* Rich Success Display */}
       {deploySuccessInfo && (
         <div className="border border-success rounded-xl p-6 bg-card">
-
-
           {/* Site Details */}
           <div className="bg-card rounded-lg p-4 mb-4 space-y-3">
             <div>
               <div className="text-sm text-foreground/80 mb-2">Your site URL:</div>
               <div className="flex items-center gap-2 p-3 bg-card rounded border border-border/10">
                 <span className="font-mono text-sm text-foreground flex-1 min-w-0 truncate">
-                  {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                    `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                    getArweaveUrl(deploySuccessInfo.manifestId)
-                  }
+                  {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName
+                    ? `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io`
+                    : getArweaveUrl(deploySuccessInfo.manifestId)}
                 </span>
-                <CopyButton textToCopy={
-                  deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                    `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                    getArweaveUrl(deploySuccessInfo.manifestId)
-                } />
+                <CopyButton
+                  textToCopy={
+                    deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName
+                      ? `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io`
+                      : getArweaveUrl(deploySuccessInfo.manifestId)
+                  }
+                />
               </div>
             </div>
 
@@ -2365,12 +2586,14 @@ export default function DeploySitePanel() {
           {/* Primary Actions */}
           <div className="flex gap-3 mb-4">
             <button
-              onClick={() => window.open(
-                deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                  `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                  getArweaveUrl(deploySuccessInfo.manifestId),
-                '_blank'
-              )}
+              onClick={() =>
+                window.open(
+                  deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName
+                    ? `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io`
+                    : getArweaveUrl(deploySuccessInfo.manifestId),
+                  '_blank',
+                )
+              }
               className="flex-1 py-3 px-4 bg-success text-white rounded-lg font-medium hover:bg-success/90 transition-colors"
             >
               Visit Your Site
@@ -2390,186 +2613,207 @@ export default function DeploySitePanel() {
               Deploy Another Site
             </button>
           </div>
-
         </div>
       )}
 
       {/* ArNS Discovery Section - Only for users without ArNS names */}
-      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       ((walletType !== 'arweave' && walletType !== 'ethereum') || userArnsNames.length === 0) && (
-        <div className="mt-6">
-          <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-warning/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                <Globe className="w-5 h-5 text-warning" />
+      {deploySuccessInfo &&
+        !deploySuccessInfo.arnsConfigured &&
+        ((walletType !== 'arweave' && walletType !== 'ethereum') || userArnsNames.length === 0) && (
+          <div className="mt-6">
+            <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-warning/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                  <Globe className="w-5 h-5 text-warning" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-foreground mb-1">
+                    Want a Friendly Domain Name?
+                  </h4>
+                  <p className="text-sm text-foreground/80">
+                    Your site is live, but you can make it even better with an ArNS domain name
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-lg font-bold text-foreground mb-1">Want a Friendly Domain Name?</h4>
-                <p className="text-sm text-foreground/80">
-                  Your site is live, but you can make it even better with an ArNS domain name
-                </p>
-              </div>
-            </div>
 
-            <div className="grid md:grid-cols-3 gap-3 mb-4 text-xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Human-readable URLs</span>
+              <div className="grid md:grid-cols-3 gap-3 mb-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-success" />
+                  <span className="text-foreground/80">Human-readable URLs</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-success" />
+                  <span className="text-foreground/80">Lease or Permanently own</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3 h-3 text-success" />
+                  <span className="text-foreground/80">
+                    Global propagation across the AR.IO Network
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Lease or Permanently own</span>
+
+              <div className="bg-card/50 rounded-lg p-4 mb-4">
+                <div className="text-sm text-foreground/80 mb-2">Instead of:</div>
+                <div className="font-mono text-xs text-foreground/60 mb-3 break-all">
+                  {getArweaveUrl(deploySuccessInfo.manifestId)}
+                </div>
+
+                <div className="text-sm text-foreground/80 mb-2">Get something like:</div>
+                <div className="font-mono text-sm text-warning font-medium">
+                  https://mysite.ar.io
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Global propagation across the AR.IO Network</span>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => (window.location.href = '/domains')}
+                  className="flex-1 py-3 px-4 bg-warning text-foreground rounded-lg font-medium hover:bg-warning/90 transition-colors"
+                >
+                  Search for Your Name
+                </button>
+                <button
+                  onClick={() => window.open('https://docs.ar.io/arns', '_blank')}
+                  className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card transition-colors"
+                >
+                  Learn More
+                </button>
               </div>
-            </div>
-            
-            <div className="bg-card/50 rounded-lg p-4 mb-4">
-              <div className="text-sm text-foreground/80 mb-2">Instead of:</div>
-              <div className="font-mono text-xs text-foreground/60 mb-3 break-all">
-                {getArweaveUrl(deploySuccessInfo.manifestId)}
-              </div>
-              
-              <div className="text-sm text-foreground/80 mb-2">Get something like:</div>
-              <div className="font-mono text-sm text-warning font-medium">
-                https://mysite.ar.io
-              </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => window.location.href = '/domains'}
-                className="flex-1 py-3 px-4 bg-warning text-foreground rounded-lg font-medium hover:bg-warning/90 transition-colors"
-              >
-                Search for Your Name
-              </button>
-              <button
-                onClick={() => window.open('https://docs.ar.io/arns', '_blank')}
-                className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card transition-colors"
-              >
-                Learn More
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS names */}
-      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       (walletType === 'arweave' || walletType === 'ethereum') && userArnsNames.length > 0 && (
-        <div className="mt-6">
-          <ArNSAssociationPanel
-            enabled={postDeployArNSEnabled}
-            onEnabledChange={setPostDeployArNSEnabled}
-            selectedName={postDeployArNSName}
-            onNameChange={setPostDeployArNSName}
-            selectedUndername={postDeployUndername}
-            onUndernameChange={setPostDeployUndername}
-            showUndername={postDeployShowUndername}
-            onShowUndernameChange={setPostDeployShowUndername}
-            customTTL={postDeployCustomTTL}
-            onCustomTTLChange={setPostDeployCustomTTL}
-          />
-          
-          {/* Connect Domain Action - Only show when enabled and name selected */}
-          {postDeployArNSEnabled && postDeployArNSName && (
-            <div className="mt-4">
-              <button
-                onClick={async () => {
-                  if (!postDeployArNSName || !deploySuccessInfo?.manifestId) return;
-                  
-                  setPostDeployArNSUpdating(true);
-                  try {
-                    console.log('Starting post-deployment ArNS update:', { 
-                      arnsName: postDeployArNSName, 
-                      manifestId: deploySuccessInfo.manifestId, 
-                      undername: postDeployUndername 
-                    });
-                    
-                    const result = await updateArNSRecord(postDeployArNSName, deploySuccessInfo.manifestId, postDeployUndername || undefined, postDeployCustomTTL);
-                    console.log('Post-deployment ArNS update result:', result);
-                    
-                    if (result.success) {
-                      // Add ArNS update to deploy history for Recent Deployments to show
-                      const arnsUpdateRecord = {
-                        type: 'arns-update' as const,
-                        id: result.transactionId || '',
+      {deploySuccessInfo &&
+        !deploySuccessInfo.arnsConfigured &&
+        (walletType === 'arweave' || walletType === 'ethereum') &&
+        userArnsNames.length > 0 && (
+          <div className="mt-6">
+            <ArNSAssociationPanel
+              enabled={postDeployArNSEnabled}
+              onEnabledChange={setPostDeployArNSEnabled}
+              selectedName={postDeployArNSName}
+              onNameChange={setPostDeployArNSName}
+              selectedUndername={postDeployUndername}
+              onUndernameChange={setPostDeployUndername}
+              showUndername={postDeployShowUndername}
+              onShowUndernameChange={setPostDeployShowUndername}
+              customTTL={postDeployCustomTTL}
+              onCustomTTLChange={setPostDeployCustomTTL}
+            />
+
+            {/* Connect Domain Action - Only show when enabled and name selected */}
+            {postDeployArNSEnabled && postDeployArNSName && (
+              <div className="mt-4">
+                <button
+                  onClick={async () => {
+                    if (!postDeployArNSName || !deploySuccessInfo?.manifestId) return;
+
+                    setPostDeployArNSUpdating(true);
+                    try {
+                      console.log('Starting post-deployment ArNS update:', {
+                        arnsName: postDeployArNSName,
                         manifestId: deploySuccessInfo.manifestId,
-                        arnsName: postDeployArNSName,
-                        undername: postDeployUndername || undefined,
-                        targetId: deploySuccessInfo.manifestId,
-                        timestamp: Date.now(),
-                        arnsStatus: 'success' as const,
-                        arnsError: undefined
-                      };
-                      
-                      addDeployResults([arnsUpdateRecord]);
-                      
-                      // Update success info to show ArNS was configured
-                      setDeploySuccessInfo(prev => prev ? {
-                        ...prev,
-                        arnsConfigured: true,
-                        arnsName: postDeployArNSName,
-                        undername: postDeployUndername || undefined,
-                        arnsTransactionId: result.transactionId
-                      } : prev);
-                      
-                      // Refresh the specific ArNS name to get latest state
-                      setTimeout(() => {
-                        refreshSpecificName(postDeployArNSName);
-                      }, 3000); // Wait 3 seconds for propagation
-                      
-                      // Reset ArNS panel state
-                      setPostDeployArNSName('');
-                      setPostDeployUndername('');
-                      setPostDeployShowUndername(false);
-                      setPostDeployArNSEnabled(false);
-                      
-                      // Clear any existing messages since the success card will show the domain
-                      setDeployMessage(null);
-                    } else {
+                        undername: postDeployUndername,
+                      });
+
+                      const result = await updateArNSRecord(
+                        postDeployArNSName,
+                        deploySuccessInfo.manifestId,
+                        postDeployUndername || undefined,
+                        postDeployCustomTTL,
+                      );
+                      console.log('Post-deployment ArNS update result:', result);
+
+                      if (result.success) {
+                        // Add ArNS update to deploy history for Recent Deployments to show
+                        const arnsUpdateRecord = {
+                          type: 'arns-update' as const,
+                          id: result.transactionId || '',
+                          manifestId: deploySuccessInfo.manifestId,
+                          arnsName: postDeployArNSName,
+                          undername: postDeployUndername || undefined,
+                          targetId: deploySuccessInfo.manifestId,
+                          timestamp: Date.now(),
+                          arnsStatus: 'success' as const,
+                          arnsError: undefined,
+                        };
+
+                        addDeployResults([arnsUpdateRecord]);
+
+                        // Update success info to show ArNS was configured
+                        setDeploySuccessInfo((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                arnsConfigured: true,
+                                arnsName: postDeployArNSName,
+                                undername: postDeployUndername || undefined,
+                                arnsTransactionId: result.transactionId,
+                              }
+                            : prev,
+                        );
+
+                        // Refresh the specific ArNS name to get latest state
+                        setTimeout(() => {
+                          refreshSpecificName(postDeployArNSName);
+                        }, 3000); // Wait 3 seconds for propagation
+
+                        // Reset ArNS panel state
+                        setPostDeployArNSName('');
+                        setPostDeployUndername('');
+                        setPostDeployShowUndername(false);
+                        setPostDeployArNSEnabled(false);
+
+                        // Clear any existing messages since the success card will show the domain
+                        setDeployMessage(null);
+                      } else {
+                        setDeployMessage({
+                          type: 'error',
+                          text: `Domain update failed: ${result.error}`,
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Post-deployment ArNS update error:', error);
                       setDeployMessage({
                         type: 'error',
-                        text: `Domain update failed: ${result.error}`
+                        text: `Domain update failed: ${error instanceof Error ? error.message : 'Please try again.'}`,
                       });
                     }
-                  } catch (error) {
-                    console.error('Post-deployment ArNS update error:', error);
-                    setDeployMessage({
-                      type: 'error',
-                      text: `Domain update failed: ${error instanceof Error ? error.message : 'Please try again.'}`
-                    });
+                    setPostDeployArNSUpdating(false);
+                  }}
+                  disabled={
+                    !postDeployArNSName ||
+                    postDeployArNSUpdating ||
+                    (postDeployShowUndername && !postDeployUndername)
                   }
-                  setPostDeployArNSUpdating(false);
-                }}
-                disabled={!postDeployArNSName || postDeployArNSUpdating || (postDeployShowUndername && !postDeployUndername)}
-                className="w-full py-3 px-4 bg-warning text-foreground rounded-lg hover:bg-warning/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
-              >
-                {postDeployArNSUpdating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Connecting Domain...
-                  </>
-                ) : (
-                  'Connect Domain'
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+                  className="w-full py-3 px-4 bg-warning text-foreground rounded-lg hover:bg-warning/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+                >
+                  {postDeployArNSUpdating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Connecting Domain...
+                    </>
+                  ) : (
+                    'Connect Domain'
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Deploy Message */}
       {deployMessage && (
-        <div className={`mt-4 p-3 rounded-lg ${
-          deployMessage.type === 'error' 
-            ? 'bg-error/10 border border-error/20 text-error'
-            : deployMessage.type === 'success'
-            ? 'bg-success/10 border border-success/20 text-success' 
-            : 'bg-info/10 border border-info/20 text-info'
-        }`}>
+        <div
+          className={`mt-4 p-3 rounded-lg ${
+            deployMessage.type === 'error'
+              ? 'bg-error/10 border border-error/20 text-error'
+              : deployMessage.type === 'success'
+                ? 'bg-success/10 border border-success/20 text-success'
+                : 'bg-info/10 border border-info/20 text-info'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span>{deployMessage.text}</span>
             <button
@@ -2587,7 +2831,9 @@ export default function DeploySitePanel() {
       {deployHistory.length > 0 && (
         <div className="mt-4 sm:mt-6 bg-gradient-to-br from-primary/5 to-primary/3 border border-primary/20 rounded-xl">
           {/* Collapsible Header with Actions on Same Row */}
-          <div className={`flex items-center justify-between p-4 ${showDeployResults ? 'pb-0 mb-4' : 'pb-4'}`}>
+          <div
+            className={`flex items-center justify-between p-4 ${showDeployResults ? 'pb-0 mb-4' : 'pb-4'}`}
+          >
             <button
               onClick={() => setShowDeployResults(!showDeployResults)}
               className="flex items-start gap-2 hover:text-success transition-colors text-left"
@@ -2596,7 +2842,13 @@ export default function DeploySitePanel() {
               <Zap className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                 <span className="font-bold text-foreground">Recent</span>
-                <span className="text-xs text-foreground/80">({recentDeploymentEntries.length}{Object.keys(deploymentGroups).length > 5 ? ' of ' + Object.keys(deploymentGroups).length : ''})</span>
+                <span className="text-xs text-foreground/80">
+                  ({recentDeploymentEntries.length}
+                  {Object.keys(deploymentGroups).length > 5
+                    ? ' of ' + Object.keys(deploymentGroups).length
+                    : ''}
+                  )
+                </span>
               </div>
               {showDeployResults ? (
                 <ChevronUp className="w-4 h-4 text-foreground/80 flex-shrink-0 mt-0.5" />
@@ -2604,7 +2856,7 @@ export default function DeploySitePanel() {
                 <ChevronDown className="w-4 h-4 text-foreground/80 flex-shrink-0 mt-0.5" />
               )}
             </button>
-            
+
             {/* Actions only show when expanded */}
             {showDeployResults && (
               <div className="flex items-center gap-2">
@@ -2627,11 +2879,13 @@ export default function DeploySitePanel() {
                     });
                     checkMultipleStatuses(allIds, true);
                   }}
-                  disabled={Object.values(statusChecking).some(checking => checking)}
+                  disabled={Object.values(statusChecking).some((checking) => checking)}
                   className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded text-foreground hover:bg-card hover:text-foreground transition-colors disabled:opacity-50"
                   title="Check status for recent deployed files"
                 >
-                  <RefreshCw className={`w-3 h-3 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`w-3 h-3 ${Object.values(statusChecking).some((checking) => checking) ? 'animate-spin' : ''}`}
+                  />
                   <span className="hidden sm:inline">Check Status</span>
                 </button>
                 <button
@@ -2645,16 +2899,19 @@ export default function DeploySitePanel() {
               </div>
             )}
           </div>
-          
+
           {showDeployResults && (
-            <>              
+            <>
               {/* Option 3: Single unified cards */}
               <div className="space-y-4 max-h-[700px] overflow-y-auto px-4">
                 {recentDeploymentEntries.map(([manifestId, group]) => {
                   const arnsAssociation = getArNSAssociation(manifestId);
-                  
+
                   return (
-                    <div key={manifestId} className="bg-card border border-border/20 rounded-lg p-4">
+                    <div
+                      key={manifestId}
+                      className="bg-card border border-border/20 rounded-lg p-4"
+                    >
                       {/* Unified Header Row - Manifest Info + Actions */}
                       {group.manifest && (
                         <div className="flex items-center justify-between gap-2 mb-3">
@@ -2674,7 +2931,9 @@ export default function DeploySitePanel() {
                                   {group.manifest.appName}
                                 </span>
                                 {group.manifest.appVersion && (
-                                  <span className="text-xs text-foreground/80">v{group.manifest.appVersion}</span>
+                                  <span className="text-xs text-foreground/80">
+                                    v{group.manifest.appVersion}
+                                  </span>
                                 )}
                                 {arnsAssociation && arnsAssociation.arnsName && (
                                   <a
@@ -2683,19 +2942,23 @@ export default function DeploySitePanel() {
                                     rel="noopener noreferrer"
                                     className="text-xs text-foreground/80 hover:text-success transition-colors"
                                   >
-                                    {arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}{arnsAssociation.arnsName}.ar.io
+                                    {arnsAssociation.undername
+                                      ? arnsAssociation.undername + '_'
+                                      : ''}
+                                    {arnsAssociation.arnsName}.ar.io
                                   </a>
                                 )}
                               </div>
                             ) : arnsAssociation && arnsAssociation.arnsName ? (
                               <div className="flex items-center gap-2">
-                                <a 
+                                <a
                                   href={`https://${arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}${arnsAssociation.arnsName}.ar.io`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm font-medium text-foreground hover:text-success hover:underline transition-colors"
                                 >
-                                  {arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}{arnsAssociation.arnsName}
+                                  {arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}
+                                  {arnsAssociation.arnsName}
                                 </a>
                                 {arnsAssociation.arnsStatus === 'failed' && (
                                   <span className="text-xs text-error">(failed)</span>
@@ -2709,7 +2972,7 @@ export default function DeploySitePanel() {
                                 {manifestId.substring(0, 6)}...
                               </div>
                             )}
-                            
+
                             {/* Timestamp - Desktop only */}
                             {group.manifest.timestamp && (
                               <span className="text-xs text-foreground/80 hidden sm:inline">
@@ -2717,14 +2980,20 @@ export default function DeploySitePanel() {
                               </span>
                             )}
                           </div>
-                          
+
                           {/* Desktop: Show all actions */}
                           <div className="hidden sm:flex items-center gap-1">
                             {/* Status Icon as part of actions - only show if we have real status */}
                             {uploadStatuses[manifestId] && (
-                              <div className="p-1.5" title={`Status: ${uploadStatuses[manifestId].status}`}>
+                              <div
+                                className="p-1.5"
+                                title={`Status: ${uploadStatuses[manifestId].status}`}
+                              >
                                 {(() => {
-                                  const iconType = getStatusIcon(uploadStatuses[manifestId].status, uploadStatuses[manifestId].info);
+                                  const iconType = getStatusIcon(
+                                    uploadStatuses[manifestId].status,
+                                    uploadStatuses[manifestId].info,
+                                  );
                                   return renderStatusIcon(iconType);
                                 })()}
                               </div>
@@ -2743,7 +3012,9 @@ export default function DeploySitePanel() {
                               className="p-1.5 text-foreground/80 hover:text-foreground transition-colors disabled:opacity-50"
                               title="Check Status"
                             >
-                              <RefreshCw className={`w-4 h-4 ${statusChecking[manifestId] ? 'animate-spin' : ''}`} />
+                              <RefreshCw
+                                className={`w-4 h-4 ${statusChecking[manifestId] ? 'animate-spin' : ''}`}
+                              />
                             </button>
                             <a
                               href={getArweaveRawUrl(manifestId)}
@@ -2768,7 +3039,7 @@ export default function DeploySitePanel() {
                               <button
                                 onClick={() => setShowAssignDomainModal(manifestId)}
                                 className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                                title={arnsAssociation ? "Change Domain" : "Assign Domain"}
+                                title={arnsAssociation ? 'Change Domain' : 'Assign Domain'}
                               >
                                 <Globe className="w-4 h-4" />
                               </button>
@@ -2779,31 +3050,40 @@ export default function DeploySitePanel() {
                           <div className="sm:hidden flex items-center gap-1">
                             {/* Status Icon - visible on mobile, only show if we have real status */}
                             {uploadStatuses[manifestId] && (
-                              <div className="p-1.5" title={`Status: ${uploadStatuses[manifestId].status}`}>
+                              <div
+                                className="p-1.5"
+                                title={`Status: ${uploadStatuses[manifestId].status}`}
+                              >
                                 {(() => {
-                                  const iconType = getStatusIcon(uploadStatuses[manifestId].status, uploadStatuses[manifestId].info);
+                                  const iconType = getStatusIcon(
+                                    uploadStatuses[manifestId].status,
+                                    uploadStatuses[manifestId].info,
+                                  );
                                   return renderStatusIcon(iconType);
                                 })()}
                               </div>
                             )}
-                            
+
                             <Popover className="relative">
                               <PopoverButton className="p-1.5 text-foreground/80 hover:text-foreground transition-colors">
                                 <MoreVertical className="w-4 h-4" />
                               </PopoverButton>
-                              <PopoverPanel anchor="bottom end" className="w-48 bg-card border border-border/20 rounded-lg shadow-lg z-[9999] py-1 mt-1">
+                              <PopoverPanel
+                                anchor="bottom end"
+                                className="w-48 bg-card border border-border/20 rounded-lg shadow-lg z-[9999] py-1 mt-1"
+                              >
                                 {({ close }) => (
                                   <>
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(manifestId);
-                                        setCopiedItems(prev => new Set([...prev, manifestId]));
+                                        setCopiedItems((prev) => new Set([...prev, manifestId]));
                                         // Show feedback for 1 second before closing menu
                                         setTimeout(() => {
                                           close();
                                           // Clear copied state after menu closes
                                           setTimeout(() => {
-                                            setCopiedItems(prev => {
+                                            setCopiedItems((prev) => {
                                               const newSet = new Set(prev);
                                               newSet.delete(manifestId);
                                               return newSet;
@@ -2843,7 +3123,9 @@ export default function DeploySitePanel() {
                                       disabled={!!statusChecking[manifestId]}
                                       className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2 disabled:opacity-50"
                                     >
-                                      <RefreshCw className={`w-4 h-4 ${statusChecking[manifestId] ? 'animate-spin' : ''}`} />
+                                      <RefreshCw
+                                        className={`w-4 h-4 ${statusChecking[manifestId] ? 'animate-spin' : ''}`}
+                                      />
                                       Check Status
                                     </button>
                                     <a
@@ -2857,7 +3139,10 @@ export default function DeploySitePanel() {
                                       View Raw JSON
                                     </a>
                                     <a
-                                      href={getArweaveUrl(manifestId, group.manifest?.receipt?.dataCaches)}
+                                      href={getArweaveUrl(
+                                        manifestId,
+                                        group.manifest?.receipt?.dataCaches,
+                                      )}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={() => close()}
@@ -2876,7 +3161,7 @@ export default function DeploySitePanel() {
                                         className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
                                       >
                                         <Globe className="w-4 h-4" />
-                                        {arnsAssociation ? "Change Domain" : "Assign Domain"}
+                                        {arnsAssociation ? 'Change Domain' : 'Assign Domain'}
                                       </button>
                                     )}
                                   </>
@@ -2886,7 +3171,7 @@ export default function DeploySitePanel() {
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Mobile Timestamp Row */}
                       {group.manifest && group.manifest.timestamp && (
                         <div className="text-xs text-foreground/80 sm:hidden mb-3">
@@ -2906,9 +3191,12 @@ export default function DeploySitePanel() {
                             {group.files.files.map((file: any, fileIndex: number) => {
                               const status = uploadStatuses[file.id];
                               const isChecking = statusChecking[file.id];
-                              
+
                               return (
-                                <div key={fileIndex} className="bg-card border border-border/20 rounded p-3">
+                                <div
+                                  key={fileIndex}
+                                  className="bg-card border border-border/20 rounded p-3"
+                                >
                                   <div className="space-y-2">
                                     {/* Row 1: Status Icon + Shortened TxID + File Path + Actions */}
                                     <div className="flex items-center justify-between gap-2">
@@ -2917,20 +3205,26 @@ export default function DeploySitePanel() {
                                         <div className="font-mono text-sm text-foreground">
                                           {file.id.substring(0, 6)}...
                                         </div>
-                                        
+
                                         {/* File Path */}
-                                        <div className="text-sm text-foreground truncate" title={file.path}>
+                                        <div
+                                          className="text-sm text-foreground truncate"
+                                          title={file.path}
+                                        >
                                           {file.path.split('/').pop() || file.path}
                                         </div>
                                       </div>
-                                      
+
                                       {/* Desktop: Show all actions */}
                                       <div className="hidden sm:flex items-center gap-1">
                                         {/* Status Icon as part of actions - only show if we have real status */}
                                         {status && (
                                           <div className="p-1.5" title={`Status: ${status.status}`}>
                                             {(() => {
-                                              const iconType = getStatusIcon(status.status, status.info);
+                                              const iconType = getStatusIcon(
+                                                status.status,
+                                                status.info,
+                                              );
                                               return renderStatusIcon(iconType);
                                             })()}
                                           </div>
@@ -2949,7 +3243,9 @@ export default function DeploySitePanel() {
                                           className="p-1.5 text-foreground/80 hover:text-foreground transition-colors disabled:opacity-50"
                                           title="Check Status"
                                         >
-                                          <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
+                                          <RefreshCw
+                                            className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`}
+                                          />
                                         </button>
                                         <a
                                           href={getArweaveUrl(file.id, file.receipt?.dataCaches)}
@@ -2968,7 +3264,10 @@ export default function DeploySitePanel() {
                                         {status && (
                                           <div className="p-1.5" title={`Status: ${status.status}`}>
                                             {(() => {
-                                              const iconType = getStatusIcon(status.status, status.info);
+                                              const iconType = getStatusIcon(
+                                                status.status,
+                                                status.info,
+                                              );
                                               return renderStatusIcon(iconType);
                                             })()}
                                           </div>
@@ -2977,19 +3276,24 @@ export default function DeploySitePanel() {
                                           <PopoverButton className="p-1.5 text-foreground/80 hover:text-foreground transition-colors">
                                             <MoreVertical className="w-4 h-4" />
                                           </PopoverButton>
-                                          <PopoverPanel anchor="bottom end" className="w-40 bg-card border border-border/20 rounded-lg shadow-lg z-[9999] py-1 mt-1">
+                                          <PopoverPanel
+                                            anchor="bottom end"
+                                            className="w-40 bg-card border border-border/20 rounded-lg shadow-lg z-[9999] py-1 mt-1"
+                                          >
                                             {({ close }) => (
                                               <>
                                                 <button
                                                   onClick={() => {
                                                     navigator.clipboard.writeText(file.id);
-                                                    setCopiedItems(prev => new Set([...prev, file.id]));
+                                                    setCopiedItems(
+                                                      (prev) => new Set([...prev, file.id]),
+                                                    );
                                                     // Show feedback for 1 second before closing menu
                                                     setTimeout(() => {
                                                       close();
                                                       // Clear copied state after menu closes
                                                       setTimeout(() => {
-                                                        setCopiedItems(prev => {
+                                                        setCopiedItems((prev) => {
                                                           const newSet = new Set(prev);
                                                           newSet.delete(file.id);
                                                           return newSet;
@@ -3029,11 +3333,16 @@ export default function DeploySitePanel() {
                                                   disabled={isChecking}
                                                   className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2 disabled:opacity-50"
                                                 >
-                                                  <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
+                                                  <RefreshCw
+                                                    className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`}
+                                                  />
                                                   Check Status
                                                 </button>
                                                 <a
-                                                  href={getArweaveUrl(file.id, file.receipt?.dataCaches)}
+                                                  href={getArweaveUrl(
+                                                    file.id,
+                                                    file.receipt?.dataCaches,
+                                                  )}
                                                   target="_blank"
                                                   rel="noopener noreferrer"
                                                   onClick={() => close()}
@@ -3054,16 +3363,18 @@ export default function DeploySitePanel() {
                                       <span>
                                         {getDisplayContentType(
                                           file.path,
-                                          file.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value
+                                          file.receipt?.tags?.find(
+                                            (tag: any) => tag.name === 'Content-Type',
+                                          )?.value,
                                         )}
                                       </span>
                                       <span>•</span>
                                       <span>
-                                        {file.size < 1024 
-                                          ? `${file.size} B` 
-                                          : file.size < 1024 * 1024 
-                                          ? `${(file.size / 1024).toFixed(2)} KB`
-                                          : `${(file.size / 1024 / 1024).toFixed(2)} MB`}
+                                        {file.size < 1024
+                                          ? `${file.size} B`
+                                          : file.size < 1024 * 1024
+                                            ? `${(file.size / 1024).toFixed(2)} KB`
+                                            : `${(file.size / 1024 / 1024).toFixed(2)} MB`}
                                       </span>
                                     </div>
 
@@ -3073,17 +3384,16 @@ export default function DeploySitePanel() {
                                         {isFileFree(file.size, freeUploadLimitBytes) ? (
                                           <span className="text-success">FREE</span>
                                         ) : wincForOneGiB ? (
-                                          `${((file.size / (1024 ** 3)) * Number(wincForOneGiB) / wincPerCredit).toFixed(6)} Credits`
+                                          `${(((file.size / 1024 ** 3) * Number(wincForOneGiB)) / wincPerCredit).toFixed(6)} Credits`
                                         ) : (
                                           'Unknown Cost'
                                         )}
                                       </span>
                                       <span>•</span>
                                       <span>
-                                        {group.files.timestamp 
+                                        {group.files.timestamp
                                           ? new Date(group.files.timestamp).toLocaleString()
-                                          : 'Unknown Time'
-                                        }
+                                          : 'Unknown Time'}
                                       </span>
                                     </div>
                                   </div>
@@ -3099,7 +3409,7 @@ export default function DeploySitePanel() {
               </div>
             </>
           )}
-          
+
           {/* View All Button at Bottom - only show when expanded and there are deployments */}
           {showDeployResults && Object.keys(deploymentGroups).length > 0 && (
             <div className="border-t border-border/20 mt-4">
@@ -3123,9 +3433,10 @@ export default function DeploySitePanel() {
       {showReceiptModal && (
         <ReceiptModal
           onClose={() => setShowReceiptModal(null)}
-          receipt={deployHistory.find(r => 
-            (r.type === 'manifest' && r.id === showReceiptModal) || 
-            (r.type === 'files' && r.files?.find(f => f.id === showReceiptModal))
+          receipt={deployHistory.find(
+            (r) =>
+              (r.type === 'manifest' && r.id === showReceiptModal) ||
+              (r.type === 'files' && r.files?.find((f) => f.id === showReceiptModal)),
           )}
           uploadId={showReceiptModal}
         />
@@ -3163,7 +3474,11 @@ export default function DeploySitePanel() {
           isPaymentServiceAvailable={isPaymentServiceAvailable}
           smartDeployEnabled={smartDeployEnabled}
           cachedFilesCount={deduplicationStats?.cachedFiles ?? 0}
-          billableSize={smartDeployEnabled ? (deduplicationStats?.billableSize ?? 0) : calculateBillableSizeWithoutSmartDeploy()}
+          billableSize={
+            smartDeployEnabled
+              ? (deduplicationStats?.billableSize ?? 0)
+              : calculateBillableSizeWithoutSmartDeploy()
+          }
           appName={appName.trim() || undefined}
           appVersion={appVersion.trim() || undefined}
         />
@@ -3176,7 +3491,7 @@ export default function DeploySitePanel() {
           manifestId={showAssignDomainModal}
           existingArnsName={getArNSAssociation(showAssignDomainModal)?.arnsName}
           existingUndername={getArNSAssociation(showAssignDomainModal)?.undername}
-          onSuccess={(arnsName, undername, transactionId) => 
+          onSuccess={(arnsName, undername, transactionId) =>
             handleAssignDomainSuccess(showAssignDomainModal, arnsName, undername, transactionId)
           }
         />

@@ -26,7 +26,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
   creditsReceived,
   targetAddress,
   owner,
-  recipient
+  recipient,
 }) => {
   const { paymentIntentResult, creditBalance, address } = useStore();
   const navigate = useNavigate();
@@ -75,7 +75,6 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
     <div>
       {/* Main Content Container with Gradient */}
       <div className="bg-gradient-to-br from-success/5 to-success/3 rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
         {/* Success Icon and Message */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -85,13 +84,13 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           <p className="text-foreground/80">
             {isCryptoPayment && tokenType === 'arweave'
               ? 'Your account will be credited in 15-30 minutes.'
-              : 'Your credits are now available.'
-            }
+              : 'Your credits are now available.'}
           </p>
         </div>
 
         {/* Show cross-wallet top-up info if sending to a different address */}
-        {((recipient && owner && recipient !== owner) || (targetAddress && targetAddress !== address)) && (
+        {((recipient && owner && recipient !== owner) ||
+          (targetAddress && targetAddress !== address)) && (
           <div className="mb-6 bg-success/10 border border-success/20 rounded-2xl p-4">
             {/* Highlighted recipient address */}
             <div className="flex items-center gap-2 text-success mb-3">
@@ -128,8 +127,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
               <span className="font-medium text-foreground">
                 {isCryptoPayment
                   ? `${paymentAmount} ${tokenLabels[tokenType!]}`
-                  : `$${paymentAmount.toFixed(2)}`
-                }
+                  : `$${paymentAmount.toFixed(2)}`}
               </span>
             </div>
 
@@ -250,9 +248,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
 
         {/* Support Link */}
         <div className="text-center mt-4 sm:mt-6">
-          <p className="text-xs text-foreground/80 mb-2">
-            Need help? Contact our support team
-          </p>
+          <p className="text-xs text-foreground/80 mb-2">Need help? Contact our support team</p>
           <a
             href="mailto:support@ardrive.io"
             className="text-xs text-foreground hover:text-foreground/80 transition-colors inline-flex items-center gap-1"

@@ -1,7 +1,20 @@
 import { useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
-import { Calculator, HardDrive, DollarSign, ArrowRight, Zap, Upload, Globe, CreditCard, Database, Rss, ChevronDown, Check } from 'lucide-react';
+import {
+  Calculator,
+  HardDrive,
+  DollarSign,
+  ArrowRight,
+  Zap,
+  Upload,
+  Globe,
+  CreditCard,
+  Database,
+  Rss,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import { useArNSPricing } from '../../hooks/useArNSPricing';
@@ -27,7 +40,12 @@ export default function ServicesCalculatorPanel() {
   // Get conversion rates
   const wincForOneGiB = useWincForOneGiB();
   const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
-  const { pricingTiers, getAffordableOptions, getBestDomainForBudget, loading: arnsLoading } = useArNSPricing();
+  const {
+    pricingTiers,
+    getAffordableOptions,
+    getBestDomainForBudget,
+    loading: arnsLoading,
+  } = useArNSPricing();
 
   const wincLoading = !wincForOneGiB;
   const creditsLoading = !creditsForOneUSD;
@@ -106,7 +124,9 @@ export default function ServicesCalculatorPanel() {
           <Calculator className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Services Calculator</h3>
+          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
+            Services Calculator
+          </h3>
           <p className="text-sm text-foreground/80">
             See what you can get: credits for storage + ARIO tokens for domains
           </p>
@@ -115,7 +135,6 @@ export default function ServicesCalculatorPanel() {
 
       {/* Main Content Container with Gradient */}
       <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
         {/* Services Notice */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-2">
@@ -167,7 +186,9 @@ export default function ServicesCalculatorPanel() {
             <div>
               {inputType === 'storage' ? (
                 <>
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Storage Amount</h4>
+                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">
+                    Enter Storage Amount
+                  </h4>
                   <div className="bg-card rounded-2xl p-6">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much data do you need to store?
@@ -207,14 +228,19 @@ export default function ServicesCalculatorPanel() {
                         placeholder="Enter amount"
                       />
                       <Listbox
-                        value={storageUnits.find(unit => unit.value === storageUnit)}
+                        value={storageUnits.find((unit) => unit.value === storageUnit)}
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
                           <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none cursor-pointer text-left">
-                            <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
+                            <span className="block truncate">
+                              {storageUnits.find((unit) => unit.value === storageUnit)?.label}
+                            </span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                              <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
+                              <ChevronDown
+                                className="h-5 w-5 text-foreground/80"
+                                aria-hidden="true"
+                              />
                             </span>
                           </Listbox.Button>
                           <Transition
@@ -228,15 +254,15 @@ export default function ServicesCalculatorPanel() {
                                 <Listbox.Option
                                   key={unit.value}
                                   className={({ active }) =>
-                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${
-                                      active ? 'bg-card text-foreground' : 'text-foreground/80'
-                                    }`
+                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${active ? 'bg-card text-foreground' : 'text-foreground/80'}`
                                   }
                                   value={unit}
                                 >
                                   {({ selected }) => (
                                     <>
-                                      <span className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}>
+                                      <span
+                                        className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}
+                                      >
                                         {unit.label}
                                       </span>
                                       {selected ? (
@@ -281,7 +307,9 @@ export default function ServicesCalculatorPanel() {
                 </>
               ) : (
                 <>
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Your Budget</h4>
+                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">
+                    Enter Your Budget
+                  </h4>
                   <div className="bg-card rounded-2xl p-6 min-h-[300px] flex flex-col">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much do you want to spend on services?
@@ -412,21 +440,26 @@ export default function ServicesCalculatorPanel() {
                         <div className="bg-card rounded-2xl p-4 min-h-[120px] flex flex-col">
                           <div className="flex items-center gap-2 mb-2">
                             <Globe className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium text-foreground">ArNS Domains</span>
+                            <span className="text-sm font-medium text-foreground">
+                              ArNS Domains
+                            </span>
                           </div>
                           <div className="text-lg font-bold text-foreground mb-1">
-                            {bestDomain.tier.displayName} for {bestDomain.maxYears} year{bestDomain.maxYears > 1 ? 's' : ''}
+                            {bestDomain.tier.displayName} for {bestDomain.maxYears} year
+                            {bestDomain.maxYears > 1 ? 's' : ''}
                           </div>
                           <div className="text-xs text-foreground/80 mb-2">
                             e.g. {bestDomain.recommendedName}.ar.io
                           </div>
                           {affordableOptions.length > 1 && (
                             <div className="text-xs text-foreground/80 mb-2">
-                              + {affordableOptions.length - 1} other option{affordableOptions.length > 2 ? 's' : ''}
+                              + {affordableOptions.length - 1} other option
+                              {affordableOptions.length > 2 ? 's' : ''}
                             </div>
                           )}
                           <div className="text-xs text-foreground/80 mt-auto">
-                            {formatNumber(bestDomain.totalCostCredits)} credits (${formatNumber(bestDomain.totalCostUSD)})
+                            {formatNumber(bestDomain.totalCostCredits)} credits ($
+                            {formatNumber(bestDomain.totalCostUSD)})
                           </div>
                         </div>
                       );
@@ -436,7 +469,9 @@ export default function ServicesCalculatorPanel() {
                         <div className="bg-card rounded-2xl p-4 min-h-[120px] flex flex-col">
                           <div className="flex items-center gap-2 mb-2">
                             <Globe className="w-4 h-4 text-foreground/80" />
-                            <span className="text-sm font-medium text-foreground/80">ArNS Domains</span>
+                            <span className="text-sm font-medium text-foreground/80">
+                              ArNS Domains
+                            </span>
                           </div>
                           {cheapestTier ? (
                             <>
@@ -447,7 +482,8 @@ export default function ServicesCalculatorPanel() {
                                 13+ characters, 1 year (paid in ARIO tokens)
                               </div>
                               <div className="text-xs text-foreground/80 mt-auto">
-                                Increase budget to ${formatNumber(cheapestTier.pricesInUSD.year1)} to afford
+                                Increase budget to ${formatNumber(cheapestTier.pricesInUSD.year1)}{' '}
+                                to afford
                               </div>
                             </>
                           ) : (
@@ -462,7 +498,9 @@ export default function ServicesCalculatorPanel() {
 
                   {/* Budget Breakdown */}
                   <div className="bg-card rounded-2xl p-4 space-y-2 border border-border/20">
-                    <div className="text-xs font-medium text-foreground/80 uppercase tracking-wider">Your Budget</div>
+                    <div className="text-xs font-medium text-foreground/80 uppercase tracking-wider">
+                      Your Budget
+                    </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-foreground/80">Total Budget</span>
                       <span className="text-lg font-medium text-foreground">
@@ -481,8 +519,12 @@ export default function ServicesCalculatorPanel() {
           {!address ? (
             // Not logged in - show connect wallet CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">Ready to use services?</h4>
-              <p className="text-foreground/80 mb-4">Connect your wallet to top up credits and access storage + domains.</p>
+              <h4 className="text-lg font-bold font-heading text-foreground mb-3">
+                Ready to use services?
+              </h4>
+              <p className="text-foreground/80 mb-4">
+                Connect your wallet to top up credits and access storage + domains.
+              </p>
               <button
                 onClick={() => setShowWalletModal(true)}
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
@@ -493,8 +535,12 @@ export default function ServicesCalculatorPanel() {
           ) : creditBalance > 0 ? (
             // Logged in with credits - show service CTAs
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You have {creditBalance.toFixed(2)} credits ready to use!</h4>
-              <p className="text-foreground/80 mb-4">Start using your credits for permanent storage or register ArNS domain names.</p>
+              <h4 className="text-lg font-bold font-heading text-foreground mb-3">
+                You have {creditBalance.toFixed(2)} credits ready to use!
+              </h4>
+              <p className="text-foreground/80 mb-4">
+                Start using your credits for permanent storage or register ArNS domain names.
+              </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
                   to="/upload"
@@ -515,8 +561,12 @@ export default function ServicesCalculatorPanel() {
           ) : (
             // Logged in but no credits - show top up CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You need credits to use services</h4>
-              <p className="text-foreground/80 mb-4">Top up your account with credits to access permanent storage and ArNS domains.</p>
+              <h4 className="text-lg font-bold font-heading text-foreground mb-3">
+                You need credits to use services
+              </h4>
+              <p className="text-foreground/80 mb-4">
+                Top up your account with credits to access permanent storage and ArNS domains.
+              </p>
               <Link
                 to="/topup"
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
@@ -531,7 +581,9 @@ export default function ServicesCalculatorPanel() {
 
       {/* Coming Soon Services Teaser */}
       <div className="mt-4 sm:mt-6 p-4 bg-card rounded-2xl border border-border/20">
-        <div className="text-xs text-foreground/80 mb-3 text-center font-medium uppercase tracking-wider">More services coming soon</div>
+        <div className="text-xs text-foreground/80 mb-3 text-center font-medium uppercase tracking-wider">
+          More services coming soon
+        </div>
         <div className="flex justify-center gap-8 text-xs">
           <div className="text-center">
             <Database className="w-5 h-5 text-foreground/80 mx-auto mb-2" />
@@ -551,11 +603,7 @@ export default function ServicesCalculatorPanel() {
         </div>
       </div>
 
-      {showWalletModal && (
-        <WalletSelectionModal
-          onClose={() => setShowWalletModal(false)}
-        />
-      )}
+      {showWalletModal && <WalletSelectionModal onClose={() => setShowWalletModal(false)} />}
     </div>
   );
 }

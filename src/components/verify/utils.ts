@@ -27,10 +27,8 @@ export function formatDate(iso: string): string {
 
 export function contentLabel(ct: string | null): string {
   if (!ct) return 'data';
-  if (ct.startsWith('image/'))
-    return ct.replace('image/', '').toUpperCase() + ' image';
-  if (ct.startsWith('video/'))
-    return ct.replace('video/', '').toUpperCase() + ' video';
+  if (ct.startsWith('image/')) return ct.replace('image/', '').toUpperCase() + ' image';
+  if (ct.startsWith('video/')) return ct.replace('video/', '').toUpperCase() + ' video';
   if (ct === 'application/pdf') return 'PDF document';
   if (ct.startsWith('text/')) return 'text file';
   return 'file';
@@ -42,10 +40,7 @@ export function bufferToBase64Url(buf: ArrayBuffer): string {
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 // ── Viewblock URLs ───────────────────────────────────────
@@ -55,8 +50,7 @@ export const viewblockAddressUrl = (addr: string) => `${VIEWBLOCK_BASE}/address/
 export const viewblockBlockUrl = (h: number) => `${VIEWBLOCK_BASE}/block/${h}`;
 
 // ── Verify API URLs ──────────────────────────────────────
-export const rawDataUrl = (verifyApiUrl: string, txId: string) =>
-  `${verifyApiUrl}/raw/${txId}`;
+export const rawDataUrl = (verifyApiUrl: string, txId: string) => `${verifyApiUrl}/raw/${txId}`;
 
 // ── String helpers ───────────────────────────────────────
 export function shortId(id: string, head = 12, tail = 6): string {

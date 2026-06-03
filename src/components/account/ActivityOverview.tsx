@@ -9,16 +9,17 @@ export default function ActivityOverview() {
 
   // Helper to find ArNS association for a manifest
   const getArNSAssociation = (manifestId: string) => {
-    return deployHistory.find(record =>
-      record.type === 'arns-update' &&
-      record.manifestId === manifestId
+    return deployHistory.find(
+      (record) => record.type === 'arns-update' && record.manifestId === manifestId,
     );
   };
 
   // Group deploy results by manifest ID (same as DeploySitePanel)
-  const deploymentGroups: { [manifestId: string]: { manifest?: any, files?: any } } = {};
+  const deploymentGroups: {
+    [manifestId: string]: { manifest?: any; files?: any };
+  } = {};
 
-  deployHistory.forEach(result => {
+  deployHistory.forEach((result) => {
     const manifestId = result.manifestId || result.id;
     if (!manifestId) return;
 
@@ -63,9 +64,7 @@ export default function ActivityOverview() {
                       {upload.id.substring(0, 6)}...
                     </div>
                     {upload.fileName && (
-                      <span className="text-xs text-foreground truncate">
-                        {upload.fileName}
-                      </span>
+                      <span className="text-xs text-foreground truncate">{upload.fileName}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -142,7 +141,8 @@ export default function ActivityOverview() {
                             rel="noopener noreferrer"
                             className="font-mono text-xs text-foreground hover:text-success hover:underline transition-colors"
                           >
-                            {arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}{arnsAssociation.arnsName}
+                            {arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}
+                            {arnsAssociation.arnsName}
                           </a>
                           {arnsAssociation.arnsStatus === 'failed' && (
                             <span className="text-xs text-error">(failed)</span>

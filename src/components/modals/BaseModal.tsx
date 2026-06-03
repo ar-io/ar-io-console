@@ -13,7 +13,7 @@ export default function BaseModal({ onClose, children, showCloseButton = false }
   const modalContent = (
     <>
       {/* Modal backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9998]"
         onClick={onClose}
         style={{
@@ -22,10 +22,10 @@ export default function BaseModal({ onClose, children, showCloseButton = false }
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 9998
+          zIndex: 9998,
         }}
       />
-      
+
       {/* Modal content - perfectly centered */}
       <div
         className="fixed z-[9999] bg-card border border-border/20 rounded-2xl shadow-xl overflow-hidden"
@@ -36,7 +36,7 @@ export default function BaseModal({ onClose, children, showCloseButton = false }
           transform: 'translate(-50%, -50%)',
           zIndex: 9999,
           maxWidth: '90vw',
-          maxHeight: '90vh'
+          maxHeight: '90vh',
         }}
       >
         {showCloseButton && (

@@ -1,11 +1,17 @@
-import { tokenToBaseMap, TurboFactory, ETHToTokenAmount, SOLToTokenAmount, ARToTokenAmount, ARIOToTokenAmount, POLToTokenAmount } from "@ardrive/turbo-sdk/web";
-import { useState, useEffect } from "react";
-import { useTurboConfig } from "./useTurboConfig";
+import {
+  tokenToBaseMap,
+  TurboFactory,
+  ETHToTokenAmount,
+  SOLToTokenAmount,
+  ARToTokenAmount,
+  ARIOToTokenAmount,
+  POLToTokenAmount,
+} from '@ardrive/turbo-sdk/web';
+import { useState, useEffect } from 'react';
+import { useTurboConfig } from './useTurboConfig';
 
 export function useWincForOneGiB() {
-  const [wincForOneGiB, setWincForOneGiB] = useState<string | undefined>(
-    undefined,
-  );
+  const [wincForOneGiB, setWincForOneGiB] = useState<string | undefined>(undefined);
   const turboConfig = useTurboConfig();
 
   // On first render, get winc for 1 GiB for conversions
@@ -20,12 +26,10 @@ export function useWincForOneGiB() {
   return wincForOneGiB;
 }
 
-export function useWincForToken(token: "arweave" | "ario", amount: number) {
-  const [wincForToken, setWincForToken] = useState<string | undefined>(
-    undefined,
-  );
+export function useWincForToken(token: 'arweave' | 'ario', amount: number) {
+  const [wincForToken, setWincForToken] = useState<string | undefined>(undefined);
   const turboConfig = useTurboConfig();
-  
+
   useEffect(() => {
     TurboFactory.unauthenticated({ ...turboConfig, token })
       .getWincForToken({
@@ -46,9 +50,9 @@ const getAmountByTokenType = (amount: number, token: string) => {
       return ARToTokenAmount(amount);
     case 'ethereum':
     case 'base-eth':
-      return ETHToTokenAmount(amount);  // Converts to wei for both mainnet and Base
+      return ETHToTokenAmount(amount); // Converts to wei for both mainnet and Base
     case 'solana':
-      return SOLToTokenAmount(amount);  // Converts to lamports
+      return SOLToTokenAmount(amount); // Converts to lamports
     case 'ario':
     case 'base-ario':
       return ARIOToTokenAmount(amount); // Proper ARIO token conversion (6 decimals for both AO and Base)
@@ -67,7 +71,11 @@ const getAmountByTokenType = (amount: number, token: string) => {
 };
 
 // Direct API call for getting winc price (following reference app pattern)
-const getWincForToken = async (amount: number, tokenType: string, paymentServiceUrl: string): Promise<{ winc: string }> => {
+const getWincForToken = async (
+  amount: number,
+  tokenType: string,
+  paymentServiceUrl: string,
+): Promise<{ winc: string }> => {
   const PAYMENT_SERVICE_FQDN = paymentServiceUrl.replace('https://', '');
   const url = `https://${PAYMENT_SERVICE_FQDN}/v1/price/${tokenType}/${amount}`;
 
@@ -119,7 +127,9 @@ export function useWincForAnyToken(token: string, amount: number) {
           });
 
           // Use getWincForToken method (converts token amount to winc)
-          const result = await turbo.getWincForToken({ tokenAmount: tokenAmount.toString() });
+          const result = await turbo.getWincForToken({
+            tokenAmount: tokenAmount.toString(),
+          });
 
           if (result.winc && Number(result.winc) > 0) {
             setWincForToken(result.winc);
@@ -128,7 +138,8 @@ export function useWincForAnyToken(token: string, amount: number) {
           }
         } else {
           // Use direct API call for other tokens
-          const paymentServiceUrl = turboConfig.paymentServiceConfig?.url || 'https://payment.ardrive.io';
+          const paymentServiceUrl =
+            turboConfig.paymentServiceConfig?.url || 'https://payment.ardrive.io';
           const result = await getWincForToken(+tokenAmount, token, paymentServiceUrl);
 
           if (result.winc && Number(result.winc) > 0) {
@@ -139,7 +150,8 @@ export function useWincForAnyToken(token: string, amount: number) {
         }
       } catch (err) {
         console.warn(`Pricing failed for ${token}:`, err);
-        const errorMessage = err instanceof Error ? err.message : `${token.toUpperCase()} pricing not available`;
+        const errorMessage =
+          err instanceof Error ? err.message : `${token.toUpperCase()} pricing not available`;
         setError(errorMessage);
         setWincForToken(undefined);
       } finally {

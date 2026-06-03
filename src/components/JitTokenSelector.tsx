@@ -50,30 +50,43 @@ export function JitTokenSelector({
   // Get shorter display label for compact layout
   const getShortLabel = (token: SupportedTokenType): string => {
     switch (token) {
-      case 'base-usdc': return 'USDC';
-      case 'base-ario': return 'ARIO';
-      case 'base-eth': return 'ETH';
-      case 'ario': return 'ARIO';
-      case 'solana': return 'SOL';
-      default: return tokenLabels[token];
+      case 'base-usdc':
+        return 'USDC';
+      case 'base-ario':
+        return 'ARIO';
+      case 'base-eth':
+        return 'ETH';
+      case 'ario':
+        return 'ARIO';
+      case 'solana':
+        return 'SOL';
+      default:
+        return tokenLabels[token];
     }
   };
 
   // Get network suffix
   const getNetworkLabel = (token: SupportedTokenType): string => {
     switch (token) {
-      case 'base-usdc': return 'Base';
-      case 'base-ario': return 'Base';
-      case 'base-eth': return 'Base';
-      case 'ario': return 'AO';
-      default: return '';
+      case 'base-usdc':
+        return 'Base';
+      case 'base-ario':
+        return 'Base';
+      case 'base-eth':
+        return 'Base';
+      case 'ario':
+        return 'AO';
+      default:
+        return '';
     }
   };
 
   return (
     <div className="mb-3">
       <label className="text-xs text-foreground/80 block mb-2">Select payment method:</label>
-      <div className={`grid gap-1.5 ${availableTokens.length === 2 ? 'grid-cols-2' : availableTokens.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+      <div
+        className={`grid gap-1.5 ${availableTokens.length === 2 ? 'grid-cols-2' : availableTokens.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}
+      >
         {availableTokens.map((token) => (
           <button
             key={token}
@@ -81,11 +94,7 @@ export function JitTokenSelector({
             onClick={() => onTokenSelect(token)}
             className={`
               p-2 rounded-2xl border transition-all text-left
-              ${
-                selectedToken === token
-                  ? 'border-foreground bg-foreground/10'
-                  : 'border-border/20 hover:border-foreground/50 bg-card'
-              }
+              ${selectedToken === token ? 'border-foreground bg-foreground/10' : 'border-border/20 hover:border-foreground/50 bg-card'}
             `}
           >
             <div className="flex items-center justify-between gap-1">
@@ -93,7 +102,9 @@ export function JitTokenSelector({
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-bold text-foreground">{getShortLabel(token)}</span>
                   {getNetworkLabel(token) && (
-                    <span className="text-[10px] text-foreground/80">({getNetworkLabel(token)})</span>
+                    <span className="text-[10px] text-foreground/80">
+                      ({getNetworkLabel(token)})
+                    </span>
                   )}
                 </div>
                 {(token === 'base-ario' || token === 'ario') && (

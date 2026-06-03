@@ -14,12 +14,12 @@ export const getPaymentServiceConfig = () => {
       stripeKey: config.stripeKey,
     };
   }
-  
+
   // Fallback to legacy behavior
   const isProd = import.meta.env.VITE_NODE_ENV === 'production';
   return {
     paymentServiceUrl: isProd ? 'https://payment.ardrive.io' : 'https://payment.ardrive.dev',
-    stripeKey: isProd 
+    stripeKey: isProd
       ? 'pk_live_51JUAtwC8apPOWkDLMQqNF9sPpfneNSPnwX8YZ8y1FNDl6v94hZIwzgFSYl27bWE4Oos8CLquunUswKrKcaDhDO6m002Yj9AeKj'
       : 'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
   };
@@ -27,13 +27,13 @@ export const getPaymentServiceConfig = () => {
 
 export const getStripePromise = () => {
   const config = getPaymentServiceConfig();
-  
+
   // Cache based on stripe key to avoid recreating unnecessarily
   if (!stripePromiseCache || (window as any).__LAST_STRIPE_KEY__ !== config.stripeKey) {
     stripePromiseCache = loadStripe(config.stripeKey);
     (window as any).__LAST_STRIPE_KEY__ = config.stripeKey;
   }
-  
+
   return stripePromiseCache;
 };
 
@@ -62,7 +62,7 @@ export const getPaymentIntent = async (
     // Payment service request failed
     throw new Error('Error connecting to server. Please try again later.');
   }
-  
+
   return res.json() as Promise<{
     topUpQuote: { quotedPaymentAmount: number };
     paymentSession: PaymentIntent;
@@ -100,13 +100,10 @@ export const getWincForFiat = async ({
   return response.json();
 };
 
-export const submitCryptoTransaction = async (
-  txId: string,
-  token: TokenType,
-) => {
+export const submitCryptoTransaction = async (txId: string, token: TokenType) => {
   const config = getPaymentServiceConfig();
   const url = `${config.paymentServiceUrl}/v1/top-up/crypto/${token}`;
-  
+
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -164,7 +161,7 @@ export const getCheckoutSessionUrl = async ({
 }) => {
   const config = getPaymentServiceConfig();
   const url = `${config.paymentServiceUrl}/v1/gift/checkout-session`;
-  
+
   const body = {
     amount: amount * 100, // Convert to cents
     recipientEmail,

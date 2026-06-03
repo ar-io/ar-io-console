@@ -1,13 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import {
-  Home,
-  CreditCard,
-  Gift,
-  Upload,
-  Globe,
-  Share2,
-  Ticket
-} from 'lucide-react';
+import { Home, CreditCard, Gift, Upload, Globe, Share2, Ticket } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
@@ -29,11 +21,7 @@ export function Navigation() {
               key={path}
               to={path}
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-                  isActive 
-                    ? 'tab-active' 
-                    : 'tab-inactive'
-                }`
+                `flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${isActive ? 'tab-active' : 'tab-inactive'}`
               }
             >
               <Icon className="w-4 h-4" />

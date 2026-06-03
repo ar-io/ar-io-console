@@ -4,7 +4,17 @@ import { getPaymentServiceConfig } from '../../services/paymentService';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { turboConfig, wincPerCredit } from '../../constants';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
-import { Gift, Ticket, Mail, Wallet, CheckCircle, Shield, Upload, Globe, ArrowRight } from 'lucide-react';
+import {
+  Gift,
+  Ticket,
+  Mail,
+  Wallet,
+  CheckCircle,
+  Shield,
+  Upload,
+  Globe,
+  ArrowRight,
+} from 'lucide-react';
 
 export default function RedeemPanel() {
   const { address } = useStore();
@@ -20,7 +30,6 @@ export default function RedeemPanel() {
     newBalance: number;
     targetAddress: string;
   } | null>(null);
-  
 
   useEffect(() => {
     // Pre-fill destination address if wallet is connected
@@ -37,7 +46,7 @@ export default function RedeemPanel() {
 
     setLoading(true);
     setError('');
-    
+
     try {
       const config = getPaymentServiceConfig();
       // Use exact same pattern as reference app
@@ -45,28 +54,28 @@ export default function RedeemPanel() {
         `${config.paymentServiceUrl}/v1/redeem?destinationAddress=${encodeURIComponent(destinationAddress)}&id=${encodeURIComponent(redemptionCode)}&email=${encodeURIComponent(recipientEmail)}`,
         {
           headers: {
-            'accept': 'application/json',
+            accept: 'application/json',
           },
-        }
+        },
       );
-      
+
       if (!response.ok) {
         throw new Error('Failed to redeem gift code');
       }
 
       const redemptionData = await response.json();
-            
+
       // Fetch the balance of the destination address to show updated info
       try {
         const turbo = TurboFactory.unauthenticated(turboConfig);
         const balance = await turbo.getBalance(destinationAddress);
         const creditsBalance = Number(balance.winc) / 1e12;
-        
+
         // Extract credits from API response (userBalance is in winc format)
-        const creditsReceived = redemptionData.userBalance 
-          ? Number(redemptionData.userBalance) / 1e12  // Convert winc to credits
+        const creditsReceived = redemptionData.userBalance
+          ? Number(redemptionData.userBalance) / 1e12 // Convert winc to credits
           : 0;
-        
+
         setRedemptionDetails({
           creditsReceived,
           newBalance: creditsBalance,
@@ -75,23 +84,23 @@ export default function RedeemPanel() {
       } catch (balanceError) {
         // If balance fetch fails, still show success but without balance info
         console.warn('Could not fetch updated balance:', balanceError);
-        const creditsReceived = redemptionData.userBalance 
-          ? Number(redemptionData.userBalance) / 1e12  // Convert winc to credits
+        const creditsReceived = redemptionData.userBalance
+          ? Number(redemptionData.userBalance) / 1e12 // Convert winc to credits
           : 0;
-          
+
         setRedemptionDetails({
           creditsReceived,
           newBalance: 0,
           targetAddress: destinationAddress,
         });
       }
-      
+
       setSuccess(true);
-      
+
       // Clear form
       setRedemptionCode('');
       setRecipientEmail('');
-      
+
       // If redeemed to connected wallet, trigger balance refresh
       if (address === destinationAddress) {
         window.dispatchEvent(new CustomEvent('refresh-balance'));
@@ -107,7 +116,12 @@ export default function RedeemPanel() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const canSubmit = destinationAddress && recipientEmail && isValidEmail(recipientEmail) && redemptionCode && !loading;
+  const canSubmit =
+    destinationAddress &&
+    recipientEmail &&
+    isValidEmail(recipientEmail) &&
+    redemptionCode &&
+    !loading;
 
   if (success) {
     return (
@@ -118,7 +132,9 @@ export default function RedeemPanel() {
             <CheckCircle className="w-5 h-5 text-success" />
           </div>
           <div>
-            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Gift Redeemed Successfully!</h3>
+            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
+              Gift Redeemed Successfully!
+            </h3>
             <p className="text-sm text-foreground/80">
               Credits have been added to your wallet and are ready to use
             </p>
@@ -127,7 +143,6 @@ export default function RedeemPanel() {
 
         {/* Main Content */}
         <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
           {/* Success Message */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-success/20 rounded-2xl mb-4">
@@ -152,7 +167,12 @@ export default function RedeemPanel() {
                   </div>
                   {wincForOneGiB && redemptionDetails.creditsReceived > 0 && (
                     <div className="text-sm text-foreground/80 mt-1">
-                      = ~{((redemptionDetails.creditsReceived * wincPerCredit) / Number(wincForOneGiB)).toFixed(2)} GiB storage capacity
+                      = ~
+                      {(
+                        (redemptionDetails.creditsReceived * wincPerCredit) /
+                        Number(wincForOneGiB)
+                      ).toFixed(2)}{' '}
+                      GiB storage capacity
                     </div>
                   )}
                 </div>
@@ -168,13 +188,19 @@ export default function RedeemPanel() {
                         </div>
                         {wincForOneGiB && (
                           <div className="text-xs text-foreground/80">
-                            ~{((redemptionDetails.newBalance * wincPerCredit) / Number(wincForOneGiB)).toFixed(2)} GiB capacity
+                            ~
+                            {(
+                              (redemptionDetails.newBalance * wincPerCredit) /
+                              Number(wincForOneGiB)
+                            ).toFixed(2)}{' '}
+                            GiB capacity
                           </div>
                         )}
                       </div>
                     </div>
                     <div className="text-xs text-foreground/80">
-                      Address: {redemptionDetails.targetAddress.slice(0, 8)}...{redemptionDetails.targetAddress.slice(-6)}
+                      Address: {redemptionDetails.targetAddress.slice(0, 8)}...
+                      {redemptionDetails.targetAddress.slice(-6)}
                     </div>
                   </div>
                 )}
@@ -231,88 +257,85 @@ export default function RedeemPanel() {
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
-      {/* Wallet Address */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-3">Wallet Address</label>
-        <div className="relative">
-          <Wallet className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
-          <input
-            type="text"
-            value={destinationAddress}
-            onChange={(e) => setDestinationAddress(e.target.value)}
-            className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-foreground focus:outline-none transition-colors"
-            placeholder="Your wallet address"
-          />
-        </div>
-        {!address && (
-          <p className="text-xs text-foreground/80 mt-2">
-            Connect your wallet to auto-fill this field
+        {/* Wallet Address */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3">Wallet Address</label>
+          <div className="relative">
+            <Wallet className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
+            <input
+              type="text"
+              value={destinationAddress}
+              onChange={(e) => setDestinationAddress(e.target.value)}
+              className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-foreground focus:outline-none transition-colors"
+              placeholder="Your wallet address"
+            />
+          </div>
+          {!address && (
+            <p className="text-xs text-foreground/80 mt-2">
+              Connect your wallet to auto-fill this field
+            </p>
+          )}
+          <p className="text-xs text-foreground/50 mt-1">
+            Example: vLRHFqCw1uHu75xqB4fCDW-QxpkpJxBtFD9g4QYUbfw
           </p>
+        </div>
+
+        {/* Gift Code */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3">Gift Code</label>
+          <div className="relative">
+            <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
+            <input
+              type="text"
+              value={redemptionCode}
+              onChange={(e) => setRedemptionCode(e.target.value)}
+              className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground font-mono focus:border-foreground focus:outline-none transition-colors"
+              placeholder="XXXX-XXXX-XXXX"
+            />
+          </div>
+        </div>
+
+        {/* Email */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3">Email Address</label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
+            <input
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
+              placeholder="Confirm your email address"
+            />
+          </div>
+          <p className="text-xs text-foreground/80 mt-2">
+            Must match the email the gift was sent to
+          </p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="text-error text-sm mb-4 p-3 bg-error/10 rounded-2xl">{error}</div>
         )}
-        <p className="text-xs text-foreground/50 mt-1">
-          Example: vLRHFqCw1uHu75xqB4fCDW-QxpkpJxBtFD9g4QYUbfw
-        </p>
-      </div>
 
-      {/* Gift Code */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-3">Gift Code</label>
-        <div className="relative">
-          <Ticket className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
-          <input
-            type="text"
-            value={redemptionCode}
-            onChange={(e) => setRedemptionCode(e.target.value)}
-            className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground font-mono focus:border-foreground focus:outline-none transition-colors"
-            placeholder="XXXX-XXXX-XXXX"
-          />
-        </div>
-      </div>
-
-      {/* Email */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-3">Email Address</label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/50" />
-          <input
-            type="email"
-            value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
-            className="w-full p-3 pl-11 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
-            placeholder="Confirm your email address"
-          />
-        </div>
-        <p className="text-xs text-foreground/80 mt-2">
-          Must match the email the gift was sent to
-        </p>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="text-error text-sm mb-4 p-3 bg-error/10 rounded-2xl">
-          {error}
-        </div>
-      )}
-
-      {/* Redeem Button */}
-      <button
-        onClick={handleRedeem}
-        className="w-full py-4 px-6 rounded-full bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        disabled={!canSubmit}
-      >
-        {loading ? (
-          <>
-            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            Redeeming Gift...
-          </>
-        ) : (
-          <>
-            <Gift className="w-5 h-5" />
-            Redeem Gift Code
-          </>
-        )}
-      </button>
+        {/* Redeem Button */}
+        <button
+          onClick={handleRedeem}
+          className="w-full py-4 px-6 rounded-full bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          disabled={!canSubmit}
+        >
+          {loading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              Redeeming Gift...
+            </>
+          ) : (
+            <>
+              <Gift className="w-5 h-5" />
+              Redeem Gift Code
+            </>
+          )}
+        </button>
       </div>
 
       {/* Redemption Process */}

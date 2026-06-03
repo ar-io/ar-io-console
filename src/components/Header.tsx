@@ -1,5 +1,31 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings, Server, ScanSearch, Compass, PencilLine, ShieldCheck } from 'lucide-react';
+import {
+  ExternalLink,
+  Coins,
+  Calculator,
+  RefreshCw,
+  Wallet,
+  CreditCard,
+  Upload,
+  Camera,
+  Share2,
+  Gift,
+  Globe,
+  Code,
+  Search,
+  Ticket,
+  Grid3x3,
+  Zap,
+  User,
+  Lock,
+  Key,
+  Settings,
+  Server,
+  ScanSearch,
+  Compass,
+  PencilLine,
+  ShieldCheck,
+} from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -33,21 +59,53 @@ const utilityServices = [
   { name: 'Browse Data', page: 'browse' as const, icon: Compass },
   { name: 'Verify Data', page: 'verify' as const, icon: ShieldCheck },
   { name: 'Search Domains', page: 'domains' as const, icon: Globe },
-  { name: 'Manage Domains', href: 'https://arns.ar.io/#/manage/names', icon: PencilLine, external: true },
-  { name: 'Network Explorer', href: 'https://scan.ar.io', icon: ScanSearch, external: true },
-  { name: 'Gateway Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
-  { name: 'Developer Docs', href: 'https://docs.ar.io', icon: Code, external: true },
+  {
+    name: 'Manage Domains',
+    href: 'https://arns.ar.io/#/manage/names',
+    icon: PencilLine,
+    external: true,
+  },
+  {
+    name: 'Network Explorer',
+    href: 'https://scan.ar.io',
+    icon: ScanSearch,
+    external: true,
+  },
+  {
+    name: 'Gateway Dashboard',
+    href: 'https://gateways.ar.io',
+    icon: Server,
+    external: true,
+  },
+  {
+    name: 'Developer Docs',
+    href: 'https://docs.ar.io',
+    icon: Code,
+    external: true,
+  },
 ];
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable } = useStore();
+  const {
+    address,
+    walletType,
+    clearAddress,
+    clearAllPaymentState,
+    setCreditBalance,
+    configMode,
+    isPaymentServiceAvailable,
+  } = useStore();
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
   // Only check ArNS for Arweave/Ethereum wallets - Solana can't own ArNS names
-  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
+  const {
+    arnsName,
+    profile,
+    loading: loadingArNS,
+  } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
 
   const [credits, setCredits] = useState<string>('0');
   const [creditsNumeric, setCreditsNumeric] = useState<number>(0);
@@ -173,10 +231,10 @@ const Header = () => {
   // Payment service dependent routes: topup, share, gift, balances, redeem
   // Note: calculator is NOT included - it works in x402-only mode with USDC pricing
   const paymentServiceRoutes = ['topup', 'share', 'gift', 'balances', 'redeem'];
-  const filteredAccountServices = accountServices.filter(service =>
-    isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page)
+  const filteredAccountServices = accountServices.filter(
+    (service) => isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page),
   );
-  const filteredUtilityServices = utilityServices.filter(service => {
+  const filteredUtilityServices = utilityServices.filter((service) => {
     // External links are always shown
     if ('external' in service && service.external) return true;
     // Internal links: check if payment service is available or not a payment route
@@ -196,9 +254,7 @@ const Header = () => {
       {configMode !== 'production' && (
         <div className="ml-4 flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
           <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-          <span className="text-xs text-primary font-medium uppercase">
-            {configMode} MODE
-          </span>
+          <span className="text-xs text-primary font-medium uppercase">{configMode} MODE</span>
         </div>
       )}
 
@@ -207,7 +263,10 @@ const Header = () => {
       {/* Clean Services Waffle Popover */}
       <div className="mr-3">
         <Popover className="relative">
-          <PopoverButton className="flex items-center p-3 text-foreground/60 hover:text-foreground transition-colors focus:outline-none" title="All Services">
+          <PopoverButton
+            className="flex items-center p-3 text-foreground/60 hover:text-foreground transition-colors focus:outline-none"
+            title="All Services"
+          >
             <Grid3x3 className="w-6 h-6" />
           </PopoverButton>
 
@@ -216,7 +275,9 @@ const Header = () => {
               <>
                 {/* Services - Always show, but require login */}
                 <div className="px-4 py-2 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-foreground/60 uppercase tracking-wider">Services</span>
+                  <span className="text-xs font-semibold text-foreground/60 uppercase tracking-wider">
+                    Services
+                  </span>
                   {!address && (
                     <span className="text-xs text-foreground/40 flex items-center gap-1">
                       <Lock className="w-3 h-3" />
@@ -260,9 +321,9 @@ const Header = () => {
                           : 'text-foreground/80 hover:bg-primary/10 hover:text-foreground'
                       }`}
                     >
-                      <service.icon className={`w-4 h-4 ${
-                        isActive ? 'text-primary' : 'text-foreground/60'
-                      }`} />
+                      <service.icon
+                        className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-foreground/60'}`}
+                      />
                       {service.name}
                     </Link>
                   );
@@ -270,7 +331,9 @@ const Header = () => {
                 <div className="border-t border-border/20 my-1" />
 
                 {/* Public Tools */}
-                <div className="px-4 py-2 text-xs font-semibold text-foreground/60 uppercase tracking-wider">Tools</div>
+                <div className="px-4 py-2 text-xs font-semibold text-foreground/60 uppercase tracking-wider">
+                  Tools
+                </div>
                 {filteredUtilityServices.map((service) => {
                   // Handle external links
                   if ('external' in service && service.external && 'href' in service) {
@@ -303,9 +366,9 @@ const Header = () => {
                           : 'text-foreground/80 hover:bg-primary/10 hover:text-foreground'
                       }`}
                     >
-                      <service.icon className={`w-4 h-4 ${
-                        isActive ? 'text-primary' : 'text-foreground/60'
-                      }`} />
+                      <service.icon
+                        className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-foreground/60'}`}
+                      />
                       {service.name}
                     </Link>
                   );
@@ -333,27 +396,39 @@ const Header = () => {
                     const container = target.parentElement;
                     if (container) {
                       target.style.display = 'none';
-                      const fallback = container.querySelector('.fallback-indicator') as HTMLElement;
+                      const fallback = container.querySelector(
+                        '.fallback-indicator',
+                      ) as HTMLElement;
                       if (fallback) {
                         fallback.style.display = 'block';
                       }
                     }
                   }}
                 />
-                <div className={`fallback-indicator hidden size-2 rounded-full ${
-                  walletType === 'arweave' ? 'bg-primary' :
-                  walletType === 'ethereum' ? 'bg-blue-500' :
-                  walletType === 'solana' ? 'bg-purple-500' :
-                  'bg-green-500'
-                }`} />
+                <div
+                  className={`fallback-indicator hidden size-2 rounded-full ${
+                    walletType === 'arweave'
+                      ? 'bg-primary'
+                      : walletType === 'ethereum'
+                        ? 'bg-blue-500'
+                        : walletType === 'solana'
+                          ? 'bg-purple-500'
+                          : 'bg-green-500'
+                  }`}
+                />
               </div>
             ) : (
-              <div className={`size-2 rounded-full ${
-                walletType === 'arweave' ? 'bg-primary' :
-                walletType === 'ethereum' ? 'bg-blue-500' :
-                walletType === 'solana' ? 'bg-purple-500' :
-                'bg-green-500'
-              }`} />
+              <div
+                className={`size-2 rounded-full ${
+                  walletType === 'arweave'
+                    ? 'bg-primary'
+                    : walletType === 'ethereum'
+                      ? 'bg-blue-500'
+                      : walletType === 'solana'
+                        ? 'bg-purple-500'
+                        : 'bg-green-500'
+                }`}
+              />
             )}
             <div className="text-foreground">
               {loadingArNS ? (
@@ -369,161 +444,162 @@ const Header = () => {
           <PopoverPanel className="absolute right-1 sm:right-0 mt-4 flex flex-col rounded-2xl bg-background text-left text-sm text-foreground shadow-lg border border-border/20 min-w-[280px] z-50">
             {({ close }) => (
               <>
-            {/* Account Info Section */}
-            <div className="px-6 py-4 border-b border-border/20">
-              <div className="text-xs text-foreground/60 mb-2">
-                {walletType === 'arweave' && 'Arweave Account'}
-                {walletType === 'ethereum' && `Ethereum Account${isPrivyUser ? ' (Privy.io)' : ''}`}
-                {walletType === 'solana' && 'Solana Account'}
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-base">
-                  {formatWalletAddress(address, 6)}
-                </div>
-                <CopyButton textToCopy={address} />
-              </div>
-            </div>
-
-            {/* Credit Balance Section - Display Only (hide in x402-only mode) */}
-            {isPaymentServiceAvailable() && (
-              <div className="px-6 py-4 border-b border-border/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-foreground" />
-                    <span className="text-xs text-foreground/60">Credits</span>
+                {/* Account Info Section */}
+                <div className="px-6 py-4 border-b border-border/20">
+                  <div className="text-xs text-foreground/60 mb-2">
+                    {walletType === 'arweave' && 'Arweave Account'}
+                    {walletType === 'ethereum' &&
+                      `Ethereum Account${isPrivyUser ? ' (Privy.io)' : ''}`}
+                    {walletType === 'solana' && 'Solana Account'}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex flex-col items-end">
-                      <div className="font-bold text-lg text-foreground">
-                        {loadingBalance || isRefreshing ? '...' : credits}
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-base">{formatWalletAddress(address, 6)}</div>
+                    <CopyButton textToCopy={address} />
+                  </div>
+                </div>
+
+                {/* Credit Balance Section - Display Only (hide in x402-only mode) */}
+                {isPaymentServiceAvailable() && (
+                  <div className="px-6 py-4 border-b border-border/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Coins className="w-4 h-4 text-foreground" />
+                        <span className="text-xs text-foreground/60">Credits</span>
                       </div>
-                      {!loadingBalance && !isRefreshing && creditsNumeric > 0 && (
-                        <div className="text-xs text-foreground/40 mt-0.5">
-                          {formatStorageCapacity(creditsNumeric)}
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end">
+                          <div className="font-bold text-lg text-foreground">
+                            {loadingBalance || isRefreshing ? '...' : credits}
+                          </div>
+                          {!loadingBalance && !isRefreshing && creditsNumeric > 0 && (
+                            <div className="text-xs text-foreground/40 mt-0.5">
+                              {formatStorageCapacity(creditsNumeric)}
+                            </div>
+                          )}
                         </div>
-                      )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the parent click
+                            handleRefresh();
+                          }}
+                          disabled={isRefreshing || loadingBalance}
+                          className="p-1 rounded hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={isRefreshing ? 'Refreshing...' : 'Refresh balance'}
+                        >
+                          <RefreshCw
+                            className={`w-3 h-3 ${isRefreshing ? 'text-primary animate-spin' : 'text-foreground/60 hover:text-foreground'}`}
+                          />
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent triggering the parent click
-                        handleRefresh();
-                      }}
-                      disabled={isRefreshing || loadingBalance}
-                      className="p-1 rounded hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={isRefreshing ? 'Refreshing...' : 'Refresh balance'}
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'text-primary animate-spin' : 'text-foreground/60 hover:text-foreground'}`} />
-                    </button>
                   </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center">
+                  <button
+                    className="flex-1 flex items-center gap-2 pl-6 pr-2 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
+                    onClick={() => {
+                      navigate('/account');
+                      close();
+                    }}
+                  >
+                    <User className="w-4 h-4" />
+                    My Account
+                  </button>
+                  <button
+                    className="pr-6 pl-2 py-3 text-foreground/40 hover:text-foreground transition-colors"
+                    onClick={() => {
+                      let explorerUrl = '';
+                      if (walletType === 'ethereum') {
+                        explorerUrl = `https://etherscan.io/address/${address}`;
+                      } else if (walletType === 'solana') {
+                        explorerUrl = `https://explorer.solana.com/address/${address}`;
+                      } else {
+                        explorerUrl = `https://viewblock.io/arweave/address/${address}`;
+                      }
+                      window.open(explorerUrl, '_blank');
+                    }}
+                    title="View on Explorer"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
                 </div>
-              </div>
-            )}
 
-            {/* Actions */}
-            <div className="flex items-center">
-              <button
-                className="flex-1 flex items-center gap-2 pl-6 pr-2 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
-                onClick={() => {
-                  navigate('/account');
-                  close();
-                }}
-              >
-                <User className="w-4 h-4" />
-                My Account
-              </button>
-              <button
-                className="pr-6 pl-2 py-3 text-foreground/40 hover:text-foreground transition-colors"
-                onClick={() => {
-                  let explorerUrl = '';
-                  if (walletType === 'ethereum') {
-                    explorerUrl = `https://etherscan.io/address/${address}`;
-                  } else if (walletType === 'solana') {
-                    explorerUrl = `https://explorer.solana.com/address/${address}`;
-                  } else {
-                    explorerUrl = `https://viewblock.io/arweave/address/${address}`;
-                  }
-                  window.open(explorerUrl, '_blank');
-                }}
-                title="View on Explorer"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </button>
-            </div>
+                <button
+                  className="flex items-center gap-2 px-6 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
+                  onClick={() => {
+                    navigate('/settings');
+                    close();
+                  }}
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </button>
 
-            <button
-              className="flex items-center gap-2 px-6 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
-              onClick={() => {
-                navigate('/settings');
-                close();
-              }}
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
-
-            {/* Export Wallet - Show for Privy users */}
-            {isPrivyUser && (
-              <button
-                className="flex items-center gap-2 px-6 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
-                onClick={async () => {
-                  try {
-                    // Export the Privy wallet - this opens Privy's secure modal
-                    await exportWallet();
-                    close(); // Close dropdown after export modal opens
-                  } catch {
-                    // Failed to export wallet
-                  }
-                }}
-              >
-                <Key className="w-4 h-4" />
-                Export Private Key
-              </button>
-            )}
-
-            <button
-              className="px-6 py-3 font-semibold text-error hover:bg-error/10 border-t border-border/20 transition-colors"
-              onClick={async () => {
-                try {
-                  // Check if this is a Privy user and handle logout differently
-                  if (isPrivyUser) {
-                    await privyLogout();
-                  } else {
-                    // Disconnect from the actual wallet extension based on wallet type
-                    if (walletType === 'arweave' && window.arweaveWallet) {
-                      await window.arweaveWallet.disconnect();
-                    } else if (walletType === 'ethereum') {
-                      // Disconnect RainbowKit/Wagmi connection (handles MetaMask, WalletConnect, Coinbase, etc.)
+                {/* Export Wallet - Show for Privy users */}
+                {isPrivyUser && (
+                  <button
+                    className="flex items-center gap-2 px-6 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
+                    onClick={async () => {
                       try {
-                        await disconnectAsync();
+                        // Export the Privy wallet - this opens Privy's secure modal
+                        await exportWallet();
+                        close(); // Close dropdown after export modal opens
                       } catch {
-                        // Wagmi disconnect failed, continue anyway
+                        // Failed to export wallet
                       }
-                      // Clear cached Turbo clients
-                      clearEthereumTurboClientCache();
-                    } else if (walletType === 'solana' && window.solana) {
-                      // Properly disconnect Solana wallet to prevent conflicts
-                      try {
-                        if (window.solana.isConnected) {
-                          await window.solana.disconnect();
+                    }}
+                  >
+                    <Key className="w-4 h-4" />
+                    Export Private Key
+                  </button>
+                )}
+
+                <button
+                  className="px-6 py-3 font-semibold text-error hover:bg-error/10 border-t border-border/20 transition-colors"
+                  onClick={async () => {
+                    try {
+                      // Check if this is a Privy user and handle logout differently
+                      if (isPrivyUser) {
+                        await privyLogout();
+                      } else {
+                        // Disconnect from the actual wallet extension based on wallet type
+                        if (walletType === 'arweave' && window.arweaveWallet) {
+                          await window.arweaveWallet.disconnect();
+                        } else if (walletType === 'ethereum') {
+                          // Disconnect RainbowKit/Wagmi connection (handles MetaMask, WalletConnect, Coinbase, etc.)
+                          try {
+                            await disconnectAsync();
+                          } catch {
+                            // Wagmi disconnect failed, continue anyway
+                          }
+                          // Clear cached Turbo clients
+                          clearEthereumTurboClientCache();
+                        } else if (walletType === 'solana' && window.solana) {
+                          // Properly disconnect Solana wallet to prevent conflicts
+                          try {
+                            if (window.solana.isConnected) {
+                              await window.solana.disconnect();
+                            }
+                          } catch {
+                            // Solana wallet disconnect failed, continue anyway
+                          }
                         }
-                      } catch {
-                        // Solana wallet disconnect failed, continue anyway
                       }
+                    } catch {
+                      // Error disconnecting from wallet extension, continue anyway
                     }
-                  }
-                } catch {
-                  // Error disconnecting from wallet extension, continue anyway
-                }
 
-                // Always clear our app state (unless Privy already handled it)
-                if (!isPrivyUser) {
-                  clearAllPaymentState();
-                  clearAddress();
-                }
-              }}
-            >
-              {isPrivyUser ? 'Logout' : 'Disconnect'}
-            </button>
+                    // Always clear our app state (unless Privy already handled it)
+                    if (!isPrivyUser) {
+                      clearAllPaymentState();
+                      clearAddress();
+                    }
+                  }}
+                >
+                  {isPrivyUser ? 'Logout' : 'Disconnect'}
+                </button>
               </>
             )}
           </PopoverPanel>

@@ -12,9 +12,7 @@ export default function Footer() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             {/* Left side: Copyright and version */}
             <div className="flex items-center gap-3">
-              <span className="text-sm text-foreground/80">
-                © {currentYear} ar.io
-              </span>
+              <span className="text-sm text-foreground/80">© {currentYear} ar.io</span>
               <span className="text-foreground/30">•</span>
               <a
                 href="https://github.com/ar-io/ar-io-console"
@@ -63,7 +61,11 @@ export default function Footer() {
                 className="text-foreground/60 hover:text-foreground transition-colors"
                 aria-label="Discord"
               >
-                <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" className="w-5 h-5 opacity-60 hover:opacity-100 transition-opacity" />
+                <img
+                  src="https://ar.io/icons/discord-icon.svg"
+                  alt="Discord"
+                  className="w-5 h-5 opacity-60 hover:opacity-100 transition-opacity"
+                />
               </a>
             </nav>
           </div>

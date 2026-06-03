@@ -7,7 +7,7 @@ import tsparser from '@typescript-eslint/parser';
 
 export default [
   {
-    ignores: ['dist', 'node_modules', '**/*.d.ts', 'vite.config.ts']
+    ignores: ['dist', 'node_modules', '**/*.d.ts', 'vite.config.ts'],
   },
   {
     files: ['**/*.{ts,tsx}'],
@@ -33,10 +33,7 @@ export default [
       ...js.configs.recommended.rules,
       ...tseslint.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
-      ],
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       // Relaxed rules for first commit
       '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/no-explicit-any': 'off',

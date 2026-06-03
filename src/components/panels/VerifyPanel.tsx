@@ -1,12 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  ShieldCheck,
-  Loader2,
-  Check,
-  AlertCircle,
-  ArrowLeft,
-  Upload,
-} from 'lucide-react';
+import { ShieldCheck, Loader2, Check, AlertCircle, ArrowLeft, Upload } from 'lucide-react';
 import { useVerification } from '../../hooks/useVerification';
 import { useStore } from '../../store/useStore';
 import CopyButton from '../CopyButton';
@@ -41,8 +34,7 @@ const EXISTENCE_STYLES: Record<string, { icon: typeof Check; color: string; labe
 
 export default function VerifyPanel() {
   const [txId, setTxId] = useState('');
-  const { verify, cancel, result, isVerifying, elapsed, error, reset, txParam } =
-    useVerification();
+  const { verify, cancel, result, isVerifying, elapsed, error, reset, txParam } = useVerification();
 
   // File compare state
   const [compareResult, setCompareResult] = useState<{
@@ -98,7 +90,7 @@ export default function VerifyPanel() {
         setHashing(false);
       }
     },
-    [result]
+    [result],
   );
 
   const { getCurrentConfig } = useStore();
@@ -122,11 +114,7 @@ export default function VerifyPanel() {
         </button>
 
         <div className="space-y-6">
-          <VerifyHero
-            result={result}
-            onReverify={handleReverify}
-            reverifying={isVerifying}
-          />
+          <VerifyHero result={result} onReverify={handleReverify} reverifying={isVerifying} />
           <ProvenanceChain result={result} />
 
           {/* Verification evidence */}
@@ -135,10 +123,7 @@ export default function VerifyPanel() {
               Verification evidence
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
-              <AuthenticitySection
-                authenticity={result.authenticity}
-                owner={result.owner}
-              />
+              <AuthenticitySection authenticity={result.authenticity} owner={result.owner} />
 
               {/* Existence card */}
               <div className="flex flex-col rounded-2xl border border-border/20 bg-card p-5">
@@ -223,7 +208,9 @@ export default function VerifyPanel() {
                   src={rawDataUrl(config.verifyApiUrl, result.txId)}
                   alt={`Verified: ${shortId(result.txId, 8, 0)}`}
                   className="max-h-64 w-full rounded-xl object-contain"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               </div>
             </div>
@@ -243,7 +230,10 @@ export default function VerifyPanel() {
                       ? 'border-primary/30 bg-primary/5'
                       : 'border-border/20 bg-card'
                 }`}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -259,15 +249,11 @@ export default function VerifyPanel() {
                   </div>
                 ) : compareResult ? (
                   <div className="w-full space-y-2 text-center">
-                    <p className="text-sm text-foreground/60">
-                      {compareResult.fileName}
-                    </p>
+                    <p className="text-sm text-foreground/60">{compareResult.fileName}</p>
                     {compareResult.match ? (
                       <div className="flex items-center justify-center gap-1.5 text-success">
                         <Check className="h-5 w-5" />
-                        <span className="font-semibold">
-                          Hash match confirmed
-                        </span>
+                        <span className="font-semibold">Hash match confirmed</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center gap-1.5 text-error">
@@ -278,9 +264,7 @@ export default function VerifyPanel() {
                     <p className="font-mono text-xs text-foreground/50">
                       File: {compareResult.fileHash}
                     </p>
-                    <p className="font-mono text-xs text-foreground/50">
-                      On-chain: {dataHash}
-                    </p>
+                    <p className="font-mono text-xs text-foreground/50">On-chain: {dataHash}</p>
                     <button
                       onClick={() => setCompareResult(null)}
                       className="mt-1 text-xs text-primary hover:underline"
@@ -314,14 +298,10 @@ export default function VerifyPanel() {
 
           {/* Details & gateway signals */}
           <div>
-            <h3 className="mb-3 font-heading text-base font-bold text-foreground/70">
-              Details
-            </h3>
+            <h3 className="mb-3 font-heading text-base font-bold text-foreground/70">Details</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-border/20 bg-card p-5">
-                <h3 className="mb-3 text-sm font-medium text-foreground/50">
-                  Metadata
-                </h3>
+                <h3 className="mb-3 text-sm font-medium text-foreground/50">Metadata</h3>
                 {result.metadata.dataSize !== null && (
                   <p className="text-sm text-foreground/70">
                     <span className="font-medium">Size:</span>{' '}
@@ -330,8 +310,7 @@ export default function VerifyPanel() {
                 )}
                 {result.metadata.contentType && (
                   <p className="text-sm text-foreground/70">
-                    <span className="font-medium">Type:</span>{' '}
-                    {result.metadata.contentType}
+                    <span className="font-medium">Type:</span> {result.metadata.contentType}
                   </p>
                 )}
                 {result.metadata.tags.length > 0 && (
@@ -343,12 +322,8 @@ export default function VerifyPanel() {
                     <div className="mt-2 max-h-48 overflow-auto rounded-xl bg-foreground/5 p-2">
                       {result.metadata.tags.map((tag, i) => (
                         <div key={`${tag.name}-${i}`} className="flex gap-2 py-0.5 text-xs">
-                          <span className="font-medium text-foreground/60">
-                            {tag.name}:
-                          </span>
-                          <span className="break-all text-foreground/40">
-                            {tag.value}
-                          </span>
+                          <span className="font-medium text-foreground/60">{tag.name}:</span>
+                          <span className="break-all text-foreground/40">{tag.value}</span>
                         </div>
                       ))}
                     </div>
@@ -361,9 +336,7 @@ export default function VerifyPanel() {
                 result.gatewayAssessment.hops !== null ||
                 result.gatewayAssessment.verified !== null) && (
                 <div className="rounded-2xl border border-border/20 bg-card p-5">
-                  <h3 className="mb-3 text-sm font-medium text-foreground/50">
-                    Gateway signals
-                  </h3>
+                  <h3 className="mb-3 text-sm font-medium text-foreground/50">Gateway signals</h3>
                   <div className="flex flex-wrap gap-2">
                     {result.gatewayAssessment.trusted !== null && (
                       <span
@@ -385,10 +358,7 @@ export default function VerifyPanel() {
                       <span
                         className={`rounded-full border px-2.5 py-1 text-xs font-medium ${result.gatewayAssessment.verified ? 'border-success/20 bg-success/10 text-success' : 'border-border/20 bg-foreground/5 text-foreground/40'}`}
                       >
-                        Gateway{' '}
-                        {result.gatewayAssessment.verified
-                          ? 'verified'
-                          : 'processing'}
+                        Gateway {result.gatewayAssessment.verified ? 'verified' : 'processing'}
                       </span>
                     )}
                   </div>
@@ -399,9 +369,7 @@ export default function VerifyPanel() {
 
           {/* Footer */}
           <div className="border-t border-border/20 pt-4">
-            <p className="text-xs text-foreground/40">
-              {result.verificationId}
-            </p>
+            <p className="text-xs text-foreground/40">{result.verificationId}</p>
           </div>
         </div>
       </div>
@@ -417,22 +385,17 @@ export default function VerifyPanel() {
           <ShieldCheck className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-heading text-2xl font-bold text-foreground mb-1">
-            Verify Data
-          </h3>
+          <h3 className="font-heading text-2xl font-bold text-foreground mb-1">Verify Data</h3>
           <p className="text-sm text-foreground/80">
-            Cryptographic proof of existence, integrity, and authorship.
-            Independently verified by your ar.io gateway.
+            Cryptographic proof of existence, integrity, and authorship. Independently verified by
+            your ar.io gateway.
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label
-            htmlFor="txId"
-            className="mb-1.5 block text-sm font-medium text-foreground/70"
-          >
+          <label htmlFor="txId" className="mb-1.5 block text-sm font-medium text-foreground/70">
             Transaction ID
           </label>
           <input
@@ -440,9 +403,7 @@ export default function VerifyPanel() {
             type="text"
             value={txId}
             onChange={(e) => setTxId(e.target.value)}
-            onKeyDown={(e) =>
-              e.key === 'Enter' && !isVerifying && handleVerify()
-            }
+            onKeyDown={(e) => e.key === 'Enter' && !isVerifying && handleVerify()}
             placeholder="Enter a 43-character Arweave transaction ID"
             className="w-full rounded-2xl border border-border/20 bg-card px-4 py-3 font-mono text-sm focus:border-primary focus:outline-none"
             disabled={isVerifying}
@@ -508,9 +469,7 @@ export default function VerifyPanel() {
         {/* Examples */}
         {!isVerifying && (
           <div className="border-t border-border/20 pt-4">
-            <p className="mb-2.5 text-xs font-medium text-foreground/40">
-              Try an example
-            </p>
+            <p className="mb-2.5 text-xs font-medium text-foreground/40">Try an example</p>
             <div className="flex flex-wrap gap-2">
               {EXAMPLES.map((ex) => (
                 <button

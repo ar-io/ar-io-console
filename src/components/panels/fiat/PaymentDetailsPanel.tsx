@@ -39,18 +39,19 @@ const isValidPromoCode = async (
   }
 };
 
-const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, onNext, targetAddress, targetWalletType }) => {
+const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({
+  usdAmount,
+  onBack,
+  onNext,
+  targetAddress,
+  targetWalletType,
+}) => {
   const countries = useCountries();
   const wincForOneGiB = useWincForOneGiB();
   const { address } = useStore();
   const { isLight } = useTheme();
 
-  const {
-    setPaymentIntent,
-    setPaymentInformation,
-    promoCode,
-    setPromoCode,
-  } = useStore();
+  const { setPaymentIntent, setPaymentInformation, promoCode, setPromoCode } = useStore();
 
   const [localPromoCode, setLocalPromoCode] = useState<string>('');
   const [promoCodeError, setPromoCodeError] = useState<string>('');
@@ -154,9 +155,8 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
     }
   };
 
-  const storageAmount = estimatedCredits && wincForOneGiB
-    ? (Number(estimatedCredits.winc) / Number(wincForOneGiB))
-    : 0;
+  const storageAmount =
+    estimatedCredits && wincForOneGiB ? Number(estimatedCredits.winc) / Number(wincForOneGiB) : 0;
 
   const adjustment =
     estimatedCredits?.adjustments && estimatedCredits.adjustments.length > 0
@@ -202,13 +202,14 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         </div>
         <div>
           <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Payment Details</h3>
-          <p className="text-sm text-foreground/80">We do not save credit card information. See our T&C for more info.</p>
+          <p className="text-sm text-foreground/80">
+            We do not save credit card information. See our T&C for more info.
+          </p>
         </div>
       </div>
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
         {/* Show recipient info if funding another wallet */}
         {targetAddress && targetAddress !== address && (
           <div className="mb-6 bg-info/10 border border-info/20 rounded-2xl p-4">
@@ -233,13 +234,11 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           {estimatedCredits ? (
             <div className="flex flex-col">
               <div className="text-2xl font-bold text-foreground">
-                {((Number(estimatedCredits?.winc ?? 0)) / wincPerCredit).toFixed(4)} Credits
+                {(Number(estimatedCredits?.winc ?? 0) / wincPerCredit).toFixed(4)} Credits
               </div>
               <div className="text-sm text-foreground/80">
                 ${actualPaymentAmount}{' '}
-                {discountAmount && (
-                  <span className="text-foreground/80">{discountAmount}</span>
-                )}
+                {discountAmount && <span className="text-foreground/80">{discountAmount}</span>}
               </div>
               {storageAmount > 0 && (
                 <div className="text-xs text-foreground/80 mt-1">
@@ -248,16 +247,11 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
               )}
             </div>
           ) : (
-            <div className="text-base font-bold text-error">
-              Error calculating price
-            </div>
+            <div className="text-base font-bold text-error">Error calculating price</div>
           )}
           <div className="flex flex-col items-center bg-card px-6 py-3 text-center text-sm text-foreground/80 rounded-2xl">
             <div>
-              Quote Updates in{' '}
-              <span className="text-foreground">
-                {formatCountdown(countdown)}
-              </span>
+              Quote Updates in <span className="text-foreground">{formatCountdown(countdown)}</span>
             </div>
             <button
               className="flex items-center gap-1 mt-1 text-foreground hover:text-foreground/80 transition-colors"
@@ -283,9 +277,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
                 const v = e.target.value ?? '';
                 const cleaned = v.replace(/[^a-zA-Z\s]/g, '');
                 setName(cleaned);
-                setNameError(
-                  cleaned.length === 0 ? 'Name is required' : '',
-                );
+                setNameError(cleaned.length === 0 ? 'Name is required' : '');
               }}
             />
           </FormEntry>
@@ -306,9 +298,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
               value={country}
               onChange={(e) => {
                 setCountry(e.target.value);
-                setCountryError(
-                  !e.target.value ? 'Country is required' : '',
-                );
+                setCountryError(!e.target.value ? 'Country is required' : '');
               }}
             >
               <option value="">Select Country</option>
@@ -338,8 +328,11 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
                         const newPaymentIntent = await getPaymentIntent(
                           targetAddress,
                           usdAmount * 100,
-                          targetWalletType === 'ethereum' ? 'ethereum' :
-                          targetWalletType === 'solana' ? 'solana' : 'arweave',
+                          targetWalletType === 'ethereum'
+                            ? 'ethereum'
+                            : targetWalletType === 'solana'
+                              ? 'solana'
+                              : 'arweave',
                         );
                         setPaymentIntent(newPaymentIntent.paymentSession);
                         setPromoCode(undefined);
@@ -355,9 +348,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
                   <CircleX className="w-4 h-4" />
                 </button>
               </div>
-              {promoCodeError && (
-                <div className="text-xs text-error">{promoCodeError}</div>
-              )}
+              {promoCodeError && <div className="text-xs text-error">{promoCodeError}</div>}
             </div>
           ) : (
             <FormEntry name="promoCode" label="Promo Code" errorText={promoCodeError}>
@@ -385,8 +376,11 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
                           const newPaymentIntent = await getPaymentIntent(
                             targetAddress,
                             usdAmount * 100,
-                            targetWalletType === 'ethereum' ? 'ethereum' :
-                            targetWalletType === 'solana' ? 'solana' : 'arweave',
+                            targetWalletType === 'ethereum'
+                              ? 'ethereum'
+                              : targetWalletType === 'solana'
+                                ? 'solana'
+                                : 'arweave',
                             localPromoCode,
                           );
                           setPaymentIntent(newPaymentIntent.paymentSession);
@@ -445,11 +439,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         </div>
 
         {/* Error Message */}
-        {paymentMethodError && (
-          <div className="mt-4 text-sm text-error">
-            {paymentMethodError}
-          </div>
-        )}
+        {paymentMethodError && <div className="mt-4 text-sm text-error">{paymentMethodError}</div>}
 
         {/* Action Buttons */}
         <div className="flex justify-between mt-8 pt-6 border-t border-border/20">

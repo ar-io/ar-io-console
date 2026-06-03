@@ -67,7 +67,8 @@ export default function PricingCalculator() {
     if (bytes < 1024) return `${formatNumber(bytes)} B`;
     if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024)} KB`;
     if (bytes < 1024 * 1024 * 1024) return `${formatNumber(bytes / (1024 * 1024))} MB`;
-    if (bytes < 1024 * 1024 * 1024 * 1024) return `${formatNumber(bytes / (1024 * 1024 * 1024))} GB`;
+    if (bytes < 1024 * 1024 * 1024 * 1024)
+      return `${formatNumber(bytes / (1024 * 1024 * 1024))} GB`;
     return `${formatNumber(bytes / (1024 * 1024 * 1024 * 1024))} TB`;
   };
 
@@ -82,7 +83,8 @@ export default function PricingCalculator() {
         <h2 className="text-2xl font-bold text-foreground mb-2">Pricing Calculator</h2>
         <p className="text-foreground/80 text-sm max-w-2xl mx-auto">
           Calculate storage costs or see how much storage your budget gets you.
-          {freeUploadLimitBytes > 0 && ` Files under ${formatFreeLimit(freeUploadLimitBytes)} are always FREE!`}
+          {freeUploadLimitBytes > 0 &&
+            ` Files under ${formatFreeLimit(freeUploadLimitBytes)} are always FREE!`}
         </p>
       </div>
 
@@ -136,7 +138,9 @@ export default function PricingCalculator() {
                         min="0"
                         step="1"
                         value={storageAmount}
-                        onChange={(e) => setStorageAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onChange={(e) =>
+                          setStorageAmount(Math.max(0, parseFloat(e.target.value) || 0))
+                        }
                         className="flex-1 rounded-2xl border border-border/20 bg-card px-4 py-2 text-foreground focus:border-primary focus:outline-none"
                       />
                       <select
@@ -284,7 +288,9 @@ export default function PricingCalculator() {
                   {freeUploadLimitBytes > 0 && (
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      <span>Files under {formatFreeLimit(freeUploadLimitBytes)} are completely FREE</span>
+                      <span>
+                        Files under {formatFreeLimit(freeUploadLimitBytes)} are completely FREE
+                      </span>
                     </li>
                   )}
                   <li className="flex items-start gap-2">

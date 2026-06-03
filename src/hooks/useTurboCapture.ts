@@ -3,7 +3,7 @@ import {
   captureScreenshot,
   createCaptureFile,
   type CaptureOptions,
-  type CaptureResult
+  type CaptureResult,
 } from '../lib/turboCaptureClient';
 
 export function useTurboCapture() {

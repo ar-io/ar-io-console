@@ -17,11 +17,11 @@ Use the browser's **Cache API** for response storage and **IndexedDB** for verif
 
 ### Why This Approach
 
-| Storage | Purpose | Persistence | Size Limit |
-|---------|---------|-------------|------------|
-| Cache API | Store verified Response objects | Survives SW restart | Browser-managed (usually % of disk) |
-| IndexedDB | Track verification metadata | Survives SW restart | ~50% of free disk |
-| Memory cache | Hot cache for active session | Lost on SW termination | 100MB (our limit) |
+| Storage      | Purpose                         | Persistence            | Size Limit                          |
+| ------------ | ------------------------------- | ---------------------- | ----------------------------------- |
+| Cache API    | Store verified Response objects | Survives SW restart    | Browser-managed (usually % of disk) |
+| IndexedDB    | Track verification metadata     | Survives SW restart    | ~50% of free disk                   |
+| Memory cache | Hot cache for active session    | Lost on SW termination | 100MB (our limit)                   |
 
 ---
 
@@ -76,18 +76,18 @@ IndexedDB structure:
 
 ```typescript
 interface ManifestRecord {
-  manifestTxId: string;        // Primary key
-  arnsName?: string;           // ArNS name that resolved to this
-  verifiedAt: number;          // Timestamp
-  resourceCount: number;       // Number of resources in manifest
-  totalBytes: number;          // Total size cached
-  version: number;             // Schema version for migrations
+  manifestTxId: string; // Primary key
+  arnsName?: string; // ArNS name that resolved to this
+  verifiedAt: number; // Timestamp
+  resourceCount: number; // Number of resources in manifest
+  totalBytes: number; // Total size cached
+  version: number; // Schema version for migrations
 }
 
 interface ResourceRecord {
-  txId: string;                // Primary key
-  manifestTxId: string;        // Foreign key (indexed)
-  path: string;                // Path within manifest
+  txId: string; // Primary key
+  manifestTxId: string; // Foreign key (indexed)
+  path: string; // Path within manifest
   contentType: string;
   size: number;
   verifiedAt: number;
@@ -163,9 +163,7 @@ class PersistentCacheStorage {
    */
   async deleteForManifest(txIds: string[]): Promise<void> {
     const cache = await caches.open(CACHE_NAME);
-    await Promise.all(txIds.map(txId =>
-      cache.delete(`arweave-verified://${txId}`)
-    ));
+    await Promise.all(txIds.map((txId) => cache.delete(`arweave-verified://${txId}`)));
   }
 
   /**
@@ -182,7 +180,7 @@ class PersistentCacheStorage {
 **File:** `src/features/browse/service-worker/cache-manager.ts`
 
 ```typescript
-import { verifiedCache } from './verified-cache';  // In-memory
+import { verifiedCache } from './verified-cache'; // In-memory
 import { persistentCacheDB } from './persistent-cache-db';
 import { persistentCacheStorage } from './persistent-cache-storage';
 
@@ -229,7 +227,7 @@ class CacheManager {
     manifestTxId: string,
     path: string,
     response: Response,
-    contentType: string
+    contentType: string,
   ): Promise<void> {
     const data = await response.clone().arrayBuffer();
 
@@ -261,7 +259,7 @@ class CacheManager {
     manifestTxId: string,
     arnsName: string | undefined,
     resourceCount: number,
-    totalBytes: number
+    totalBytes: number,
   ): Promise<void> {
     await persistentCacheDB.setManifest({
       manifestTxId,
@@ -278,7 +276,7 @@ class CacheManager {
    */
   async deleteManifest(manifestTxId: string): Promise<void> {
     const resources = await persistentCacheDB.getResourcesForManifest(manifestTxId);
-    const txIds = resources.map(r => r.txId);
+    const txIds = resources.map((r) => r.txId);
 
     // Clear from all caches
     verifiedCache.clearForManifest(txIds);
@@ -296,7 +294,7 @@ class CacheManager {
     return {
       manifestCount: manifests.length,
       totalBytes,
-      manifests: manifests.map(m => ({
+      manifests: manifests.map((m) => ({
         name: m.arnsName || m.manifestTxId.slice(0, 8) + '...',
         manifestTxId: m.manifestTxId,
         resourceCount: m.resourceCount,
@@ -352,7 +350,9 @@ await cacheManager.finalizeManifest(manifestTxId, arnsName, resourceCount, total
 Add a "Cache" section:
 
 ```tsx
-{/* Cache Section */}
+{
+  /* Cache Section */
+}
 <div className="pt-4 border-t border-border/20">
   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
     <Database className="w-4 h-4 text-primary" />
@@ -416,7 +416,7 @@ Add a "Cache" section:
       </button>
     </div>
   )}
-</div>
+</div>;
 ```
 
 #### 5.2 Cache Hit Indicator
@@ -425,12 +425,14 @@ When serving from cache, show a subtle indicator:
 
 ```tsx
 // In the floating toolbar or verification badge area
-{isCacheHit && (
-  <div className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs">
-    <Zap className="w-3 h-3" />
-    <span>Cached</span>
-  </div>
-)}
+{
+  isCacheHit && (
+    <div className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs">
+      <Zap className="w-3 h-3" />
+      <span>Cached</span>
+    </div>
+  );
+}
 ```
 
 ### Phase 6: Service Worker Messages
@@ -471,7 +473,7 @@ Add to BrowseConfig:
 ```typescript
 interface BrowseConfig {
   // ... existing fields
-  persistentCacheEnabled: boolean;  // Default: true
+  persistentCacheEnabled: boolean; // Default: true
 }
 
 const DEFAULT_BROWSE_CONFIG: BrowseConfig = {
@@ -515,24 +517,24 @@ interface CacheStoredEvent {
 
 ### New Files (6)
 
-| File | Purpose |
-|------|---------|
-| `service-worker/persistent-cache-db.ts` | IndexedDB operations for metadata |
-| `service-worker/persistent-cache-storage.ts` | Cache API operations for responses |
-| `service-worker/cache-manager.ts` | Unified cache manager |
-| `utils/cacheMessaging.ts` | UI ↔ SW cache communication |
-| `hooks/useBrowseCache.ts` | React hook for cache stats/actions |
-| `components/CacheStatsPanel.tsx` | Optional: dedicated cache management UI |
+| File                                         | Purpose                                 |
+| -------------------------------------------- | --------------------------------------- |
+| `service-worker/persistent-cache-db.ts`      | IndexedDB operations for metadata       |
+| `service-worker/persistent-cache-storage.ts` | Cache API operations for responses      |
+| `service-worker/cache-manager.ts`            | Unified cache manager                   |
+| `utils/cacheMessaging.ts`                    | UI ↔ SW cache communication             |
+| `hooks/useBrowseCache.ts`                    | React hook for cache stats/actions      |
+| `components/CacheStatsPanel.tsx`             | Optional: dedicated cache management UI |
 
 ### Modified Files (5)
 
-| File | Changes |
-|------|---------|
+| File                                  | Changes                                   |
+| ------------------------------------- | ----------------------------------------- |
 | `service-worker/manifest-verifier.ts` | Check cache before verifying, store after |
-| `service-worker/service-worker.ts` | Add cache message handlers |
-| `components/BrowseSettingsFlyout.tsx` | Add cache settings section |
-| `components/BrowsePanel.tsx` | Handle cache-hit events, show indicator |
-| `store/useStore.ts` | Add `persistentCacheEnabled` config |
+| `service-worker/service-worker.ts`    | Add cache message handlers                |
+| `components/BrowseSettingsFlyout.tsx` | Add cache settings section                |
+| `components/BrowsePanel.tsx`          | Handle cache-hit events, show indicator   |
+| `store/useStore.ts`                   | Add `persistentCacheEnabled` config       |
 
 ---
 

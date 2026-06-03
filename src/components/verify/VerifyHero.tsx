@@ -2,13 +2,7 @@ import { Check, Clock, Download, ShieldCheck, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { type VerificationResult, getPdfUrl } from '../../services/verificationService';
 import { useStore } from '../../store/useStore';
-import {
-  relativeTime,
-  formatBytes,
-  contentLabel,
-  rawDataUrl,
-  downloadFilename,
-} from './utils';
+import { relativeTime, formatBytes, contentLabel, rawDataUrl, downloadFilename } from './utils';
 
 interface Props {
   result: VerificationResult;
@@ -16,11 +10,19 @@ interface Props {
   reverifying: boolean;
 }
 
-const LEVEL_CONFIG: Record<number, {
-  bg: string; border: string; iconColor: string;
-  headColor: string; textColor: string; title: string;
-  desc: string; Icon: typeof ShieldCheck;
-}> = {
+const LEVEL_CONFIG: Record<
+  number,
+  {
+    bg: string;
+    border: string;
+    iconColor: string;
+    headColor: string;
+    textColor: string;
+    title: string;
+    desc: string;
+    Icon: typeof ShieldCheck;
+  }
+> = {
   3: {
     bg: 'bg-success/10',
     border: 'border-success/20',
@@ -60,12 +62,15 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
   const config = getCurrentConfig();
 
   const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      // Clipboard API unavailable (e.g. iframe/permissions policy)
-    });
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // Clipboard API unavailable (e.g. iframe/permissions policy)
+      });
   };
 
   // Content type + size one-liner

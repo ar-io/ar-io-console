@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Upload, ExternalLink, Receipt, FileImage, FileVideo, FileAudio, FileText, File, Code } from 'lucide-react';
+import {
+  Upload,
+  ExternalLink,
+  Receipt,
+  FileImage,
+  FileVideo,
+  FileAudio,
+  FileText,
+  File,
+  Code,
+} from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { getArweaveUrl } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
@@ -13,7 +23,10 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
   const ext = fileName?.split('.').pop()?.toLowerCase() || '';
 
   // Images
-  if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)) {
+  if (
+    type.startsWith('image/') ||
+    ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)
+  ) {
     return <FileImage className="w-4 h-4 text-foreground/80 flex-shrink-0" />;
   }
 
@@ -28,13 +41,48 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
   }
 
   // Code files
-  if (['application/javascript', 'application/json', 'text/css', 'text/html', 'application/xml', 'text/xml'].includes(type) ||
-      ['js', 'ts', 'jsx', 'tsx', 'css', 'html', 'json', 'xml', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh', 'yml', 'yaml', 'toml', 'md'].includes(ext)) {
+  if (
+    [
+      'application/javascript',
+      'application/json',
+      'text/css',
+      'text/html',
+      'application/xml',
+      'text/xml',
+    ].includes(type) ||
+    [
+      'js',
+      'ts',
+      'jsx',
+      'tsx',
+      'css',
+      'html',
+      'json',
+      'xml',
+      'py',
+      'rb',
+      'go',
+      'rs',
+      'java',
+      'c',
+      'cpp',
+      'h',
+      'sh',
+      'yml',
+      'yaml',
+      'toml',
+      'md',
+    ].includes(ext)
+  ) {
     return <Code className="w-4 h-4 text-foreground/80 flex-shrink-0" />;
   }
 
   // Text/Documents (including PDF by MIME type)
-  if (type.startsWith('text/') || type === 'application/pdf' || ['txt', 'pdf', 'doc', 'docx', 'rtf'].includes(ext)) {
+  if (
+    type.startsWith('text/') ||
+    type === 'application/pdf' ||
+    ['txt', 'pdf', 'doc', 'docx', 'rtf'].includes(ext)
+  ) {
     return <FileText className="w-4 h-4 text-foreground/80 flex-shrink-0" />;
   }
 
@@ -140,7 +188,10 @@ export default function RecentUploadsSection() {
 
                 {/* Row 2: File Name */}
                 {upload.fileName && (
-                  <div className="text-sm text-foreground truncate flex items-center gap-2" title={upload.fileName}>
+                  <div
+                    className="text-sm text-foreground truncate flex items-center gap-2"
+                    title={upload.fileName}
+                  >
                     {getFileIcon(upload.contentType, upload.fileName)}
                     <span className="truncate">{upload.fileName}</span>
                   </div>
@@ -162,7 +213,7 @@ export default function RecentUploadsSection() {
       {showReceiptModal && (
         <ReceiptModal
           onClose={() => setShowReceiptModal(null)}
-          receipt={uploadHistory.find(u => u.id === showReceiptModal)?.receipt}
+          receipt={uploadHistory.find((u) => u.id === showReceiptModal)?.receipt}
           uploadId={showReceiptModal}
           initialStatus={uploadStatuses[showReceiptModal]}
         />

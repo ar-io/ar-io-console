@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useState, memo, useRef } from "react";
-import { useWayfinderUrl } from "@ar.io/wayfinder-react";
-import { RoutingLoadingScreen } from "./RoutingLoadingScreen";
-import { ErrorDisplay } from "./ErrorDisplay";
-import { ContentRenderer } from "./ContentRenderer";
-import { detectInputType } from "../utils/detectInputType";
-import { checkGatewayHealth } from "../utils/gatewayHealthCheck";
-import {
-  detectContentType,
-  type ContentCategory,
-} from "../utils/contentTypeUtils";
-import { MAX_GATEWAY_AUTO_RETRIES } from "../utils/constants";
-import { useStore } from "@/store/useStore";
+import { useEffect, useMemo, useState, memo, useRef } from 'react';
+import { useWayfinderUrl } from '@ar.io/wayfinder-react';
+import { RoutingLoadingScreen } from './RoutingLoadingScreen';
+import { ErrorDisplay } from './ErrorDisplay';
+import { ContentRenderer } from './ContentRenderer';
+import { detectInputType } from '../utils/detectInputType';
+import { checkGatewayHealth } from '../utils/gatewayHealthCheck';
+import { detectContentType, type ContentCategory } from '../utils/contentTypeUtils';
+import { MAX_GATEWAY_AUTO_RETRIES } from '../utils/constants';
+import { useStore } from '@/store/useStore';
 
 interface BrowseContentViewerProps {
   input: string;
@@ -35,8 +32,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   const isMounted = useRef(true);
 
   // Content type detection
-  const [contentCategory, setContentCategory] =
-    useState<ContentCategory>("html");
+  const [contentCategory, setContentCategory] = useState<ContentCategory>('html');
   const [isDetectingContentType, setIsDetectingContentType] = useState(false);
 
   // Track mount status to prevent state updates after unmount
@@ -48,7 +44,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   }, []);
 
   const params = useMemo(
-    () => (inputType === "txId" ? { txId: input } : { arnsName: input }),
+    () => (inputType === 'txId' ? { txId: input } : { arnsName: input }),
     [inputType, input],
   );
 
@@ -95,7 +91,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
   // Detect content type when resolvedUrl is available
   useEffect(() => {
     if (!resolvedUrl || !healthCheckPassed) {
-      setContentCategory("html");
+      setContentCategory('html');
       return;
     }
 
@@ -112,7 +108,7 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
       .catch(() => {
         if (!cancelled && isMounted.current) {
           // Default to HTML on error (preserves existing behavior for manifests)
-          setContentCategory("html");
+          setContentCategory('html');
           setIsDetectingContentType(false);
         }
       });
@@ -133,11 +129,11 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
       !hasAutoRetried.current
     ) {
       const isGatewayError =
-        error.message.toLowerCase().includes("gateway") ||
-        error.message.toLowerCase().includes("network") ||
-        error.message.toLowerCase().includes("failed to fetch") ||
-        error.message.toLowerCase().includes("timeout") ||
-        error.message.toLowerCase().includes("offline");
+        error.message.toLowerCase().includes('gateway') ||
+        error.message.toLowerCase().includes('network') ||
+        error.message.toLowerCase().includes('failed to fetch') ||
+        error.message.toLowerCase().includes('timeout') ||
+        error.message.toLowerCase().includes('offline');
 
       if (isGatewayError) {
         hasAutoRetried.current = true;
@@ -202,11 +198,5 @@ export const BrowseContentViewer = memo(function BrowseContentViewer({
     );
   }
 
-  return (
-    <ContentRenderer
-      url={resolvedUrl}
-      category={contentCategory}
-      identifier={input}
-    />
-  );
+  return <ContentRenderer url={resolvedUrl} category={contentCategory} identifier={input} />;
 });

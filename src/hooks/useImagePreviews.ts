@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 const MAX_PREVIEWS = 50; // Limit to prevent memory issues
-const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp', 'image/avif'];
+const IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
+  'image/avif',
+];
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico'];
 
 /**
@@ -33,14 +41,20 @@ export function useImagePreviews(files: File[], maxPreviews: number = MAX_PREVIE
   }, []);
 
   // Get preview URL for a specific file index
-  const getPreviewUrl = useCallback((index: number): string | null => {
-    return previewUrls.get(index) || null;
-  }, [previewUrls]);
+  const getPreviewUrl = useCallback(
+    (index: number): string | null => {
+      return previewUrls.get(index) || null;
+    },
+    [previewUrls],
+  );
 
   // Check if a file at index has a preview
-  const hasPreview = useCallback((index: number): boolean => {
-    return previewUrls.has(index);
-  }, [previewUrls]);
+  const hasPreview = useCallback(
+    (index: number): boolean => {
+      return previewUrls.has(index);
+    },
+    [previewUrls],
+  );
 
   // Generate previews when files change
   useEffect(() => {
@@ -72,7 +86,7 @@ export function useImagePreviews(files: File[], maxPreviews: number = MAX_PREVIE
     });
 
     // Revoke only URLs that were in previous set but not in new set (avoids double revocation)
-    prevCreatedUrls.forEach(url => {
+    prevCreatedUrls.forEach((url) => {
       if (!newCreatedUrls.has(url)) {
         URL.revokeObjectURL(url);
       }
@@ -84,7 +98,7 @@ export function useImagePreviews(files: File[], maxPreviews: number = MAX_PREVIE
 
     // Cleanup on unmount - revoke whatever is currently tracked
     return () => {
-      createdUrls.current.forEach(url => {
+      createdUrls.current.forEach((url) => {
         URL.revokeObjectURL(url);
       });
     };
@@ -92,7 +106,7 @@ export function useImagePreviews(files: File[], maxPreviews: number = MAX_PREVIE
 
   // Manual cleanup function (useful for clearing all previews)
   const clearPreviews = useCallback(() => {
-    createdUrls.current.forEach(url => {
+    createdUrls.current.forEach((url) => {
       URL.revokeObjectURL(url);
     });
     createdUrls.current.clear();

@@ -16,7 +16,10 @@ interface UsePaymentFlowReturn {
   // Crypto shortage tracking
   cryptoShortage: { amount: number; tokenType: SupportedTokenType } | null;
   setCryptoShortage: React.Dispatch<
-    React.SetStateAction<{ amount: number; tokenType: SupportedTokenType } | null>
+    React.SetStateAction<{
+      amount: number;
+      tokenType: SupportedTokenType;
+    } | null>
   >;
 
   // JIT payment local state

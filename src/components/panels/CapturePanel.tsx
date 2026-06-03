@@ -6,7 +6,34 @@ import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { wincPerCredit, APP_NAME, APP_VERSION } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Camera, CheckCircle, XCircle, Shield, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, Link, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
+import {
+  Camera,
+  CheckCircle,
+  XCircle,
+  Shield,
+  ExternalLink,
+  RefreshCw,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
+  Archive,
+  Clock,
+  HelpCircle,
+  MoreVertical,
+  ArrowRight,
+  Copy,
+  Globe,
+  AlertTriangle,
+  Link,
+  CreditCard,
+  Wallet,
+  FileText,
+  Image,
+  Film,
+  Music,
+  FileCode,
+  File,
+} from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
@@ -30,7 +57,10 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
   const ext = fileName?.split('.').pop()?.toLowerCase() || '';
 
   // Images
-  if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)) {
+  if (
+    type.startsWith('image/') ||
+    ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)
+  ) {
     return <Image className="w-4 h-4 text-foreground/80 inline mr-1" />;
   }
 
@@ -45,8 +75,39 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
   }
 
   // Code files
-  if (['application/javascript', 'application/json', 'text/css', 'text/html', 'application/xml', 'text/xml'].includes(type) ||
-      ['js', 'ts', 'jsx', 'tsx', 'css', 'html', 'json', 'xml', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh', 'yml', 'yaml', 'toml', 'md'].includes(ext)) {
+  if (
+    [
+      'application/javascript',
+      'application/json',
+      'text/css',
+      'text/html',
+      'application/xml',
+      'text/xml',
+    ].includes(type) ||
+    [
+      'js',
+      'ts',
+      'jsx',
+      'tsx',
+      'css',
+      'html',
+      'json',
+      'xml',
+      'py',
+      'rb',
+      'go',
+      'rs',
+      'java',
+      'c',
+      'cpp',
+      'h',
+      'sh',
+      'yml',
+      'yaml',
+      'toml',
+      'md',
+    ].includes(ext)
+  ) {
     return <FileCode className="w-4 h-4 text-foreground/80 inline mr-1" />;
   }
 
@@ -77,8 +138,17 @@ export default function CapturePanel() {
 
   // Capture state
   const [urlInput, setUrlInput] = useState('');
-  const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
-  const { capture, isCapturing, error: captureError, result: captureResult, captureFile } = useTurboCapture();
+  const [captureMessage, setCaptureMessage] = useState<{
+    type: 'error' | 'success' | 'info';
+    text: string;
+  } | null>(null);
+  const {
+    capture,
+    isCapturing,
+    error: captureError,
+    result: captureResult,
+    captureFile,
+  } = useTurboCapture();
 
   // ArNS assignment state
   const [arnsEnabled, setArnsEnabled] = useState(false);
@@ -133,7 +203,7 @@ export default function CapturePanel() {
     totalSize,
     uploadedSize,
     retryFailedFiles,
-    cancelUploads
+    cancelUploads,
   } = useFileUpload();
 
   const {
@@ -143,27 +213,26 @@ export default function CapturePanel() {
     uploadStatuses,
     formatFileSize,
     getStatusIcon,
-    initializeFromCache
+    initializeFromCache,
   } = useUploadStatus();
 
   // Calculate billable file size for x402 pricing (exclude free files)
-  const billableFileSize = captureFile && !isFileFree(captureFile.size, freeUploadLimitBytes)
-    ? captureFile.size
-    : 0;
+  const billableFileSize =
+    captureFile && !isFileFree(captureFile.size, freeUploadLimitBytes) ? captureFile.size : 0;
 
   // Determine if we should use x402 for pricing
   // In x402-only mode, always use x402 pricing since there's no credits option
   const shouldUseX402 =
     walletType === 'ethereum' &&
     selectedJitToken === 'base-usdc' &&
-    showConfirmModal &&  // Modal must be open
-    (jitSectionExpanded || x402OnlyMode);  // "Pay with Crypto" section expanded OR x402-only mode
+    showConfirmModal && // Modal must be open
+    (jitSectionExpanded || x402OnlyMode); // "Pay with Crypto" section expanded OR x402-only mode
   const x402Pricing = useX402Pricing(shouldUseX402 ? billableFileSize : 0);
 
   // Initialize status from cache when page loads
   useEffect(() => {
     if (uploadHistory.length > 0) {
-      const uploadIds = uploadHistory.slice(0, uploadsToShow).map(upload => upload.id);
+      const uploadIds = uploadHistory.slice(0, uploadsToShow).map((upload) => upload.id);
       initializeFromCache(uploadIds);
     }
   }, [uploadHistory, uploadsToShow, initializeFromCache]);
@@ -192,31 +261,38 @@ export default function CapturePanel() {
       'Original URL',
       'Data Caches',
       'Fast Finality Indexes',
-      'Arweave URL'
+      'Arweave URL',
     ];
 
-    const rows = uploadHistory.map(result => {
-      const fileName = result.fileName ||
-                       result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value ||
-                       'Unknown';
+    const rows = uploadHistory.map((result) => {
+      const fileName =
+        result.fileName ||
+        result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value ||
+        'Unknown';
 
-      const contentType = result.contentType ||
-                          result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value ||
-                          'application/octet-stream';
+      const contentType =
+        result.contentType ||
+        result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value ||
+        'application/octet-stream';
 
-      const appName = result.receipt?.tags?.find((tag: any) => tag.name === 'App-Name')?.value || 'Turbo-Gateway';
-      const capturedUrl = result.receipt?.tags?.find((tag: any) => tag.name === 'Original-URL')?.value || '';
+      const appName =
+        result.receipt?.tags?.find((tag: any) => tag.name === 'App-Name')?.value || 'Turbo-Gateway';
+      const capturedUrl =
+        result.receipt?.tags?.find((tag: any) => tag.name === 'Original-URL')?.value || '';
 
       const fileSizeBytes = result.fileSize || 'Unknown';
-      const fileSizeHuman = typeof fileSizeBytes === 'number' ? formatFileSize(fileSizeBytes) : 'Unknown';
+      const fileSizeHuman =
+        typeof fileSizeBytes === 'number' ? formatFileSize(fileSizeBytes) : 'Unknown';
 
       const wincAmount = Number(result.winc || '0');
-      const credits = wincForOneGiB && wincAmount > 0 ? (wincAmount / wincPerCredit) : 0;
+      const credits = wincForOneGiB && wincAmount > 0 ? wincAmount / wincPerCredit : 0;
 
       return [
         result.id,
         fileName,
-        result.timestamp ? new Date(result.timestamp).toLocaleString() : new Date().toLocaleString(),
+        result.timestamp
+          ? new Date(result.timestamp).toLocaleString()
+          : new Date().toLocaleString(),
         fileSizeBytes,
         fileSizeHuman,
         typeof credits === 'number' ? credits.toFixed(6) : credits,
@@ -227,13 +303,13 @@ export default function CapturePanel() {
         capturedUrl,
         result.dataCaches.join('; '),
         result.fastFinalityIndexes.join('; '),
-        getArweaveUrl(result.id, result.dataCaches)
+        getArweaveUrl(result.id, result.dataCaches),
       ];
     });
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -259,12 +335,18 @@ export default function CapturePanel() {
 
   const handleCapture = async () => {
     if (!address) {
-      setCaptureMessage({ type: 'error', text: 'Please connect your wallet to capture screenshots' });
+      setCaptureMessage({
+        type: 'error',
+        text: 'Please connect your wallet to capture screenshots',
+      });
       return;
     }
 
     if (!urlInput.trim()) {
-      setCaptureMessage({ type: 'error', text: 'Please enter a URL to capture' });
+      setCaptureMessage({
+        type: 'error',
+        text: 'Please enter a URL to capture',
+      });
       return;
     }
 
@@ -299,7 +381,7 @@ export default function CapturePanel() {
     if (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') {
       setCaptureMessage({
         type: 'error',
-        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.'
+        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.',
       });
       return;
     }
@@ -322,8 +404,14 @@ export default function CapturePanel() {
         { name: 'App-Feature', value: 'Capture' },
         { name: 'Original-URL', value: captureResult.finalUrl },
         { name: 'Title', value: captureResult.title },
-        { name: 'Viewport-Width', value: captureResult.viewport.width.toString() },
-        { name: 'Viewport-Height', value: captureResult.viewport.height.toString() },
+        {
+          name: 'Viewport-Width',
+          value: captureResult.viewport.width.toString(),
+        },
+        {
+          name: 'Viewport-Height',
+          value: captureResult.viewport.height.toString(),
+        },
         { name: 'Captured-At', value: captureResult.capturedAt },
       ];
 
@@ -348,7 +436,7 @@ export default function CapturePanel() {
               selectedArnsName,
               results[0].id,
               selectedUndername || undefined,
-              customTTL
+              customTTL,
             );
 
             if (arnsResult.success) {
@@ -357,27 +445,27 @@ export default function CapturePanel() {
                 results[0].id,
                 selectedArnsName,
                 selectedUndername || undefined,
-                arnsResult.transactionId
+                arnsResult.transactionId,
               );
 
               if (failedFiles.length === 0) {
                 setCaptureMessage({
                   type: 'success',
-                  text: `Screenshot captured and uploaded! Assigned to ${selectedUndername ? selectedUndername + '_' : ''}${selectedArnsName}.ar.io`
+                  text: `Screenshot captured and uploaded! Assigned to ${selectedUndername ? selectedUndername + '_' : ''}${selectedArnsName}.ar.io`,
                 });
               }
             } else {
               // ArNS update failed, but upload succeeded
               setCaptureMessage({
                 type: 'error',
-                text: `Upload successful but ArNS update failed: ${arnsResult.error}`
+                text: `Upload successful but ArNS update failed: ${arnsResult.error}`,
               });
             }
           } catch (arnsError) {
             console.error('ArNS update failed:', arnsError);
             setCaptureMessage({
               type: 'error',
-              text: 'Upload successful but ArNS update failed. You can assign a domain later from the history.'
+              text: 'Upload successful but ArNS update failed. You can assign a domain later from the history.',
             });
           } finally {
             setIsUpdatingArNS(false);
@@ -386,7 +474,7 @@ export default function CapturePanel() {
           // No ArNS assignment or no results
           setCaptureMessage({
             type: 'success',
-            text: 'Screenshot captured and uploaded successfully!'
+            text: 'Screenshot captured and uploaded successfully!',
           });
         }
 
@@ -402,7 +490,7 @@ export default function CapturePanel() {
       if (failedFiles.length > 0) {
         setCaptureMessage({
           type: 'error',
-          text: 'Failed to upload screenshot. Please try again.'
+          text: 'Failed to upload screenshot. Please try again.',
         });
       }
     } catch (error) {
@@ -435,7 +523,9 @@ export default function CapturePanel() {
         </div>
         <div>
           <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Capture Page</h3>
-          <p className="text-sm text-foreground/80">Capture and permanently archive any webpage to Arweave</p>
+          <p className="text-sm text-foreground/80">
+            Capture and permanently archive any webpage to Arweave
+          </p>
         </div>
       </div>
 
@@ -451,13 +541,15 @@ export default function CapturePanel() {
 
       {/* Capture Message */}
       {captureMessage && (
-        <div className={`mb-4 sm:mb-6 p-4 rounded-lg border ${
-          captureMessage.type === 'error'
-            ? 'bg-error/10 border-error/20 text-error'
-            : captureMessage.type === 'success'
-            ? 'bg-success/10 border-success/20 text-success'
-            : 'bg-info/10 border-info/20 text-info'
-        }`}>
+        <div
+          className={`mb-4 sm:mb-6 p-4 rounded-lg border ${
+            captureMessage.type === 'error'
+              ? 'bg-error/10 border-error/20 text-error'
+              : captureMessage.type === 'success'
+                ? 'bg-success/10 border-success/20 text-success'
+                : 'bg-info/10 border-info/20 text-info'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {captureMessage.type === 'error' && <XCircle className="w-5 h-5" />}
@@ -491,9 +583,7 @@ export default function CapturePanel() {
               className="w-full px-4 py-3 bg-card border border-border/20 rounded-2xl text-foreground placeholder-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
               disabled={isCapturing}
             />
-            <p className="mt-2 text-xs text-foreground/80">
-              Enter any public website URL
-            </p>
+            <p className="mt-2 text-xs text-foreground/80">Enter any public website URL</p>
           </div>
         </div>
       )}
@@ -518,7 +608,12 @@ export default function CapturePanel() {
       {!uploading && hasValidUrl && (
         <button
           onClick={handleCapture}
-          disabled={isCapturing || !address || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername)}
+          disabled={
+            isCapturing ||
+            !address ||
+            (arnsEnabled && !selectedArnsName) ||
+            (arnsEnabled && showUndername && !selectedUndername)
+          }
           className="w-full py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           <Camera className="w-5 h-5" />
@@ -552,7 +647,8 @@ export default function CapturePanel() {
             <div>
               <div className="text-sm font-medium text-foreground">Updating ArNS Record</div>
               <div className="text-xs text-foreground/80">
-                Assigning {selectedUndername ? selectedUndername + '_' : ''}{selectedArnsName}.ar.io to your capture...
+                Assigning {selectedUndername ? selectedUndername + '_' : ''}
+                {selectedArnsName}.ar.io to your capture...
               </div>
             </div>
           </div>
@@ -563,7 +659,9 @@ export default function CapturePanel() {
       {uploadHistory.length > 0 && (
         <div className="mt-4 sm:mt-6 bg-card rounded-2xl border border-border/20">
           {/* Collapsible Header with Actions */}
-          <div className={`flex items-center justify-between p-4 ${showUploadResults ? 'pb-0 mb-4' : 'pb-4'}`}>
+          <div
+            className={`flex items-center justify-between p-4 ${showUploadResults ? 'pb-0 mb-4' : 'pb-4'}`}
+          >
             <button
               onClick={() => setShowUploadResults(!showUploadResults)}
               className="flex items-center gap-2 hover:text-success transition-colors text-left"
@@ -590,12 +688,19 @@ export default function CapturePanel() {
                   <span className="hidden sm:inline">Export CSV</span>
                 </button>
                 <button
-                  onClick={() => checkMultipleStatuses(uploadHistory.map(r => r.id), true)}
-                  disabled={Object.values(statusChecking).some(checking => checking)}
+                  onClick={() =>
+                    checkMultipleStatuses(
+                      uploadHistory.map((r) => r.id),
+                      true,
+                    )
+                  }
+                  disabled={Object.values(statusChecking).some((checking) => checking)}
                   className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded-full text-foreground hover:bg-card/80 hover:text-foreground transition-colors disabled:opacity-50"
                   title="Check status for all items"
                 >
-                  <RefreshCw className={`w-3 h-3 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`w-3 h-3 ${Object.values(statusChecking).some((checking) => checking) ? 'animate-spin' : ''}`}
+                  />
                   <span className="hidden sm:inline">Check Status</span>
                 </button>
                 <button
@@ -619,7 +724,9 @@ export default function CapturePanel() {
                 {uploadHistory.slice(0, uploadsToShow).map((result, index) => {
                   const status = uploadStatuses[result.id];
                   const isChecking = statusChecking[result.id];
-                  const isCapture = result.receipt?.tags?.find((tag: any) => tag.name === 'App-Feature')?.value === 'Capture';
+                  const isCapture =
+                    result.receipt?.tags?.find((tag: any) => tag.name === 'App-Feature')?.value ===
+                    'Capture';
 
                   const renderStatusIcon = (iconName: string) => {
                     switch (iconName) {
@@ -658,7 +765,8 @@ export default function CapturePanel() {
                                   rel="noopener noreferrer"
                                   className="text-sm font-medium text-foreground hover:text-foreground/80 hover:underline transition-colors truncate"
                                 >
-                                  {result.undername ? result.undername + '_' : ''}{result.arnsName}
+                                  {result.undername ? result.undername + '_' : ''}
+                                  {result.arnsName}
                                 </a>
                               </div>
                             ) : (
@@ -692,7 +800,9 @@ export default function CapturePanel() {
                               className="p-1.5 text-foreground/80 hover:text-foreground transition-colors disabled:opacity-50"
                               title="Check Status"
                             >
-                              <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
+                              <RefreshCw
+                                className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`}
+                              />
                             </button>
                             {(walletType === 'arweave' || walletType === 'ethereum') && (
                               <button
@@ -737,11 +847,11 @@ export default function CapturePanel() {
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(result.id);
-                                        setCopiedItems(prev => new Set([...prev, result.id]));
+                                        setCopiedItems((prev) => new Set([...prev, result.id]));
                                         setTimeout(() => {
                                           close();
                                           setTimeout(() => {
-                                            setCopiedItems(prev => {
+                                            setCopiedItems((prev) => {
                                               const newSet = new Set(prev);
                                               newSet.delete(result.id);
                                               return newSet;
@@ -781,7 +891,9 @@ export default function CapturePanel() {
                                       disabled={isChecking}
                                       className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2 disabled:opacity-50"
                                     >
-                                      <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
+                                      <RefreshCw
+                                        className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`}
+                                      />
                                       Check Status
                                     </button>
                                     {(walletType === 'arweave' || walletType === 'ethereum') && (
@@ -814,30 +926,58 @@ export default function CapturePanel() {
                         </div>
 
                         {/* Row 2: File Name */}
-                        {(result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value) && (
-                          <div className="text-sm text-foreground truncate flex items-center" title={result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}>
-                            {!isCapture && getFileIcon(
-                              result.contentType || result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value,
-                              result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value
-                            )}
-                            <span className="truncate">{result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}</span>
+                        {(result.fileName ||
+                          result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                            ?.value) && (
+                          <div
+                            className="text-sm text-foreground truncate flex items-center"
+                            title={
+                              result.fileName ||
+                              result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                                ?.value
+                            }
+                          >
+                            {!isCapture &&
+                              getFileIcon(
+                                result.contentType ||
+                                  result.receipt?.tags?.find(
+                                    (tag: any) => tag.name === 'Content-Type',
+                                  )?.value,
+                                result.fileName ||
+                                  result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                                    ?.value,
+                              )}
+                            <span className="truncate">
+                              {result.fileName ||
+                                result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                                  ?.value}
+                            </span>
                           </div>
                         )}
 
                         {/* Row 3: Original URL (for captures only) */}
-                        {isCapture && result.receipt?.tags?.find((tag: any) => tag.name === 'Original-URL')?.value && (
-                          <div className="text-xs text-foreground/80 truncate flex items-center gap-1">
-                            <Link className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{result.receipt?.tags?.find((tag: any) => tag.name === 'Original-URL')?.value}</span>
-                          </div>
-                        )}
+                        {isCapture &&
+                          result.receipt?.tags?.find((tag: any) => tag.name === 'Original-URL')
+                            ?.value && (
+                            <div className="text-xs text-foreground/80 truncate flex items-center gap-1">
+                              <Link className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {
+                                  result.receipt?.tags?.find(
+                                    (tag: any) => tag.name === 'Original-URL',
+                                  )?.value
+                                }
+                              </span>
+                            </div>
+                          )}
 
                         {/* Row 4: Content Type + File Size */}
                         <div className="flex items-center gap-2 text-sm text-foreground/80">
                           <span>
                             {result.contentType ||
-                             result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value ||
-                             'Unknown Type'}
+                              result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')
+                                ?.value ||
+                              'Unknown Type'}
                           </span>
                           <span>•</span>
                           <span>
@@ -849,7 +989,10 @@ export default function CapturePanel() {
                         <div className="flex items-center gap-2 text-sm text-foreground/80">
                           <span>
                             {(() => {
-                              if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
+                              if (
+                                result.fileSize &&
+                                isFileFree(result.fileSize, freeUploadLimitBytes)
+                              ) {
                                 return <span className="text-success">FREE</span>;
                               } else if (wincForOneGiB && result.winc) {
                                 const credits = Number(result.winc) / wincPerCredit;
@@ -863,8 +1006,7 @@ export default function CapturePanel() {
                           <span>
                             {result.timestamp
                               ? new Date(result.timestamp).toLocaleString()
-                              : 'Unknown Time'
-                            }
+                              : 'Unknown Time'}
                           </span>
                         </div>
                       </div>
@@ -880,7 +1022,7 @@ export default function CapturePanel() {
             <div className="border-t border-border/20 mt-4">
               <div className="p-4">
                 <button
-                  onClick={() => setUploadsToShow(prev => prev + 20)}
+                  onClick={() => setUploadsToShow((prev) => prev + 20)}
                   className="w-full flex items-center justify-center gap-2 py-2 text-sm text-foreground hover:text-foreground/80 transition-colors font-medium"
                 >
                   View More <ArrowRight className="w-4 h-4" />
@@ -895,7 +1037,7 @@ export default function CapturePanel() {
       {showReceiptModal && (
         <ReceiptModal
           onClose={() => setShowReceiptModal(null)}
-          receipt={uploadHistory.find(r => r.id === showReceiptModal)?.receipt}
+          receipt={uploadHistory.find((r) => r.id === showReceiptModal)?.receipt}
           uploadId={showReceiptModal}
           initialStatus={uploadStatuses[showReceiptModal]}
         />
@@ -911,7 +1053,7 @@ export default function CapturePanel() {
             setShowAssignDomainModal(null);
             setCaptureMessage({
               type: 'success',
-              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io!`
+              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io!`,
             });
           }}
         />
@@ -919,10 +1061,12 @@ export default function CapturePanel() {
 
       {/* Upload Confirmation Modal */}
       {showConfirmModal && captureFile && captureResult && (
-        <BaseModal onClose={() => {
-          setShowConfirmModal(false);
-          setJitSectionExpanded(false); // Reset JIT section when modal closes
-        }}>
+        <BaseModal
+          onClose={() => {
+            setShowConfirmModal(false);
+            setJitSectionExpanded(false); // Reset JIT section when modal closes
+          }}
+        >
           <div className="p-4 sm:p-5 w-full max-w-2xl mx-auto min-w-[90vw] sm:min-w-[500px]">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0">
@@ -946,7 +1090,8 @@ export default function CapturePanel() {
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-foreground/80">Domain:</span>
                       <span className="text-xs text-foreground">
-                        {selectedUndername ? selectedUndername + '_' : ''}{selectedArnsName}.ar.io
+                        {selectedUndername ? selectedUndername + '_' : ''}
+                        {selectedArnsName}.ar.io
                       </span>
                     </div>
                   )}
@@ -956,7 +1101,10 @@ export default function CapturePanel() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-foreground/80">Page Title:</span>
-                    <span className="text-xs text-foreground truncate max-w-[200px]" title={captureResult.title}>
+                    <span
+                      className="text-xs text-foreground truncate max-w-[200px]"
+                      title={captureResult.title}
+                    >
                       {captureResult.title}
                     </span>
                   </div>
@@ -972,7 +1120,8 @@ export default function CapturePanel() {
 
             {/* Payment Method Section */}
             {(() => {
-              const creditsNeeded = typeof totalCost === 'number' ? Math.max(0, totalCost - creditBalance) : 0;
+              const creditsNeeded =
+                typeof totalCost === 'number' ? Math.max(0, totalCost - creditBalance) : 0;
               const hasSufficientCredits = creditsNeeded === 0;
               const canUseJit = selectedJitToken && supportsJitPayment(selectedJitToken);
 
@@ -1030,69 +1179,87 @@ export default function CapturePanel() {
                   )}
 
                   {/* Payment Details Section - Credits Tab (hide in x402-only mode) */}
-                  {paymentTab === 'credits' && canUseJit && !isFreeCapture && isPaymentServiceAvailable() && !x402OnlyMode && (
-                    <div className="mb-4">
-                      <div className="bg-card rounded-2xl border border-border/20 p-4">
-                        <div className="space-y-2.5">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-foreground/80">Cost:</span>
-                            <span className="text-sm text-foreground font-medium">
-                              {totalCost === 0 ? (
-                                <span className="text-success font-medium">FREE</span>
-                              ) : typeof totalCost === 'number' ? (
-                                <>{totalCost.toFixed(6)} Credits</>
-                              ) : (
-                                'Calculating...'
-                              )}
-                            </span>
-                          </div>
+                  {paymentTab === 'credits' &&
+                    canUseJit &&
+                    !isFreeCapture &&
+                    isPaymentServiceAvailable() &&
+                    !x402OnlyMode && (
+                      <div className="mb-4">
+                        <div className="bg-card rounded-2xl border border-border/20 p-4">
+                          <div className="space-y-2.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-foreground/80">Cost:</span>
+                              <span className="text-sm text-foreground font-medium">
+                                {totalCost === 0 ? (
+                                  <span className="text-success font-medium">FREE</span>
+                                ) : typeof totalCost === 'number' ? (
+                                  <>{totalCost.toFixed(6)} Credits</>
+                                ) : (
+                                  'Calculating...'
+                                )}
+                              </span>
+                            </div>
 
-                          {/* Only show balance info for non-free captures */}
-                          {!isFreeCapture && (
-                            <>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-foreground/80">Current Balance:</span>
-                                <span className="text-sm text-foreground font-medium">
-                                  {creditBalance.toFixed(6)} Credits
-                                </span>
-                              </div>
-                              {typeof totalCost === 'number' && (
-                                <div className="flex justify-between items-center pt-2 border-t border-border/30">
-                                  <span className="text-xs text-foreground/80">After Upload:</span>
+                            {/* Only show balance info for non-free captures */}
+                            {!isFreeCapture && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-foreground/80">
+                                    Current Balance:
+                                  </span>
                                   <span className="text-sm text-foreground font-medium">
-                                    {Math.max(0, creditBalance - totalCost).toFixed(6)} Credits
+                                    {creditBalance.toFixed(6)} Credits
                                   </span>
                                 </div>
-                              )}
-                            </>
-                          )}
-
-                          {/* Insufficient Credits Warning */}
-                          {!isFreeCapture && !hasSufficientCredits && (
-                            <div className="pt-3 mt-3 border-t border-border/30">
-                              <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
-                                <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs text-error font-medium mb-1">
-                                    Need {creditsNeeded.toFixed(6)} more credits
+                                {typeof totalCost === 'number' && (
+                                  <div className="flex justify-between items-center pt-2 border-t border-border/30">
+                                    <span className="text-xs text-foreground/80">
+                                      After Upload:
+                                    </span>
+                                    <span className="text-sm text-foreground font-medium">
+                                      {Math.max(0, creditBalance - totalCost).toFixed(6)} Credits
+                                    </span>
                                   </div>
-                                  <div className="text-xs text-error/80">
-                                    {canUseJit && (
-                                      <>
-                                        • Switch to <button onClick={handleCryptoTabClick} className="underline hover:text-error">Crypto tab</button> to pay directly
-                                        <br />
-                                      </>
-                                    )}
-                                    • <a href="/topup" className="underline hover:text-error">Top up credits</a>
+                                )}
+                              </>
+                            )}
+
+                            {/* Insufficient Credits Warning */}
+                            {!isFreeCapture && !hasSufficientCredits && (
+                              <div className="pt-3 mt-3 border-t border-border/30">
+                                <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
+                                  <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs text-error font-medium mb-1">
+                                      Need {creditsNeeded.toFixed(6)} more credits
+                                    </div>
+                                    <div className="text-xs text-error/80">
+                                      {canUseJit && (
+                                        <>
+                                          • Switch to{' '}
+                                          <button
+                                            onClick={handleCryptoTabClick}
+                                            className="underline hover:text-error"
+                                          >
+                                            Crypto tab
+                                          </button>{' '}
+                                          to pay directly
+                                          <br />
+                                        </>
+                                      )}
+                                      •{' '}
+                                      <a href="/topup" className="underline hover:text-error">
+                                        Top up credits
+                                      </a>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Payment Details Section - Crypto Tab (always show in x402-only mode) */}
                   {(paymentTab === 'crypto' || x402OnlyMode) && canUseJit && !isFreeCapture && (
@@ -1103,9 +1270,13 @@ export default function CapturePanel() {
                           <div className="flex items-start gap-2">
                             <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                             <div>
-                              <div className="font-medium text-warning text-sm mb-1">Ethereum Wallet Required</div>
+                              <div className="font-medium text-warning text-sm mb-1">
+                                Ethereum Wallet Required
+                              </div>
                               <div className="text-xs text-warning/80">
-                                X402 payments only support Ethereum wallets with BASE-USDC. Please connect an Ethereum wallet or disable x402-only mode in Developer Resources.
+                                X402 payments only support Ethereum wallets with BASE-USDC. Please
+                                connect an Ethereum wallet or disable x402-only mode in Developer
+                                Resources.
                               </div>
                             </div>
                           </div>
@@ -1190,7 +1361,11 @@ export default function CapturePanel() {
                                     Need {creditsNeeded.toFixed(6)} more credits
                                   </div>
                                   <div className="text-xs text-error/80">
-                                    • <a href="/topup" className="underline hover:text-error">Top up credits</a> to continue
+                                    •{' '}
+                                    <a href="/topup" className="underline hover:text-error">
+                                      Top up credits
+                                    </a>{' '}
+                                    to continue
                                   </div>
                                 </div>
                               </div>
@@ -1202,25 +1377,33 @@ export default function CapturePanel() {
                   )}
 
                   {/* Insufficient crypto balance warning - when using JIT */}
-                  {localJitEnabled && creditsNeeded > 0 && !jitBalanceSufficient && cryptoShortage && (
-                    <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs text-error font-medium mb-1">
-                            Need {formatTokenAmount(cryptoShortage.amount, cryptoShortage.tokenType)} {tokenLabels[cryptoShortage.tokenType]} more
-                          </div>
-                          <div className="text-xs text-error/80">
-                            Add funds to your wallet or{' '}
-                            <a href="/topup" className="underline hover:text-error transition-colors">
-                              buy credits
-                            </a>{' '}
-                            instead.
+                  {localJitEnabled &&
+                    creditsNeeded > 0 &&
+                    !jitBalanceSufficient &&
+                    cryptoShortage && (
+                      <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-error font-medium mb-1">
+                              Need{' '}
+                              {formatTokenAmount(cryptoShortage.amount, cryptoShortage.tokenType)}{' '}
+                              {tokenLabels[cryptoShortage.tokenType]} more
+                            </div>
+                            <div className="text-xs text-error/80">
+                              Add funds to your wallet or{' '}
+                              <a
+                                href="/topup"
+                                className="underline hover:text-error transition-colors"
+                              >
+                                buy credits
+                              </a>{' '}
+                              instead.
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Terms */}
                   <div className="bg-card/30 rounded-2xl px-3 py-2 mb-4">
@@ -1252,7 +1435,10 @@ export default function CapturePanel() {
                         // Disable if in x402-only mode with non-Ethereum wallet for billable captures
                         (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') ||
                         // Disable while x402 pricing is loading (for crypto payments)
-                        (localJitEnabled && creditsNeeded > 0 && selectedJitToken === 'base-usdc' && x402Pricing?.loading)
+                        (localJitEnabled &&
+                          creditsNeeded > 0 &&
+                          selectedJitToken === 'base-usdc' &&
+                          x402Pricing?.loading)
                       }
                       className="flex-1 py-3 px-4 rounded-2xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
                     >

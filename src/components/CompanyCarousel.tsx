@@ -102,9 +102,7 @@ export function CompanyCarousel({ companies }: CompanyCarouselProps) {
                 <div className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
                   {company.name}
                 </div>
-                <div className="text-sm text-foreground/80">
-                  {company.description}
-                </div>
+                <div className="text-sm text-foreground/80">{company.description}</div>
               </a>
             </div>
           ))}
@@ -124,9 +122,7 @@ export function CompanyCarousel({ companies }: CompanyCarouselProps) {
                 <div className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
                   {company.name}
                 </div>
-                <div className="text-sm text-foreground/80">
-                  {company.description}
-                </div>
+                <div className="text-sm text-foreground/80">{company.description}</div>
               </a>
             </div>
           ))}
@@ -139,17 +135,11 @@ export function CompanyCarousel({ companies }: CompanyCarouselProps) {
           <button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            className={`relative p-2 transition-all duration-300 ${
-              index === currentSlide % companies.length
-                ? 'scale-110'
-                : 'hover:scale-105'
-            }`}
+            className={`relative p-2 transition-all duration-300 ${index === currentSlide % companies.length ? 'scale-110' : 'hover:scale-105'}`}
           >
-            <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === currentSlide % companies.length
-                ? 'bg-primary w-6'
-                : 'bg-primary/30 hover:bg-primary/50'
-            }`} />
+            <div
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentSlide % companies.length ? 'bg-primary w-6' : 'bg-primary/30 hover:bg-primary/50'}`}
+            />
           </button>
         ))}
       </div>

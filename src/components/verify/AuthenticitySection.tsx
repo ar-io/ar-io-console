@@ -13,9 +13,7 @@ function OwnerRow({ owner }: { owner: VerificationResult['owner'] }) {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="text-foreground/40">
-        {owner.addressVerified ? 'Signed by' : 'Owner'}
-      </span>
+      <span className="text-foreground/40">{owner.addressVerified ? 'Signed by' : 'Owner'}</span>
       <a
         href={viewblockAddressUrl(owner.address)}
         target="_blank"
@@ -52,7 +50,9 @@ export default function AuthenticitySection({ authenticity, owner }: Props) {
                 Technical details
               </summary>
               <div className="mt-2 space-y-1 rounded-xl bg-foreground/5 p-2 text-foreground/40">
-                <p>Data fingerprint: <span className="font-mono">{authenticity.dataHash}</span></p>
+                <p>
+                  Data fingerprint: <span className="font-mono">{authenticity.dataHash}</span>
+                </p>
                 {owner.addressVerified && <p>Address derived from public key (SHA-256)</p>}
                 <p>Verification: RSA-PSS digital signature</p>
               </div>

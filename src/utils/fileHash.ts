@@ -76,11 +76,11 @@ interface WorkerResponse {
 
 // Dynamic concurrency based on file size
 const CONCURRENCY_CONFIG = {
-  tiny: { maxSize: 100 * 1024, concurrency: 50 },       // <100KB
-  small: { maxSize: 1024 * 1024, concurrency: 30 },     // <1MB
+  tiny: { maxSize: 100 * 1024, concurrency: 50 }, // <100KB
+  small: { maxSize: 1024 * 1024, concurrency: 30 }, // <1MB
   medium: { maxSize: 10 * 1024 * 1024, concurrency: 15 }, // <10MB
-  large: { maxSize: 50 * 1024 * 1024, concurrency: 8 },   // <50MB
-  huge: { maxSize: Infinity, concurrency: 4 },            // 50MB+
+  large: { maxSize: 50 * 1024 * 1024, concurrency: 8 }, // <50MB
+  huge: { maxSize: Infinity, concurrency: 4 }, // 50MB+
 };
 
 // Worker pool configuration
@@ -136,7 +136,9 @@ async function checkWorkerSupport(): Promise<boolean> {
       `;
 
       const blob = new Blob([workerCode], { type: 'application/javascript' });
-      const testWorker = new Worker(URL.createObjectURL(blob), { type: 'module' });
+      const testWorker = new Worker(URL.createObjectURL(blob), {
+        type: 'module',
+      });
 
       const timeout = setTimeout(() => {
         testWorker.terminate();
@@ -185,10 +187,9 @@ async function initWorkerPool(): Promise<void> {
 
   for (let i = 0; i < workerCount; i++) {
     try {
-      const worker = new Worker(
-        new URL('../workers/hashWorker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      const worker = new Worker(new URL('../workers/hashWorker.ts', import.meta.url), {
+        type: 'module',
+      });
 
       workerPool.push({
         worker,
@@ -232,10 +233,7 @@ export function terminateWorkerPool(): void {
  * Hash a file on the main thread using streaming
  * Used as fallback when workers unavailable
  */
-async function hashFileMainThread(
-  file: File,
-  signal?: AbortSignal
-): Promise<string> {
+async function hashFileMainThread(file: File, signal?: AbortSignal): Promise<string> {
   const hasher = await createSHA256();
   hasher.init();
 
@@ -274,7 +272,7 @@ function hashFileWithWorker(
   file: File,
   path: string,
   timeoutMs: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const id = `${path}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -320,10 +318,14 @@ function hashFileWithWorker(
 
     // Handle abort signal
     if (signal) {
-      signal.addEventListener('abort', () => {
-        cleanup();
-        reject(new DOMException('Aborted', 'AbortError'));
-      }, { once: true });
+      signal.addEventListener(
+        'abort',
+        () => {
+          cleanup();
+          reject(new DOMException('Aborted', 'AbortError'));
+        },
+        { once: true },
+      );
     }
 
     // Set timeout
@@ -360,7 +362,7 @@ interface QueueItem {
 async function processQueue(
   queue: QueueItem[],
   options: HashOptions,
-  useWorkers: boolean
+  useWorkers: boolean,
 ): Promise<void> {
   const { signal, onProgress, maxRetries = DEFAULT_MAX_RETRIES } = options;
 
@@ -509,7 +511,7 @@ async function processQueue(
  */
 export async function hashFilesAsync(
   files: File[],
-  options: HashOptions = {}
+  options: HashOptions = {},
 ): Promise<HashResult> {
   const { signal, useWorkers = true } = options;
 
@@ -544,11 +546,19 @@ export async function hashFilesAsync(
 
   // Create queue items
   const queue: QueueItem[] = [];
-  const resultPromises: Promise<{ path: string; hash: string | null; error?: string }>[] = [];
+  const resultPromises: Promise<{
+    path: string;
+    hash: string | null;
+    error?: string;
+  }>[] = [];
 
   files.forEach((file) => {
     const path = file.webkitRelativePath || file.name;
-    const promise = new Promise<{ path: string; hash: string | null; error?: string }>((resolve) => {
+    const promise = new Promise<{
+      path: string;
+      hash: string | null;
+      error?: string;
+    }>((resolve) => {
       queue.push({
         file,
         path,
@@ -590,17 +600,18 @@ export async function hashFilesAsync(
 export async function hashFiles(
   files: File[],
   _concurrency?: number,
-  onProgress?: (completed: number, total: number) => void
+  onProgress?: (completed: number, total: number) => void,
 ): Promise<Map<string, string>> {
   const result = await hashFilesAsync(files, {
-    onProgress: onProgress
-      ? (p) => onProgress(p.completed, p.total)
-      : undefined,
+    onProgress: onProgress ? (p) => onProgress(p.completed, p.total) : undefined,
   });
 
   // Log any errors
   if (result.errors.size > 0) {
-    console.warn(`Hashing completed with ${result.errors.size} errors:`, Object.fromEntries(result.errors));
+    console.warn(
+      `Hashing completed with ${result.errors.size} errors:`,
+      Object.fromEntries(result.errors),
+    );
   }
 
   return result.results;
@@ -616,10 +627,7 @@ export async function hashFile(file: File): Promise<string> {
 /**
  * Hash a single file with timeout
  */
-export async function hashFileWithTimeout(
-  file: File,
-  timeoutMs?: number
-): Promise<string | null> {
+export async function hashFileWithTimeout(file: File, timeoutMs?: number): Promise<string | null> {
   const timeout = timeoutMs ?? Math.max(30000, (file.size / (5 * 1024 * 1024)) * 1000);
 
   try {

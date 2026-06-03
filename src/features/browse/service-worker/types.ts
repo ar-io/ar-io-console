@@ -2,10 +2,10 @@
  * Service Worker Types for Browse Data Verification
  */
 
-export type VerificationMethod = "hash" | "signature";
+export type VerificationMethod = 'hash' | 'signature';
 
 export interface ArweaveManifest {
-  manifest: "arweave/paths";
+  manifest: 'arweave/paths';
   version: string;
   index?: { path: string };
   paths: Record<string, ManifestPath | string>; // Can be { id: string } or just the txId string
@@ -24,13 +24,13 @@ export interface ManifestVerificationState {
   verificationId: number; // Unique ID to detect stale updates from abandoned verifications
   manifestTxId: string; // Resolved manifest transaction ID
   status:
-    | "resolving"
-    | "fetching-manifest"
-    | "manifest-verified"
-    | "verifying"
-    | "complete"
-    | "partial"
-    | "failed";
+    | 'resolving'
+    | 'fetching-manifest'
+    | 'manifest-verified'
+    | 'verifying'
+    | 'complete'
+    | 'partial'
+    | 'failed';
   manifest: ArweaveManifest | null;
   totalResources: number;
   verifiedResources: number;
@@ -56,17 +56,17 @@ export interface ManifestCheckResult {
 
 export interface VerificationEvent {
   type:
-    | "verification-started" // Started resolving/fetching manifest
-    | "manifest-loaded" // Manifest parsed, know total resources
-    | "manifest-verified" // Manifest + index verified, ready for on-demand
-    | "resource-verifying" // On-demand verification starting for a resource
-    | "resource-verified" // On-demand verification complete for a resource
-    | "resource-failed" // On-demand verification failed for a resource
-    | "resource-cache-hit" // Resource served from verified cache
-    | "verification-progress" // Resource verified, progress update (legacy eager mode)
-    | "verification-complete" // All resources verified (legacy eager mode)
-    | "verification-failed" // Verification failed
-    | "routing-gateway"; // Gateway info for display
+    | 'verification-started' // Started resolving/fetching manifest
+    | 'manifest-loaded' // Manifest parsed, know total resources
+    | 'manifest-verified' // Manifest + index verified, ready for on-demand
+    | 'resource-verifying' // On-demand verification starting for a resource
+    | 'resource-verified' // On-demand verification complete for a resource
+    | 'resource-failed' // On-demand verification failed for a resource
+    | 'resource-cache-hit' // Resource served from verified cache
+    | 'verification-progress' // Resource verified, progress update (legacy eager mode)
+    | 'verification-complete' // All resources verified (legacy eager mode)
+    | 'verification-failed' // Verification failed
+    | 'routing-gateway'; // Gateway info for display
   identifier: string; // ArNS name or txId being verified
   manifestTxId?: string; // Resolved manifest txId
   resourcePath?: string; // Current resource being verified

@@ -20,16 +20,19 @@ export function useTheme() {
   }, []);
 
   // Apply theme class to document
-  const applyTheme = useCallback((themeMode: ThemeMode) => {
-    const resolvedTheme = resolveTheme(themeMode);
-    const root = document.documentElement;
+  const applyTheme = useCallback(
+    (themeMode: ThemeMode) => {
+      const resolvedTheme = resolveTheme(themeMode);
+      const root = document.documentElement;
 
-    if (resolvedTheme === 'light') {
-      root.classList.add('light');
-    } else {
-      root.classList.remove('light');
-    }
-  }, [resolveTheme]);
+      if (resolvedTheme === 'light') {
+        root.classList.add('light');
+      } else {
+        root.classList.remove('light');
+      }
+    },
+    [resolveTheme],
+  );
 
   // Apply theme on mount and when theme changes
   useEffect(() => {

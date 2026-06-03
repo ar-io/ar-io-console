@@ -28,7 +28,7 @@ const nativeFetch = self.fetch.bind(self);
  */
 function createTimeoutSignal(ms: number): AbortSignal {
   // Use native AbortSignal.timeout if available (modern browsers)
-  if (typeof AbortSignal.timeout === "function") {
+  if (typeof AbortSignal.timeout === 'function') {
     return AbortSignal.timeout(ms);
   }
 

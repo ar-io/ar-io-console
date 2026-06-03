@@ -5,25 +5,33 @@ import { SupportedTokenType } from '../constants';
  * Currently supported: ARIO, Base-ARIO, SOL, Base-ETH, Base-USDC
  */
 export function supportsJitPayment(tokenType: SupportedTokenType | null): boolean {
-  return tokenType === 'ario' || tokenType === 'base-ario' || tokenType === 'solana' || tokenType === 'base-eth' || tokenType === 'base-usdc';
+  return (
+    tokenType === 'ario' ||
+    tokenType === 'base-ario' ||
+    tokenType === 'solana' ||
+    tokenType === 'base-eth' ||
+    tokenType === 'base-usdc'
+  );
 }
 
 /**
  * Get the token conversion function for a given token type
  * Converts from readable amount to smallest unit (e.g., SOL → Lamports)
  */
-export function getTokenConverter(tokenType: SupportedTokenType): ((amount: number) => number) | null {
+export function getTokenConverter(
+  tokenType: SupportedTokenType,
+): ((amount: number) => number) | null {
   const TOKEN_DECIMALS: Record<SupportedTokenType, number> = {
     arweave: 12,
-    ario: 6,  // 1 ARIO = 1,000,000 mARIO
+    ario: 6, // 1 ARIO = 1,000,000 mARIO
     'base-ario': 6, // 1 ARIO = 1,000,000 mARIO (same as ARIO on AO)
     ethereum: 18,
     'base-eth': 18,
     solana: 9,
     kyve: 18,
     pol: 18,
-    'usdc': 6,        // USDC uses 6 decimals
-    'base-usdc': 6,   // USDC uses 6 decimals
+    usdc: 6, // USDC uses 6 decimals
+    'base-usdc': 6, // USDC uses 6 decimals
     'polygon-usdc': 6, // USDC uses 6 decimals
   };
 
@@ -37,15 +45,15 @@ export function getTokenConverter(tokenType: SupportedTokenType): ((amount: numb
 export function fromSmallestUnit(amount: number, tokenType: SupportedTokenType): number {
   const TOKEN_DECIMALS: Record<SupportedTokenType, number> = {
     arweave: 12,
-    ario: 6,  // 1 ARIO = 1,000,000 mARIO
+    ario: 6, // 1 ARIO = 1,000,000 mARIO
     'base-ario': 6, // 1 ARIO = 1,000,000 mARIO (same as ARIO on AO)
     ethereum: 18,
     'base-eth': 18,
     solana: 9,
     kyve: 18,
     pol: 18,
-    'usdc': 6,        // USDC uses 6 decimals
-    'base-usdc': 6,   // USDC uses 6 decimals
+    usdc: 6, // USDC uses 6 decimals
+    'base-usdc': 6, // USDC uses 6 decimals
     'polygon-usdc': 6, // USDC uses 6 decimals
   };
 
@@ -67,16 +75,16 @@ export function formatTokenAmount(amount: number, tokenType: SupportedTokenType)
 
   // Standard precision for normal amounts
   const precision: Record<SupportedTokenType, number> = {
-    ario: 2,        // 100.50 ARIO
+    ario: 2, // 100.50 ARIO
     'base-ario': 2, // 100.50 ARIO (same as ARIO)
-    solana: 6,      // 0.000001 SOL (increased from 4)
-    'base-eth': 6,  // 0.000001 ETH (increased from 4)
+    solana: 6, // 0.000001 SOL (increased from 4)
+    'base-eth': 6, // 0.000001 ETH (increased from 4)
     ethereum: 6,
     arweave: 4,
     kyve: 2,
     pol: 2,
-    'usdc': 2,        // 10.50 USDC (stablecoin, dollars and cents)
-    'base-usdc': 3,   // 10.500 USDC (one extra decimal for precision)
+    usdc: 2, // 10.50 USDC (stablecoin, dollars and cents)
+    'base-usdc': 3, // 10.500 USDC (one extra decimal for precision)
     'polygon-usdc': 2, // 10.50 USDC (stablecoin, dollars and cents)
   };
 
@@ -114,7 +122,7 @@ export async function calculateRequiredTokenAmount({
   const cached = priceCache.get(tokenType);
 
   // Use cached price if available and fresh
-  if (cached && (now - cached.timestamp) < PRICE_CACHE_DURATION) {
+  if (cached && now - cached.timestamp < PRICE_CACHE_DURATION) {
     const baseAmount = creditsNeeded * cached.tokenPricePerCredit;
     const bufferedAmount = baseAmount * bufferMultiplier;
     const converter = getTokenConverter(tokenType);
@@ -196,13 +204,17 @@ export async function calculateRequiredTokenAmount({
         const { winc: wincPerGiBString } = await turbo.getFiatRates();
         wincPerGiB = Number(wincPerGiBString);
       } catch (turboError) {
-        throw new Error(`Turbo getFiatRates failed: ${turboError instanceof Error ? turboError.message : String(turboError)}`);
+        throw new Error(
+          `Turbo getFiatRates failed: ${turboError instanceof Error ? turboError.message : String(turboError)}`,
+        );
       }
 
       // USDC is pegged to USD (1 USDC = $1 USD)
       usdPerToken = 1.0;
 
-      console.log(`[X402 Pricing] 1 GiB costs ${tokensPerGiB} USDC (${usdcSmallestUnitPerGiB} smallest unit, scaled from 1 MiB probe), ${wincPerGiB} winc`);
+      console.log(
+        `[X402 Pricing] 1 GiB costs ${tokensPerGiB} USDC (${usdcSmallestUnitPerGiB} smallest unit, scaled from 1 MiB probe), ${wincPerGiB} winc`,
+      );
 
       if (wincPerGiB === 0) {
         throw new Error('Failed to get x402 pricing - wincPerGiB is 0');
@@ -216,7 +228,7 @@ export async function calculateRequiredTokenAmount({
       const turbo = TurboFactory.unauthenticated({
         token: tokenType,
         paymentServiceConfig: { url: turboConfig.paymentServiceUrl },
-        gatewayUrl: turboConfig.tokenMap[tokenType]
+        gatewayUrl: turboConfig.tokenMap[tokenType],
       });
 
       // Get the cost in tokens for uploading credits worth of data
@@ -228,7 +240,9 @@ export async function calculateRequiredTokenAmount({
       }
 
       // Get token price for 1 GiB worth of winc
-      const tokenPriceForGiB = await turbo.getTokenPriceForBytes({ byteCount: oneGiBBytes });
+      const tokenPriceForGiB = await turbo.getTokenPriceForBytes({
+        byteCount: oneGiBBytes,
+      });
       // SDK already returns price in readable token units (ARIO, not mARIO)
       tokensPerGiB = Number(tokenPriceForGiB.tokenPrice);
 
@@ -271,7 +285,10 @@ export async function calculateRequiredTokenAmount({
     console.log(`[JIT ${tokenType}] Base amount (no buffer):`, baseAmount);
     console.log(`[JIT ${tokenType}] Buffer multiplier:`, bufferMultiplier);
     console.log(`[JIT ${tokenType}] Buffered amount:`, bufferedAmount);
-    console.log(`[JIT ${tokenType}] Estimated USD:`, usdPerToken ? bufferedAmount * usdPerToken : null);
+    console.log(
+      `[JIT ${tokenType}] Estimated USD:`,
+      usdPerToken ? bufferedAmount * usdPerToken : null,
+    );
 
     const converter = getTokenConverter(tokenType);
     const smallestUnit = converter ? converter(bufferedAmount) : 0;
@@ -300,16 +317,16 @@ export async function calculateRequiredTokenAmount({
 export function getDefaultMaxTokenAmount(tokenType: SupportedTokenType): number {
   // Aim for ~$20-25 equivalent across all types
   const defaults: Record<SupportedTokenType, number> = {
-    ario: 200,      // 200 ARIO ≈ $20 at $0.10/ARIO
+    ario: 200, // 200 ARIO ≈ $20 at $0.10/ARIO
     'base-ario': 200, // 200 ARIO ≈ $20 at $0.10/ARIO (on Base L2)
-    solana: 0.15,   // 0.15 SOL ≈ $22.50 at $150/SOL
+    solana: 0.15, // 0.15 SOL ≈ $22.50 at $150/SOL
     'base-eth': 0.01, // 0.01 ETH ≈ $25 at $2500/ETH
-    'base-usdc': 25,  // 25 USDC = $25 (stablecoin)
+    'base-usdc': 25, // 25 USDC = $25 (stablecoin)
     arweave: 0,
     ethereum: 0,
     kyve: 0,
     pol: 0,
-    'usdc': 0,        // Not supported for JIT (too slow)
+    usdc: 0, // Not supported for JIT (too slow)
     'polygon-usdc': 0, // Not supported for JIT (too slow)
   };
 

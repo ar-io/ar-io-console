@@ -10,7 +10,8 @@ export function Layout() {
       style={{
         // Page background: white fading to lavender (matches ar.io public site)
         // 4-stop gradient: white solid (0-33%), transition (33-66%), lavender solid (66-100%)
-        background: 'linear-gradient(to bottom, rgb(255 255 255) 0%, rgb(255 255 255) 33%, rgb(223 214 247) 66%, rgb(223 214 247) 100%)',
+        background:
+          'linear-gradient(to bottom, rgb(255 255 255) 0%, rgb(255 255 255) 33%, rgb(223 214 247) 66%, rgb(223 214 247) 100%)',
       }}
     >
       {/* Announcement Banner */}

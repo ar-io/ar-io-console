@@ -1,10 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { swMessenger } from "../utils/serviceWorkerMessaging";
-import {
-  getTrustedGateways,
-  getRoutingGateways,
-} from "../utils/trustedGateways";
-import { useBrowseConfig } from "./useBrowseConfig";
+import { useState, useEffect, useCallback } from 'react';
+import { swMessenger } from '../utils/serviceWorkerMessaging';
+import { getTrustedGateways, getRoutingGateways } from '../utils/trustedGateways';
+import { useBrowseConfig } from './useBrowseConfig';
 
 interface UseBrowseServiceWorkerResult {
   isReady: boolean;
@@ -47,9 +44,7 @@ export function useBrowseServiceWorker(): UseBrowseServiceWorkerResult {
       }
 
       // Get trusted gateways (top-staked, for hash verification)
-      const trustedGateways = await getTrustedGateways(
-        config.trustedGatewayCount,
-      );
+      const trustedGateways = await getTrustedGateways(config.trustedGatewayCount);
 
       // Get routing gateways (broader pool, for content fetching)
       const routingGateways = await getRoutingGateways();
@@ -68,7 +63,7 @@ export function useBrowseServiceWorker(): UseBrowseServiceWorkerResult {
 
       setIsReady(true);
     } catch (err) {
-      console.error("[Browse] Service worker initialization failed:", err);
+      console.error('[Browse] Service worker initialization failed:', err);
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsReady(false);
     } finally {

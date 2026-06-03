@@ -10,7 +10,7 @@ import {
   FileText,
   Clock,
   HardDrive,
-  X
+  X,
 } from 'lucide-react';
 
 export interface ActiveUpload {
@@ -59,7 +59,7 @@ export default function UploadProgressSummary({
   onRetryFailed,
   onCancel,
   compact = false,
-  className = ''
+  className = '',
 }: UploadProgressSummaryProps) {
   const [showErrors, setShowErrors] = useState(true);
 
@@ -99,11 +99,7 @@ export default function UploadProgressSummary({
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
-        {failedCount > 0 && (
-          <div className="mt-2 text-xs text-error">
-            {failedCount} failed
-          </div>
-        )}
+        {failedCount > 0 && <div className="mt-2 text-xs text-error">{failedCount} failed</div>}
       </div>
     );
   }
@@ -165,12 +161,8 @@ export default function UploadProgressSummary({
               <HardDrive className="w-4 h-4 text-foreground/80" />
               <span className="text-xs text-foreground/80">Size</span>
             </div>
-            <p className="text-lg font-bold text-foreground">
-              {formatSize(uploadedSize)}
-            </p>
-            <p className="text-xs text-foreground/80">
-              of {formatSize(totalSize)}
-            </p>
+            <p className="text-lg font-bold text-foreground">{formatSize(uploadedSize)}</p>
+            <p className="text-xs text-foreground/80">of {formatSize(totalSize)}</p>
           </div>
         </div>
       </div>
@@ -215,9 +207,7 @@ export default function UploadProgressSummary({
                     </span>
                     <span className="text-xs text-foreground/80">
                       {activeUploads.length > 1 && (
-                        <span className="mr-2 text-primary">
-                          +{activeUploads.length - 1} more
-                        </span>
+                        <span className="mr-2 text-primary">+{activeUploads.length - 1} more</span>
                       )}
                       {formatSize(displayFile.size)}
                     </span>
@@ -237,10 +227,11 @@ export default function UploadProgressSummary({
                       <span>
                         {activeUploads.length > 1
                           ? `Processing batch (${activeUploads.length} concurrent)`
-                          : `${displayFile.progress || 0}% complete`
-                        }
+                          : `${displayFile.progress || 0}% complete`}
                       </span>
-                      <span>{uploadedCount} of {totalCount} complete</span>
+                      <span>
+                        {uploadedCount} of {totalCount} complete
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -273,12 +264,8 @@ export default function UploadProgressSummary({
               <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
                 {errors.slice(0, 10).map((error, index) => (
                   <div key={index} className="bg-card/50 rounded p-2">
-                    <p className="text-xs font-medium text-foreground truncate">
-                      {error.fileName}
-                    </p>
-                    <p className="text-xs text-error mt-1">
-                      {error.error}
-                    </p>
+                    <p className="text-xs font-medium text-foreground truncate">{error.fileName}</p>
+                    <p className="text-xs text-error mt-1">{error.error}</p>
                   </div>
                 ))}
                 {errors.length > 10 && (
@@ -288,7 +275,7 @@ export default function UploadProgressSummary({
                 )}
               </div>
 
-              {onRetryFailed && errors.some(e => e.retryable) && (
+              {onRetryFailed && errors.some((e) => e.retryable) && (
                 <button
                   onClick={onRetryFailed}
                   className="w-full py-2 px-3 rounded-full bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
@@ -301,7 +288,6 @@ export default function UploadProgressSummary({
           )}
         </div>
       )}
-
     </div>
   );
 }

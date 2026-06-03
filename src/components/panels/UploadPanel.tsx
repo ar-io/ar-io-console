@@ -7,7 +7,33 @@ import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { useImagePreviews } from '../../hooks/useImagePreviews';
 import { wincPerCredit, SupportedTokenType } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { CheckCircle, XCircle, Upload, ExternalLink, Shield, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
+import {
+  CheckCircle,
+  XCircle,
+  Upload,
+  ExternalLink,
+  Shield,
+  RefreshCw,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
+  Archive,
+  Clock,
+  HelpCircle,
+  MoreVertical,
+  ArrowRight,
+  Copy,
+  Globe,
+  AlertTriangle,
+  CreditCard,
+  Wallet,
+  FileText,
+  Image,
+  Film,
+  Music,
+  FileCode,
+  File,
+} from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
@@ -17,7 +43,12 @@ import BaseModal from '../modals/BaseModal';
 import { getArweaveUrl } from '../../utils';
 import UploadProgressSummary from '../UploadProgressSummary';
 import { JitTokenSelector } from '../JitTokenSelector';
-import { supportsJitPayment, getTokenConverter, calculateRequiredTokenAmount, formatTokenAmount } from '../../utils/jitPayment';
+import {
+  supportsJitPayment,
+  getTokenConverter,
+  calculateRequiredTokenAmount,
+  formatTokenAmount,
+} from '../../utils/jitPayment';
 import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { tokenLabels } from '../../constants';
 import { Loader2 } from 'lucide-react';
@@ -33,7 +64,10 @@ const getFileIcon = (contentType?: string, fileName?: string, size: 'sm' | 'lg' 
   const inlineClass = size === 'sm' ? `${baseClass} inline mr-1` : baseClass;
 
   // Images
-  if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)) {
+  if (
+    type.startsWith('image/') ||
+    ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext)
+  ) {
     return <Image className={inlineClass} />;
   }
 
@@ -48,8 +82,39 @@ const getFileIcon = (contentType?: string, fileName?: string, size: 'sm' | 'lg' 
   }
 
   // Code files
-  if (['application/javascript', 'application/json', 'text/css', 'text/html', 'application/xml', 'text/xml'].includes(type) ||
-      ['js', 'ts', 'jsx', 'tsx', 'css', 'html', 'json', 'xml', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sh', 'yml', 'yaml', 'toml', 'md'].includes(ext)) {
+  if (
+    [
+      'application/javascript',
+      'application/json',
+      'text/css',
+      'text/html',
+      'application/xml',
+      'text/xml',
+    ].includes(type) ||
+    [
+      'js',
+      'ts',
+      'jsx',
+      'tsx',
+      'css',
+      'html',
+      'json',
+      'xml',
+      'py',
+      'rb',
+      'go',
+      'rs',
+      'java',
+      'c',
+      'cpp',
+      'h',
+      'sh',
+      'yml',
+      'yaml',
+      'toml',
+      'md',
+    ].includes(ext)
+  ) {
     return <FileCode className={inlineClass} />;
   }
 
@@ -101,7 +166,7 @@ function CryptoPaymentDetails({
   const [bufferPercentage, setBufferPercentage] = useState(1); // Default 1% buffer
 
   const tokenLabel = tokenLabels[tokenType];
-  const BUFFER_MULTIPLIER = 1 + (bufferPercentage / 100); // Adjustable buffer
+  const BUFFER_MULTIPLIER = 1 + bufferPercentage / 100; // Adjustable buffer
 
   // Fetch wallet balance
   const {
@@ -156,7 +221,7 @@ function CryptoPaymentDetails({
       }
     };
 
-    const hasCost = (creditsNeeded > 0) || (totalCost > 0);
+    const hasCost = creditsNeeded > 0 || totalCost > 0;
     if (hasCost) {
       calculate();
     } else {
@@ -165,7 +230,15 @@ function CryptoPaymentDetails({
       onMaxTokenAmountChange(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditsNeeded, totalCost, tokenType, bufferPercentage, x402Pricing?.usdcAmount, x402Pricing?.loading, x402Pricing?.error]);
+  }, [
+    creditsNeeded,
+    totalCost,
+    tokenType,
+    bufferPercentage,
+    x402Pricing?.usdcAmount,
+    x402Pricing?.loading,
+    x402Pricing?.error,
+  ]);
 
   // Validate balance and update shortage info
   useEffect(() => {
@@ -207,9 +280,20 @@ function CryptoPaymentDetails({
     } else {
       onShortageUpdate(null);
     }
-  }, [tokenBalance, estimatedCost, balanceError, isNetworkError, balanceLoading, tokenType, onBalanceValidation, onShortageUpdate]);
+  }, [
+    tokenBalance,
+    estimatedCost,
+    balanceError,
+    isNetworkError,
+    balanceLoading,
+    tokenType,
+    onBalanceValidation,
+    onShortageUpdate,
+  ]);
 
-  const afterUpload = estimatedCost ? Math.max(0, tokenBalance - estimatedCost.tokenAmountReadable) : tokenBalance;
+  const afterUpload = estimatedCost
+    ? Math.max(0, tokenBalance - estimatedCost.tokenAmountReadable)
+    : tokenBalance;
 
   return (
     <div className="mb-4">
@@ -227,9 +311,11 @@ function CryptoPaymentDetails({
                     ~{formatTokenAmount(estimatedCost.tokenAmountReadable, tokenType)} {tokenLabel}
                     {estimatedCost.estimatedUSD && estimatedCost.estimatedUSD > 0 && (
                       <span className="text-xs text-foreground/80 ml-2">
-                        (≈ ${estimatedCost.estimatedUSD < 0.01
+                        (≈ $
+                        {estimatedCost.estimatedUSD < 0.01
                           ? estimatedCost.estimatedUSD.toFixed(4)
-                          : estimatedCost.estimatedUSD.toFixed(2)})
+                          : estimatedCost.estimatedUSD.toFixed(2)}
+                        )
                       </span>
                     )}
                   </>
@@ -273,9 +359,7 @@ function CryptoPaymentDetails({
               <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
                 <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-warning font-medium mb-1">
-                    {balanceError}
-                  </div>
+                  <div className="text-xs text-warning font-medium mb-1">{balanceError}</div>
                 </div>
               </div>
             </div>
@@ -353,7 +437,10 @@ export default function UploadPanel() {
   // Image preview management for selected files
   const { getPreviewUrl, isPreviewableImage } = useImagePreviews(files);
 
-  const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<{
+    type: 'error' | 'success' | 'info';
+    text: string;
+  } | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showAssignDomainModal, setShowAssignDomainModal] = useState<string | null>(null);
   const [showUploadResults, setShowUploadResults] = useState(true);
@@ -399,8 +486,8 @@ export default function UploadPanel() {
   const shouldUseX402 =
     walletType === 'ethereum' &&
     selectedJitToken === 'base-usdc' &&
-    showConfirmModal &&  // Modal must be open
-    (jitSectionExpanded || x402OnlyMode);  // "Pay with Crypto" section expanded OR x402-only mode
+    showConfirmModal && // Modal must be open
+    (jitSectionExpanded || x402OnlyMode); // "Pay with Crypto" section expanded OR x402-only mode
   const x402Pricing = useX402Pricing(shouldUseX402 ? billableFileSize : 0);
 
   const {
@@ -416,16 +503,16 @@ export default function UploadPanel() {
     totalSize,
     uploadedSize,
     retryFailedFiles,
-    cancelUploads
+    cancelUploads,
   } = useFileUpload();
-  const { 
-    checkUploadStatus, 
-    checkMultipleStatuses, 
-    statusChecking, 
-    uploadStatuses, 
+  const {
+    checkUploadStatus,
+    checkMultipleStatuses,
+    statusChecking,
+    uploadStatuses,
     formatFileSize,
     getStatusIcon,
-    initializeFromCache
+    initializeFromCache,
   } = useUploadStatus();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -441,15 +528,15 @@ export default function UploadPanel() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const droppedFiles = Array.from(e.dataTransfer.files);
-    setFiles(prev => [...prev, ...droppedFiles]);
+    setFiles((prev) => [...prev, ...droppedFiles]);
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
+      setFiles((prev) => [...prev, ...newFiles]);
       // Reset input value after processing to allow re-selecting the same file
       setTimeout(() => {
         e.target.value = '';
@@ -458,13 +545,13 @@ export default function UploadPanel() {
   };
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Initialize status from cache only (no API calls) when page loads
   useEffect(() => {
     if (uploadHistory.length > 0) {
-      const uploadIds = uploadHistory.slice(0, uploadsToShow).map(upload => upload.id);
+      const uploadIds = uploadHistory.slice(0, uploadsToShow).map((upload) => upload.id);
       // Initialize from cache only (no API calls)
       initializeFromCache(uploadIds);
     }
@@ -475,7 +562,7 @@ export default function UploadPanel() {
 
     const headers = [
       'Transaction ID',
-      'File Name', 
+      'File Name',
       'Upload Date',
       'File Size (Bytes)',
       'File Size (Human)',
@@ -485,30 +572,35 @@ export default function UploadPanel() {
       'Content Type',
       'Data Caches',
       'Fast Finality Indexes',
-      'Arweave URL'
+      'Arweave URL',
     ];
 
-    const rows = uploadHistory.map(result => {
+    const rows = uploadHistory.map((result) => {
       // Use stored file metadata (preferred) or fallback to receipt tags
-      const fileName = result.fileName || 
-                       result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value || 
-                       'Unknown';
-      
-      const contentType = result.contentType || 
-                          result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value || 
-                          'application/octet-stream';
-      
+      const fileName =
+        result.fileName ||
+        result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value ||
+        'Unknown';
+
+      const contentType =
+        result.contentType ||
+        result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value ||
+        'application/octet-stream';
+
       const fileSizeBytes = result.fileSize || 'Unknown';
-      const fileSizeHuman = typeof fileSizeBytes === 'number' ? formatFileSize(fileSizeBytes) : 'Unknown';
-      
+      const fileSizeHuman =
+        typeof fileSizeBytes === 'number' ? formatFileSize(fileSizeBytes) : 'Unknown';
+
       // Calculate credits from WINC
       const wincAmount = Number(result.winc || '0');
-      const credits = wincForOneGiB && wincAmount > 0 ? (wincAmount / wincPerCredit) : 0;
-      
+      const credits = wincForOneGiB && wincAmount > 0 ? wincAmount / wincPerCredit : 0;
+
       return [
         result.id,
         fileName,
-        result.timestamp ? new Date(result.timestamp).toLocaleString() : new Date().toLocaleString(),
+        result.timestamp
+          ? new Date(result.timestamp).toLocaleString()
+          : new Date().toLocaleString(),
         fileSizeBytes,
         fileSizeHuman,
         typeof credits === 'number' ? credits.toFixed(6) : credits,
@@ -517,14 +609,14 @@ export default function UploadPanel() {
         contentType,
         result.dataCaches.join('; '),
         result.fastFinalityIndexes.join('; '),
-        getArweaveUrl(result.id, result.dataCaches)
+        getArweaveUrl(result.id, result.dataCaches),
       ];
     });
 
     // Create CSV content
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
     // Create and download file
@@ -538,7 +630,6 @@ export default function UploadPanel() {
     link.click();
     document.body.removeChild(link);
   };
-
 
   const calculateUploadCost = (bytes: number) => {
     if (isFileFree(bytes, freeUploadLimitBytes)) return 0; // Free tier: Files under bundler's free limit
@@ -571,14 +662,21 @@ export default function UploadPanel() {
 
   const handleUpload = () => {
     if (!address) {
-      setUploadMessage({ type: 'error', text: 'Please connect your wallet to upload files' });
+      setUploadMessage({
+        type: 'error',
+        text: 'Please connect your wallet to upload files',
+      });
       return;
     }
     setShowConfirmModal(true);
   };
 
   const handleConfirmUpload = async () => {
-    console.log('[UploadPanel] handleConfirmUpload called', { fileCount: files.length, walletType, address });
+    console.log('[UploadPanel] handleConfirmUpload called', {
+      fileCount: files.length,
+      walletType,
+      address,
+    });
     setShowConfirmModal(false);
     setJitSectionExpanded(false); // Reset for next upload
     setUploadMessage(null);
@@ -600,7 +698,7 @@ export default function UploadPanel() {
     if (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') {
       setUploadMessage({
         type: 'error',
-        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in your console settings.'
+        text: 'X402 payments require an Ethereum wallet. Please connect an Ethereum wallet or disable x402-only mode in your console settings.',
       });
       return;
     }
@@ -623,7 +721,7 @@ export default function UploadPanel() {
         tokenAmount: jitMaxTokenAmountSmallest,
         selectedToken: selectedJitToken,
       });
-      
+
       if (results.length > 0) {
         // Add to persistent upload history
         addUploadResults(results);
@@ -644,17 +742,17 @@ export default function UploadPanel() {
         if (failedFiles.length === 0) {
           setUploadMessage({
             type: 'success',
-            text: `Successfully uploaded ${results.length} file${results.length !== 1 ? 's' : ''}!`
+            text: `Successfully uploaded ${results.length} file${results.length !== 1 ? 's' : ''}!`,
           });
         }
       }
-      
+
       if (failedFiles.length > 0) {
         // Failed to upload some files - error is now included in failedFiles entries
         // Format: ["filename.pdf: Error message", ...]
         setUploadMessage({
           type: 'error',
-          text: `Failed to upload ${failedFiles.length} file${failedFiles.length !== 1 ? 's' : ''}: ${failedFiles.join('; ')}`
+          text: `Failed to upload ${failedFiles.length} file${failedFiles.length !== 1 ? 's' : ''}: ${failedFiles.join('; ')}`,
         });
       }
     } catch (error) {
@@ -677,7 +775,9 @@ export default function UploadPanel() {
         </div>
         <div>
           <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Upload Files</h3>
-          <p className="text-sm text-foreground/80">Store your files permanently on the Arweave network</p>
+          <p className="text-sm text-foreground/80">
+            Store your files permanently on the Arweave network
+          </p>
         </div>
       </div>
 
@@ -693,13 +793,15 @@ export default function UploadPanel() {
 
       {/* Upload Message */}
       {uploadMessage && (
-        <div className={`mb-4 sm:mb-6 p-4 rounded-lg border ${
-          uploadMessage.type === 'error'
-            ? 'bg-error/10 border-error/20 text-error'
-            : uploadMessage.type === 'success'
-            ? 'bg-success/10 border-success/20 text-success'
-            : 'bg-info/10 border-info/20 text-info'
-        }`}>
+        <div
+          className={`mb-4 sm:mb-6 p-4 rounded-lg border ${
+            uploadMessage.type === 'error'
+              ? 'bg-error/10 border-error/20 text-error'
+              : uploadMessage.type === 'success'
+                ? 'bg-success/10 border-success/20 text-success'
+                : 'bg-info/10 border-info/20 text-info'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {uploadMessage.type === 'error' && <XCircle className="w-5 h-5" />}
@@ -733,12 +835,13 @@ export default function UploadPanel() {
             >
               <div className="mb-4">
                 <Upload className="w-12 h-12 text-primary mx-auto mb-2" />
-                <p className="text-lg font-medium mb-2">
-                  Drop files here or click to browse
-                </p>
+                <p className="text-lg font-medium mb-2">Drop files here or click to browse</p>
                 <p className="text-sm text-foreground/80">
                   {freeUploadLimitBytes > 0 ? (
-                    <>Files under {formatFreeLimit(freeUploadLimitBytes)} are <span className="text-success font-semibold">FREE</span> • </>
+                    <>
+                      Files under {formatFreeLimit(freeUploadLimitBytes)} are{' '}
+                      <span className="text-success font-semibold">FREE</span> •{' '}
+                    </>
                   ) : null}
                   Max 10GiB per file
                 </p>
@@ -781,7 +884,9 @@ export default function UploadPanel() {
                       if (fileInput) {
                         fileInput.value = '';
                       }
-                      const addInput = document.getElementById('file-upload-add') as HTMLInputElement;
+                      const addInput = document.getElementById(
+                        'file-upload-add',
+                      ) as HTMLInputElement;
                       if (addInput) {
                         addInput.value = '';
                       }
@@ -833,11 +938,11 @@ export default function UploadPanel() {
                           <div className="text-sm text-foreground truncate">{file.name}</div>
                           <div className="text-xs text-foreground/80">
                             {formatFileSize(file.size)}
-                            {isFree && <span className="ml-2 text-success font-medium">• FREE</span>}
+                            {isFree && (
+                              <span className="ml-2 text-success font-medium">• FREE</span>
+                            )}
                             {cost !== null && cost > 0 && (
-                              <span className="ml-2">
-                                • {cost.toFixed(6)} Credits
-                              </span>
+                              <span className="ml-2">• {cost.toFixed(6)} Credits</span>
                             )}
                           </div>
                         </div>
@@ -863,7 +968,9 @@ export default function UploadPanel() {
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-xs text-foreground/80">Files:</span>
-                  <span className="text-xs text-foreground">{files.length} file{files.length !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-foreground">
+                    {files.length} file{files.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
 
@@ -903,7 +1010,9 @@ export default function UploadPanel() {
       {uploadHistory.length > 0 && (
         <div className="mt-4 sm:mt-6 bg-card rounded-2xl border border-border/20">
           {/* Collapsible Header with Actions */}
-          <div className={`flex items-center justify-between p-4 ${showUploadResults ? 'pb-0 mb-4' : 'pb-4'}`}>
+          <div
+            className={`flex items-center justify-between p-4 ${showUploadResults ? 'pb-0 mb-4' : 'pb-4'}`}
+          >
             <button
               onClick={() => setShowUploadResults(!showUploadResults)}
               className="flex items-center gap-2 hover:text-success transition-colors text-left"
@@ -918,7 +1027,7 @@ export default function UploadPanel() {
                 <ChevronDown className="w-4 h-4 text-foreground/80" />
               )}
             </button>
-            
+
             {/* Actions only show when expanded */}
             {showUploadResults && (
               <div className="flex items-center gap-2">
@@ -931,12 +1040,19 @@ export default function UploadPanel() {
                   <span className="hidden sm:inline">Export CSV</span>
                 </button>
                 <button
-                  onClick={() => checkMultipleStatuses(uploadHistory.map(r => r.id), true)}
-                  disabled={Object.values(statusChecking).some(checking => checking)}
+                  onClick={() =>
+                    checkMultipleStatuses(
+                      uploadHistory.map((r) => r.id),
+                      true,
+                    )
+                  }
+                  disabled={Object.values(statusChecking).some((checking) => checking)}
                   className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded-full text-foreground hover:bg-card/80 hover:text-foreground transition-colors disabled:opacity-50"
                   title="Check status for all uploaded files"
                 >
-                  <RefreshCw className={`w-3 h-3 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`w-3 h-3 ${Object.values(statusChecking).some((checking) => checking) ? 'animate-spin' : ''}`}
+                  />
                   <span className="hidden sm:inline">Check Status</span>
                 </button>
                 <button
@@ -953,14 +1069,14 @@ export default function UploadPanel() {
               </div>
             )}
           </div>
-          
+
           {showUploadResults && (
             <>
               <div className="space-y-4 max-h-[700px] overflow-y-auto px-4 pb-4">
                 {uploadHistory.slice(0, uploadsToShow).map((result, index) => {
                   const status = uploadStatuses[result.id];
                   const isChecking = statusChecking[result.id];
-                  
+
                   // Create a unified status icon renderer to match deployment results
                   const renderStatusIcon = (iconName: string) => {
                     switch (iconName) {
@@ -978,7 +1094,7 @@ export default function UploadPanel() {
                         return <Clock className="w-4 h-4 text-warning" />;
                     }
                   };
-                  
+
                   return (
                     <div key={index} className="bg-card border border-border/20 rounded-2xl p-4">
                       <div className="space-y-2">
@@ -995,7 +1111,8 @@ export default function UploadPanel() {
                                   rel="noopener noreferrer"
                                   className="text-sm font-medium text-foreground hover:text-foreground/80 hover:underline transition-colors truncate"
                                 >
-                                  {result.undername ? result.undername + '_' : ''}{result.arnsName}
+                                  {result.undername ? result.undername + '_' : ''}
+                                  {result.arnsName}
                                 </a>
                               </div>
                             ) : (
@@ -1004,7 +1121,7 @@ export default function UploadPanel() {
                               </div>
                             )}
                           </div>
-                      
+
                           {/* Desktop: Show all actions */}
                           <div className="hidden sm:flex items-center gap-1">
                             {/* Status Icon as part of actions - only show if we have real status */}
@@ -1017,41 +1134,43 @@ export default function UploadPanel() {
                               </div>
                             )}
                             <CopyButton textToCopy={result.id} />
-                        <button
-                          onClick={() => setShowReceiptModal(result.id)}
-                          className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                          title="View Receipt"
-                        >
-                          <Receipt className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => checkUploadStatus(result.id)}
-                          disabled={isChecking}
-                          className="p-1.5 text-foreground/80 hover:text-foreground transition-colors disabled:opacity-50"
-                          title="Check Status"
-                        >
-                          <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
-                        </button>
-                        {/* Only show Assign Domain for Arweave and Ethereum wallets */}
-                        {(walletType === 'arweave' || walletType === 'ethereum') && (
-                          <button
-                            onClick={() => setShowAssignDomainModal(result.id)}
-                            className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                            title="Assign Domain"
-                          >
-                            <Globe className="w-4 h-4" />
-                          </button>
-                        )}
-                        <a
-                          href={getArweaveUrl(result.id, result.dataCaches)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                          title="View File"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
+                            <button
+                              onClick={() => setShowReceiptModal(result.id)}
+                              className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                              title="View Receipt"
+                            >
+                              <Receipt className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => checkUploadStatus(result.id)}
+                              disabled={isChecking}
+                              className="p-1.5 text-foreground/80 hover:text-foreground transition-colors disabled:opacity-50"
+                              title="Check Status"
+                            >
+                              <RefreshCw
+                                className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`}
+                              />
+                            </button>
+                            {/* Only show Assign Domain for Arweave and Ethereum wallets */}
+                            {(walletType === 'arweave' || walletType === 'ethereum') && (
+                              <button
+                                onClick={() => setShowAssignDomainModal(result.id)}
+                                className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                                title="Assign Domain"
+                              >
+                                <Globe className="w-4 h-4" />
+                              </button>
+                            )}
+                            <a
+                              href={getArweaveUrl(result.id, result.dataCaches)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                              title="View File"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </div>
 
                           {/* Mobile: Status icon + 3-dot menu */}
                           <div className="sm:hidden flex items-center gap-1">
@@ -1073,149 +1192,172 @@ export default function UploadPanel() {
                                 className="w-40 bg-card border border-border/20 rounded-2xl shadow-lg z-[200] py-1 mt-1"
                               >
                                 {({ close }) => (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(result.id);
-                                    setCopiedItems(prev => new Set([...prev, result.id]));
-                                    // Show feedback for 1 second before closing menu
-                                    setTimeout(() => {
-                                      close();
-                                      // Clear copied state after menu closes
-                                      setTimeout(() => {
-                                        setCopiedItems(prev => {
-                                          const newSet = new Set(prev);
-                                          newSet.delete(result.id);
-                                          return newSet;
-                                        });
-                                      }, 500);
-                                    }, 1000);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                >
-                                  {copiedItems.has(result.id) ? (
-                                    <>
-                                      <CheckCircle className="w-4 h-4 text-success" />
-                                      Copied!
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-4 h-4" />
-                                      Copy Tx ID
-                                    </>
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setShowReceiptModal(result.id);
-                                    close();
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                >
-                                  <Receipt className="w-4 h-4" />
-                                  View Receipt
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    checkUploadStatus(result.id);
-                                    close();
-                                  }}
-                                  disabled={isChecking}
-                                  className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2 disabled:opacity-50"
-                                >
-                                  <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
-                                  Check Status
-                                </button>
-                                {/* Only show Assign Domain for Arweave and Ethereum wallets */}
-                                {(walletType === 'arweave' || walletType === 'ethereum') && (
-                                  <button
-                                    onClick={() => {
-                                      setShowAssignDomainModal(result.id);
-                                      close();
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                  >
-                                    <Globe className="w-4 h-4" />
-                                    Assign Domain
-                                  </button>
-                                )}
-                                <a
-                                  href={getArweaveUrl(result.id, result.dataCaches)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => close()}
-                                  className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                  View File
-                                </a>
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(result.id);
+                                        setCopiedItems((prev) => new Set([...prev, result.id]));
+                                        // Show feedback for 1 second before closing menu
+                                        setTimeout(() => {
+                                          close();
+                                          // Clear copied state after menu closes
+                                          setTimeout(() => {
+                                            setCopiedItems((prev) => {
+                                              const newSet = new Set(prev);
+                                              newSet.delete(result.id);
+                                              return newSet;
+                                            });
+                                          }, 500);
+                                        }, 1000);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                    >
+                                      {copiedItems.has(result.id) ? (
+                                        <>
+                                          <CheckCircle className="w-4 h-4 text-success" />
+                                          Copied!
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-4 h-4" />
+                                          Copy Tx ID
+                                        </>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setShowReceiptModal(result.id);
+                                        close();
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                    >
+                                      <Receipt className="w-4 h-4" />
+                                      View Receipt
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        checkUploadStatus(result.id);
+                                        close();
+                                      }}
+                                      disabled={isChecking}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                      <RefreshCw
+                                        className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`}
+                                      />
+                                      Check Status
+                                    </button>
+                                    {/* Only show Assign Domain for Arweave and Ethereum wallets */}
+                                    {(walletType === 'arweave' || walletType === 'ethereum') && (
+                                      <button
+                                        onClick={() => {
+                                          setShowAssignDomainModal(result.id);
+                                          close();
+                                        }}
+                                        className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                      >
+                                        <Globe className="w-4 h-4" />
+                                        Assign Domain
+                                      </button>
+                                    )}
+                                    <a
+                                      href={getArweaveUrl(result.id, result.dataCaches)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={() => close()}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                    >
+                                      <ExternalLink className="w-4 h-4" />
+                                      View File
+                                    </a>
                                   </>
                                 )}
                               </PopoverPanel>
                             </Popover>
                           </div>
-                    </div>
+                        </div>
 
-                    {/* Row 2: File Name (if available) */}
-                    {(result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value) && (
-                      <div className="text-sm text-foreground truncate flex items-center" title={result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}>
-                        {getFileIcon(
-                          result.contentType || result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value,
-                          result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value
+                        {/* Row 2: File Name (if available) */}
+                        {(result.fileName ||
+                          result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                            ?.value) && (
+                          <div
+                            className="text-sm text-foreground truncate flex items-center"
+                            title={
+                              result.fileName ||
+                              result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                                ?.value
+                            }
+                          >
+                            {getFileIcon(
+                              result.contentType ||
+                                result.receipt?.tags?.find(
+                                  (tag: any) => tag.name === 'Content-Type',
+                                )?.value,
+                              result.fileName ||
+                                result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                                  ?.value,
+                            )}
+                            <span className="truncate">
+                              {result.fileName ||
+                                result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')
+                                  ?.value}
+                            </span>
+                          </div>
                         )}
-                        <span className="truncate">{result.fileName || result.receipt?.tags?.find((tag: any) => tag.name === 'File-Name')?.value}</span>
+
+                        {/* Row 3: Content Type + File Size */}
+                        <div className="flex items-center gap-2 text-sm text-foreground/80">
+                          <span>
+                            {result.contentType ||
+                              result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')
+                                ?.value ||
+                              'Unknown Type'}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {result.fileSize ? formatFileSize(result.fileSize) : 'Unknown Size'}
+                          </span>
+                        </div>
+
+                        {/* Row 3: Cost + Upload Timestamp */}
+                        <div className="flex items-center gap-2 text-sm text-foreground/80">
+                          <span>
+                            {(() => {
+                              if (
+                                result.fileSize &&
+                                isFileFree(result.fileSize, freeUploadLimitBytes)
+                              ) {
+                                return <span className="text-success">FREE</span>;
+                              } else if (wincForOneGiB && result.winc) {
+                                const credits = Number(result.winc) / wincPerCredit;
+                                return `${credits.toFixed(6)} Credits`;
+                              } else {
+                                return 'Unknown Cost';
+                              }
+                            })()}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {result.timestamp
+                              ? new Date(result.timestamp).toLocaleString()
+                              : 'Unknown Time'}
+                          </span>
+                        </div>
                       </div>
-                    )}
-
-                    {/* Row 3: Content Type + File Size */}
-                    <div className="flex items-center gap-2 text-sm text-foreground/80">
-                      <span>
-                        {result.contentType ||
-                         result.receipt?.tags?.find((tag: any) => tag.name === 'Content-Type')?.value ||
-                         'Unknown Type'}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {result.fileSize ? formatFileSize(result.fileSize) : 'Unknown Size'}
-                      </span>
                     </div>
-
-                    {/* Row 3: Cost + Upload Timestamp */}
-                    <div className="flex items-center gap-2 text-sm text-foreground/80">
-                      <span>
-                        {(() => {
-                          if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
-                            return <span className="text-success">FREE</span>;
-                          } else if (wincForOneGiB && result.winc) {
-                            const credits = Number(result.winc) / wincPerCredit;
-                            return `${credits.toFixed(6)} Credits`;
-                          } else {
-                            return 'Unknown Cost';
-                          }
-                        })()}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {result.timestamp
-                          ? new Date(result.timestamp).toLocaleString()
-                          : 'Unknown Time'
-                        }
-                      </span>
-                    </div>
-                  </div>
-                </div>
                   );
                 })}
               </div>
             </>
           )}
-          
+
           {/* View More Button - only show when there are more uploads to load */}
           {showUploadResults && uploadHistory.length > uploadsToShow && (
             <div className="border-t border-border/20 mt-4">
               <div className="p-4">
                 <button
-                  onClick={() => setUploadsToShow(prev => prev + 20)}
+                  onClick={() => setUploadsToShow((prev) => prev + 20)}
                   className="w-full flex items-center justify-center gap-2 py-2 text-sm text-foreground hover:text-foreground/80 transition-colors font-medium"
                 >
                   View More Uploads <ArrowRight className="w-4 h-4" />
@@ -1223,7 +1365,6 @@ export default function UploadPanel() {
               </div>
             </div>
           )}
-          
         </div>
       )}
 
@@ -1231,7 +1372,7 @@ export default function UploadPanel() {
       {showReceiptModal && (
         <ReceiptModal
           onClose={() => setShowReceiptModal(null)}
-          receipt={uploadHistory.find(r => r.id === showReceiptModal)?.receipt}
+          receipt={uploadHistory.find((r) => r.id === showReceiptModal)?.receipt}
           uploadId={showReceiptModal}
           initialStatus={uploadStatuses[showReceiptModal]}
         />
@@ -1251,7 +1392,7 @@ export default function UploadPanel() {
             // Show success message
             setUploadMessage({
               type: 'success',
-              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io to your file!`
+              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io to your file!`,
             });
           }}
         />
@@ -1259,10 +1400,12 @@ export default function UploadPanel() {
 
       {/* Upload Confirmation Modal */}
       {showConfirmModal && files.length > 0 && (
-        <BaseModal onClose={() => {
-          setShowConfirmModal(false);
-          setJitSectionExpanded(false); // Reset JIT section when modal closes
-        }}>
+        <BaseModal
+          onClose={() => {
+            setShowConfirmModal(false);
+            setJitSectionExpanded(false); // Reset JIT section when modal closes
+          }}
+        >
           <div className="p-4 sm:p-5 w-full max-w-2xl mx-auto min-w-[90vw] sm:min-w-[500px]">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -1286,7 +1429,9 @@ export default function UploadPanel() {
                     <span className="text-xs text-foreground">
                       {files.length} file{files.length !== 1 ? 's' : ''}
                       {(() => {
-                        const freeFilesCount = files.filter(file => isFileFree(file.size, freeUploadLimitBytes)).length;
+                        const freeFilesCount = files.filter((file) =>
+                          isFileFree(file.size, freeUploadLimitBytes),
+                        ).length;
                         return freeFilesCount > 0 ? (
                           <span className="text-success"> ({freeFilesCount} free)</span>
                         ) : null;
@@ -1295,9 +1440,7 @@ export default function UploadPanel() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-foreground/80">Total Size:</span>
-                    <span className="text-xs text-foreground">
-                      {formatFileSize(totalFileSize)}
-                    </span>
+                    <span className="text-xs text-foreground">{formatFileSize(totalFileSize)}</span>
                   </div>
                 </div>
               </div>
@@ -1305,7 +1448,8 @@ export default function UploadPanel() {
 
             {/* Payment Method Section */}
             {(() => {
-              const creditsNeeded = typeof totalCost === 'number' ? Math.max(0, totalCost - creditBalance) : 0;
+              const creditsNeeded =
+                typeof totalCost === 'number' ? Math.max(0, totalCost - creditBalance) : 0;
               const hasSufficientCredits = creditsNeeded === 0;
               const canUseJit = selectedJitToken && supportsJitPayment(selectedJitToken);
 
@@ -1363,69 +1507,87 @@ export default function UploadPanel() {
                   )}
 
                   {/* Payment Details Section - Credits Tab (hide in x402-only mode) */}
-                  {paymentTab === 'credits' && canUseJit && !isFreeUpload && isPaymentServiceAvailable() && !x402OnlyMode && (
-                    <div className="mb-4">
-                      <div className="bg-card rounded-lg border border-border/20 p-4">
-                        <div className="space-y-2.5">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-foreground/80">Cost:</span>
-                            <span className="text-sm text-foreground font-medium">
-                              {totalCost === 0 ? (
-                                <span className="text-success font-medium">FREE</span>
-                              ) : typeof totalCost === 'number' ? (
-                                <>{totalCost.toFixed(6)} Credits</>
-                              ) : (
-                                'Calculating...'
-                              )}
-                            </span>
-                          </div>
+                  {paymentTab === 'credits' &&
+                    canUseJit &&
+                    !isFreeUpload &&
+                    isPaymentServiceAvailable() &&
+                    !x402OnlyMode && (
+                      <div className="mb-4">
+                        <div className="bg-card rounded-lg border border-border/20 p-4">
+                          <div className="space-y-2.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-foreground/80">Cost:</span>
+                              <span className="text-sm text-foreground font-medium">
+                                {totalCost === 0 ? (
+                                  <span className="text-success font-medium">FREE</span>
+                                ) : typeof totalCost === 'number' ? (
+                                  <>{totalCost.toFixed(6)} Credits</>
+                                ) : (
+                                  'Calculating...'
+                                )}
+                              </span>
+                            </div>
 
-                          {/* Only show balance info for non-free uploads */}
-                          {!isFreeUpload && (
-                            <>
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-foreground/80">Current Balance:</span>
-                                <span className="text-sm text-foreground font-medium">
-                                  {creditBalance.toFixed(6)} Credits
-                                </span>
-                              </div>
-                              {typeof totalCost === 'number' && (
-                                <div className="flex justify-between items-center pt-2 border-t border-border/30">
-                                  <span className="text-xs text-foreground/80">After Upload:</span>
+                            {/* Only show balance info for non-free uploads */}
+                            {!isFreeUpload && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-foreground/80">
+                                    Current Balance:
+                                  </span>
                                   <span className="text-sm text-foreground font-medium">
-                                    {Math.max(0, creditBalance - totalCost).toFixed(6)} Credits
+                                    {creditBalance.toFixed(6)} Credits
                                   </span>
                                 </div>
-                              )}
-                            </>
-                          )}
-
-                          {/* Insufficient Credits Warning */}
-                          {!isFreeUpload && !hasSufficientCredits && (
-                            <div className="pt-3 mt-3 border-t border-border/30">
-                              <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
-                                <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs text-error font-medium mb-1">
-                                    Need {creditsNeeded.toFixed(6)} more credits
+                                {typeof totalCost === 'number' && (
+                                  <div className="flex justify-between items-center pt-2 border-t border-border/30">
+                                    <span className="text-xs text-foreground/80">
+                                      After Upload:
+                                    </span>
+                                    <span className="text-sm text-foreground font-medium">
+                                      {Math.max(0, creditBalance - totalCost).toFixed(6)} Credits
+                                    </span>
                                   </div>
-                                  <div className="text-xs text-error/80">
-                                    {canUseJit && (
-                                      <>
-                                        • Switch to <button onClick={handleCryptoTabClick} className="underline hover:text-error">Crypto tab</button> to pay directly
-                                        <br />
-                                      </>
-                                    )}
-                                    • <a href="/topup" className="underline hover:text-error">Top up credits</a>
+                                )}
+                              </>
+                            )}
+
+                            {/* Insufficient Credits Warning */}
+                            {!isFreeUpload && !hasSufficientCredits && (
+                              <div className="pt-3 mt-3 border-t border-border/30">
+                                <div className="flex items-start gap-2 p-3 bg-error/10 rounded-lg border border-error/20">
+                                  <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs text-error font-medium mb-1">
+                                      Need {creditsNeeded.toFixed(6)} more credits
+                                    </div>
+                                    <div className="text-xs text-error/80">
+                                      {canUseJit && (
+                                        <>
+                                          • Switch to{' '}
+                                          <button
+                                            onClick={handleCryptoTabClick}
+                                            className="underline hover:text-error"
+                                          >
+                                            Crypto tab
+                                          </button>{' '}
+                                          to pay directly
+                                          <br />
+                                        </>
+                                      )}
+                                      •{' '}
+                                      <a href="/topup" className="underline hover:text-error">
+                                        Top up credits
+                                      </a>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Payment Details Section - Crypto Tab (always show in x402-only mode) */}
                   {(paymentTab === 'crypto' || x402OnlyMode) && canUseJit && !isFreeUpload && (
@@ -1436,9 +1598,13 @@ export default function UploadPanel() {
                           <div className="flex items-start gap-2">
                             <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                             <div>
-                              <div className="font-medium text-warning text-sm mb-1">Ethereum Wallet Required</div>
+                              <div className="font-medium text-warning text-sm mb-1">
+                                Ethereum Wallet Required
+                              </div>
                               <div className="text-xs text-warning/80">
-                                X402 payments only support Ethereum wallets with BASE-USDC. Please connect an Ethereum wallet or disable x402-only mode in your settings.
+                                X402 payments only support Ethereum wallets with BASE-USDC. Please
+                                connect an Ethereum wallet or disable x402-only mode in your
+                                settings.
                               </div>
                             </div>
                           </div>
@@ -1523,7 +1689,11 @@ export default function UploadPanel() {
                                     Need {creditsNeeded.toFixed(6)} more credits
                                   </div>
                                   <div className="text-xs text-error/80">
-                                    • <a href="/topup" className="underline hover:text-error">Top up credits</a> to continue
+                                    •{' '}
+                                    <a href="/topup" className="underline hover:text-error">
+                                      Top up credits
+                                    </a>{' '}
+                                    to continue
                                   </div>
                                 </div>
                               </div>
@@ -1535,25 +1705,33 @@ export default function UploadPanel() {
                   )}
 
                   {/* Insufficient crypto balance warning - when using JIT */}
-                  {localJitEnabled && creditsNeeded > 0 && !jitBalanceSufficient && cryptoShortage && (
-                    <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs text-error font-medium mb-1">
-                            Need {formatTokenAmount(cryptoShortage.amount, cryptoShortage.tokenType)} {tokenLabels[cryptoShortage.tokenType]} more
-                          </div>
-                          <div className="text-xs text-error/80">
-                            Add funds to your wallet or{' '}
-                            <a href="/topup" className="underline hover:text-error transition-colors">
-                              buy credits
-                            </a>{' '}
-                            instead.
+                  {localJitEnabled &&
+                    creditsNeeded > 0 &&
+                    !jitBalanceSufficient &&
+                    cryptoShortage && (
+                      <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-error font-medium mb-1">
+                              Need{' '}
+                              {formatTokenAmount(cryptoShortage.amount, cryptoShortage.tokenType)}{' '}
+                              {tokenLabels[cryptoShortage.tokenType]} more
+                            </div>
+                            <div className="text-xs text-error/80">
+                              Add funds to your wallet or{' '}
+                              <a
+                                href="/topup"
+                                className="underline hover:text-error transition-colors"
+                              >
+                                buy credits
+                              </a>{' '}
+                              instead.
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Terms */}
                   <div className="bg-card/30 rounded-lg px-3 py-2 mb-4">
@@ -1592,12 +1770,17 @@ export default function UploadPanel() {
                           // Disable if in x402-only mode with non-Ethereum wallet for billable uploads
                           (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') ||
                           // Disable while x402 pricing is loading (for crypto payments)
-                          (shouldEnableJit && creditsNeeded > 0 && selectedJitToken === 'base-usdc' && x402Pricing?.loading)
+                          (shouldEnableJit &&
+                            creditsNeeded > 0 &&
+                            selectedJitToken === 'base-usdc' &&
+                            x402Pricing?.loading)
                         );
                       })()}
                       className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
                     >
-                      {localJitEnabled && paymentTab === 'crypto' && creditsNeeded > 0 ? 'Pay & Upload' : 'Upload'}
+                      {localJitEnabled && paymentTab === 'crypto' && creditsNeeded > 0
+                        ? 'Pay & Upload'
+                        : 'Upload'}
                     </button>
                   </div>
                 </>
@@ -1606,7 +1789,6 @@ export default function UploadPanel() {
           </div>
         </BaseModal>
       )}
-
     </div>
   );
 }

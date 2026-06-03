@@ -66,7 +66,7 @@ function PaymentCallbackHandler() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const paymentStatus = urlParams.get('payment');
-    
+
     if (paymentStatus === 'success') {
       // Show success message and refresh balance
       if (address) {
@@ -115,11 +115,14 @@ function AppRoutes() {
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
           <Route path="verify" element={<VerifyPage />} />
-          <Route path="browse" element={
-            <Suspense fallback={<BrowsePageLoader />}>
-              <BrowsePage />
-            </Suspense>
-          } />
+          <Route
+            path="browse"
+            element={
+              <Suspense fallback={<BrowsePageLoader />}>
+                <BrowsePage />
+              </Suspense>
+            }
+          />
           {/* Catch all route - redirect to home */}
           <Route path="*" element={<LandingPage />} />
         </Route>

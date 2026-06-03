@@ -1,7 +1,18 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
-import { Calculator, HardDrive, DollarSign, ArrowRight, Zap, Upload, Globe, CreditCard, ChevronDown, Check } from 'lucide-react';
+import {
+  Calculator,
+  HardDrive,
+  DollarSign,
+  ArrowRight,
+  Zap,
+  Upload,
+  Globe,
+  CreditCard,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import { useCryptoPriceForWinc, useWincForCrypto } from '../../hooks/useCryptoPrice';
@@ -26,7 +37,11 @@ export default function PricingCalculatorPanel() {
 
   // Currency options - x402-only mode shows ONLY USDC (x402)
   type CurrencyType = 'usd' | SupportedTokenType;
-  const baseCurrencies: Array<{ value: CurrencyType; label: string; symbol: string }> = [
+  const baseCurrencies: Array<{
+    value: CurrencyType;
+    label: string;
+    symbol: string;
+  }> = [
     { value: 'usd', label: 'USD', symbol: '$' },
     { value: 'arweave', label: tokenLabels.arweave, symbol: 'AR' },
     { value: 'ario', label: tokenLabels.ario, symbol: 'ARIO' },
@@ -39,9 +54,17 @@ export default function PricingCalculatorPanel() {
   ];
   // In x402-only mode, ONLY show USDC (x402)
   const currencies = x402OnlyMode
-    ? [{ value: 'base-usdc' as CurrencyType, label: tokenLabels['base-usdc'] + ' (x402)', symbol: 'USDC' }]
+    ? [
+        {
+          value: 'base-usdc' as CurrencyType,
+          label: tokenLabels['base-usdc'] + ' (x402)',
+          symbol: 'USDC',
+        },
+      ]
     : baseCurrencies;
-  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyType>(x402OnlyMode ? 'base-usdc' : 'usd');
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyType>(
+    x402OnlyMode ? 'base-usdc' : 'usd',
+  );
 
   const [dollarAmount, setDollarAmount] = useState(10);
   const [dollarAmountInput, setDollarAmountInput] = useState('10'); // String for display
@@ -102,12 +125,13 @@ export default function PricingCalculatorPanel() {
   const creditsLoading = !creditsForOneUSD;
 
   // For Budget to Storage mode with crypto: convert crypto amount to winc
-  const cryptoAmountInSmallestUnit = selectedCurrency !== 'usd' && inputType === 'dollars'
-    ? getTokenSmallestUnit(selectedCurrency as SupportedTokenType, dollarAmount)
-    : undefined;
+  const cryptoAmountInSmallestUnit =
+    selectedCurrency !== 'usd' && inputType === 'dollars'
+      ? getTokenSmallestUnit(selectedCurrency as SupportedTokenType, dollarAmount)
+      : undefined;
   const wincFromCrypto = useWincForCrypto(
     cryptoAmountInSmallestUnit,
-    selectedCurrency as SupportedTokenType
+    selectedCurrency as SupportedTokenType,
   );
 
   // Calculate storage in GiB (must be defined before being used)
@@ -144,14 +168,16 @@ export default function PricingCalculatorPanel() {
   };
 
   // Get crypto price based on current mode
-  const wincForCryptoPrice = inputType === 'storage' ? calculateWincNeeded() : calculateWincFromBudget();
+  const wincForCryptoPrice =
+    inputType === 'storage' ? calculateWincNeeded() : calculateWincFromBudget();
   const cryptoPrice = useCryptoPriceForWinc(
     selectedCurrency !== 'usd' ? wincForCryptoPrice : undefined,
-    selectedCurrency as SupportedTokenType
+    selectedCurrency as SupportedTokenType,
   );
 
   // Get selected currency info
-  const selectedCurrencyInfo = currencies.find(c => c.value === selectedCurrency) || currencies[0];
+  const selectedCurrencyInfo =
+    currencies.find((c) => c.value === selectedCurrency) || currencies[0];
 
   // Calculate storage in bytes for display
   const getStorageInBytes = () => {
@@ -238,9 +264,10 @@ export default function PricingCalculatorPanel() {
   };
 
   // When using x402 pricing (x402-only mode or base-usdc selected), derive loading from x402 state
-  const isLoading = (x402OnlyMode || selectedCurrency === 'base-usdc')
-    ? x402PricingPerGiB.loading
-    : (wincLoading || creditsLoading);
+  const isLoading =
+    x402OnlyMode || selectedCurrency === 'base-usdc'
+      ? x402PricingPerGiB.loading
+      : wincLoading || creditsLoading;
 
   return (
     <div className="px-4 sm:px-6">
@@ -250,7 +277,9 @@ export default function PricingCalculatorPanel() {
           <Calculator className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Storage Pricing Calculator</h3>
+          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">
+            Storage Pricing Calculator
+          </h3>
           <p className="text-sm text-foreground/80">
             Calculate exactly how much permanent storage you get for your budget
           </p>
@@ -259,7 +288,6 @@ export default function PricingCalculatorPanel() {
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
         {/* Free Tier Notice */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
@@ -308,7 +336,9 @@ export default function PricingCalculatorPanel() {
             <div>
               {inputType === 'storage' ? (
                 <div className="flex flex-col h-full">
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Storage Amount</h4>
+                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">
+                    Enter Storage Amount
+                  </h4>
                   <div className="bg-card rounded-2xl p-6 flex-1 flex flex-col">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much data do you need to store?
@@ -348,14 +378,19 @@ export default function PricingCalculatorPanel() {
                         placeholder="Enter amount"
                       />
                       <Listbox
-                        value={storageUnits.find(unit => unit.value === storageUnit)}
+                        value={storageUnits.find((unit) => unit.value === storageUnit)}
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
                           <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none cursor-pointer text-left">
-                            <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
+                            <span className="block truncate">
+                              {storageUnits.find((unit) => unit.value === storageUnit)?.label}
+                            </span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                              <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
+                              <ChevronDown
+                                className="h-5 w-5 text-foreground/80"
+                                aria-hidden="true"
+                              />
                             </span>
                           </Listbox.Button>
                           <Transition
@@ -369,15 +404,15 @@ export default function PricingCalculatorPanel() {
                                 <Listbox.Option
                                   key={unit.value}
                                   className={({ active }) =>
-                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${
-                                      active ? 'bg-card text-foreground' : 'text-foreground/80'
-                                    }`
+                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${active ? 'bg-card text-foreground' : 'text-foreground/80'}`
                                   }
                                   value={unit}
                                 >
                                   {({ selected }) => (
                                     <>
-                                      <span className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}>
+                                      <span
+                                        className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}
+                                      >
                                         {unit.label}
                                       </span>
                                       {selected ? (
@@ -425,7 +460,9 @@ export default function PricingCalculatorPanel() {
                 </div>
               ) : (
                 <div className="flex flex-col h-full">
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Your Budget</h4>
+                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">
+                    Enter Your Budget
+                  </h4>
                   <div className="bg-card rounded-2xl p-6 flex-1 flex flex-col">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much do you want to spend?
@@ -436,7 +473,7 @@ export default function PricingCalculatorPanel() {
                       <input
                         type="number"
                         min="0"
-                        step={selectedCurrency === 'usd' ? "0.01" : "0.000001"}
+                        step={selectedCurrency === 'usd' ? '0.01' : '0.000001'}
                         value={dollarAmountInput}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -474,7 +511,10 @@ export default function PricingCalculatorPanel() {
                           <Listbox.Button className="relative w-full rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none cursor-pointer text-left">
                             <span className="block truncate">{selectedCurrencyInfo.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                              <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
+                              <ChevronDown
+                                className="h-5 w-5 text-foreground/80"
+                                aria-hidden="true"
+                              />
                             </span>
                           </Listbox.Button>
                           <Transition
@@ -488,15 +528,15 @@ export default function PricingCalculatorPanel() {
                                 <Listbox.Option
                                   key={currency.value}
                                   className={({ active }) =>
-                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${
-                                      active ? 'bg-card text-foreground' : 'text-foreground/80'
-                                    }`
+                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${active ? 'bg-card text-foreground' : 'text-foreground/80'}`
                                   }
                                   value={currency}
                                 >
                                   {({ selected }) => (
                                     <>
-                                      <span className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}>
+                                      <span
+                                        className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}
+                                      >
                                         {currency.label}
                                       </span>
                                       {selected ? (
@@ -518,59 +558,57 @@ export default function PricingCalculatorPanel() {
                     <div className="mt-auto">
                       <div className="text-xs text-foreground/80 mb-2">Quick select:</div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {selectedCurrency === 'usd' ? (
-                          [5, 10, 25, 50, 100, 250].map((amount) => (
-                            <button
-                              key={amount}
-                              onClick={() => {
-                                setDollarAmount(amount);
-                                setDollarAmountInput(amount.toString());
-                              }}
-                              className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
-                            >
-                              ${amount}
-                            </button>
-                          ))
-                        ) : selectedCurrency === 'arweave' || selectedCurrency === 'ario' ? (
-                          [10, 25, 50, 100, 250, 500].map((amount) => (
-                            <button
-                              key={amount}
-                              onClick={() => {
-                                setDollarAmount(amount);
-                                setDollarAmountInput(amount.toString());
-                              }}
-                              className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
-                            >
-                              {amount} {selectedCurrencyInfo.symbol}
-                            </button>
-                          ))
-                        ) : selectedCurrency === 'solana' ? (
-                          [0.1, 0.25, 0.5, 1, 2.5, 5].map((amount) => (
-                            <button
-                              key={amount}
-                              onClick={() => {
-                                setDollarAmount(amount);
-                                setDollarAmountInput(amount.toString());
-                              }}
-                              className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
-                            >
-                              {amount} {selectedCurrencyInfo.symbol}
-                            </button>
-                          ))
-                        ) : (
-                          [0.01, 0.025, 0.05, 0.1, 0.25, 0.5].map((amount) => (
-                            <button
-                              key={amount}
-                              onClick={() => {
-                                setDollarAmount(amount);
-                                setDollarAmountInput(amount.toString());
-                              }}
-                              className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
-                            >
-                              {amount} {selectedCurrencyInfo.symbol}
-                            </button>
-                          ))
-                        )}
+                        {selectedCurrency === 'usd'
+                          ? [5, 10, 25, 50, 100, 250].map((amount) => (
+                              <button
+                                key={amount}
+                                onClick={() => {
+                                  setDollarAmount(amount);
+                                  setDollarAmountInput(amount.toString());
+                                }}
+                                className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
+                              >
+                                ${amount}
+                              </button>
+                            ))
+                          : selectedCurrency === 'arweave' || selectedCurrency === 'ario'
+                            ? [10, 25, 50, 100, 250, 500].map((amount) => (
+                                <button
+                                  key={amount}
+                                  onClick={() => {
+                                    setDollarAmount(amount);
+                                    setDollarAmountInput(amount.toString());
+                                  }}
+                                  className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
+                                >
+                                  {amount} {selectedCurrencyInfo.symbol}
+                                </button>
+                              ))
+                            : selectedCurrency === 'solana'
+                              ? [0.1, 0.25, 0.5, 1, 2.5, 5].map((amount) => (
+                                  <button
+                                    key={amount}
+                                    onClick={() => {
+                                      setDollarAmount(amount);
+                                      setDollarAmountInput(amount.toString());
+                                    }}
+                                    className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
+                                  >
+                                    {amount} {selectedCurrencyInfo.symbol}
+                                  </button>
+                                ))
+                              : [0.01, 0.025, 0.05, 0.1, 0.25, 0.5].map((amount) => (
+                                  <button
+                                    key={amount}
+                                    onClick={() => {
+                                      setDollarAmount(amount);
+                                      setDollarAmountInput(amount.toString());
+                                    }}
+                                    className="px-3 py-2 sm:py-3 text-xs rounded-2xl border border-border/20 text-foreground/80 hover:bg-card hover:text-foreground transition-colors min-h-[44px] flex items-center justify-center"
+                                  >
+                                    {amount} {selectedCurrencyInfo.symbol}
+                                  </button>
+                                ))}
                       </div>
                     </div>
                   </div>
@@ -598,7 +636,10 @@ export default function PricingCalculatorPanel() {
                           <Listbox.Button className="relative rounded-2xl border border-border/20 bg-card pl-3 pr-10 py-1 text-sm font-medium text-foreground hover:bg-card focus:border-primary focus:outline-none cursor-pointer text-left">
                             <span className="block truncate">{selectedCurrencyInfo.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                              <ChevronDown className="h-4 w-4 text-foreground/80" aria-hidden="true" />
+                              <ChevronDown
+                                className="h-4 w-4 text-foreground/80"
+                                aria-hidden="true"
+                              />
                             </span>
                           </Listbox.Button>
                           <Transition
@@ -612,15 +653,15 @@ export default function PricingCalculatorPanel() {
                                 <Listbox.Option
                                   key={currency.value}
                                   className={({ active }) =>
-                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${
-                                      active ? 'bg-card text-foreground' : 'text-foreground/80'
-                                    }`
+                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${active ? 'bg-card text-foreground' : 'text-foreground/80'}`
                                   }
                                   value={currency}
                                 >
                                   {({ selected }) => (
                                     <>
-                                      <span className={`block truncate text-sm font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}>
+                                      <span
+                                        className={`block truncate text-sm font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}
+                                      >
                                         {currency.label}
                                       </span>
                                       {selected ? (
@@ -691,7 +732,9 @@ export default function PricingCalculatorPanel() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-foreground/80">Your Budget</span>
                       <span className="text-lg font-medium text-foreground">
-                        {selectedCurrency === 'usd' ? `$${formatNumber(dollarAmount)}` : `${formatNumber(dollarAmount, 6)} ${selectedCurrencyInfo.symbol}`}
+                        {selectedCurrency === 'usd'
+                          ? `$${formatNumber(dollarAmount)}`
+                          : `${formatNumber(dollarAmount, 6)} ${selectedCurrencyInfo.symbol}`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -701,8 +744,7 @@ export default function PricingCalculatorPanel() {
                           ? formatNumber(dollarAmount * (creditsForOneUSD || 0))
                           : wincFromCrypto
                             ? formatNumber(wincFromCrypto / 1e12)
-                            : '0'
-                        }
+                            : '0'}
                       </span>
                     </div>
                     {selectedCurrency !== 'usd' && (
@@ -725,8 +767,12 @@ export default function PricingCalculatorPanel() {
           {!address ? (
             // Not logged in - show connect wallet CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">Ready to store your data permanently?</h4>
-              <p className="text-foreground/80 mb-4">Connect your wallet to top up credits and start uploading.</p>
+              <h4 className="text-lg font-bold font-heading text-foreground mb-3">
+                Ready to store your data permanently?
+              </h4>
+              <p className="text-foreground/80 mb-4">
+                Connect your wallet to top up credits and start uploading.
+              </p>
               <button
                 onClick={() => setShowWalletModal(true)}
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
@@ -737,8 +783,12 @@ export default function PricingCalculatorPanel() {
           ) : creditBalance > 0 ? (
             // Logged in with credits - show upload/ArNS CTAs
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You have {creditBalance.toFixed(2)} credits ready to use!</h4>
-              <p className="text-foreground/80 mb-4">Start uploading files or register an ArNS domain name to use your credits.</p>
+              <h4 className="text-lg font-bold font-heading text-foreground mb-3">
+                You have {creditBalance.toFixed(2)} credits ready to use!
+              </h4>
+              <p className="text-foreground/80 mb-4">
+                Start uploading files or register an ArNS domain name to use your credits.
+              </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
                   to="/upload"
@@ -759,8 +809,12 @@ export default function PricingCalculatorPanel() {
           ) : (
             // Logged in but no credits - show top up CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You need credits to store data permanently</h4>
-              <p className="text-foreground/80 mb-4">Top up your account with credits to start uploading files or registering ArNS names.</p>
+              <h4 className="text-lg font-bold font-heading text-foreground mb-3">
+                You need credits to store data permanently
+              </h4>
+              <p className="text-foreground/80 mb-4">
+                Top up your account with credits to start uploading files or registering ArNS names.
+              </p>
               <Link
                 to="/topup"
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
@@ -773,11 +827,7 @@ export default function PricingCalculatorPanel() {
         </div>
       </div>
 
-      {showWalletModal && (
-        <WalletSelectionModal
-          onClose={() => setShowWalletModal(false)}
-        />
-      )}
+      {showWalletModal && <WalletSelectionModal onClose={() => setShowWalletModal(false)} />}
     </div>
   );
 }

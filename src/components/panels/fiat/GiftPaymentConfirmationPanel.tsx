@@ -36,13 +36,10 @@ const GiftPaymentConfirmationPanel: FC<GiftPaymentConfirmationPanelProps> = ({
 
     try {
       // Confirm the payment intent using stored payment method
-      const { error: stripeError } = await stripe.confirmCardPayment(
-        paymentIntent.client_secret,
-        {
-          payment_method: paymentInformation.paymentMethodId,
-          receipt_email: paymentInformation.email,
-        }
-      );
+      const { error: stripeError } = await stripe.confirmCardPayment(paymentIntent.client_secret, {
+        payment_method: paymentInformation.paymentMethodId,
+        receipt_email: paymentInformation.email,
+      });
 
       if (stripeError) {
         setError(stripeError.message || 'Payment failed');
@@ -66,7 +63,9 @@ const GiftPaymentConfirmationPanel: FC<GiftPaymentConfirmationPanelProps> = ({
           <Gift className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Confirm Gift Payment</h3>
+          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
+            Confirm Gift Payment
+          </h3>
           <p className="text-sm text-foreground/80">
             Review your gift details and complete the payment
           </p>
@@ -75,7 +74,6 @@ const GiftPaymentConfirmationPanel: FC<GiftPaymentConfirmationPanelProps> = ({
 
       {/* Main Content */}
       <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
         {/* Gift Details */}
         <div className="bg-card rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
           <h4 className="font-heading font-bold text-foreground mb-4 flex items-center gap-2">

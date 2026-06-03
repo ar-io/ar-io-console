@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { SupportedTokenType, tokenLabels } from '../constants';
-import {
-  calculateRequiredTokenAmount,
-  formatTokenAmount,
-} from '../utils/jitPayment';
+import { calculateRequiredTokenAmount, formatTokenAmount } from '../utils/jitPayment';
 import { useTokenBalance } from '../hooks/useTokenBalance';
 
 interface JitPaymentCardProps {
@@ -79,8 +76,9 @@ export function JitPaymentCard({
 
     // Calculate if there's any cost (either insufficient or wanting to pay with crypto)
     // Must check for null explicitly since totalCost can be null while loading
-    const hasCost = (typeof creditsNeeded === 'number' && creditsNeeded > 0) ||
-                    (typeof totalCost === 'number' && totalCost > 0);
+    const hasCost =
+      (typeof creditsNeeded === 'number' && creditsNeeded > 0) ||
+      (typeof totalCost === 'number' && totalCost > 0);
 
     if (hasCost) {
       calculate();
@@ -114,18 +112,29 @@ export function JitPaymentCard({
     const hasSufficientBalance = tokenBalance >= requiredAmount;
 
     onBalanceValidation?.(hasSufficientBalance);
-  }, [tokenBalance, estimatedCost, balanceLoading, balanceError, isNetworkError, onBalanceValidation]);
+  }, [
+    tokenBalance,
+    estimatedCost,
+    balanceLoading,
+    balanceError,
+    isNetworkError,
+    onBalanceValidation,
+  ]);
 
   // Calculate shortfall if insufficient
-  const shortfall = estimatedCost && tokenBalance < estimatedCost.tokenAmountReadable
-    ? estimatedCost.tokenAmountReadable - tokenBalance
-    : 0;
+  const shortfall =
+    estimatedCost && tokenBalance < estimatedCost.tokenAmountReadable
+      ? estimatedCost.tokenAmountReadable - tokenBalance
+      : 0;
 
-  const hasSufficientBalance = estimatedCost ? tokenBalance >= estimatedCost.tokenAmountReadable : true;
+  const hasSufficientBalance = estimatedCost
+    ? tokenBalance >= estimatedCost.tokenAmountReadable
+    : true;
 
   // Check if no files selected (no cost to calculate)
-  const hasCost = (typeof creditsNeeded === 'number' && creditsNeeded > 0) ||
-                  (typeof totalCost === 'number' && totalCost > 0);
+  const hasCost =
+    (typeof creditsNeeded === 'number' && creditsNeeded > 0) ||
+    (typeof totalCost === 'number' && totalCost > 0);
 
   return (
     <div className="bg-card rounded-2xl border border-border/20 p-3">
@@ -150,11 +159,13 @@ export function JitPaymentCard({
               </div>
               {estimatedCost.estimatedUSD && estimatedCost.estimatedUSD > 0 && (
                 <div className="text-xs text-foreground/80">
-                  ≈ ${estimatedCost.estimatedUSD < 0.0001
+                  ≈ $
+                  {estimatedCost.estimatedUSD < 0.0001
                     ? estimatedCost.estimatedUSD.toFixed(6)
                     : estimatedCost.estimatedUSD < 0.01
-                    ? estimatedCost.estimatedUSD.toFixed(4)
-                    : estimatedCost.estimatedUSD.toFixed(2)} USD
+                      ? estimatedCost.estimatedUSD.toFixed(4)
+                      : estimatedCost.estimatedUSD.toFixed(2)}{' '}
+                  USD
                 </div>
               )}
             </div>
@@ -194,7 +205,9 @@ export function JitPaymentCard({
                   </div>
                   <div className="text-xs text-error flex items-center gap-1 mt-0.5">
                     <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                    <span>Need {formatTokenAmount(shortfall, tokenType)} {tokenLabel} more</span>
+                    <span>
+                      Need {formatTokenAmount(shortfall, tokenType)} {tokenLabel} more
+                    </span>
                   </div>
                 </div>
               </div>
@@ -210,20 +223,14 @@ export function JitPaymentCard({
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="mt-2 text-xs text-foreground/80 hover:text-foreground transition-colors flex items-center gap-1"
           >
-            {showAdvanced ? (
-              <ChevronUp className="w-3 h-3" />
-            ) : (
-              <ChevronDown className="w-3 h-3" />
-            )}
+            {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             Advanced Settings
           </button>
 
           {showAdvanced && (
             <div className="mt-2 pt-2 border-t border-border/20">
               <div>
-                <label className="text-xs text-foreground/80 block mb-1">
-                  Max {tokenLabel}:
-                </label>
+                <label className="text-xs text-foreground/80 block mb-1">Max {tokenLabel}:</label>
                 <input
                   type="number"
                   step={tokenType === 'ario' ? '0.1' : '0.001'}

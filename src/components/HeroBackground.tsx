@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo } from 'react';
 
 /**
  * Hero background with static clouds image and white overlay.

@@ -13,12 +13,12 @@ import {
   SimpleCacheRoutingStrategy,
   HashVerificationStrategy,
   SignatureVerificationStrategy,
-} from "@ar.io/wayfinder-core";
-import type { Wayfinder, VerificationStrategy } from "@ar.io/wayfinder-core";
-import type { SwWayfinderConfig } from "./types";
-import { logger } from "./logger";
+} from '@ar.io/wayfinder-core';
+import type { Wayfinder, VerificationStrategy } from '@ar.io/wayfinder-core';
+import type { SwWayfinderConfig } from './types';
+import { logger } from './logger';
 
-const TAG = "Wayfinder";
+const TAG = 'Wayfinder';
 
 let wayfinderInstance: Wayfinder | null = null;
 let currentConfig: SwWayfinderConfig | null = null;
@@ -40,9 +40,7 @@ let initializationPromise: Promise<void> | null = null;
  * @param maxWaitMs Maximum time to wait in milliseconds (default 10 seconds)
  * @returns true if initialized, false if timed out
  */
-export async function waitForInitialization(
-  maxWaitMs = 10000,
-): Promise<boolean> {
+export async function waitForInitialization(maxWaitMs = 10000): Promise<boolean> {
   // Already initialized
   if (wayfinderInstance !== null) {
     return true;
@@ -73,7 +71,7 @@ export async function waitForInitialization(
  */
 export function setSelectedGateway(gateway: string | null): void {
   selectedGateway = gateway ? new URL(gateway) : null;
-  logger.debug(TAG, `Gateway: ${selectedGateway?.hostname || "random"}`);
+  logger.debug(TAG, `Gateway: ${selectedGateway?.hostname || 'random'}`);
 }
 
 /**
@@ -98,14 +96,14 @@ function safeDispose(resource: unknown, name: string): void {
   if (!resource) return;
 
   const r = resource as Record<string, unknown>;
-  if (typeof r.dispose === "function") {
+  if (typeof r.dispose === 'function') {
     try {
       r.dispose();
       logger.debug(TAG, `Disposed ${name}`);
     } catch (err) {
       logger.warn(TAG, `Failed to dispose ${name}: ${err}`);
     }
-  } else if (typeof r.close === "function") {
+  } else if (typeof r.close === 'function') {
     try {
       r.close();
       logger.debug(TAG, `Closed ${name}`);
@@ -119,7 +117,7 @@ function safeDispose(resource: unknown, name: string): void {
  * Initialize the Wayfinder client with the given configuration.
  */
 export function initializeWayfinder(config: SwWayfinderConfig): void {
-  const verificationMethod = config.verificationMethod || "hash";
+  const verificationMethod = config.verificationMethod || 'hash';
 
   logger.info(
     TAG,
@@ -127,8 +125,8 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
   );
 
   // Clean up previous instances to prevent resource leaks
-  safeDispose(wayfinderInstance, "wayfinderInstance");
-  safeDispose(verificationStrategy, "verificationStrategy");
+  safeDispose(wayfinderInstance, 'wayfinderInstance');
+  safeDispose(verificationStrategy, 'verificationStrategy');
   wayfinderInstance = null;
   verificationStrategy = null;
 
@@ -163,9 +161,8 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
   // Create routing strategy
   // Handle 'preferred' strategy separately using StaticRoutingStrategy
   let routingStrategy;
-  if (config.routingStrategy === "preferred" && config.preferredGateway) {
-    const preferredGateway =
-      config.preferredGateway.trim() || "https://turbo-gateway.com";
+  if (config.routingStrategy === 'preferred' && config.preferredGateway) {
+    const preferredGateway = config.preferredGateway.trim() || 'https://turbo-gateway.com';
     logger.debug(TAG, `Using preferred gateway: ${preferredGateway}`);
     routingStrategy = new StaticRoutingStrategy({
       gateway: preferredGateway,
@@ -174,11 +171,9 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
   } else {
     // Map 'roundRobin' to 'balanced' for createRoutingStrategy
     const strategyName =
-      config.routingStrategy === "roundRobin"
-        ? "balanced"
-        : config.routingStrategy;
+      config.routingStrategy === 'roundRobin' ? 'balanced' : config.routingStrategy;
     const baseStrategy = createRoutingStrategy({
-      strategy: strategyName as "random" | "fastest" | "balanced",
+      strategy: strategyName as 'random' | 'fastest' | 'balanced',
       gatewaysProvider,
       logger: quietWayfinderLogger,
     });
@@ -198,7 +193,7 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
   // This controls how many gateways are queried for hash verification
   const consensusCount = trustedGatewayUrls.length;
 
-  if (verificationMethod === "signature") {
+  if (verificationMethod === 'signature') {
     // Signature verification - cryptographically verifies data item signatures
     verificationStrategy = new SignatureVerificationStrategy({
       trustedGateways: trustedGatewayUrls,
@@ -247,7 +242,7 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
 
   logger.info(
     TAG,
-    `Ready: verification=${config.enabled ? verificationMethod : "disabled"}, strict=${config.strict}`,
+    `Ready: verification=${config.enabled ? verificationMethod : 'disabled'}, strict=${config.strict}`,
   );
 }
 
@@ -257,7 +252,7 @@ export function initializeWayfinder(config: SwWayfinderConfig): void {
  */
 export function getWayfinder(): Wayfinder {
   if (!wayfinderInstance) {
-    throw new Error("Wayfinder not initialized");
+    throw new Error('Wayfinder not initialized');
   }
   return wayfinderInstance;
 }
@@ -284,7 +279,7 @@ export function getConfig(): SwWayfinderConfig | null {
  */
 export function getVerificationStrategy(): VerificationStrategy {
   if (!verificationStrategy) {
-    throw new Error("Verification strategy not initialized");
+    throw new Error('Verification strategy not initialized');
   }
   return verificationStrategy;
 }

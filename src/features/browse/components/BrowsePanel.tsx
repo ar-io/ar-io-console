@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Minimize2, Settings } from "lucide-react";
-import { WayfinderProvider } from "@ar.io/wayfinder-react";
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Minimize2, Settings } from 'lucide-react';
+import { WayfinderProvider } from '@ar.io/wayfinder-react';
 import {
   createRoutingStrategy,
   TrustedPeersGatewaysProvider,
@@ -8,30 +8,24 @@ import {
   SimpleCacheRoutingStrategy,
   StaticRoutingStrategy,
   type RoutingOption,
-} from "@ar.io/wayfinder-core";
-import { useStore } from "@/store/useStore";
-import { BrowseSearchBar } from "./BrowseSearchBar";
-import { BrowseContentViewer } from "./BrowseContentViewer";
-import { BrowseSettingsFlyout } from "./BrowseSettingsFlyout";
+} from '@ar.io/wayfinder-core';
+import { useStore } from '@/store/useStore';
+import { BrowseSearchBar } from './BrowseSearchBar';
+import { BrowseContentViewer } from './BrowseContentViewer';
+import { BrowseSettingsFlyout } from './BrowseSettingsFlyout';
 import {
   VerificationBadge,
   type VerificationState,
   type VerificationStats,
-} from "./VerificationBadge";
-import { VerificationBlockedModal } from "./VerificationBlockedModal";
-import { VerificationLoadingScreen } from "./VerificationLoadingScreen";
-import { ContentRenderer } from "./ContentRenderer";
-import { swMessenger } from "../utils/serviceWorkerMessaging";
-import {
-  getTrustedGateways,
-  getRoutingGateways,
-} from "../utils/trustedGateways";
-import { gatewayHealth } from "../utils/gatewayHealth";
-import {
-  detectContentType,
-  type ContentCategory,
-} from "../utils/contentTypeUtils";
-import type { VerificationEvent } from "../service-worker/types";
+} from './VerificationBadge';
+import { VerificationBlockedModal } from './VerificationBlockedModal';
+import { VerificationLoadingScreen } from './VerificationLoadingScreen';
+import { ContentRenderer } from './ContentRenderer';
+import { swMessenger } from '../utils/serviceWorkerMessaging';
+import { getTrustedGateways, getRoutingGateways } from '../utils/trustedGateways';
+import { gatewayHealth } from '../utils/gatewayHealth';
+import { detectContentType, type ContentCategory } from '../utils/contentTypeUtils';
+import type { VerificationEvent } from '../service-worker/types';
 
 /**
  * Extract the base gateway domain from a URL, removing the first subdomain.
@@ -43,11 +37,11 @@ import type { VerificationEvent } from "../service-worker/types";
 function safeBaseGateway(url: string): string {
   try {
     const hostname = new URL(url).hostname;
-    const parts = hostname.split(".");
+    const parts = hostname.split('.');
 
     // If 3+ parts, strip the first subdomain
     if (parts.length >= 3) {
-      return parts.slice(1).join(".");
+      return parts.slice(1).join('.');
     }
 
     // 2 or fewer parts, return as-is
@@ -62,31 +56,24 @@ interface WayfinderWrapperProps {
   gatewayRefreshCounter: number;
 }
 
-function WayfinderWrapper({
-  children,
-  gatewayRefreshCounter,
-}: WayfinderWrapperProps) {
+function WayfinderWrapper({ children, gatewayRefreshCounter }: WayfinderWrapperProps) {
   const browseConfig = useStore((state) => state.browseConfig);
 
   const wayfinderConfig = useMemo(() => {
     const getHostGateway = (): URL | null => {
-      if (typeof window === "undefined") return null;
+      if (typeof window === 'undefined') return null;
 
       const hostname = window.location.hostname;
 
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname.includes("192.168")
-      ) {
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168')) {
         return null;
       }
 
-      const parts = hostname.split(".");
+      const parts = hostname.split('.');
 
       // Strip 'console' subdomain if present to get the gateway
-      if (parts[0] === "console" && parts.length > 1) {
-        const gateway = parts.slice(1).join(".");
+      if (parts[0] === 'console' && parts.length > 1) {
+        const gateway = parts.slice(1).join('.');
         return new URL(`https://${gateway}`);
       }
 
@@ -95,7 +82,7 @@ function WayfinderWrapper({
 
     const resilientProvider = {
       async getGateways(): Promise<URL[]> {
-        const peersEndpoints: string[] = ["https://turbo-gateway.com"];
+        const peersEndpoints: string[] = ['https://turbo-gateway.com'];
 
         const hostGateway = getHostGateway();
         if (hostGateway) {
@@ -120,7 +107,7 @@ function WayfinderWrapper({
           return [hostGateway];
         }
 
-        return [new URL("https://turbo-gateway.com")];
+        return [new URL('https://turbo-gateway.com')];
       },
     };
 
@@ -132,9 +119,7 @@ function WayfinderWrapper({
         let healthyUrls = gatewayHealth.filterHealthy(gatewayUrls);
 
         if (healthyUrls.length === 0) {
-          console.log(
-            "[BrowsePanel] All gateways marked unhealthy, clearing cache",
-          );
+          console.log('[BrowsePanel] All gateways marked unhealthy, clearing cache');
           gatewayHealth.clear();
           healthyUrls = gatewayUrls;
         }
@@ -146,9 +131,7 @@ function WayfinderWrapper({
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
 
-        return shuffled
-          .slice(0, Math.min(20, shuffled.length))
-          .map((url) => new URL(url));
+        return shuffled.slice(0, Math.min(20, shuffled.length)).map((url) => new URL(url));
       },
     };
 
@@ -159,21 +142,19 @@ function WayfinderWrapper({
 
     let routingStrategy;
 
-    if (browseConfig.routingStrategy === "preferred") {
+    if (browseConfig.routingStrategy === 'preferred') {
       const preferredGatewayRaw = browseConfig.preferredGateway?.trim();
       const preferredGateway =
         preferredGatewayRaw && preferredGatewayRaw.length > 0
           ? preferredGatewayRaw
-          : "https://turbo-gateway.com";
+          : 'https://turbo-gateway.com';
 
       routingStrategy = new StaticRoutingStrategy({
         gateway: preferredGateway,
       });
     } else {
       const strategyName: RoutingOption =
-        browseConfig.routingStrategy === "roundRobin"
-          ? "balanced"
-          : browseConfig.routingStrategy;
+        browseConfig.routingStrategy === 'roundRobin' ? 'balanced' : browseConfig.routingStrategy;
 
       const baseStrategy = createRoutingStrategy({
         strategy: strategyName,
@@ -200,11 +181,7 @@ function WayfinderWrapper({
       },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    browseConfig.routingStrategy,
-    browseConfig.preferredGateway,
-    gatewayRefreshCounter,
-  ]);
+  }, [browseConfig.routingStrategy, browseConfig.preferredGateway, gatewayRefreshCounter]);
 
   // Only use gatewayRefreshCounter in key - settings changes shouldn't reset verification state
   const routingKey = `browse-${gatewayRefreshCounter}`;
@@ -220,12 +197,10 @@ interface BrowsePanelContentProps {
   setGatewayRefreshCounter: (fn: (prev: number) => number) => void;
 }
 
-function BrowsePanelContent({
-  setGatewayRefreshCounter,
-}: BrowsePanelContentProps) {
+function BrowsePanelContent({ setGatewayRefreshCounter }: BrowsePanelContentProps) {
   const browseConfig = useStore((state) => state.browseConfig);
 
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, setSearchInput] = useState('');
   const [isSearched, setIsSearched] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -251,11 +226,11 @@ function BrowsePanelContent({
     };
     const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, [searchInput, isSearched]);
 
@@ -273,11 +248,7 @@ function BrowsePanelContent({
     const newIdentifier = searchInput || null;
 
     // Clear OLD verification when switching to a new identifier
-    if (
-      oldIdentifier &&
-      oldIdentifier !== newIdentifier &&
-      browseConfig.verificationEnabled
-    ) {
+    if (oldIdentifier && oldIdentifier !== newIdentifier && browseConfig.verificationEnabled) {
       swMessenger.clearVerification(oldIdentifier).catch(() => {
         // Non-critical
       });
@@ -287,47 +258,38 @@ function BrowsePanelContent({
   }, [searchInput, browseConfig.verificationEnabled]);
 
   // Verification state tracking
-  const [verificationState, setVerificationState] =
-    useState<VerificationState>("idle");
-  const [verificationStats, setVerificationStats] = useState<VerificationStats>(
-    {
-      total: 0,
-      verified: 0,
-      failed: 0,
-      cachedHits: 0,
-      failedResources: [],
-    },
-  );
-  const [verificationError, setVerificationError] = useState<
-    string | undefined
-  >();
+  const [verificationState, setVerificationState] = useState<VerificationState>('idle');
+  const [verificationStats, setVerificationStats] = useState<VerificationStats>({
+    total: 0,
+    verified: 0,
+    failed: 0,
+    cachedHits: 0,
+    failedResources: [],
+  });
+  const [verificationError, setVerificationError] = useState<string | undefined>();
   const [showBlockedModal, setShowBlockedModal] = useState(false);
-  const [userBypassedVerification, setUserBypassedVerification] =
-    useState(false);
+  const [userBypassedVerification, setUserBypassedVerification] = useState(false);
 
   // Additional verification loading screen state
   const [verificationPhase, setVerificationPhase] = useState<
-    "idle" | "resolving" | "fetching-manifest" | "verifying" | "complete"
-  >("idle");
+    'idle' | 'resolving' | 'fetching-manifest' | 'verifying' | 'complete'
+  >('idle');
   const [routingGateway, setRoutingGateway] = useState<string | null>(null);
-  const [verificationStartTime, setVerificationStartTime] = useState<
-    number | null
-  >(null);
+  const [verificationStartTime, setVerificationStartTime] = useState<number | null>(null);
   const [manifestTxId, setManifestTxId] = useState<string | null>(null);
   const [isSingleFileContent, setIsSingleFileContent] = useState(false);
   const [recentVerifiedResources, setRecentVerifiedResources] = useState<
-    Array<{ path: string; status: "verified" | "failed" | "verifying" }>
+    Array<{ path: string; status: 'verified' | 'failed' | 'verifying' }>
   >([]);
 
   // Content type detection for non-HTML content (images, video, audio, PDF)
-  const [contentCategory, setContentCategory] =
-    useState<ContentCategory>("html");
+  const [contentCategory, setContentCategory] = useState<ContentCategory>('html');
   const [isDetectingContentType, setIsDetectingContentType] = useState(false);
 
   // Initialize from URL query parameter on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const query = params.get("q");
+    const query = params.get('q');
     if (query && query.trim()) {
       setSearchInput(query.trim());
       setIsSearched(true);
@@ -335,18 +297,18 @@ function BrowsePanelContent({
 
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const query = params.get("q");
+      const query = params.get('q');
       if (query && query.trim()) {
         setSearchInput(query.trim());
         setIsSearched(true);
       } else {
-        setSearchInput("");
+        setSearchInput('');
         setIsSearched(false);
       }
     };
 
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Track previous verification enabled state to detect when it's toggled OFF
@@ -374,26 +336,20 @@ function BrowsePanelContent({
       try {
         // Wait for service worker registration to complete
         // This awaits the registration promise from main.tsx instead of polling
-        console.log("[Browse] Waiting for service worker registration...");
+        console.log('[Browse] Waiting for service worker registration...');
         const controllerReady = await swMessenger.waitForReady();
         if (cancelled) return;
 
         if (!controllerReady) {
-          console.error(
-            "[Browse] Service worker controller not available after registration",
-          );
+          console.error('[Browse] Service worker controller not available after registration');
           setSwReady(false);
-          setVerificationError(
-            "Service worker not ready. Try refreshing the page.",
-          );
+          setVerificationError('Service worker not ready. Try refreshing the page.');
           return;
         }
 
-        console.log("[Browse] Service worker ready, initializing Wayfinder...");
+        console.log('[Browse] Service worker ready, initializing Wayfinder...');
 
-        const trustedGateways = await getTrustedGateways(
-          browseConfig.trustedGatewayCount,
-        );
+        const trustedGateways = await getTrustedGateways(browseConfig.trustedGatewayCount);
         if (cancelled) return;
 
         const routingGateways = await getRoutingGateways();
@@ -414,11 +370,9 @@ function BrowsePanelContent({
         setSwReady(true);
       } catch (error) {
         if (cancelled) return;
-        console.error("[Browse] SW initialization failed:", error);
+        console.error('[Browse] SW initialization failed:', error);
         setSwReady(false);
-        setVerificationError(
-          error instanceof Error ? error.message : "Initialization failed",
-        );
+        setVerificationError(error instanceof Error ? error.message : 'Initialization failed');
       }
     }
 
@@ -475,8 +429,7 @@ function BrowsePanelContent({
       prevSettings.routingStrategy !== browseConfig.routingStrategy ||
       prevSettings.preferredGateway !== browseConfig.preferredGateway ||
       prevSettings.strictVerification !== browseConfig.strictVerification ||
-      prevSettings.verificationConcurrency !==
-        browseConfig.verificationConcurrency ||
+      prevSettings.verificationConcurrency !== browseConfig.verificationConcurrency ||
       prevSettings.verificationMethod !== browseConfig.verificationMethod ||
       prevSettings.trustedGatewayCount !== browseConfig.trustedGatewayCount;
 
@@ -494,7 +447,7 @@ function BrowsePanelContent({
     // If settings changed and we have an active search, restart
     if (settingsChanged && isSearched && searchInput) {
       // Reset verification state
-      setVerificationState("idle");
+      setVerificationState('idle');
       setVerificationStats({
         total: 0,
         verified: 0,
@@ -505,7 +458,7 @@ function BrowsePanelContent({
       setVerificationError(undefined);
       setShowBlockedModal(false);
       setUserBypassedVerification(false);
-      setVerificationPhase("idle");
+      setVerificationPhase('idle');
       setRoutingGateway(null);
       setVerificationStartTime(null);
       setManifestTxId(null);
@@ -544,20 +497,17 @@ function BrowsePanelContent({
       // Guard against null/undefined event.data
       if (!event.data) return;
       const { type, event: verificationEvent } = event.data;
-      if (type === "VERIFICATION_EVENT" && verificationEvent) {
+      if (type === 'VERIFICATION_EVENT' && verificationEvent) {
         const vEvent = verificationEvent as VerificationEvent;
 
         // Filter out events for identifiers we're no longer viewing.
         // This prevents stale verification updates from affecting the UI
         // when the user has already navigated to a different identifier.
-        if (
-          vEvent.identifier &&
-          vEvent.identifier !== currentIdentifierRef.current
-        ) {
+        if (vEvent.identifier && vEvent.identifier !== currentIdentifierRef.current) {
           return;
         }
 
-        if (vEvent.type === "routing-gateway" && vEvent.gatewayUrl) {
+        if (vEvent.type === 'routing-gateway' && vEvent.gatewayUrl) {
           const isTxId = /^[A-Za-z0-9_-]{43}$/.test(vEvent.identifier);
           const gatewayHost = new URL(vEvent.gatewayUrl).host;
           const fullUrl = isTxId
@@ -565,11 +515,11 @@ function BrowsePanelContent({
             : `https://${vEvent.identifier}.${gatewayHost}`;
           setResolvedUrl(fullUrl);
           setRoutingGateway(vEvent.gatewayUrl);
-          setVerificationPhase("fetching-manifest");
+          setVerificationPhase('fetching-manifest');
         }
 
-        if (vEvent.type === "verification-started") {
-          setVerificationState("verifying");
+        if (vEvent.type === 'verification-started') {
+          setVerificationState('verifying');
           setVerificationStats({
             total: vEvent.progress?.total || 1,
             verified: 0,
@@ -578,14 +528,14 @@ function BrowsePanelContent({
           setVerificationError(undefined);
           setShowBlockedModal(false);
           setUserBypassedVerification(false);
-          setVerificationPhase("resolving");
+          setVerificationPhase('resolving');
           setVerificationStartTime(Date.now());
           setManifestTxId(null);
           setIsSingleFileContent(false);
           setRecentVerifiedResources([]);
         }
 
-        if (vEvent.type === "verification-progress" && vEvent.progress) {
+        if (vEvent.type === 'verification-progress' && vEvent.progress) {
           const { total, current } = vEvent.progress;
           setVerificationStats((prev) => ({
             ...prev,
@@ -597,13 +547,13 @@ function BrowsePanelContent({
             const resourcePath = vEvent.resourcePath;
             setRecentVerifiedResources((prev) => {
               const newList = [...prev.filter((r) => r.path !== resourcePath)];
-              newList.push({ path: resourcePath, status: "verified" });
+              newList.push({ path: resourcePath, status: 'verified' });
               return newList.slice(-8);
             });
           }
         }
 
-        if (vEvent.type === "manifest-loaded" && vEvent.progress) {
+        if (vEvent.type === 'manifest-loaded' && vEvent.progress) {
           const { total } = vEvent.progress;
           setVerificationStats((prev) => ({
             ...prev,
@@ -611,11 +561,11 @@ function BrowsePanelContent({
           }));
           setManifestTxId(vEvent.manifestTxId || null);
           setIsSingleFileContent(vEvent.isSingleFile ?? total === 1);
-          setVerificationPhase("verifying");
+          setVerificationPhase('verifying');
         }
 
         // Lazy verification: manifest + index verified, ready to serve
-        if (vEvent.type === "manifest-verified") {
+        if (vEvent.type === 'manifest-verified') {
           if (vEvent.progress) {
             const { total, current } = vEvent.progress;
             setVerificationStats((prev) => ({
@@ -624,21 +574,21 @@ function BrowsePanelContent({
               verified: current,
             }));
           }
-          setVerificationState("verified"); // Show as verified in badge
-          setVerificationPhase("complete");
+          setVerificationState('verified'); // Show as verified in badge
+          setVerificationPhase('complete');
         }
 
         // On-demand resource verification events
-        if (vEvent.type === "resource-verifying" && vEvent.resourcePath) {
+        if (vEvent.type === 'resource-verifying' && vEvent.resourcePath) {
           const resourcePath = vEvent.resourcePath;
           setRecentVerifiedResources((prev) => {
             const newList = [...prev.filter((r) => r.path !== resourcePath)];
-            newList.push({ path: resourcePath, status: "verifying" });
+            newList.push({ path: resourcePath, status: 'verifying' });
             return newList.slice(-8);
           });
         }
 
-        if (vEvent.type === "resource-verified" && vEvent.progress) {
+        if (vEvent.type === 'resource-verified' && vEvent.progress) {
           const { current } = vEvent.progress;
           setVerificationStats((prev) => ({
             ...prev,
@@ -648,20 +598,20 @@ function BrowsePanelContent({
             const resourcePath = vEvent.resourcePath;
             setRecentVerifiedResources((prev) => {
               const newList = [...prev.filter((r) => r.path !== resourcePath)];
-              newList.push({ path: resourcePath, status: "verified" });
+              newList.push({ path: resourcePath, status: 'verified' });
               return newList.slice(-8);
             });
           }
         }
 
-        if (vEvent.type === "resource-cache-hit") {
+        if (vEvent.type === 'resource-cache-hit') {
           setVerificationStats((prev) => ({
             ...prev,
             cachedHits: (prev.cachedHits || 0) + 1,
           }));
         }
 
-        if (vEvent.type === "resource-failed" && vEvent.resourcePath) {
+        if (vEvent.type === 'resource-failed' && vEvent.resourcePath) {
           const resourcePath = vEvent.resourcePath;
           setVerificationStats((prev) => ({
             ...prev,
@@ -670,12 +620,12 @@ function BrowsePanelContent({
           }));
           setRecentVerifiedResources((prev) => {
             const newList = [...prev.filter((r) => r.path !== resourcePath)];
-            newList.push({ path: resourcePath, status: "failed" });
+            newList.push({ path: resourcePath, status: 'failed' });
             return newList.slice(-8);
           });
         }
 
-        if (vEvent.type === "verification-complete") {
+        if (vEvent.type === 'verification-complete') {
           if (vEvent.progress) {
             const { total, current } = vEvent.progress;
             setVerificationStats((prev) => ({
@@ -687,19 +637,19 @@ function BrowsePanelContent({
 
           if (vEvent.error) {
             const verifiedCount = vEvent.progress?.current ?? 0;
-            setVerificationState(verifiedCount > 0 ? "partial" : "failed");
+            setVerificationState(verifiedCount > 0 ? 'partial' : 'failed');
             setVerificationError(vEvent.error);
 
             if (browseConfig.strictVerification && !userBypassedVerification) {
               setShowBlockedModal(true);
             }
           } else {
-            setVerificationState("verified");
+            setVerificationState('verified');
           }
-          setVerificationPhase("complete");
+          setVerificationPhase('complete');
         }
 
-        if (vEvent.type === "verification-failed") {
+        if (vEvent.type === 'verification-failed') {
           if (vEvent.resourcePath) {
             const resourcePath = vEvent.resourcePath;
             setVerificationStats((prev) => ({
@@ -709,13 +659,13 @@ function BrowsePanelContent({
             }));
             setRecentVerifiedResources((prev) => {
               const newList = [...prev.filter((r) => r.path !== resourcePath)];
-              newList.push({ path: resourcePath, status: "failed" });
+              newList.push({ path: resourcePath, status: 'failed' });
               return newList.slice(-8);
             });
           } else {
             setVerificationError(vEvent.error);
-            setVerificationState("failed");
-            setVerificationPhase("complete");
+            setVerificationState('failed');
+            setVerificationPhase('complete');
 
             if (browseConfig.strictVerification && !userBypassedVerification) {
               setShowBlockedModal(true);
@@ -725,19 +675,14 @@ function BrowsePanelContent({
       }
     };
 
-    navigator.serviceWorker.addEventListener("message", handleSwMessage);
-    return () =>
-      navigator.serviceWorker.removeEventListener("message", handleSwMessage);
-  }, [
-    browseConfig.verificationEnabled,
-    browseConfig.strictVerification,
-    userBypassedVerification,
-  ]);
+    navigator.serviceWorker.addEventListener('message', handleSwMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+  }, [browseConfig.verificationEnabled, browseConfig.strictVerification, userBypassedVerification]);
 
   // Detect content type when resolvedUrl changes (for non-verification mode or after verification)
   useEffect(() => {
     if (!resolvedUrl) {
-      setContentCategory("html");
+      setContentCategory('html');
       return;
     }
 
@@ -754,7 +699,7 @@ function BrowsePanelContent({
       .catch(() => {
         if (!cancelled) {
           // Default to HTML on error (preserves existing behavior for manifests)
-          setContentCategory("html");
+          setContentCategory('html');
           setIsDetectingContentType(false);
         }
       });
@@ -772,7 +717,7 @@ function BrowsePanelContent({
     setSearchCounter((prev) => prev + 1);
 
     // Reset verification state
-    setVerificationState("idle");
+    setVerificationState('idle');
     setVerificationStats({
       total: 0,
       verified: 0,
@@ -782,13 +727,13 @@ function BrowsePanelContent({
     setVerificationError(undefined);
     setShowBlockedModal(false);
     setUserBypassedVerification(false);
-    setVerificationPhase("idle");
+    setVerificationPhase('idle');
     setRoutingGateway(null);
     setVerificationStartTime(null);
     setManifestTxId(null);
     setIsSingleFileContent(false);
     setRecentVerifiedResources([]);
-    setContentCategory("html");
+    setContentCategory('html');
     setIsDetectingContentType(false);
 
     // Note: We don't clear verification here because:
@@ -797,8 +742,8 @@ function BrowsePanelContent({
 
     // Update URL with search query
     const url = new URL(window.location.href);
-    url.searchParams.set("q", input);
-    window.history.pushState({}, "", url.toString());
+    url.searchParams.set('q', input);
+    window.history.pushState({}, '', url.toString());
   }, []);
 
   const handleRetry = useCallback(async () => {
@@ -806,7 +751,7 @@ function BrowsePanelContent({
     setRetryAttempts(newAttempts);
 
     // Reset verification state
-    setVerificationState("idle");
+    setVerificationState('idle');
     setVerificationStats({
       total: 0,
       verified: 0,
@@ -816,7 +761,7 @@ function BrowsePanelContent({
     setVerificationError(undefined);
     setShowBlockedModal(false);
     setUserBypassedVerification(false);
-    setVerificationPhase("idle");
+    setVerificationPhase('idle');
     setRoutingGateway(null);
     setVerificationStartTime(null);
     setManifestTxId(null);
@@ -833,12 +778,7 @@ function BrowsePanelContent({
 
     setGatewayRefreshCounter((prev) => prev + 1);
     setSearchCounter((prev) => prev + 1);
-  }, [
-    retryAttempts,
-    setGatewayRefreshCounter,
-    browseConfig.verificationEnabled,
-    searchInput,
-  ]);
+  }, [retryAttempts, setGatewayRefreshCounter, browseConfig.verificationEnabled, searchInput]);
 
   const handleToggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
@@ -855,10 +795,10 @@ function BrowsePanelContent({
   const handleGoBack = useCallback(() => {
     // Note: Setting searchInput to '' triggers the currentIdentifierRef effect
     // which clears verification for the old identifier
-    setSearchInput("");
+    setSearchInput('');
     setIsSearched(false);
     setShowBlockedModal(false);
-    setVerificationState("idle");
+    setVerificationState('idle');
     setVerificationStats({
       total: 0,
       verified: 0,
@@ -867,7 +807,7 @@ function BrowsePanelContent({
     });
     setVerificationError(undefined);
     setUserBypassedVerification(false);
-    setVerificationPhase("idle");
+    setVerificationPhase('idle');
     setRoutingGateway(null);
     setVerificationStartTime(null);
     setManifestTxId(null);
@@ -876,8 +816,8 @@ function BrowsePanelContent({
     setResolvedUrl(null);
 
     const url = new URL(window.location.href);
-    url.searchParams.delete("q");
-    window.history.pushState({}, "", url.toString());
+    url.searchParams.delete('q');
+    window.history.pushState({}, '', url.toString());
   }, []);
 
   const handleProceedAnyway = useCallback(() => {
@@ -892,15 +832,15 @@ function BrowsePanelContent({
   const shouldBlockContent =
     browseConfig.verificationEnabled &&
     browseConfig.strictVerification &&
-    (verificationState === "failed" || verificationState === "partial") &&
+    (verificationState === 'failed' || verificationState === 'partial') &&
     !userBypassedVerification;
 
   const verificationBadgeElement =
     browseConfig.verificationEnabled &&
     isSearched &&
     searchInput &&
-    verificationState !== "idle" &&
-    verificationState !== "verifying" ? (
+    verificationState !== 'idle' &&
+    verificationState !== 'verifying' ? (
       <VerificationBadge
         state={verificationState}
         stats={verificationStats}
@@ -930,16 +870,12 @@ function BrowsePanelContent({
                 />
               </svg>
             </div>
-            <div className="text-xl font-semibold text-foreground mb-2">
-              You&apos;re Offline
-            </div>
+            <div className="text-xl font-semibold text-foreground mb-2">You&apos;re Offline</div>
             <div className="text-foreground/60 max-w-md mb-4">
-              Unable to browse Arweave content without an internet connection.
-              Content will automatically load when you&apos;re back online.
+              Unable to browse Arweave content without an internet connection. Content will
+              automatically load when you&apos;re back online.
             </div>
-            <div className="text-sm text-foreground/40">
-              Waiting for connection...
-            </div>
+            <div className="text-sm text-foreground/40">Waiting for connection...</div>
           </div>
         </div>
       );
@@ -968,12 +904,8 @@ function BrowsePanelContent({
                     />
                   </svg>
                 </div>
-                <div className="text-foreground font-medium mb-2">
-                  Verification Unavailable
-                </div>
-                <div className="text-foreground/60 text-sm mb-4">
-                  {verificationError}
-                </div>
+                <div className="text-foreground font-medium mb-2">Verification Unavailable</div>
+                <div className="text-foreground/60 text-sm mb-4">{verificationError}</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -989,9 +921,7 @@ function BrowsePanelContent({
             ) : (
               <>
                 <div className="w-12 h-12 mx-auto mb-4 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <div className="text-foreground/60">
-                  Initializing verification...
-                </div>
+                <div className="text-foreground/60">Initializing verification...</div>
                 <div className="text-foreground/40 text-xs mt-2">
                   Preparing secure content verification
                 </div>
@@ -1005,13 +935,12 @@ function BrowsePanelContent({
     if (browseConfig.verificationEnabled && swReady) {
       return (
         <>
-          {(verificationState === "verifying" ||
-            verificationState === "idle") && (
+          {(verificationState === 'verifying' || verificationState === 'idle') && (
             <VerificationLoadingScreen
               identifier={searchInput}
               phase={
-                verificationPhase === "idle" || verificationPhase === "complete"
-                  ? "resolving"
+                verificationPhase === 'idle' || verificationPhase === 'complete'
+                  ? 'resolving'
                   : verificationPhase
               }
               manifestTxId={manifestTxId || undefined}
@@ -1034,8 +963,8 @@ function BrowsePanelContent({
               category={contentCategory}
               identifier={searchInput}
               isHidden={
-                verificationState === "verifying" ||
-                verificationState === "idle" ||
+                verificationState === 'verifying' ||
+                verificationState === 'idle' ||
                 isDetectingContentType
               }
             />
@@ -1059,12 +988,10 @@ function BrowsePanelContent({
                     />
                   </svg>
                 </div>
-                <div className="text-xl font-semibold text-foreground mb-2">
-                  Content Blocked
-                </div>
+                <div className="text-xl font-semibold text-foreground mb-2">Content Blocked</div>
                 <div className="text-foreground/60 max-w-md">
-                  Verification failed and strict mode is enabled. Use the dialog
-                  to retry, go back, or proceed at your own risk.
+                  Verification failed and strict mode is enabled. Use the dialog to retry, go back,
+                  or proceed at your own risk.
                 </div>
               </div>
             </div>
@@ -1094,8 +1021,8 @@ function BrowsePanelContent({
     <div
       className={
         isShowingResults && !isFullscreen
-          ? "-mt-6 sm:-mt-8 -mb-6 sm:-mb-8 h-[calc(100dvh-80px)] flex flex-col overflow-hidden"
-          : ""
+          ? '-mt-6 sm:-mt-8 -mb-6 sm:-mb-8 h-[calc(100dvh-80px)] flex flex-col overflow-hidden'
+          : ''
       }
     >
       {/* Normal mode: show search bar */}
@@ -1112,29 +1039,25 @@ function BrowsePanelContent({
       )}
 
       {/* SW Update notification - minimal banner */}
-      {swUpdateAvailable &&
-        browseConfig.verificationEnabled &&
-        !isFullscreen && (
-          <div className="mx-auto max-w-xl mb-3 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between gap-3">
-            <span className="text-sm text-foreground/80">
-              A new version is available
-            </span>
-            <button
-              type="button"
-              onClick={handleApplyUpdate}
-              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-            >
-              Update now
-            </button>
-          </div>
-        )}
+      {swUpdateAvailable && browseConfig.verificationEnabled && !isFullscreen && (
+        <div className="mx-auto max-w-xl mb-3 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between gap-3">
+          <span className="text-sm text-foreground/80">A new version is available</span>
+          <button
+            type="button"
+            onClick={handleApplyUpdate}
+            className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            Update now
+          </button>
+        </div>
+      )}
 
       {isShowingResults && (
         <div
           className={
             isFullscreen
-              ? "fixed inset-0 z-[100] bg-white flex flex-col"
-              : "flex-1 min-h-0 flex flex-col overflow-hidden"
+              ? 'fixed inset-0 z-[100] bg-white flex flex-col'
+              : 'flex-1 min-h-0 flex flex-col overflow-hidden'
           }
         >
           {/* Fullscreen toolbar */}
@@ -1150,12 +1073,8 @@ function BrowsePanelContent({
                   <Minimize2 className="w-4 h-4" />
                 </button>
                 <div className="px-3 py-1.5 bg-white/95 backdrop-blur-sm rounded-lg border border-border/30 shadow-lg flex items-center gap-2">
-                  <span className="text-sm font-mono text-foreground/50">
-                    ar://
-                  </span>
-                  <span className="text-sm font-mono text-foreground">
-                    {searchInput}
-                  </span>
+                  <span className="text-sm font-mono text-foreground/50">ar://</span>
+                  <span className="text-sm font-mono text-foreground">{searchInput}</span>
                   {verificationBadgeElement}
                 </div>
               </div>
@@ -1174,8 +1093,8 @@ function BrowsePanelContent({
           <div
             className={
               isFullscreen
-                ? "flex-1 overflow-hidden"
-                : "flex-1 min-h-0 overflow-hidden rounded-lg border border-border/20"
+                ? 'flex-1 overflow-hidden'
+                : 'flex-1 min-h-0 overflow-hidden rounded-lg border border-border/20'
             }
             key="content-viewer-container"
           >
@@ -1223,10 +1142,7 @@ function BrowsePanelContent({
         />
       )}
 
-      <BrowseSettingsFlyout
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
+      <BrowseSettingsFlyout isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

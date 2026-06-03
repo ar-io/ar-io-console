@@ -8,16 +8,12 @@
  * - Completion status
  */
 
-import type {
-  ArweaveManifest,
-  ManifestVerificationState,
-  VerificationEvent,
-} from "./types";
-import { logger } from "./logger";
+import type { ArweaveManifest, ManifestVerificationState, VerificationEvent } from './types';
+import { logger } from './logger';
 
 declare const self: ServiceWorkerGlobalScope;
 
-const TAG = "State";
+const TAG = 'State';
 
 // Active manifest verifications keyed by identifier (ArNS name or txId)
 const manifestStates = new Map<string, ManifestVerificationState>();
@@ -58,7 +54,7 @@ export async function broadcastEvent(event: VerificationEvent): Promise<void> {
     for (const client of clients) {
       try {
         client.postMessage({
-          type: "VERIFICATION_EVENT",
+          type: 'VERIFICATION_EVENT',
           event,
         });
       } catch (err) {
@@ -75,16 +71,9 @@ export async function broadcastEvent(event: VerificationEvent): Promise<void> {
 /**
  * Check if a verification ID is current (not stale from an abandoned verification).
  */
-function isCurrentVerification(
-  identifier: string,
-  verificationId: number,
-): boolean {
+function isCurrentVerification(identifier: string, verificationId: number): boolean {
   const state = manifestStates.get(identifier);
-  return (
-    state !== null &&
-    state !== undefined &&
-    state.verificationId === verificationId
-  );
+  return state !== null && state !== undefined && state.verificationId === verificationId;
 }
 
 /**
@@ -97,14 +86,14 @@ export function startManifestVerification(identifier: string): number {
   const state: ManifestVerificationState = {
     identifier,
     verificationId,
-    manifestTxId: "",
-    status: "resolving",
+    manifestTxId: '',
+    status: 'resolving',
     manifest: null,
     totalResources: 0,
     verifiedResources: 0,
     failedResources: [],
     pathToTxId: new Map(),
-    indexPath: "index.html",
+    indexPath: 'index.html',
     isSingleFile: false,
     startedAt: Date.now(),
   };
@@ -112,7 +101,7 @@ export function startManifestVerification(identifier: string): number {
   manifestStates.set(identifier, state);
 
   broadcastEvent({
-    type: "verification-started",
+    type: 'verification-started',
     identifier,
   });
 
@@ -136,14 +125,11 @@ export function setResolvedTxId(
   }
   const state = manifestStates.get(identifier)!;
   state.manifestTxId = manifestTxId;
-  state.status = "fetching-manifest";
+  state.status = 'fetching-manifest';
   if (gateway) {
     state.routingGateway = gateway;
   }
-  logger.debug(
-    TAG,
-    `Resolved "${identifier}" → ${manifestTxId.slice(0, 8)}...`,
-  );
+  logger.debug(TAG, `Resolved "${identifier}" → ${manifestTxId.slice(0, 8)}...`);
 }
 
 /**
@@ -164,15 +150,15 @@ export function setManifestLoaded(
   const state = manifestStates.get(identifier)!;
 
   state.manifest = manifest;
-  state.status = "verifying";
-  state.indexPath = manifest.index?.path || "index.html";
+  state.status = 'verifying';
+  state.indexPath = manifest.index?.path || 'index.html';
   state.isSingleFile = isSingleFile;
 
   // Build path → txId mapping
   // Handle both formats: { id: string } and raw string txId
   state.pathToTxId.clear();
   for (const [path, entry] of Object.entries(manifest.paths)) {
-    const txId = typeof entry === "string" ? entry : entry.id;
+    const txId = typeof entry === 'string' ? entry : entry.id;
     if (txId) {
       state.pathToTxId.set(path, txId);
     }
@@ -180,7 +166,7 @@ export function setManifestLoaded(
 
   // Include fallback if present
   if (manifest.fallback?.id) {
-    state.pathToTxId.set("__fallback__", manifest.fallback.id);
+    state.pathToTxId.set('__fallback__', manifest.fallback.id);
   }
 
   state.totalResources = state.pathToTxId.size;
@@ -189,7 +175,7 @@ export function setManifestLoaded(
   logger.debug(TAG, `Paths:`, Array.from(state.pathToTxId.keys()));
 
   broadcastEvent({
-    type: "manifest-loaded",
+    type: 'manifest-loaded',
     identifier,
     manifestTxId: state.manifestTxId,
     progress: { current: 0, total: state.totalResources },
@@ -208,23 +194,17 @@ export function recordResourceVerified(
   path: string,
 ): void {
   if (!isCurrentVerification(identifier, verificationId)) {
-    logger.debug(
-      TAG,
-      `Ignoring stale recordResourceVerified for ${identifier}`,
-    );
+    logger.debug(TAG, `Ignoring stale recordResourceVerified for ${identifier}`);
     return;
   }
   const state = manifestStates.get(identifier)!;
 
   state.verifiedResources++;
 
-  logger.debug(
-    TAG,
-    `✓ ${path} (${state.verifiedResources}/${state.totalResources})`,
-  );
+  logger.debug(TAG, `✓ ${path} (${state.verifiedResources}/${state.totalResources})`);
 
   broadcastEvent({
-    type: "verification-progress",
+    type: 'verification-progress',
     identifier,
     manifestTxId: state.manifestTxId,
     resourcePath: path,
@@ -232,10 +212,7 @@ export function recordResourceVerified(
   });
 
   // Check if all done
-  if (
-    state.verifiedResources + state.failedResources.length >=
-    state.totalResources
-  ) {
+  if (state.verifiedResources + state.failedResources.length >= state.totalResources) {
     completeVerificationInternal(identifier, verificationId);
   }
 }
@@ -262,7 +239,7 @@ export function recordResourceFailed(
   logger.warn(TAG, `✗ ${path}: ${error}`);
 
   broadcastEvent({
-    type: "verification-failed",
+    type: 'verification-failed',
     identifier,
     manifestTxId: state.manifestTxId,
     resourcePath: path,
@@ -271,10 +248,7 @@ export function recordResourceFailed(
   });
 
   // Check if all done (even with failures)
-  if (
-    state.verifiedResources + state.failedResources.length >=
-    state.totalResources
-  ) {
+  if (state.verifiedResources + state.failedResources.length >= state.totalResources) {
     completeVerificationInternal(identifier, verificationId);
   }
 }
@@ -283,10 +257,7 @@ export function recordResourceFailed(
  * Internal function to mark verification as complete.
  * Called automatically when all resources are processed.
  */
-function completeVerificationInternal(
-  identifier: string,
-  verificationId: number,
-): void {
+function completeVerificationInternal(identifier: string, verificationId: number): void {
   if (!isCurrentVerification(identifier, verificationId)) {
     logger.debug(TAG, `Ignoring stale completeVerification for ${identifier}`);
     return;
@@ -298,27 +269,27 @@ function completeVerificationInternal(
   // - 'partial': some verified, some failed (can still serve verified resources)
   // - 'failed': all resources failed (nothing to serve)
   if (state.failedResources.length === 0) {
-    state.status = "complete";
+    state.status = 'complete';
   } else if (state.verifiedResources > 0) {
-    state.status = "partial";
+    state.status = 'partial';
   } else {
-    state.status = "failed";
+    state.status = 'failed';
   }
 
   state.completedAt = Date.now();
 
   const elapsed = state.completedAt - state.startedAt;
   const statusMsg =
-    state.status === "complete"
+    state.status === 'complete'
       ? `All ${state.verifiedResources} verified`
-      : state.status === "partial"
+      : state.status === 'partial'
         ? `${state.verifiedResources} verified, ${state.failedResources.length} failed`
         : `All ${state.failedResources.length} failed`;
 
   logger.info(TAG, `Complete: ${statusMsg} (${elapsed}ms)`);
 
   broadcastEvent({
-    type: "verification-complete",
+    type: 'verification-complete',
     identifier,
     manifestTxId: state.manifestTxId,
     progress: { current: state.verifiedResources, total: state.totalResources },
@@ -334,10 +305,7 @@ function completeVerificationInternal(
  * Status is 'complete' if all succeeded, 'partial' if some failed but some succeeded.
  * @param verificationId - Must match the ID returned by startManifestVerification
  */
-export function completeVerification(
-  identifier: string,
-  verificationId: number,
-): void {
+export function completeVerification(identifier: string, verificationId: number): void {
   completeVerificationInternal(identifier, verificationId);
 }
 
@@ -345,24 +313,20 @@ export function completeVerification(
  * Mark verification as failed with error.
  * @param verificationId - Must match the ID returned by startManifestVerification
  */
-export function failVerification(
-  identifier: string,
-  verificationId: number,
-  error: string,
-): void {
+export function failVerification(identifier: string, verificationId: number, error: string): void {
   if (!isCurrentVerification(identifier, verificationId)) {
     logger.debug(TAG, `Ignoring stale failVerification for ${identifier}`);
     return;
   }
   const state = manifestStates.get(identifier)!;
-  state.status = "failed";
+  state.status = 'failed';
   state.error = error;
   state.completedAt = Date.now();
 
   logger.error(TAG, `Failed: ${identifier} - ${error}`);
 
   broadcastEvent({
-    type: "verification-failed",
+    type: 'verification-failed',
     identifier,
     error,
   });
@@ -371,9 +335,7 @@ export function failVerification(
 /**
  * Get manifest verification state.
  */
-export function getManifestState(
-  identifier: string,
-): ManifestVerificationState | null {
+export function getManifestState(identifier: string): ManifestVerificationState | null {
   return manifestStates.get(identifier) || null;
 }
 
@@ -383,7 +345,7 @@ export function getManifestState(
  */
 export function isVerificationComplete(identifier: string): boolean {
   const state = manifestStates.get(identifier);
-  return state?.status === "complete" || state?.status === "partial";
+  return state?.status === 'complete' || state?.status === 'partial';
 }
 
 /**
@@ -393,9 +355,9 @@ export function isVerificationComplete(identifier: string): boolean {
 export function isVerificationInProgress(identifier: string): boolean {
   const state = manifestStates.get(identifier);
   return (
-    state?.status === "resolving" ||
-    state?.status === "fetching-manifest" ||
-    state?.status === "verifying"
+    state?.status === 'resolving' ||
+    state?.status === 'fetching-manifest' ||
+    state?.status === 'verifying'
   ); // Include 'verifying' - index is being verified
 }
 
@@ -406,9 +368,9 @@ export function isVerificationInProgress(identifier: string): boolean {
 export function isReadyToServe(identifier: string): boolean {
   const state = manifestStates.get(identifier);
   return (
-    state?.status === "manifest-verified" ||
-    state?.status === "complete" ||
-    state?.status === "partial"
+    state?.status === 'manifest-verified' ||
+    state?.status === 'complete' ||
+    state?.status === 'partial'
   );
 }
 
@@ -416,17 +378,14 @@ export function isReadyToServe(identifier: string): boolean {
  * Mark manifest (and index) as verified, ready for on-demand resource serving.
  * This is the key state transition for lazy verification.
  */
-export function setManifestVerified(
-  identifier: string,
-  verificationId: number,
-): void {
+export function setManifestVerified(identifier: string, verificationId: number): void {
   if (!isCurrentVerification(identifier, verificationId)) {
     logger.debug(TAG, `Ignoring stale setManifestVerified for ${identifier}`);
     return;
   }
 
   const state = manifestStates.get(identifier)!;
-  state.status = "manifest-verified";
+  state.status = 'manifest-verified';
 
   const elapsed = Date.now() - state.startedAt;
   logger.info(
@@ -435,7 +394,7 @@ export function setManifestVerified(
   );
 
   broadcastEvent({
-    type: "manifest-verified",
+    type: 'manifest-verified',
     identifier,
     manifestTxId: state.manifestTxId,
     progress: { current: state.verifiedResources, total: state.totalResources },
@@ -458,7 +417,7 @@ export function recordResourceVerifying(
   logger.debug(TAG, `Verifying on-demand: ${path}`);
 
   broadcastEvent({
-    type: "resource-verifying",
+    type: 'resource-verifying',
     identifier,
     resourcePath: path,
   });
@@ -481,13 +440,10 @@ export function recordResourceVerifiedOnDemand(
   const state = manifestStates.get(identifier)!;
   state.verifiedResources++;
 
-  logger.debug(
-    TAG,
-    `✓ On-demand: ${path} (${state.verifiedResources}/${state.totalResources})`,
-  );
+  logger.debug(TAG, `✓ On-demand: ${path} (${state.verifiedResources}/${state.totalResources})`);
 
   broadcastEvent({
-    type: "resource-verified",
+    type: 'resource-verified',
     identifier,
     manifestTxId: state.manifestTxId,
     resourcePath: path,
@@ -514,7 +470,7 @@ export function recordResourceFailedOnDemand(
   logger.warn(TAG, `✗ On-demand: ${path}: ${error}`);
 
   broadcastEvent({
-    type: "resource-failed",
+    type: 'resource-failed',
     identifier,
     resourcePath: path,
     error,
@@ -525,19 +481,16 @@ export function recordResourceFailedOnDemand(
 /**
  * Get the txId for a path within a verified manifest.
  */
-export function getTxIdForPath(
-  identifier: string,
-  path: string,
-): string | null {
+export function getTxIdForPath(identifier: string, path: string): string | null {
   const state = manifestStates.get(identifier);
   if (!state?.pathToTxId) return null;
 
   // Normalize path
-  let normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  if (normalizedPath === "" || normalizedPath === "/") {
+  let normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  if (normalizedPath === '' || normalizedPath === '/') {
     // Root path - use index
     normalizedPath = state.indexPath;
-  } else if (normalizedPath.endsWith("/")) {
+  } else if (normalizedPath.endsWith('/')) {
     // Directory path - append index (e.g., "foo/" -> "foo/index.html")
     normalizedPath = normalizedPath + state.indexPath;
   }
@@ -548,8 +501,8 @@ export function getTxIdForPath(
   }
 
   // Fallback
-  if (state.pathToTxId.has("__fallback__")) {
-    return state.pathToTxId.get("__fallback__")!;
+  if (state.pathToTxId.has('__fallback__')) {
+    return state.pathToTxId.get('__fallback__')!;
   }
 
   return null;
@@ -577,10 +530,10 @@ export function getActiveTxIdForPath(path: string): string | null {
   }
 
   // Normalize path
-  let normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  if (normalizedPath === "" || normalizedPath === "/") {
+  let normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  if (normalizedPath === '' || normalizedPath === '/') {
     normalizedPath = state.indexPath;
-  } else if (normalizedPath.endsWith("/")) {
+  } else if (normalizedPath.endsWith('/')) {
     normalizedPath = normalizedPath + state.indexPath;
   }
 
@@ -617,10 +570,10 @@ export function cleanupOldStates(maxAgeMs: number = 30 * 60 * 1000): number {
   for (const [identifier, state] of manifestStates) {
     // Only clean up completed, partial, failed, or manifest-verified states
     if (
-      state.status === "complete" ||
-      state.status === "partial" ||
-      state.status === "failed" ||
-      state.status === "manifest-verified"
+      state.status === 'complete' ||
+      state.status === 'partial' ||
+      state.status === 'failed' ||
+      state.status === 'manifest-verified'
     ) {
       const age = now - (state.completedAt || state.startedAt);
       if (age > maxAgeMs) {

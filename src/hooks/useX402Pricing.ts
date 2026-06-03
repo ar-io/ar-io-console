@@ -69,7 +69,7 @@ export function useX402Pricing(fileSizeBytes: number): X402PricingResult {
       const priceInSmallestUnit = Math.ceil(priceInUSDC * 1_000_000).toString();
 
       console.log(
-        `[X402 Pricing] Price: ${priceInUSDC} USDC (${priceInSmallestUnit} mUSDC) for ${fileSizeBytes} bytes`
+        `[X402 Pricing] Price: ${priceInUSDC} USDC (${priceInSmallestUnit} mUSDC) for ${fileSizeBytes} bytes`,
       );
 
       setUsdcAmount(priceInUSDC);

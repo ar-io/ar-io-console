@@ -199,7 +199,6 @@ To claim testnet tokens from the testnet token faucet, you can use one of the fo
 1. Visit [faucet.ar.io](https://faucet.ar.io) - the easiest way to quickly get tokens for testing for a single address.
 
 2. Programmatically via the SDK - useful if you need to claim tokens for multiple addresses or dynamically within your application.
-
    - `ARIO.testnet().faucet.captchaUrl()` - returns the captcha URL for the testnet faucet. Open this URL in a new browser window and listen for the `ario-jwt-success` event to be emitted.
    - `ARIO.testnet().faucet.claimWithAuthToken({ authToken, recipient, quantity })` - claims tokens for the specified recipient address using the provided auth token.
    - `ARIO.testnet().faucet.verifyAuthToken({ authToken })` - verifies if the provided auth token is still valid.
@@ -214,11 +213,7 @@ const testnet = ARIO.testnet();
 const captchaUrl = await ario.faucet.captchaUrl();
 
 // open the captcha URL in the browser, and listen for the auth token event
-const captchaWindow = window.open(
-  captchaUrl.captchaUrl,
-  '_blank',
-  'width=600,height=600',
-);
+const captchaWindow = window.open(captchaUrl.captchaUrl, '_blank', 'width=600,height=600');
 /**
  * The captcha URL includes a window.parent.postMessage event that is used to send the auth token to the parent window.
  * You can store the auth token in localStorage and use it to claim tokens for the duration of the auth token's expiration (default 1 hour).
@@ -237,9 +232,7 @@ window.parent.addEventListener('message', async (event) => {
         quantity: new ARIOToken(100).toMARIO().valueOf(), // 100 ARIO
       })
       .then((res) => {
-        alert(
-          'Successfully claimed 100 ARIO tokens! Transaction ID: ' + res.id,
-        );
+        alert('Successfully claimed 100 ARIO tokens! Transaction ID: ' + res.id);
       })
       .catch((err) => {
         alert(`Failed to claim tokens: ${err}`);
@@ -277,11 +270,12 @@ Factory function to that creates a read-only or writeable client. By providing a
 const ario = ARIO.mainnet();
 
 // read-write client for browser environments
-const ario = ARIO.mainnet({ signer: new ArConnectSigner(window.arweaveWallet, Arweave.init({}))});
+const ario = ARIO.mainnet({
+  signer: new ArConnectSigner(window.arweaveWallet, Arweave.init({})),
+});
 
 // read-write client for node environments
 const ario = ARIO.mainnet({ signer: new ArweaveSigner(JWK) });
-
 ```
 
 #### `getInfo()`
@@ -913,11 +907,9 @@ const { id: txId } = await ario.instantWithdrawal(
   },
 );
 // removes an operator vault from a gateway
-const { id: txId } = await ario.instantWithdrawal(
-  {
-    vaultId: 'fDrr0_J4Iurt7caNST02cMotaz2FIbWQ4Kcj616RHl3',
-  },
-);
+const { id: txId } = await ario.instantWithdrawal({
+  vaultId: 'fDrr0_J4Iurt7caNST02cMotaz2FIbWQ4Kcj616RHl3',
+});
 ```
 
 #### `cancelWithdrawal({ gatewayAddress, vaultId })`
@@ -940,12 +932,10 @@ const { id: txId } = await ario.cancelWithdrawal(
   { tags: [{ name: 'App-Name', value: 'My-Awesome-App' }] },
 );
 // cancels an operator vault from a gateway
-const { id: txId } = await ario.cancelWithdrawal(
-  {
-    // operator vault id to cancel
-    vaultId: 'fDrr0_J4Iurt7caNST02cMotaz2FIbWQ4Kcj616RHl3',
-  },
-);
+const { id: txId } = await ario.cancelWithdrawal({
+  // operator vault id to cancel
+  vaultId: 'fDrr0_J4Iurt7caNST02cMotaz2FIbWQ4Kcj616RHl3',
+});
 ```
 
 #### `getAllowedDelegates({ address, cursor, limit, sortBy, sortOrder })`
@@ -1560,9 +1550,7 @@ const epoch = await ario.getCurrentEpoch();
   "distributionTimestamp": 1711122739,
   "observations": {
     "failureSummaries": {
-      "-Tk2DDk8k4zkwtppp_XFKKI5oUgh6IEHygAoN7mD-w8": [
-        "Ie2wEEUDKoU26c7IuckHNn3vMFdNQnMvfPBrFzAb3NA"
-      ]
+      "-Tk2DDk8k4zkwtppp_XFKKI5oUgh6IEHygAoN7mD-w8": ["Ie2wEEUDKoU26c7IuckHNn3vMFdNQnMvfPBrFzAb3NA"]
     },
     "reports": {
       "IPdwa3Mb_9pDD8c2IaJx6aad51Ss-_TfStVwBuhtXMs": "B6UUjKWjjEWDBvDSMXWNmymfwvgR9EN27z5FTkEVlX4"
@@ -1616,9 +1604,7 @@ const epoch = await ario.getEpoch({ epochIndex: 0 });
   "distributionTimestamp": 1752256702026,
   "observations": {
     "failureSummaries": {
-      "-Tk2DDk8k4zkwtppp_XFKKI5oUgh6IEHygAoN7mD-w8": [
-        "Ie2wEEUDKoU26c7IuckHNn3vMFdNQnMvfPBrFzAb3NA"
-      ]
+      "-Tk2DDk8k4zkwtppp_XFKKI5oUgh6IEHygAoN7mD-w8": ["Ie2wEEUDKoU26c7IuckHNn3vMFdNQnMvfPBrFzAb3NA"]
     },
     "reports": {
       "IPdwa3Mb_9pDD8c2IaJx6aad51Ss-_TfStVwBuhtXMs": "B6UUjKWjjEWDBvDSMXWNmymfwvgR9EN27z5FTkEVlX4"

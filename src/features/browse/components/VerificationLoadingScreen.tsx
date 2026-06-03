@@ -1,11 +1,7 @@
-import { useEffect, useState } from "react";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { useEffect, useState } from 'react';
+import { LoadingSpinner } from './LoadingSpinner';
 
-export type VerificationPhase =
-  | "resolving"
-  | "fetching-manifest"
-  | "verifying"
-  | "complete";
+export type VerificationPhase = 'resolving' | 'fetching-manifest' | 'verifying' | 'complete';
 
 export interface VerificationLoadingScreenProps {
   identifier: string;
@@ -15,7 +11,7 @@ export interface VerificationLoadingScreenProps {
   progress: { current: number; total: number; failed?: number };
   recentResources: Array<{
     path: string;
-    status: "verified" | "failed" | "verifying";
+    status: 'verified' | 'failed' | 'verifying';
   }>;
   startTime: number | null;
   isSingleFile: boolean;
@@ -68,25 +64,22 @@ export function VerificationLoadingScreen({
     }
   };
 
-  const getPhaseStatus = (
-    targetPhase: VerificationPhase,
-  ): "complete" | "active" | "pending" => {
+  const getPhaseStatus = (targetPhase: VerificationPhase): 'complete' | 'active' | 'pending' => {
     const phaseOrder: VerificationPhase[] = [
-      "resolving",
-      "fetching-manifest",
-      "verifying",
-      "complete",
+      'resolving',
+      'fetching-manifest',
+      'verifying',
+      'complete',
     ];
     const currentIndex = phaseOrder.indexOf(phase);
     const targetIndex = phaseOrder.indexOf(targetPhase);
 
-    if (targetIndex < currentIndex) return "complete";
-    if (targetIndex === currentIndex) return "active";
-    return "pending";
+    if (targetIndex < currentIndex) return 'complete';
+    if (targetIndex === currentIndex) return 'active';
+    return 'pending';
   };
 
-  const progressPercent =
-    progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
+  const progressPercent = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
 
   return (
     <div className="w-full h-full flex items-center justify-center">
@@ -110,7 +103,7 @@ export function VerificationLoadingScreen({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-foreground">
-              {isSingleFile ? "Verifying Content" : "Verifying Application"}
+              {isSingleFile ? 'Verifying Content' : 'Verifying Application'}
             </h2>
             <p className="text-foreground/60 font-mono text-sm">{identifier}</p>
           </div>
@@ -119,31 +112,25 @@ export function VerificationLoadingScreen({
         {/* Phase Indicators */}
         <div className="bg-card rounded-xl p-4 mb-4 border border-border/20">
           <PhaseRow
-            status={getPhaseStatus("resolving")}
+            status={getPhaseStatus('resolving')}
             label="Resolve identifier"
             detail={manifestTxId ? formatTxId(manifestTxId) : undefined}
           />
           <PhaseRow
-            status={getPhaseStatus("fetching-manifest")}
+            status={getPhaseStatus('fetching-manifest')}
             label="Fetch content"
-            detail={
-              progress.total > 1 ? `${progress.total} resources` : undefined
-            }
+            detail={progress.total > 1 ? `${progress.total} resources` : undefined}
           />
           <PhaseRow
-            status={getPhaseStatus("verifying")}
-            label={isSingleFile ? "Verify content" : "Verify resources"}
+            status={getPhaseStatus('verifying')}
+            label={isSingleFile ? 'Verify content' : 'Verify resources'}
             detail={
-              phase === "verifying" || phase === "complete"
+              phase === 'verifying' || phase === 'complete'
                 ? `${progress.current}/${progress.total}`
                 : undefined
             }
             progress={
-              phase === "verifying"
-                ? progressPercent
-                : phase === "complete"
-                  ? 100
-                  : undefined
+              phase === 'verifying' ? progressPercent : phase === 'complete' ? 100 : undefined
             }
           />
         </div>
@@ -170,12 +157,7 @@ export function VerificationLoadingScreen({
         <div className="flex items-center justify-center gap-4 text-xs text-foreground/50">
           {gateway && (
             <span className="flex items-center gap-1">
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -188,12 +170,7 @@ export function VerificationLoadingScreen({
           )}
           {startTime && (
             <span className="flex items-center gap-1">
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -211,7 +188,7 @@ export function VerificationLoadingScreen({
 }
 
 interface PhaseRowProps {
-  status: "complete" | "active" | "pending";
+  status: 'complete' | 'active' | 'pending';
   label: string;
   detail?: string;
   progress?: number;
@@ -221,42 +198,33 @@ function PhaseRow({ status, label, detail, progress }: PhaseRowProps) {
   return (
     <div className="flex items-center gap-3 py-2">
       <div className="flex-shrink-0 w-5 h-5">
-        {status === "complete" && (
+        {status === 'complete' && (
           <svg
             className="w-5 h-5 text-emerald-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         )}
-        {status === "active" && <LoadingSpinner size="sm" />}
-        {status === "pending" && (
-          <div className="w-5 h-5 rounded-full border-2 border-border/30" />
-        )}
+        {status === 'active' && <LoadingSpinner size="sm" />}
+        {status === 'pending' && <div className="w-5 h-5 rounded-full border-2 border-border/30" />}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`text-sm ${status === "pending" ? "text-foreground/50" : "text-foreground"}`}
+            className={`text-sm ${status === 'pending' ? 'text-foreground/50' : 'text-foreground'}`}
           >
             {label}
           </span>
           {detail && (
-            <span className="text-xs font-mono text-foreground/60 truncate">
-              {detail}
-            </span>
+            <span className="text-xs font-mono text-foreground/60 truncate">{detail}</span>
           )}
         </div>
 
-        {progress !== undefined && status === "active" && (
+        {progress !== undefined && status === 'active' && (
           <div className="mt-1.5 w-full bg-card rounded-full h-1.5 overflow-hidden border border-border/20">
             <div
               className="bg-primary h-1.5 rounded-full transition-all duration-300 ease-out"
@@ -271,28 +239,23 @@ function PhaseRow({ status, label, detail, progress }: PhaseRowProps) {
 
 interface ResourceRowProps {
   path: string;
-  status: "verified" | "failed" | "verifying";
+  status: 'verified' | 'failed' | 'verifying';
 }
 
 function ResourceRow({ path, status }: ResourceRowProps) {
   return (
     <div className="flex items-center gap-2 text-xs">
-      {status === "verified" && (
+      {status === 'verified' && (
         <svg
           className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 13l4 4L19 7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       )}
-      {status === "failed" && (
+      {status === 'failed' && (
         <svg
           className="w-3.5 h-3.5 text-red-600 flex-shrink-0"
           fill="none"
@@ -307,9 +270,9 @@ function ResourceRow({ path, status }: ResourceRowProps) {
           />
         </svg>
       )}
-      {status === "verifying" && <LoadingSpinner size="sm" />}
+      {status === 'verifying' && <LoadingSpinner size="sm" />}
       <span
-        className={`font-mono truncate ${status === "failed" ? "text-red-600" : "text-foreground/60"}`}
+        className={`font-mono truncate ${status === 'failed' ? 'text-red-600' : 'text-foreground/60'}`}
       >
         {path}
       </span>
