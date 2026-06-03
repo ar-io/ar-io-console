@@ -723,6 +723,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'turbo-gateway-store',
+      version: 1,
       partialize: (state) => ({
         address: state.address,
         walletType: state.walletType,
