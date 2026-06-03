@@ -699,7 +699,7 @@ All captures include standardized tags:
 **Wallet Requirements**
 - Only Arweave wallets can update ArNS records
 - ArconnectSigner required for ANT operations
-- Ethereum and Solana wallets cannot manage ArNS
+- Ethereum and Arweave wallets cannot manage ArNS
 
 ---
 
