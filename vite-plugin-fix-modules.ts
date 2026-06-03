@@ -7,7 +7,7 @@ export function fixModulesPlugin() {
         resolve: {
           alias: {
             // Force browser-compatible versions
-            pino: 'pino/browser.js',
+            'pino': 'pino/browser.js',
             '@walletconnect/environment': '@walletconnect/environment/dist/index.es.js',
           },
         },

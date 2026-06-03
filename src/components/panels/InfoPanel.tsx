@@ -24,8 +24,8 @@ export default function InfoPanel() {
       .finally(() => setLoading(false));
   }, [address, walletType]);
 
-  const estimatedStorage = wincForOneGiB
-    ? (balance * 1_000_000_000_000) / Number(wincForOneGiB)
+  const estimatedStorage = wincForOneGiB 
+    ? (balance * 1_000_000_000_000) / Number(wincForOneGiB) 
     : 0;
 
   return (
@@ -71,9 +71,7 @@ export default function InfoPanel() {
         <div className="bg-card rounded-2xl p-4">
           <div className="text-sm text-foreground/80 mb-1">Free Tier</div>
           <div className="font-semibold">
-            {freeUploadLimitBytes > 0
-              ? `Files under ${formatFreeLimit(freeUploadLimitBytes)}`
-              : 'No free tier'}
+            {freeUploadLimitBytes > 0 ? `Files under ${formatFreeLimit(freeUploadLimitBytes)}` : 'No free tier'}
           </div>
         </div>
       </div>

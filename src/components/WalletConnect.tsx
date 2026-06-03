@@ -5,7 +5,7 @@ import { useStore } from '@/store/useStore';
 export function WalletConnect() {
   const { address, setAddress, clearAddress } = useStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
+  
   const connectWallet = async () => {
     try {
       // Check for Wander
@@ -34,7 +34,10 @@ export function WalletConnect() {
 
   if (!address) {
     return (
-      <button onClick={connectWallet} className="btn-primary flex items-center gap-2">
+      <button
+        onClick={connectWallet}
+        className="btn-primary flex items-center gap-2"
+      >
         <Wallet className="w-4 h-4" />
         Connect Wallet
       </button>
@@ -51,7 +54,7 @@ export function WalletConnect() {
         {formatAddress(address)}
         <ChevronDown className="w-4 h-4" />
       </button>
-
+      
       {isDropdownOpen && (
         <div className="absolute right-0 mt-2 w-48 card p-2">
           <button

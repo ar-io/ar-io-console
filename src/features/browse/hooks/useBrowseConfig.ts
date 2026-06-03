@@ -1,5 +1,5 @@
-import { useStore } from '@/store/useStore';
-import type { BrowseConfig } from '@/store/useStore';
+import { useStore } from "@/store/useStore";
+import type { BrowseConfig } from "@/store/useStore";
 
 /**
  * Convenience hook for accessing and updating browse configuration.

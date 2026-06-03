@@ -41,7 +41,9 @@ export function ThemeToggle({ variant = 'segmented', className = '' }: ThemeTogg
     <div className={`inline-flex bg-card rounded-2xl p-1 border border-border/20 ${className}`}>
       <button
         className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
-          theme === 'light' ? 'bg-primary text-white' : 'text-foreground/80 hover:text-foreground'
+          theme === 'light'
+            ? 'bg-primary text-white'
+            : 'text-foreground/80 hover:text-foreground'
         }`}
         onClick={() => handleThemeChange('light')}
         aria-pressed={theme === 'light'}
@@ -52,7 +54,9 @@ export function ThemeToggle({ variant = 'segmented', className = '' }: ThemeTogg
       </button>
       <button
         className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
-          theme === 'system' ? 'bg-primary text-white' : 'text-foreground/80 hover:text-foreground'
+          theme === 'system'
+            ? 'bg-primary text-white'
+            : 'text-foreground/80 hover:text-foreground'
         }`}
         onClick={() => handleThemeChange('system')}
         aria-pressed={theme === 'system'}
@@ -63,7 +67,9 @@ export function ThemeToggle({ variant = 'segmented', className = '' }: ThemeTogg
       </button>
       <button
         className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
-          theme === 'dark' ? 'bg-primary text-white' : 'text-foreground/80 hover:text-foreground'
+          theme === 'dark'
+            ? 'bg-primary text-white'
+            : 'text-foreground/80 hover:text-foreground'
         }`}
         onClick={() => handleThemeChange('dark')}
         aria-pressed={theme === 'dark'}

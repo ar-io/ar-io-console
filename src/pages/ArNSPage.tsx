@@ -3,13 +3,15 @@ import { Globe, Search, Shield } from 'lucide-react';
 
 export function ArNSPage() {
   const [searchQuery, setSearchQuery] = useState('');
-
+  
   return (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-8">
         <Globe className="w-12 h-12 text-primary mx-auto mb-4" />
         <h1 className="text-3xl font-bold mb-2">ArNS Names</h1>
-        <p className="text-muted text-lg">Register permanent names for your Arweave applications</p>
+        <p className="text-muted text-lg">
+          Register permanent names for your Arweave applications
+        </p>
       </div>
 
       {/* Search */}
@@ -25,7 +27,9 @@ export function ArNSPage() {
               placeholder="Search for a name..."
             />
           </div>
-          <button className="btn-primary">Check Availability</button>
+          <button className="btn-primary">
+            Check Availability
+          </button>
         </div>
       </div>
 
@@ -53,19 +57,25 @@ export function ArNSPage() {
         <div className="card text-center">
           <Shield className="w-8 h-8 text-primary mx-auto mb-3" />
           <h4 className="font-semibold mb-1">Permanent Ownership</h4>
-          <p className="text-sm text-muted">Your name is permanently stored on Arweave</p>
+          <p className="text-sm text-muted">
+            Your name is permanently stored on Arweave
+          </p>
         </div>
-
+        
         <div className="card text-center">
           <Globe className="w-8 h-8 text-primary mx-auto mb-3" />
           <h4 className="font-semibold mb-1">Global Resolution</h4>
-          <p className="text-sm text-muted">Accessible through any AR.IO gateway</p>
+          <p className="text-sm text-muted">
+            Accessible through any AR.IO gateway
+          </p>
         </div>
-
+        
         <div className="card text-center">
           <Zap className="w-8 h-8 text-primary mx-auto mb-3" />
           <h4 className="font-semibold mb-1">Instant Updates</h4>
-          <p className="text-sm text-muted">Changes propagate immediately across the network</p>
+          <p className="text-sm text-muted">
+            Changes propagate immediately across the network
+          </p>
         </div>
       </div>
     </div>

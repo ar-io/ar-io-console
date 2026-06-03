@@ -36,21 +36,17 @@ Cannot query by tag name alone - need name + value. Query all manifests by owner
 ```graphql
 query GetUserDeployments($owner: String!) {
   transactions(
-    owners: [$owner]
-    tags: [{ name: "Content-Type", values: ["application/x.arweave-manifest+json"] }]
+    owners: [$owner],
+    tags: [
+      { name: "Content-Type", values: ["application/x.arweave-manifest+json"] }
+    ]
     first: 100
   ) {
     edges {
       node {
         id
-        block {
-          timestamp
-          height
-        }
-        tags {
-          name
-          value
-        }
+        block { timestamp height }
+        tags { name value }
       }
     }
     pageInfo {
@@ -61,7 +57,6 @@ query GetUserDeployments($owner: String!) {
 ```
 
 Client-side parsing extracts:
-
 - `App-Name` tag → app name
 - `App-Version` tag → version
 - `ArNS-Name` tag → associated ArNS name
@@ -69,15 +64,15 @@ Client-side parsing extracts:
 
 ## Data Comparison: Local vs Chain
 
-| Field             | Local (recent) | Chain (historical)   |
-| ----------------- | -------------- | -------------------- |
-| Manifest ID       | ✓              | ✓                    |
-| File list + sizes | ✓ Full detail  | ✗ (need extra fetch) |
-| Receipts          | ✓              | ✗                    |
-| App Name/Version  | ✓              | ✓ (from tags)        |
-| ArNS Name         | ✓              | ✓ (from tag)         |
-| Timestamp         | ✓ Exact        | ✓ Block time         |
-| Upload status     | ✓              | ✗                    |
+| Field | Local (recent) | Chain (historical) |
+|-------|---------------|-------------------|
+| Manifest ID | ✓ | ✓ |
+| File list + sizes | ✓ Full detail | ✗ (need extra fetch) |
+| Receipts | ✓ | ✗ |
+| App Name/Version | ✓ | ✓ (from tags) |
+| ArNS Name | ✓ | ✓ (from tag) |
+| Timestamp | ✓ Exact | ✓ Block time |
+| Upload status | ✓ | ✗ |
 
 Historical deployments (chain-only) show simpler cards with "Loaded from Arweave" badge.
 
@@ -86,16 +81,13 @@ Historical deployments (chain-only) show simpler cards with "Loaded from Arweave
 ### Phase 1: Add the ArNS-Name tag
 
 **Files to modify:**
-
 - `src/hooks/useFolderUpload.ts`
 
 **Changes:**
-
 - When building manifest tags, check if ArNS association exists
 - If yes, add `ArNS-Name` tag with value `{undername}_{rootname}` or `{rootname}`
 
 **Location in code:**
-
 ```typescript
 // In deployFolder function, where manifest tags are built
 // Around line 870-920 where manifest is created
@@ -133,7 +125,9 @@ interface UseArweaveDeploymentsResult {
   refetch: () => void;
 }
 
-export function useArweaveDeployments(ownerAddress: string | null): UseArweaveDeploymentsResult {
+export function useArweaveDeployments(
+  ownerAddress: string | null
+): UseArweaveDeploymentsResult {
   // Query Arweave GraphQL
   // Parse tags from results
   // Return structured data
@@ -148,11 +142,9 @@ export function useArweaveDeployments(ownerAddress: string | null): UseArweaveDe
 ### Phase 3: Merge & display on /deployments
 
 **Files to modify:**
-
 - `src/pages/RecentDeploymentsPage.tsx`
 
 **Changes:**
-
 1. Add "Load from Arweave" button (or auto-load option)
 2. Call `useArweaveDeployments(address)`
 3. Merge chain data with localStorage `deployHistory`
@@ -160,7 +152,6 @@ export function useArweaveDeployments(ownerAddress: string | null): UseArweaveDe
 5. Add visual indicator for chain-loaded entries
 
 **UI mockup:**
-
 ```
 ┌─────────────────────────────────────────────────┐
 │ Your Site Deployments                           │
@@ -225,15 +216,12 @@ Group deployments by `App-Name` to show version timeline:
 ## Files Reference
 
 **Existing files to modify:**
-
 - `src/hooks/useFolderUpload.ts` - Add ArNS-Name tag
 - `src/pages/RecentDeploymentsPage.tsx` - Merge chain data, new UI
 
 **New files to create:**
-
 - `src/hooks/useArweaveDeployments.ts` - GraphQL query hook
 
 **Related existing code:**
-
 - `src/store/useStore.ts` - `deployHistory` state
 - `src/components/account/RecentDeploymentsSection.tsx` - May need similar updates

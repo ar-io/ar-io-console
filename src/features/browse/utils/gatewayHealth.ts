@@ -5,7 +5,7 @@
  * Gateways are blacklisted for a configurable duration after failures.
  */
 
-import { GATEWAY_BLACKLIST_DURATION_MS } from './constants';
+import { GATEWAY_BLACKLIST_DURATION_MS } from "./constants";
 
 interface GatewayHealthEntry {
   failedAt: number;
@@ -54,7 +54,7 @@ class GatewayHealthCache {
     });
 
     console.log(
-      `[GatewayHealth] Marked ${hostname} as unhealthy for ${durationMs / 1000}s${error ? `: ${error}` : ''}`,
+      `[GatewayHealth] Marked ${hostname} as unhealthy for ${durationMs / 1000}s${error ? `: ${error}` : ""}`,
     );
   }
 

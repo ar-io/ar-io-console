@@ -8,7 +8,7 @@ export default function Banner() {
   useEffect(() => {
     // Check if this banner has been dismissed
     const dismissedBanners = JSON.parse(
-      localStorage.getItem(DISMISSED_BANNERS_KEY) || '[]',
+      localStorage.getItem(DISMISSED_BANNERS_KEY) || '[]'
     ) as string[];
 
     setIsDismissed(dismissedBanners.includes(BANNER_CONFIG.id));
@@ -17,7 +17,7 @@ export default function Banner() {
   const handleDismiss = () => {
     // Add this banner's id to dismissed list
     const dismissedBanners = JSON.parse(
-      localStorage.getItem(DISMISSED_BANNERS_KEY) || '[]',
+      localStorage.getItem(DISMISSED_BANNERS_KEY) || '[]'
     ) as string[];
 
     if (!dismissedBanners.includes(BANNER_CONFIG.id)) {
@@ -37,7 +37,11 @@ export default function Banner() {
 
   return (
     <div
-      className={`w-full py-2.5 px-4 ${isSubtle ? 'bg-lavender text-primary' : 'bg-primary text-white'}`}
+      className={`w-full py-2.5 px-4 ${
+        isSubtle
+          ? 'bg-lavender text-primary'
+          : 'bg-primary text-white'
+      }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 relative">
         <p className={`text-sm text-center pr-8 ${isSubtle ? 'font-medium' : 'font-semibold'}`}>
@@ -49,10 +53,14 @@ export default function Banner() {
                 href={BANNER_CONFIG.link.href}
                 target={BANNER_CONFIG.link.external ? '_blank' : undefined}
                 rel={BANNER_CONFIG.link.external ? 'noopener noreferrer' : undefined}
-                className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 transition-opacity ${isSubtle ? 'text-primary' : 'text-white'}`}
+                className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 transition-opacity ${
+                  isSubtle ? 'text-primary' : 'text-white'
+                }`}
               >
                 {BANNER_CONFIG.link.text}
-                {BANNER_CONFIG.link.external && <ExternalLink className="w-3 h-3" />}
+                {BANNER_CONFIG.link.external && (
+                  <ExternalLink className="w-3 h-3" />
+                )}
               </a>
             </>
           )}

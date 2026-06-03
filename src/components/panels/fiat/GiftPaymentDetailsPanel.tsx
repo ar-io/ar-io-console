@@ -23,7 +23,7 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   paymentIntent,
   onBack,
-  onNext,
+  onNext
 }) => {
   const countries = useCountries();
   const stripe = useStripe();
@@ -157,6 +157,7 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
 
       {/* Main Content */}
       <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+
         {/* Gift Summary */}
         <div className="bg-card rounded-2xl p-4 mb-6">
           <h4 className="font-heading font-bold text-foreground mb-3">Gift Summary</h4>
@@ -231,16 +232,13 @@ const GiftPaymentDetailsPanel: FC<GiftPaymentDetailsPanelProps> = ({
               Card Information <span className="text-error">*</span>
             </label>
             <div className="p-3 rounded-2xl border border-border/20 bg-card">
-              <CardElement
-                options={cardElementOptions}
-                onChange={(e) => {
-                  if (e.error) {
-                    setCardError(e.error.message);
-                  } else {
-                    setCardError('');
-                  }
-                }}
-              />
+              <CardElement options={cardElementOptions} onChange={(e) => {
+                if (e.error) {
+                  setCardError(e.error.message);
+                } else {
+                  setCardError('');
+                }
+              }} />
             </div>
             {cardError && (
               <div className="flex items-center gap-2 mt-2 text-error text-sm">

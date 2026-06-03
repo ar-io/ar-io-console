@@ -5,9 +5,7 @@ import CopyButton from '../CopyButton';
 
 export default function WalletOverviewCard() {
   const { address, walletType } = useStore();
-  const { arnsName, loading: loadingArNS } = usePrimaryArNSName(
-    walletType !== 'solana' ? address : null,
-  );
+  const { arnsName, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
 
   if (!address || !walletType) {
     return null;
@@ -26,7 +24,7 @@ export default function WalletOverviewCard() {
             onClick={() => {
               // Determine which explorer to use based on wallet type
               let explorerUrl = '';
-
+              
               if (walletType === 'ethereum') {
                 explorerUrl = `https://etherscan.io/address/${address}`;
               } else if (walletType === 'solana') {
@@ -34,7 +32,7 @@ export default function WalletOverviewCard() {
               } else {
                 explorerUrl = `https://viewblock.io/arweave/address/${address}`;
               }
-
+              
               window.open(explorerUrl, '_blank');
             }}
             className="p-1.5 rounded hover:bg-card transition-colors"
@@ -44,7 +42,7 @@ export default function WalletOverviewCard() {
           </button>
         </div>
       </div>
-
+      
       <div className="space-y-2">
         {(arnsName || loadingArNS) && (
           <div className="flex items-center justify-between text-sm">

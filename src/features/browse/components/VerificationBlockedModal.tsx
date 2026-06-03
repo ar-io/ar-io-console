@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 interface VerificationBlockedModalProps {
   identifier: string;
@@ -52,8 +52,12 @@ export function VerificationBlockedModal({
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">Verification Failed</h2>
-              <p className="text-sm text-red-600">Content integrity could not be verified</p>
+              <h2 className="text-xl font-bold text-foreground">
+                Verification Failed
+              </h2>
+              <p className="text-sm text-red-600">
+                Content integrity could not be verified
+              </p>
             </div>
           </div>
         </div>
@@ -62,12 +66,13 @@ export function VerificationBlockedModal({
         <div className="px-6 py-5 space-y-4">
           <div className="text-foreground">
             <p className="mb-3">
-              The content for <span className="font-mono text-primary">{identifier}</span> failed
-              cryptographic verification.
+              The content for{" "}
+              <span className="font-mono text-primary">{identifier}</span>{" "}
+              failed cryptographic verification.
             </p>
             <p className="text-sm text-foreground/60">
-              This could mean the content was tampered with by a malicious gateway, or there was a
-              network error during verification.
+              This could mean the content was tampered with by a malicious
+              gateway, or there was a network error during verification.
             </p>
           </div>
 
@@ -85,7 +90,9 @@ export function VerificationBlockedModal({
               {errorMessage && (
                 <div className="pt-2 border-t border-border/20">
                   <span className="text-foreground/60 text-xs">Error: </span>
-                  <span className="text-red-600 text-xs font-mono">{errorMessage}</span>
+                  <span className="text-red-600 text-xs font-mono">
+                    {errorMessage}
+                  </span>
                 </div>
               )}
             </div>
@@ -108,8 +115,12 @@ export function VerificationBlockedModal({
                 />
               </svg>
               <div className="text-sm">
-                <div className="font-semibold text-red-600 mb-1">Security Risk</div>
-                <div className="text-foreground">Viewing unverified content may expose you to:</div>
+                <div className="font-semibold text-red-600 mb-1">
+                  Security Risk
+                </div>
+                <div className="text-foreground">
+                  Viewing unverified content may expose you to:
+                </div>
                 <ul className="mt-2 text-foreground/60 space-y-1 list-disc list-inside">
                   <li>Phishing attacks disguised as legitimate apps</li>
                   <li>Malicious code that could steal your wallet keys</li>
@@ -130,9 +141,9 @@ export function VerificationBlockedModal({
                   className="mt-1 w-4 h-4 text-red-600 rounded focus:ring-red-600 accent-red-600"
                 />
                 <span className="text-sm text-foreground">
-                  I understand the risks. I acknowledge that this content failed verification and
-                  may be malicious. I will not sign any transactions or connect my wallet on this
-                  page.
+                  I understand the risks. I acknowledge that this content failed
+                  verification and may be malicious. I will not sign any
+                  transactions or connect my wallet on this page.
                 </span>
               </label>
             </div>
@@ -162,15 +173,15 @@ export function VerificationBlockedModal({
               disabled={showConfirmProceed && !acknowledged}
               className={`w-full px-4 py-2 text-sm rounded-full transition-colors ${
                 showConfirmProceed && !acknowledged
-                  ? 'text-foreground/40 bg-card cursor-not-allowed'
-                  : 'text-red-600 hover:bg-red-50 border border-red-200'
+                  ? "text-foreground/40 bg-card cursor-not-allowed"
+                  : "text-red-600 hover:bg-red-50 border border-red-200"
               }`}
             >
               {showConfirmProceed
                 ? acknowledged
-                  ? 'Confirm: View Unverified Content'
-                  : 'Please acknowledge the risks above'
-                : 'Proceed Anyway (Not Recommended)'}
+                  ? "Confirm: View Unverified Content"
+                  : "Please acknowledge the risks above"
+                : "Proceed Anyway (Not Recommended)"}
             </button>
           </div>
 

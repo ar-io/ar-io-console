@@ -1,14 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Globe,
-  ExternalLink,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
-  ChevronDown,
-  Check,
-  ChevronRight,
-} from 'lucide-react';
+import { Globe, ExternalLink, AlertCircle, Loader2, RefreshCw, ChevronDown, Check, ChevronRight } from 'lucide-react';
 import { Combobox } from '@headlessui/react';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { sanitizeUndername, hasInvalidCharacters } from '../utils/undernames';
@@ -36,7 +27,7 @@ export default function ArNSAssociationPanel({
   showUndername: externalShowUndername,
   onShowUndernameChange,
   customTTL: _customTTL, // eslint-disable-line @typescript-eslint/no-unused-vars
-  onCustomTTLChange,
+  onCustomTTLChange
 }: ArNSAssociationPanelProps) {
   const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
   const [internalShowUndername, setInternalShowUndername] = useState(false);
@@ -49,15 +40,14 @@ export default function ArNSAssociationPanel({
   const filteredNames = useMemo(() => {
     if (!nameQuery) return names;
     const query = nameQuery.toLowerCase();
-    return names.filter(
-      (name) =>
-        name.name.toLowerCase().includes(query) || name.displayName.toLowerCase().includes(query),
+    return names.filter(name =>
+      name.name.toLowerCase().includes(query) ||
+      name.displayName.toLowerCase().includes(query)
     );
   }, [names, nameQuery]);
 
   // Use external state if provided, otherwise use internal state
-  const showUndername =
-    externalShowUndername !== undefined ? externalShowUndername : internalShowUndername;
+  const showUndername = externalShowUndername !== undefined ? externalShowUndername : internalShowUndername;
   const setShowUndername = (value: boolean) => {
     if (onShowUndernameChange) {
       onShowUndernameChange(value);
@@ -66,22 +56,20 @@ export default function ArNSAssociationPanel({
     }
   };
 
-  const selectedNameRecord = names.find((name) => name.name === selectedName);
+  const selectedNameRecord = names.find(name => name.name === selectedName);
   const currentTarget = selectedNameRecord?.currentTarget;
   const displayName = selectedNameRecord?.displayName || selectedName;
   const fullDomainName = `${selectedUndername ? selectedUndername + '_' : ''}${displayName}`;
   const previewUrl = `https://${selectedUndername ? selectedUndername + '_' : ''}${selectedName}.ar.io`; // URL uses raw name for correct links
 
   // Check if this is an existing undername or a new one
-  const isExistingUndername =
-    selectedUndername && selectedNameRecord?.undernames?.includes(selectedUndername);
+  const isExistingUndername = selectedUndername && selectedNameRecord?.undernames?.includes(selectedUndername);
   const isNewUndername = selectedUndername && !isExistingUndername;
 
   // Get current TTL (either for undername or base name)
-  const currentTTL =
-    selectedUndername && selectedNameRecord?.undernameTTLs?.[selectedUndername]
-      ? selectedNameRecord.undernameTTLs[selectedUndername]
-      : selectedNameRecord?.ttl || 600;
+  const currentTTL = selectedUndername && selectedNameRecord?.undernameTTLs?.[selectedUndername]
+    ? selectedNameRecord.undernameTTLs[selectedUndername]
+    : selectedNameRecord?.ttl || 600;
 
   // Format TTL for display
   const formatTTL = (seconds: number) => {
@@ -153,7 +141,9 @@ export default function ArNSAssociationPanel({
               Add domain name
             </label>
           </div>
-          <p className="text-sm text-foreground/80">Give your site a friendly, smart domain name</p>
+          <p className="text-sm text-foreground/80">
+            Give your site a friendly, smart domain name
+          </p>
         </div>
       </div>
 
@@ -173,8 +163,7 @@ export default function ArNSAssociationPanel({
                     No ArNS names found
                   </div>
                   <div className="text-sm text-foreground/80 mb-3">
-                    You need to own an ArNS name first. You can purchase names from the AR.IO
-                    Network.
+                    You need to own an ArNS name first. You can purchase names from the AR.IO Network.
                   </div>
                   <button
                     onClick={() => window.open('https://ar.io/arns', '_blank')}
@@ -190,7 +179,9 @@ export default function ArNSAssociationPanel({
               {/* Name Selection */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-foreground">Select name:</label>
+                  <label className="text-sm font-medium text-foreground">
+                    Select name:
+                  </label>
                   <button
                     onClick={() => fetchOwnedNames(true)}
                     disabled={loading}
@@ -219,7 +210,7 @@ export default function ArNSAssociationPanel({
                         className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 pr-10"
                         displayValue={(name: string) => {
                           if (!name) return '';
-                          const found = names.find((n) => n.name === name);
+                          const found = names.find(n => n.name === name);
                           return found?.displayName !== found?.name
                             ? `${found?.displayName} (${name})`
                             : name;
@@ -229,10 +220,7 @@ export default function ArNSAssociationPanel({
                       />
                       <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
                         {loadingDetails[selectedName] ? (
-                          <Loader2
-                            className="h-4 w-4 text-foreground/80 animate-spin"
-                            aria-hidden="true"
-                          />
+                          <Loader2 className="h-4 w-4 text-foreground/80 animate-spin" aria-hidden="true" />
                         ) : (
                           <ChevronDown className="h-4 w-4 text-foreground/80" aria-hidden="true" />
                         )}
@@ -249,25 +237,27 @@ export default function ArNSAssociationPanel({
                             <Combobox.Option
                               value=""
                               className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-9 ${active ? 'bg-card text-foreground' : 'text-foreground/80'}`
+                                `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
+                                  active ? 'bg-card text-foreground' : 'text-foreground/80'
+                                }`
                               }
                             >
                               <span className="block truncate">Choose a name...</span>
                             </Combobox.Option>
                           )}
-                          {filteredNames.map((name) => (
+                          {filteredNames.map(name => (
                             <Combobox.Option
                               key={name.name}
                               value={name.name}
                               className={({ active }) =>
-                                `relative cursor-pointer select-none py-2 pl-3 pr-9 ${active ? 'bg-card text-foreground' : 'text-foreground'}`
+                                `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
+                                  active ? 'bg-card text-foreground' : 'text-foreground'
+                                }`
                               }
                             >
                               {({ selected }) => (
                                 <>
-                                  <span
-                                    className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}
-                                  >
+                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
                                     {name.displayName !== name.name
                                       ? `${name.displayName} (${name.name})`
                                       : name.displayName}
@@ -290,9 +280,7 @@ export default function ArNSAssociationPanel({
 
               {/* Undername Option */}
               <div>
-                <label
-                  className={`flex items-center gap-2 ${selectedName ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
-                >
+                <label className={`flex items-center gap-2 ${selectedName ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                   <input
                     type="checkbox"
                     checked={showUndername}
@@ -315,12 +303,10 @@ export default function ArNSAssociationPanel({
                     {/* Show existing undernames if any */}
                     {selectedNameRecord?.undernames && selectedNameRecord.undernames.length > 0 && (
                       <div>
-                        <div className="text-sm font-medium text-foreground mb-2">
-                          Existing undernames:
-                        </div>
+                        <div className="text-sm font-medium text-foreground mb-2">Existing undernames:</div>
                         <div className="bg-card rounded-2xl p-3 border border-primary/20">
                           <div className="flex flex-wrap gap-2">
-                            {selectedNameRecord.undernames.map((undername) => (
+                            {selectedNameRecord.undernames.map(undername => (
                               <button
                                 key={undername}
                                 onClick={() => onUndernameChange(undername)}
@@ -350,8 +336,7 @@ export default function ArNSAssociationPanel({
                       </label>
 
                       {/* Info for first-time users */}
-                      {(!selectedNameRecord?.undernames ||
-                        selectedNameRecord.undernames.length === 0) && (
+                      {(!selectedNameRecord?.undernames || selectedNameRecord.undernames.length === 0) && (
                         <div className="text-xs text-foreground/80 mb-2 bg-primary/10 rounded p-2 border border-primary/30">
                           This will be the first undername for {selectedName}
                         </div>
@@ -381,23 +366,16 @@ export default function ArNSAssociationPanel({
                         {selectedUndername ? (
                           hasInvalidCharacters(selectedUndername) ? (
                             <span className="text-warning">
-                              Will be sanitized to: {sanitizeUndername(selectedUndername)}_
-                              {selectedName}.ar.io
+                              Will be sanitized to: {sanitizeUndername(selectedUndername)}_{selectedName}.ar.io
                             </span>
                           ) : (
                             <span className="text-foreground/80">
-                              Will{' '}
-                              {selectedNameRecord?.undernames?.includes(selectedUndername)
-                                ? 'update existing'
-                                : 'create new'}{' '}
-                              undername: {selectedUndername}_{selectedName}
-                              .ar.io
+                              Will {selectedNameRecord?.undernames?.includes(selectedUndername) ? 'update existing' : 'create new'} undername: {selectedUndername}_{selectedName}.ar.io
                             </span>
                           )
                         ) : (
                           <span className="text-foreground/80">
-                            Lowercase letters, numbers, hyphens, and underscores. Cannot start/end
-                            with - or _.
+                            Lowercase letters, numbers, hyphens, and underscores. Cannot start/end with - or _.
                           </span>
                         )}
                       </p>
@@ -441,6 +419,7 @@ export default function ArNSAssociationPanel({
                       </div>
                     )}
                   </div>
+
                 </div>
               )}
 
@@ -451,9 +430,7 @@ export default function ArNSAssociationPanel({
                     onClick={() => setShowAdvanced(!showAdvanced)}
                     className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-foreground/80 transition-colors w-full"
                   >
-                    <ChevronRight
-                      className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
-                    />
+                    <ChevronRight className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} />
                     Advanced Settings
                   </button>
 
@@ -479,8 +456,7 @@ export default function ArNSAssociationPanel({
                                 Keep existing TTL
                               </div>
                               <div className="text-xs text-foreground/80 mt-0.5">
-                                Preserve current setting ({formatTTL(currentTTL)} / {currentTTL}{' '}
-                                seconds)
+                                Preserve current setting ({formatTTL(currentTTL)} / {currentTTL} seconds)
                               </div>
                             </div>
                           </label>
@@ -554,10 +530,7 @@ export default function ArNSAssociationPanel({
                         {/* Help Text */}
                         <div className="mt-3 text-xs text-foreground/80 bg-primary/10 rounded p-3 border border-primary/30">
                           <div className="font-medium text-foreground mb-1">What is TTL?</div>
-                          TTL controls how long AR.IO gateways cache your content before checking
-                          for updates. Lower values (5-10 min) are better for frequently updated
-                          content, while higher values (1 hour+) work well for static sites and
-                          reduce network requests.
+                          TTL controls how long AR.IO gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
                         </div>
                       </div>
                     </div>

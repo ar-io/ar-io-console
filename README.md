@@ -5,7 +5,6 @@ A unified web application for uploading and accessing permanent data through the
 ## Overview
 
 The ar.io Console provides a streamlined interface for:
-
 - **File uploads** to the permaweb with instant confirmation
 - **Site deployment** with ArNS domain support
 - **Credit management** (purchase, share, gift)
@@ -20,16 +19,16 @@ npm run dev       # Start dev server at http://localhost:3000
 
 ## Development Commands
 
-| Command                 | Description                                      |
-| ----------------------- | ------------------------------------------------ |
-| `npm run dev`           | Development server (4GB memory)                  |
-| `npm run build:prod`    | Production build with type checking (8GB memory) |
-| `npm run build:staging` | Staging build with source maps                   |
-| `npm run build`         | Development build (no type check)                |
-| `npm run lint`          | ESLint validation                                |
-| `npm run type-check`    | TypeScript checking                              |
-| `npm run clean:all`     | Full clean and reinstall                         |
-| `npm run preview`       | Preview production build                         |
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server (4GB memory) |
+| `npm run build:prod` | Production build with type checking (8GB memory) |
+| `npm run build:staging` | Staging build with source maps |
+| `npm run build` | Development build (no type check) |
+| `npm run lint` | ESLint validation |
+| `npm run type-check` | TypeScript checking |
+| `npm run clean:all` | Full clean and reinstall |
+| `npm run preview` | Preview production build |
 
 ## Tech Stack
 
@@ -73,20 +72,19 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 ```
 
 External resources are available via the navigation menu:
-
 - **Developer Docs**: [docs.ar.io](https://docs.ar.io)
 - **Network Explorer**: [scan.ar.io](https://scan.ar.io)
 - **Gateway Dashboard**: [gateways.ar.io](https://gateways.ar.io)
 
 ## Wallet Capabilities
 
-| Feature                   | Arweave | Ethereum/Base  | Solana |
-| ------------------------- | ------- | -------------- | ------ |
-| Buy Credits (Fiat/Crypto) | ✅      | ✅             | ✅     |
-| Upload/Deploy/Capture     | ✅      | ✅             | ✅     |
-| Share Credits             | ✅      | ✅             | ✅     |
-| Update ArNS Records       | ✅      | ✅             | ❌     |
-| X402 USDC Uploads         | ❌      | ✅ (Base only) | ❌     |
+| Feature | Arweave | Ethereum/Base | Solana |
+|---------|---------|---------------|--------|
+| Buy Credits (Fiat/Crypto) | ✅ | ✅ | ✅ |
+| Upload/Deploy/Capture | ✅ | ✅ | ✅ |
+| Share Credits | ✅ | ✅ | ✅ |
+| Update ArNS Records | ✅ | ✅ | ❌ |
+| X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
 ## Documentation
 

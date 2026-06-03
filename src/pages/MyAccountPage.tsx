@@ -1,6 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { User, Globe, ExternalLink, RefreshCw, Calendar, ArrowRight } from 'lucide-react';
+import {
+  User,
+  Globe,
+  ExternalLink,
+  RefreshCw,
+  Calendar,
+  ArrowRight,
+} from 'lucide-react';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { makePossessive } from '../utils';
@@ -17,7 +24,11 @@ export default function MyAccountPage() {
     profile,
     loading: loadingArNS,
   } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
-  const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
+  const {
+    names: ownedNames,
+    loading: loadingDomains,
+    fetchOwnedNames,
+  } = useOwnedArNSNames();
 
   // Redirect to home if not logged in
   if (!address) {
@@ -42,7 +53,9 @@ export default function MyAccountPage() {
                 const container = target.parentElement;
                 if (container) {
                   target.style.display = 'none';
-                  const fallback = container.querySelector('.fallback-icon') as HTMLElement;
+                  const fallback = container.querySelector(
+                    '.fallback-icon',
+                  ) as HTMLElement;
                   if (fallback) {
                     fallback.style.display = 'flex';
                   }
@@ -68,7 +81,8 @@ export default function MyAccountPage() {
                 : 'My Account'}
           </h1>
           <p className="text-sm text-foreground/80">
-            {walletType && 'View your account details, like credits and recent activity.'}
+            {walletType &&
+              'View your account details, like credits and recent activity.'}
           </p>
         </div>
       </div>
@@ -76,7 +90,9 @@ export default function MyAccountPage() {
       {/* Wallet Overview Section - Hide balance/sharing in x402-only mode */}
       {isPaymentServiceAvailable() && (
         <div className="mb-8">
-          <h2 className="font-heading font-bold text-xl text-foreground mb-4">Overview</h2>
+          <h2 className="font-heading font-bold text-xl text-foreground mb-4">
+            Overview
+          </h2>
           <div className="space-y-4">
             <BalanceCardsGrid />
             <CreditSharingSection />
@@ -88,14 +104,18 @@ export default function MyAccountPage() {
       {!!walletType && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading font-bold text-xl text-foreground">Domains</h2>
+            <h2 className="font-heading font-bold text-xl text-foreground">
+              Domains
+            </h2>
             <button
               onClick={() => fetchOwnedNames(true)}
               disabled={loadingDomains}
               className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground hover:text-foreground/80 transition-colors disabled:opacity-50"
               title="Refresh domain list"
             >
-              <RefreshCw className={`w-4 h-4 ${loadingDomains ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${loadingDomains ? 'animate-spin' : ''}`}
+              />
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
@@ -104,14 +124,19 @@ export default function MyAccountPage() {
             {loadingDomains ? (
               <div className="text-center py-8">
                 <RefreshCw className="w-6 h-6 text-primary mx-auto mb-3 animate-spin" />
-                <p className="text-sm text-foreground/80">Loading your domains...</p>
+                <p className="text-sm text-foreground/80">
+                  Loading your domains...
+                </p>
               </div>
             ) : ownedNames.length === 0 ? (
               <div className="text-center py-8">
                 <Globe className="w-12 h-12 text-primary/50 mx-auto mb-4" />
-                <h3 className="font-heading font-bold text-foreground mb-2">No Domains Yet</h3>
+                <h3 className="font-heading font-bold text-foreground mb-2">
+                  No Domains Yet
+                </h3>
                 <p className="text-sm text-foreground/80 mb-4">
-                  Register an ArNS domain to give your apps and sites friendly names
+                  Register an ArNS domain to give your apps and sites friendly
+                  names
                 </p>
                 <button
                   onClick={() => navigate('/domains')}
@@ -132,7 +157,12 @@ export default function MyAccountPage() {
                 {ownedNames.length > 0 && (
                   <div className="text-center pt-4 border-t border-primary/20">
                     <button
-                      onClick={() => window.open('https://arns.ar.io/#/manage/names', '_blank')}
+                      onClick={() =>
+                        window.open(
+                          'https://arns.ar.io/#/manage/names',
+                          '_blank',
+                        )
+                      }
                       className="flex items-center justify-center gap-2 px-6 py-3 text-foreground hover:text-foreground/80 transition-colors font-medium"
                     >
                       View All Domains
@@ -148,7 +178,9 @@ export default function MyAccountPage() {
 
       {/* Activity & Management */}
       <div className="space-y-6">
-        <h2 className="font-heading font-bold text-xl text-foreground">Activity</h2>
+        <h2 className="font-heading font-bold text-xl text-foreground">
+          Activity
+        </h2>
 
         {/* Activity Overview */}
         <ActivityOverview />

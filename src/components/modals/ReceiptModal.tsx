@@ -1,18 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-  X,
-  ExternalLink,
-  Receipt,
-  FileText,
-  Clock,
-  RefreshCw,
-  CheckCircle,
-  Archive,
-  XCircle,
-  HelpCircle,
-  Code,
-  Download,
-} from 'lucide-react';
+import { X, ExternalLink, Receipt, FileText, Clock, RefreshCw, CheckCircle, Archive, XCircle, HelpCircle, Code, Download } from 'lucide-react';
 import BaseModal from './BaseModal';
 import CopyButton from '../CopyButton';
 import { useUploadStatus, UploadStatus } from '../../hooks/useUploadStatus';
@@ -35,7 +22,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
     formatWinc,
     getStatusColor,
     getStatusIcon,
-    getStatusDescription,
+    getStatusDescription
   } = useUploadStatus();
 
   // Current status (either from initial prop or fetched)
@@ -78,11 +65,9 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
       uploadId,
       receipt,
       status: currentStatus,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -104,9 +89,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-lg sm:text-xl font-bold">Upload Receipt</h3>
-              <p className="text-xs sm:text-sm text-foreground/80">
-                Transaction status and details
-              </p>
+              <p className="text-xs sm:text-sm text-foreground/80">Transaction status and details</p>
             </div>
           </div>
           <button
@@ -153,22 +136,14 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div>
-                      {renderStatusIcon(
-                        getStatusIcon(currentStatus.status, currentStatus.info),
-                        getStatusColor(currentStatus.status, currentStatus.info),
-                      )}
+                      {renderStatusIcon(getStatusIcon(currentStatus.status, currentStatus.info), getStatusColor(currentStatus.status, currentStatus.info))}
                     </div>
                     <div>
-                      <div
-                        className={`text-lg font-semibold ${getStatusColor(currentStatus.status, currentStatus.info)}`}
-                      >
-                        {currentStatus.status === 'FINALIZED'
-                          ? 'Permanently Stored'
-                          : currentStatus.status === 'CONFIRMED'
-                            ? 'Processing'
-                            : currentStatus.status === 'FAILED'
-                              ? 'Upload Failed'
-                              : 'Checking Status'}
+                      <div className={`text-lg font-semibold ${getStatusColor(currentStatus.status, currentStatus.info)}`}>
+                        {currentStatus.status === 'FINALIZED' ? 'Permanently Stored' :
+                         currentStatus.status === 'CONFIRMED' ? 'Processing' :
+                         currentStatus.status === 'FAILED' ? 'Upload Failed' :
+                         'Checking Status'}
                       </div>
                       <p className="text-sm text-foreground/80">
                         {getStatusDescription(currentStatus.status, currentStatus.info)}
@@ -181,9 +156,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                     className="p-2 hover:bg-card rounded transition-colors disabled:opacity-50"
                     title="Refresh status"
                   >
-                    <RefreshCw
-                      className={`w-4 h-4 text-foreground/80 ${isLoadingStatus ? 'animate-spin' : ''}`}
-                    />
+                    <RefreshCw className={`w-4 h-4 text-foreground/80 ${isLoadingStatus ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               )}
@@ -211,8 +184,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                       <div>
                         <div className="text-xs text-foreground/80 mb-1">Type</div>
                         <div className="text-sm text-foreground">
-                          {currentStatus.payloadContentType.split('/').pop()?.toUpperCase() ||
-                            'File'}
+                          {currentStatus.payloadContentType.split('/').pop()?.toUpperCase() || 'File'}
                         </div>
                       </div>
                     )}
@@ -256,7 +228,9 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                         <CopyButton textToCopy={uploadId} />
                       </div>
                     </div>
-                    <div className="font-mono text-xs text-foreground break-all">{uploadId}</div>
+                    <div className="font-mono text-xs text-foreground break-all">
+                      {uploadId}
+                    </div>
                   </div>
 
                   {/* Parent Bundle ID */}

@@ -59,7 +59,7 @@ async function ensureInitialized(): Promise<void> {
  */
 async function hashFileStreaming(
   file: File,
-  onProgress?: (bytesProcessed: number, totalBytes: number) => void,
+  onProgress?: (bytesProcessed: number, totalBytes: number) => void
 ): Promise<string> {
   await ensureInitialized();
 

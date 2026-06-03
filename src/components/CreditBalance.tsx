@@ -39,7 +39,9 @@ export function CreditBalance() {
           <span className="text-muted">Loading...</span>
         ) : (
           <>
-            <span className="font-mono font-medium">{balance ? formatBalance(balance) : '0'}</span>
+            <span className="font-mono font-medium">
+              {balance ? formatBalance(balance) : '0'}
+            </span>
             <span className="text-muted ml-1">Credits</span>
           </>
         )}

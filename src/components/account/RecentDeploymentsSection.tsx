@@ -15,17 +15,12 @@ export default function RecentDeploymentsSection() {
   const navigate = useNavigate();
 
   // Get the most recent deployment entries first, then group them
-  const recentDeployHistory = deployHistory.slice(
-    0,
-    showAllDeployments ? deployHistory.length : 10,
-  ); // Get more entries to ensure we have enough groups
+  const recentDeployHistory = deployHistory.slice(0, showAllDeployments ? deployHistory.length : 10); // Get more entries to ensure we have enough groups
 
   // Group deploy results by manifest ID like in DeploySitePanel
-  const deploymentGroups: {
-    [manifestId: string]: { manifest?: any; files?: any };
-  } = {};
+  const deploymentGroups: { [manifestId: string]: { manifest?: any, files?: any } } = {};
 
-  recentDeployHistory.forEach((result) => {
+  recentDeployHistory.forEach(result => {
     const manifestId = result.manifestId || result.id;
     if (!manifestId) return;
 
@@ -104,9 +99,7 @@ export default function RecentDeploymentsSection() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground">{group.manifest.appName}</span>
                     {group.manifest?.appVersion && (
-                      <span className="text-xs text-foreground/80">
-                        v{group.manifest.appVersion}
-                      </span>
+                      <span className="text-xs text-foreground/80">v{group.manifest.appVersion}</span>
                     )}
                   </div>
                 ) : (
@@ -138,8 +131,7 @@ export default function RecentDeploymentsSection() {
                   MANIFEST
                 </div>
                 <div className="font-mono text-sm text-foreground">
-                  {manifestId.substring(0, 8)}...
-                  {manifestId.substring(manifestId.length - 6)}
+                  {manifestId.substring(0, 8)}...{manifestId.substring(manifestId.length - 6)}
                 </div>
                 <CopyButton textToCopy={manifestId} />
               </div>
@@ -179,10 +171,9 @@ export default function RecentDeploymentsSection() {
       {showReceiptModal && (
         <ReceiptModal
           onClose={() => setShowReceiptModal(null)}
-          receipt={deployHistory.find(
-            (r) =>
-              (r.type === 'manifest' && r.id === showReceiptModal) ||
-              (r.type === 'files' && r.files?.find((f) => f.id === showReceiptModal)),
+          receipt={deployHistory.find(r =>
+            (r.type === 'manifest' && r.id === showReceiptModal) ||
+            (r.type === 'files' && r.files?.find(f => f.id === showReceiptModal))
           )}
           uploadId={showReceiptModal}
           initialStatus={uploadStatuses[showReceiptModal]}

@@ -5,14 +5,7 @@ import { useAccount, useConfig } from 'wagmi';
 import { getConnectorClient, switchChain } from 'wagmi/actions';
 import { ethers } from 'ethers';
 import { X402Funding } from '@ardrive/turbo-sdk/web';
-import {
-  createWalletClient,
-  custom,
-  type WalletClient,
-  type Transport,
-  type Chain,
-  type Account,
-} from 'viem';
+import { createWalletClient, custom, type WalletClient, type Transport, type Chain, type Account } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { APP_NAME, APP_VERSION, X402_CONFIG } from '../constants';
 import { getContentType } from '../utils/mimeTypes';
@@ -50,7 +43,10 @@ export interface X402UploadResult {
  * Creates an x402 signer (viem WalletClient) for the appropriate network
  * Supports both Base Mainnet and Base Sepolia based on config mode
  */
-async function createX402Signer(ethProvider: any, useMainnet: boolean): Promise<X402Signer> {
+async function createX402Signer(
+  ethProvider: any,
+  useMainnet: boolean
+): Promise<X402Signer> {
   // Request accounts to get the connected account
   const accounts = (await ethProvider.request({
     method: 'eth_requestAccounts',
@@ -125,10 +121,7 @@ export function useX402Upload() {
             });
             ethProvider = connectorClient.transport;
           } catch (error) {
-            console.warn(
-              'Failed to get connector client for X402, falling back to window.ethereum:',
-              error,
-            );
+            console.warn('Failed to get connector client for X402, falling back to window.ethereum:', error);
             if (window.ethereum) {
               ethProvider = window.ethereum;
             } else {
@@ -172,7 +165,9 @@ export function useX402Upload() {
               ethersSigner = await ethersProvider.getSigner();
             } catch (switchError: any) {
               console.warn('Wagmi switchChain failed:', switchError);
-              throw new Error(`Please switch to ${networkName} in your wallet for X402 payments.`);
+              throw new Error(
+                `Please switch to ${networkName} in your wallet for X402 payments.`
+              );
             }
           } else if (window.ethereum && !privyWallet) {
             // Fallback for direct window.ethereum injection (no wagmi connection)
@@ -194,7 +189,9 @@ export function useX402Upload() {
             } catch (switchError: any) {
               // Error 4902 means the network doesn't exist in MetaMask - add it first
               if (switchError.code === 4902) {
-                const rpcUrl = useMainnet ? 'https://mainnet.base.org' : 'https://sepolia.base.org';
+                const rpcUrl = useMainnet
+                  ? 'https://mainnet.base.org'
+                  : 'https://sepolia.base.org';
                 const blockExplorerUrl = useMainnet
                   ? 'https://basescan.org'
                   : 'https://sepolia.basescan.org';
@@ -226,17 +223,19 @@ export function useX402Upload() {
                   ethersSigner = await ethersProvider.getSigner();
                 } catch {
                   throw new Error(
-                    `Failed to add ${networkName} to your wallet. Please add it manually.`,
+                    `Failed to add ${networkName} to your wallet. Please add it manually.`
                   );
                 }
               } else {
                 throw new Error(
-                  `Please switch to ${networkName} in your wallet for X402 payments.`,
+                  `Please switch to ${networkName} in your wallet for X402 payments.`
                 );
               }
             }
           } else {
-            throw new Error(`Please switch to ${networkName} in your wallet for X402 payments.`);
+            throw new Error(
+              `Please switch to ${networkName} in your wallet for X402 payments.`
+            );
           }
         }
 
@@ -284,7 +283,7 @@ export function useX402Upload() {
         const maxMUSDCAmount = Math.ceil(options.maxUsdcAmount * 1_000_000);
 
         console.log(
-          `Uploading ${file.name} (${file.size} bytes) with x402, max ${options.maxUsdcAmount} USDC`,
+          `Uploading ${file.name} (${file.size} bytes) with x402, max ${options.maxUsdcAmount} USDC`
         );
 
         options.onProgress?.(30); // Starting upload
@@ -301,8 +300,7 @@ export function useX402Upload() {
           events: {
             onProgress: (event: { totalBytes: number; processedBytes: number; step: string }) => {
               // Calculate percentage from bytes
-              const pct =
-                event.totalBytes > 0 ? (event.processedBytes / event.totalBytes) * 100 : 0;
+              const pct = event.totalBytes > 0 ? (event.processedBytes / event.totalBytes) * 100 : 0;
               // Map SDK progress (0-100) to our progress range (30-90)
               const mappedProgress = 30 + pct * 0.6;
               options.onProgress?.(Math.round(mappedProgress));
@@ -330,14 +328,7 @@ export function useX402Upload() {
         setUploading(false);
       }
     },
-    [
-      configMode,
-      wallets,
-      wagmiConfig,
-      ethAccount.isConnected,
-      ethAccount.connector,
-      createEthereumTurboClient,
-    ],
+    [configMode, wallets, wagmiConfig, ethAccount.isConnected, ethAccount.connector, createEthereumTurboClient]
   );
 
   return {

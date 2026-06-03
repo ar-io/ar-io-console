@@ -22,12 +22,17 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
   onBack,
   onSuccess,
   targetAddress,
-  targetWalletType,
+  targetWalletType
 }) => {
   const stripe = useStripe();
   const wincForOneGiB = useWincForOneGiB();
-  const { address, paymentIntent, paymentInformation, promoCode, setPaymentIntentResult } =
-    useStore();
+  const {
+    address,
+    paymentIntent,
+    paymentInformation,
+    promoCode,
+    setPaymentIntentResult
+  } = useStore();
 
   const [estimatedCredits, setEstimatedCredits] = useState<TurboWincForFiatResponse>();
   const [countdown, setCountdown] = useState<number>(5 * 60);
@@ -84,10 +89,13 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
     setPaymentError('');
 
     try {
-      const result = await stripe.confirmCardPayment(paymentIntent.client_secret, {
-        payment_method: paymentInformation.paymentMethodId,
-        receipt_email: paymentInformation.email,
-      });
+      const result = await stripe.confirmCardPayment(
+        paymentIntent.client_secret,
+        {
+          payment_method: paymentInformation.paymentMethodId,
+          receipt_email: paymentInformation.email,
+        },
+      );
 
       if (result.error) {
         console.error(result.error.message);
@@ -105,10 +113,14 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
     }
   };
 
-  const actualPaymentAmount = estimatedCredits ? estimatedCredits.actualPaymentAmount / 100 : 0;
+  const actualPaymentAmount = estimatedCredits
+    ? estimatedCredits.actualPaymentAmount / 100
+    : 0;
   const originalAmount = usdAmount;
 
-  const credits = estimatedCredits ? (Number(estimatedCredits.winc) || 0) / wincPerCredit : 0;
+  const credits = estimatedCredits
+    ? ((Number(estimatedCredits.winc) || 0) / wincPerCredit)
+    : 0;
 
   // Smart storage display - show in appropriate units
   const formatStorage = (gigabytes: number): string => {
@@ -125,8 +137,9 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
     }
   };
 
-  const storageAmount =
-    estimatedCredits && wincForOneGiB ? Number(estimatedCredits.winc) / Number(wincForOneGiB) : 0;
+  const storageAmount = estimatedCredits && wincForOneGiB
+    ? (Number(estimatedCredits.winc) / Number(wincForOneGiB))
+    : 0;
 
   return (
     <div className="px-4 sm:px-6">
@@ -143,6 +156,7 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+
         {/* Show recipient info if funding another wallet */}
         {targetAddress && targetAddress !== address && (
           <div className="mb-6 bg-info/10 border border-info/20 rounded-2xl p-4">
@@ -167,7 +181,9 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
           {estimatedCredits ? (
             <>
               <div className="flex flex-col items-center py-4 mb-4">
-                <div className="text-4xl font-bold text-foreground mb-1">{credits.toFixed(4)}</div>
+                <div className="text-4xl font-bold text-foreground mb-1">
+                  {credits.toFixed(4)}
+                </div>
                 <div className="text-sm text-foreground/80">Credits</div>
                 {storageAmount > 0 && (
                   <div className="text-xs text-foreground/80 mt-1">
@@ -197,7 +213,9 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
             </>
           ) : (
             <div className="flex flex-col items-center py-4">
-              <div className="text-xl font-bold text-error">Error calculating final price</div>
+              <div className="text-xl font-bold text-error">
+                Error calculating final price
+              </div>
             </div>
           )}
         </div>
@@ -205,7 +223,8 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
         {/* Quote Refresh */}
         <div className="flex justify-between items-center bg-card px-6 py-3 text-center text-sm text-foreground/80 rounded-2xl mb-6">
           <div>
-            Quote Updates in <span className="text-foreground">{formatCountdown(countdown)}</span>
+            Quote Updates in{' '}
+            <span className="text-foreground">{formatCountdown(countdown)}</span>
           </div>
           <button
             className="flex items-center gap-1 text-foreground hover:text-foreground/80 transition-colors"

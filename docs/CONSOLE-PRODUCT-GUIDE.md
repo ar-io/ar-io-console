@@ -1,6 +1,6 @@
 # ar.io Console Product Guide
 
-_A comprehensive guide to all features and capabilities of the ar.io Console_
+*A comprehensive guide to all features and capabilities of the ar.io Console*
 
 ---
 
@@ -67,7 +67,6 @@ The ar.io Console is accessible through any modern web browser at the deployment
 ### 🏠 Landing Page & Navigation
 
 **Public Landing Page**
-
 - Hero section with "How does it work?" explanation and Try It Now feature
 - Announcement Banner: Configurable banner for important updates (dismissible, persists in localStorage)
 - Trusted by the Best: Enterprise logos carousel
@@ -83,7 +82,6 @@ The ar.io Console is accessible through any modern web browser at the deployment
 - Final CTA: Book a Demo with Cal.com integration (opens in modal)
 
 **Navigation System**
-
 - **Waffle Menu**: Grid3x3 icon in header providing access to all services
 - **React Router**: Direct URL access to any feature (e.g., `/upload`, `/domains`)
 - **Responsive Design**: Optimized for desktop, tablet, and mobile
@@ -92,13 +90,11 @@ The ar.io Console is accessible through any modern web browser at the deployment
 ### 💳 Buy Credits
 
 **Email Authentication Support**
-
 - Privy integration for email-only sign-in
 - Automatically creates embedded Ethereum wallet for email users
 - No wallet extension required for fiat payments
 
 **Fiat Payments (Stripe Integration)**
-
 - Complete payment flow with form validation
 - Country selection (190+ countries) with payment method restrictions
 - Real-time USD to credits conversion with debouncing (500ms)
@@ -107,13 +103,11 @@ The ar.io Console is accessible through any modern web browser at the deployment
 - Minimum amounts enforced with clear error messages
 
 **Payment Flow**
-
 1. **Payment Details**: Enter credit amount, select country, provide email/payment info
 2. **Payment Confirmation**: Review transaction summary, accept Terms of Service
 3. **Payment Success**: Confirmation with balance update and next steps
 
 **Crypto Payments**
-
 - Direct wallet payments via MetaMask, Phantom, Solflare
 - Automatic network switching for correct blockchain
 - Real-time cryptocurrency to credits conversion with live rates
@@ -126,7 +120,6 @@ The ar.io Console is accessible through any modern web browser at the deployment
 ### 📤 Upload Files
 
 **Just-in-Time (JIT) Payment System**
-
 - Automatic credit top-up during upload if balance is insufficient
 - Configurable per token type with defaults:
   - ARIO: 200 tokens (~$20)
@@ -140,7 +133,6 @@ The ar.io Console is accessible through any modern web browser at the deployment
 - OnDemandFunding integration with Turbo SDK
 
 **File Upload Interface**
-
 - Drag & drop support with visual feedback and gradient container
 - Batch upload capability for multiple files
 - "Add More" button to append files without clearing selection
@@ -151,7 +143,6 @@ The ar.io Console is accessible through any modern web browser at the deployment
 - Clean UI that hides file selection during active uploads
 
 **Upload Process**
-
 1. **File Selection**: Drag files, click to browse, or add more to existing selection
 2. **JIT Payment Check**: Automatic balance check with optional auto-top-up
 3. **Cost Review**: Real-time pricing display with total costs and buffer
@@ -160,7 +151,6 @@ The ar.io Console is accessible through any modern web browser at the deployment
 6. **Receipt Generation**: Transaction IDs with Arweave explorer links
 
 **Supported Features**
-
 - Individual file upload with detailed progress tracking
 - Folder upload with recursive file processing
 - Upload cancellation with proper cleanup
@@ -169,7 +159,6 @@ The ar.io Console is accessible through any modern web browser at the deployment
 - ArNS assignment during upload for permanent links
 
 **Wallet Requirements**
-
 - Arweave, Ethereum, and Solana wallets can upload files
 - All wallet types support file uploads with proper signers
 - Email authentication users can upload via embedded Ethereum wallet
@@ -177,14 +166,12 @@ The ar.io Console is accessible through any modern web browser at the deployment
 ### 📸 Capture Webpages
 
 **Webpage Capture System**
-
 - Full-page screenshot capture of any public webpage
 - Integration with turbo-capture-service backend
 - 90-second timeout for complete page rendering
 - PNG format screenshots with viewport metadata
 
 **Capture Features**
-
 - URL input with validation
 - Progressive disclosure: ArNS and upload options appear after capture
 - Optional ArNS name/undername assignment (Arweave wallets only)
@@ -194,12 +181,10 @@ The ar.io Console is accessible through any modern web browser at the deployment
 
 **Capture Metadata Tags**
 All captures include standardized tags:
-
 - Common: `App-Name`, `App-Feature: 'Capture'`, `App-Version`
 - Capture-specific: `Original-URL`, `Title`, `Viewport-Width`, `Viewport-Height`, `Captured-At`
 
 **Capture Workflow**
-
 1. **URL Entry**: Enter public webpage URL to capture
 2. **Screenshot Capture**: Service captures full-page screenshot (90s timeout)
 3. **Preview**: Review captured image with metadata
@@ -208,7 +193,6 @@ All captures include standardized tags:
 6. **Receipt**: Receive transaction ID and Arweave link
 
 **Configuration**
-
 - Capture service URL configurable in Settings
 - Separate production/development URLs supported
 - Dynamic configuration via store settings
@@ -216,7 +200,6 @@ All captures include standardized tags:
 ### 🌐 Deploy Sites
 
 **Site Deployment**
-
 - Complete website deployment to Arweave with manifest generation
 - Data export functionality for site packages
 - Drag & drop folder upload support
@@ -225,7 +208,6 @@ All captures include standardized tags:
 - ArNS association during deployment
 
 **Just-in-Time (JIT) Payment for Deployments**
-
 - Same JIT payment system as file uploads
 - Automatic credit top-up if balance insufficient
 - Buffer multiplier to ensure successful deployment
@@ -233,7 +215,6 @@ All captures include standardized tags:
 - Seamless deployment without manual credit management
 
 **ArNS Integration**
-
 - Associate deployments with owned ArNS names
 - Support for base names (@) and custom undernames
 - TTL configuration (default 600 seconds / 10 minutes)
@@ -242,7 +223,6 @@ All captures include standardized tags:
 - Manual refresh option for owned names
 
 **Deployment Workflow**
-
 1. **Site Preparation**: Select folder, configure homepage/404 pages
 2. **JIT Payment Check**: Automatic balance verification with optional auto-top-up
 3. **Deployment Upload**: Upload all site files with progress tracking
@@ -251,7 +231,6 @@ All captures include standardized tags:
 6. **Confirmation**: Receive manifest ID and access URLs
 
 **Deployment Management**
-
 - Recent deployments page (`/deployments`) with full history
 - Transaction IDs and Arweave explorer links
 - ArNS name associations displayed
@@ -260,7 +239,6 @@ All captures include standardized tags:
 ### 🤝 Share Credits
 
 **Credit Sharing System**
-
 - Wallet-to-wallet credit transfers (delegated credits)
 - Preset expiration options: 24 hours, 7 days, 30 days, never
 - Recipient tracking and management with persistent history
@@ -268,7 +246,6 @@ All captures include standardized tags:
 - Support for multiple recipients simultaneously
 
 **Sharing Process**
-
 1. **Recipient Setup**: Enter destination wallet address (Arweave, Ethereum, Solana)
 2. **Amount Configuration**: Specify credit amount to share (minimum enforced)
 3. **Expiration Settings**: Choose when shared credits expire
@@ -276,21 +253,18 @@ All captures include standardized tags:
 5. **Confirmation**: Receive sharing confirmation and tracking info
 
 **Credit Revocation**
-
 - Revoke unused shared credits from recipients
 - Real-time balance updates after revocation
 - Transaction history tracking in persistent storage
 - Clear UI showing revocable amounts
 
 **Wallet Requirements**
-
 - Only Arweave wallets (Wander) can share and revoke credits
 - Ethereum and Solana wallets cannot share credits
 
 ### 🎁 Gift System
 
 **Send Gifts**
-
 - Send credits to anyone via email address (no wallet required)
 - Optional personal messages for recipients
 - Gift code generation and automatic email delivery
@@ -298,7 +272,6 @@ All captures include standardized tags:
 - Support for both fiat and crypto gift payments
 
 **Gift Creation Process**
-
 1. **Gift Details**: Enter recipient email and credit amount
 2. **Personal Message**: Add optional message to recipient
 3. **Payment Method**: Choose fiat (Stripe) or crypto payment
@@ -306,7 +279,6 @@ All captures include standardized tags:
 5. **Gift Delivery**: Automatic email delivery with redemption code via GiftPaymentSuccessPanel
 
 **Redeem Gifts**
-
 - Dedicated redemption page (`/redeem`)
 - Gift code validation and processing
 - Credit allocation to connected wallet or email account
@@ -314,7 +286,6 @@ All captures include standardized tags:
 - No wallet required to receive - can redeem later
 
 **Wallet Requirements**
-
 - No wallet required to send or receive gifts
 - Can use email authentication for gift redemption
 
@@ -325,7 +296,6 @@ All captures include standardized tags:
 ### 📊 Account Overview
 
 **Account Page (`/account`)**
-
 - Comprehensive dashboard with all account information
 - Wallet connection status and details
 - Credit balance with shared credits tracking
@@ -333,7 +303,6 @@ All captures include standardized tags:
 - Quick access to all account management features
 
 **Balance Cards Grid**
-
 - Visual balance display for connected wallet
 - Credit balance breakdown (owned + shared)
 - Real-time balance updates via `refresh-balance` custom events
@@ -341,7 +310,6 @@ All captures include standardized tags:
 - Shared credits section with delegation tracking
 
 **Activity Overview**
-
 - Recent uploads with transaction links and file details
 - Recent deployments with ArNS associations and manifest links
 - Transaction history with timestamps and status tracking
@@ -351,7 +319,6 @@ All captures include standardized tags:
 ### 👤 Wallet Overview Card
 
 **Connected Wallet Information**
-
 - Wallet address display with CopyButton functionality
 - Wallet type identification (Arweave/Ethereum/Solana/Email)
 - ArNS primary name resolution and display (24-hour cache)
@@ -359,7 +326,6 @@ All captures include standardized tags:
 - Visual wallet type indicators
 
 **Credit Sharing Section**
-
 - Manage shared credits (only for Arweave wallets)
 - View sharing history with recipient addresses
 - Expiration dates for time-limited shares
@@ -367,7 +333,6 @@ All captures include standardized tags:
 - Track credit utilization by recipients
 
 **Email Authentication Users**
-
 - Display embedded Ethereum wallet address
 - Balance information for Privy-managed wallet
 - Limited feature access (buy credits only)
@@ -376,7 +341,6 @@ All captures include standardized tags:
 ### 📈 Recent Activity Sections
 
 **Recent Uploads Section**
-
 - Upload history from persistent store with timestamps
 - Transaction IDs with Arweave explorer links (format: https://arweave.net/{txId})
 - Upload status tracking (confirmed/finalized)
@@ -385,7 +349,6 @@ All captures include standardized tags:
 - Error logs for failed uploads with retry options
 
 **Recent Deployments Section**
-
 - Deployment history from persistent store
 - Manifest IDs with access URLs
 - ArNS name associations with .ar.io links
@@ -394,7 +357,6 @@ All captures include standardized tags:
 - Site management with update/redeploy options
 
 **Balance Checker Tool**
-
 - Check credit balance for any wallet address (`/balances`)
 - Multi-chain support: Arweave, Ethereum, Solana
 - Display owned credits and shared credits separately
@@ -408,7 +370,6 @@ All captures include standardized tags:
 ### 💰 Fiat Payment Integration
 
 **Payment Details Panel**
-
 - Form validation with real-time error messages
 - Country selection from 190+ countries affecting payment methods
 - Credit amount input with minimum validation (varies by country)
@@ -417,7 +378,6 @@ All captures include standardized tags:
 - Clear pricing breakdown and total display
 
 **Payment Confirmation Panel**
-
 - Transaction summary with all details:
   - Credit amount to receive
   - Total cost in USD
@@ -429,7 +389,6 @@ All captures include standardized tags:
 - Loading states during payment processing
 
 **Payment Success Panel**
-
 - Transaction confirmation with receipt details
 - Credit balance update notification with new balance display
 - Next steps guidance:
@@ -440,7 +399,6 @@ All captures include standardized tags:
 - Automatic `refresh-balance` event trigger
 
 **Payment Callback Handling**
-
 - URL parameter processing: `?payment=success` or `?payment=cancelled`
 - Automatic balance refresh on success
 - User notifications via alerts
@@ -449,7 +407,6 @@ All captures include standardized tags:
 ### 🎁 Gift Payment Flow
 
 **Gift Payment Details Panel**
-
 - Recipient information: email address (required)
 - Gift amount specification with minimum enforcement
 - Personal message composition (optional, up to 500 characters)
@@ -457,7 +414,6 @@ All captures include standardized tags:
 - Real-time validation and error feedback
 
 **Gift Payment Confirmation Panel**
-
 - Gift summary with all details:
   - Recipient email
   - Gift amount in credits
@@ -468,7 +424,6 @@ All captures include standardized tags:
 - Terms of service acknowledgment
 
 **Gift Payment Success Panel**
-
 - Gift creation confirmation with unique gift code
 - Delivery status: email sent confirmation
 - Gift code display with copy functionality
@@ -480,8 +435,7 @@ All captures include standardized tags:
 
 **Supported Cryptocurrencies**
 
-_Native Blockchain Tokens_:
-
+*Native Blockchain Tokens*:
 - **Arweave (AR)**: Native Arweave token (slow, 10-60 min)
 - **ARIO**: AR.IO token on AO/Arweave (medium, 5-15 min, JIT enabled)
 - **Ethereum (ETH L1)**: Ethereum mainnet (slow, 10-30 min)
@@ -490,14 +444,12 @@ _Native Blockchain Tokens_:
 - **KYVE**: KYVE network token (medium)
 - **POL**: Polygon network (fast, 2-5 min)
 
-_Stablecoins (pegged to $1 USD)_:
-
+*Stablecoins (pegged to $1 USD)*:
 - **USDC on Ethereum**: USDC on Ethereum L1 (slow, 10-30 min)
 - **USDC on Base**: USDC on Base L2 (fast, instant-3 min, JIT enabled)
 - **USDC on Polygon**: USDC on Polygon (fast, 2-5 min)
 
 **Payment Features**
-
 - Direct wallet payments through MetaMask, Phantom, Solflare, Wander
 - Automatic network detection and switching
 - Network validation before transaction
@@ -505,7 +457,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Processing time indicators per token type
 
 **Crypto Confirmation Panel**
-
 - Payment address generation for selected cryptocurrency
 - Dynamic gateway URL based on token type (configured in tokenMap)
 - QR code display for mobile wallet scanning
@@ -515,7 +466,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Transaction verification with blockchain explorers
 
 **Token Gateway Configuration**
-
 - Configurable RPC endpoints per token type
 - Production and development environment presets
 - Custom configuration support in Settings
@@ -528,7 +478,6 @@ _Stablecoins (pegged to $1 USD)_:
 ### 📁 Upload System
 
 **File Upload Panel**
-
 - Multi-file drag and drop interface with gradient visual container
 - File type detection and validation
 - Size limits with warnings (100 KiB free threshold prominently displayed)
@@ -536,7 +485,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Support for all file types and formats
 
 **Just-in-Time (JIT) Payment Feature**
-
 - Automatic credit balance checking before upload
 - Optional auto-top-up if balance insufficient
 - JitPaymentCard component with configuration:
@@ -552,7 +500,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Clear messaging when JIT payment is triggered
 
 **Upload Progress Tracking**
-
 - Single file view during upload with clean UI
 - Real-time progress bars per file with percentage
 - Upload speed and estimated time remaining
@@ -563,7 +510,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Success indicators with transaction IDs
 
 **File Selection Enhancement**
-
 - "Add More" button to append files without clearing existing selection
 - "Clear all" button with destructive red hover color
 - Individual file removal with X button (red hover)
@@ -571,7 +517,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Uniform color scheme: white for positive actions, red for destructive
 
 **Upload History**
-
 - Complete upload history tracking in persistent Zustand store
 - Transaction details with timestamps
 - Arweave explorer links for all uploads
@@ -582,7 +527,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Receipt data storage for verification
 
 **Connection Warnings**
-
 - Clear messaging when non-Arweave wallet connected
 - Explanation of upload wallet requirements
 - Guidance to connect Wander wallet
@@ -591,7 +535,6 @@ _Stablecoins (pegged to $1 USD)_:
 ### 🚀 Site Deployment
 
 **Deploy Site Panel**
-
 - Folder upload with drag & drop support
 - Site file preparation and packaging
 - Homepage configuration (default: index.html)
@@ -601,7 +544,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Data export functionality for site manifests
 
 **Just-in-Time (JIT) Payment for Deployments**
-
 - Same JIT payment system as file uploads
 - JitPaymentCard component with deployment-specific settings
 - Automatic balance checking before deployment
@@ -611,7 +553,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Seamless deployment workflow without manual credit management
 
 **Deploy Confirmation Modal**
-
 - Compact modal design (max-w-2xl) optimized for vertical space
 - Deployment summary:
   - Domain (ArNS name if selected)
@@ -624,7 +565,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Close/cancel options
 
 **ArNS Association**
-
 - Owned ArNS names fetching from AR.IO SDK
 - ArNSAssociationPanel for name selection
 - Base name (@) deployment support
@@ -636,7 +576,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Loading states during name fetch and update
 
 **Deployment Management**
-
 - Deployment history in persistent Zustand store
 - Recent Deployments page (`/deployments`) with full list
 - Manifest IDs with Arweave explorer links
@@ -647,7 +586,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Update/redeploy options for existing sites
 
 **Deployment Workflow**
-
 1. **Site Preparation**: Select folder via drag & drop or file picker
 2. **Configuration**: Set homepage (default index.html) and optional 404 page
 3. **ArNS Selection**: Optionally associate with owned ArNS name or undername
@@ -660,7 +598,6 @@ _Stablecoins (pegged to $1 USD)_:
 10. **Completion**: Receive manifest ID, ArNS URL, and success confirmation
 
 **Wallet Requirements**
-
 - Arweave, Ethereum, and Solana wallets can deploy sites
 - All wallet types support site deployment with proper signers
 - ArconnectSigner required for ArNS/ANT updates (Arweave wallets only)
@@ -673,7 +610,6 @@ _Stablecoins (pegged to $1 USD)_:
 ### 🔍 Domain Search
 
 **ArNS Panel (Domain Search)**
-
 - Real-time domain availability checking via AR.IO SDK
 - Registration period selection: 1, 2, 5, 10 years
 - Credit-based pricing calculations with dynamic rates
@@ -682,7 +618,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Loading states during availability checks
 
 **Domain Pricing**
-
 - Dynamic pricing based on name length and demand
 - Credit cost calculations from AR.IO process
 - Registration period discounts for longer terms
@@ -690,7 +625,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Price comparison across different registration periods
 
 **Search Features**
-
 - Instant search with debouncing
 - Name validation with clear error messages
 - Availability status with visual indicators
@@ -698,7 +632,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Educational content about ArNS benefits
 
 **Purchase Status**
-
 - Search UI fully functional
 - Purchase functionality planned but not yet connected
 - Clear messaging about upcoming purchase capability
@@ -707,7 +640,6 @@ _Stablecoins (pegged to $1 USD)_:
 ### 🏠 Owned Names Management
 
 **Primary Name Resolution**
-
 - AR.IO SDK integration for primary name lookup
 - 24-hour cache per wallet address
 - Automatic cache refresh on expiration
@@ -719,7 +651,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Error handling with fallback to address display
 
 **Owned Names Panel**
-
 - Fetch all owned ArNS names via AR.IO SDK
 - Display owned names with current targets
 - ANT state tracking: processId, current target, undernames
@@ -729,7 +660,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Empty state messaging when no names owned
 
 **ANT Record Updates**
-
 - Update ArNS names to point to new manifest IDs
 - Support for base names (@) and custom undernames
 - Undername creation with validation
@@ -740,7 +670,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Error handling with user-friendly messages
 
 **ArNS Name Display**
-
 - Primary name shown in header next to wallet address
 - Owned names list in account page
 - Name associations in upload/deployment history
@@ -750,7 +679,6 @@ _Stablecoins (pegged to $1 USD)_:
 ### 🔗 Site Association
 
 **ArNSAssociationPanel**
-
 - Modal interface for associating deployments with ArNS names
 - Dropdown selection of owned names
 - Base name (@) option for root deployment
@@ -761,7 +689,6 @@ _Stablecoins (pegged to $1 USD)_:
 - Transaction signing and status tracking
 
 **Association Workflow**
-
 1. **Name Selection**: Choose from owned ArNS names dropdown
 2. **Record Type**: Select base name (@) or create custom undername
 3. **Undername Input**: If custom, enter undername (validated)
@@ -770,7 +697,6 @@ _Stablecoins (pegged to $1 USD)_:
 6. **Confirmation**: Receive transaction ID and updated .ar.io URL
 
 **Wallet Requirements**
-
 - Only Arweave wallets can update ArNS records
 - ArconnectSigner required for ANT operations
 - Ethereum and Solana wallets cannot manage ArNS
@@ -784,13 +710,11 @@ _Stablecoins (pegged to $1 USD)_:
 Developer documentation is available at **docs.ar.io** with comprehensive guides and API references:
 
 **Getting Started**
-
 - Installation: `npm i @ardrive/turbo-sdk`
 - Quick start guides with code examples
 - Upload, payment, and deployment tutorials
 
 **API Documentation**
-
 - **Upload Service API** (https://upload.ardrive.io/api-docs)
   - POST /tx - Upload signed data item
   - GET /tx/:id/status - Check upload status
@@ -804,7 +728,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
   - POST /graphql - GraphQL query interface
 
 **Learning Resources** (docs.ar.io)
-
 - **Getting Started**: Create your first upload integration
 - **Paying for Uploads**: Turbo Credits as payment medium
 - **Host Decentralized Websites**: Deploy webpage/app to Arweave with ArNS
@@ -815,7 +738,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 ### ⚙️ Settings Page (`/settings`)
 
 **Service Configuration**
-
 - Environment selection: Production / Development / Custom
 - Endpoint configuration:
   - Payment Service URL
@@ -834,7 +756,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 ### 🧮 Pricing Calculators
 
 **Storage Pricing Calculator (`/calculator`)**
-
 - Real-time storage cost calculations using Turbo SDK
 - File size input with unit selection (KiB/MiB/GiB)
 - Instant winc (credits) to USD conversion
@@ -844,7 +765,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - Batch calculation support for multiple files
 
 **Services Calculator (`/services-calculator`)**
-
 - Combined storage and ArNS pricing
 - Multi-service cost estimation:
   - File storage costs
@@ -858,13 +778,11 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 ### 🌐 External Network Tools
 
 **Network Explorer (scan.ar.io)**
-
 - Search transactions and messages on the ar.io network
 - View block details and transaction history
 - Explore network activity and data
 
 **Gateway Dashboard (gateways.ar.io)**
-
 - View all gateways on the ar.io network
 - Delegate stake to gateway operators
 - Monitor gateway performance and health
@@ -877,14 +795,12 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 ### 📧 Email Authentication (Privy)
 
 **Email-Only Sign-In**
-
 - Privy integration (`@privy-io/react-auth`) for email authentication
 - No wallet extension required
 - Configuration: `loginMethods: ['email']` (wallet connections disabled)
 - Automatically creates embedded Ethereum wallet for users
 
 **Embedded Wallet Features**
-
 - Privy-managed embedded Ethereum wallet created on sign-in
 - Access via `useWallets()` hook from Privy
 - wallet.walletClientType === 'privy' for identification
@@ -892,7 +808,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - ethers.BrowserProvider wrapper for transaction signing
 
 **User Experience**
-
 - Seamless email-based authentication
 - No wallet extension installation needed
 - Automatic wallet creation and management
@@ -902,14 +817,12 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 ### 🦌 Arweave Integration (Wander Wallet)
 
 **ArconnectSigner Support**
-
 - Full Turbo SDK integration via `ArconnectSigner`
 - Native Arweave transaction signing with proper data item creation
 - Direct `window.arweaveWallet` API integration
 - Complete permaweb functionality access
 
 **Wallet Features**
-
 - File signing and upload capabilities
 - ArNS name management and updates
 - Credit sharing and delegation
@@ -917,7 +830,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - Site deployment with manifest creation
 
 **Supported Operations**
-
 - ✅ Buy Credits (Fiat & Crypto) - Full support
 - ✅ Upload Files - Full support with JIT payments
 - ✅ Deploy Sites - Full support with ArNS association
@@ -927,7 +839,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - ✅ Gift Credits - Send gifts via email
 
 **Technical Implementation**
-
 - TurboFactory.authenticated with ArconnectSigner
 - Proper error handling for connection issues
 - Transaction signing with user confirmation
@@ -936,7 +847,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 ### 🦊 Ethereum Integration (MetaMask / WalletConnect)
 
 **Wagmi v2 Framework**
-
 - Direct Ethereum connection (not through Privy)
 - MetaMask connector with automatic detection
 - WalletConnect v2 integration for mobile
@@ -944,7 +854,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - ethers.BrowserProvider for transaction signing
 
 **Wallet Features**
-
 - Fiat and crypto payment support (ETH, Base-ETH, POL, USDC variants)
 - Embedded wallet detection for Privy users
 - Automatic network detection and switching
@@ -954,7 +863,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - JIT payments for Base-ETH and Base-USDC
 
 **Network Auto-Switching**
-
 - Detects current MetaMask network before payment
 - Automatically switches to correct network per token:
   - USDC/ETH → Ethereum Mainnet (chain ID 1)
@@ -965,13 +873,11 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - Clear error messages if switch fails
 
 **Supported Token Types**
-
 - **Ethereum L1**: ETH, USDC (slower, 10-30 min confirmations)
 - **Base L2**: Base-ETH, Base-USDC (fast, instant-3 min, JIT enabled)
 - **Polygon**: POL, Polygon-USDC (fast, 2-5 min)
 
 **Technical Implementation**
-
 - TurboFactory.authenticated with ethers signer
 - Token type override for JIT: "ethereum", "base-eth", "pol", "usdc", "base-usdc", "polygon-usdc"
 - Dynamic turboConfig based on token type
@@ -983,7 +889,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 ### 👻 Solana Integration (Phantom / Solflare)
 
 **Wallet Adapter Ecosystem**
-
 - @solana/wallet-adapter-react integration
 - Phantom wallet with WalletAdapterNetwork.Mainnet
 - Solflare wallet support
@@ -991,7 +896,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - Direct provider access via `window.solana`
 
 **Wallet Features**
-
 - Fiat and crypto payment support
 - SOL token balance checking
 - Transaction signing capabilities
@@ -999,7 +903,6 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - Real-time balance updates
 
 **Technical Implementation**
-
 - TurboFactory.authenticated with Solana wallet adapter
 - Token type: "solana" for standard operations
 - Custom adapter wrapping Phantom/Solflare
@@ -1013,8 +916,7 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 
 **Waffle Menu (Grid3x3 Icon)**
 
-_Services Section_ (Login Required):
-
+*Services Section* (Login Required):
 - Buy Credits (`/topup`)
 - Upload Files (`/upload`)
 - Capture Page (`/capture`)
@@ -1023,8 +925,7 @@ _Services Section_ (Login Required):
 - Redeem Gift (`/redeem`)
 - Send Gift (`/gift`)
 
-_Tools Section_ (Public Access):
-
+*Tools Section* (Public Access):
 - Search Domains (`/domains`)
 - Pricing Calculator (`/calculator`)
 - Check Balance (`/balances`)
@@ -1032,15 +933,13 @@ _Tools Section_ (Public Access):
 - Gateway Dashboard (external: gateways.ar.io)
 - Developer Docs (external: docs.ar.io)
 
-_Profile Dropdown_ (Logged In Users):
-
+*Profile Dropdown* (Logged In Users):
 - My Account (with explorer link)
 - Settings (`/settings`)
 - Export Private Key (Privy users only)
 - Disconnect/Logout
 
 **React Router Integration**
-
 - Full client-side routing with BrowserRouter
 - Direct URL access to all features
 - Deep linking support for sharing
@@ -1050,7 +949,6 @@ _Profile Dropdown_ (Logged In Users):
 - Browser history management
 
 **URL Structure**
-
 - Landing: `/`
 - Services: `/topup`, `/upload`, `/capture`, `/deploy`, `/share`, `/gift`, `/redeem`, `/account`
 - Tools: `/domains`, `/calculator`, `/services-calculator`, `/balances`, `/settings`, `/deployments`
@@ -1060,7 +958,6 @@ _Profile Dropdown_ (Logged In Users):
 ### 📱 Responsive Design
 
 **Mobile Optimization**
-
 - Touch-friendly interface elements (44px+ touch targets)
 - Optimized layouts for screens < 768px
 - Gesture support: swipe, pinch-to-zoom where appropriate
@@ -1071,7 +968,6 @@ _Profile Dropdown_ (Logged In Users):
 - Simplified forms with mobile-optimized inputs
 
 **Tablet Experience (768px - 1024px)**
-
 - Hybrid layout between mobile and desktop
 - Grid layouts optimized for tablet orientation
 - Touch and mouse input support
@@ -1080,7 +976,6 @@ _Profile Dropdown_ (Logged In Users):
 - Sidebar navigation for landscape orientation
 
 **Desktop Experience (> 1024px)**
-
 - Full-featured interface with all capabilities
 - Multi-column layouts for efficient space usage
 - Hover states and tooltips
@@ -1090,7 +985,6 @@ _Profile Dropdown_ (Logged In Users):
 - Optimized for mouse and keyboard input
 
 **Breakpoints**
-
 - Mobile: < 640px (sm)
 - Tablet: 640px - 768px (md)
 - Desktop: 768px - 1024px (lg)
@@ -1099,7 +993,6 @@ _Profile Dropdown_ (Logged In Users):
 ### 🎨 Design System
 
 **ar.io Brand Colors (Light Mode)**
-
 - **Primary Purple** (#5427C8) - Primary brand color for:
   - Call-to-action buttons
   - Active states and highlights
@@ -1120,7 +1013,6 @@ _Profile Dropdown_ (Logged In Users):
 - **Card Surface** (#F0F0F0) - Card backgrounds
 
 **Light Theme (Default)**
-
 - **Background**: #FFFFFF - Main page background
 - **Foreground**: #23232D - Primary text color
 - **Card**: #F0F0F0 - Card and elevated surface backgrounds
@@ -1131,8 +1023,7 @@ _Profile Dropdown_ (Logged In Users):
 
 **Component Patterns**
 
-_Service Panel Header_ (Consistent across all services):
-
+*Service Panel Header* (Consistent across all services):
 ```jsx
 <div className="flex items-start gap-3 mb-6">
   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
@@ -1145,16 +1036,14 @@ _Service Panel Header_ (Consistent across all services):
 </div>
 ```
 
-_Card Component_:
-
+*Card Component*:
 ```jsx
 <div className="rounded-2xl border border-border/20 bg-card p-6 shadow-sm">
   {/* Card content */}
 </div>
 ```
 
-_Primary Button_:
-
+*Primary Button*:
 ```jsx
 <button className="inline-flex items-center gap-2 bg-foreground text-white px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity">
   Button Text
@@ -1162,7 +1051,6 @@ _Primary Button_:
 ```
 
 **Typography**
-
 - **Headings**: Besley (font-heading), weight 800 (extra bold)
 - **Body text**: Plus Jakarta Sans (font-body)
 - **Responsive Scaling**: Base 16px with scale modifiers (text-xs to text-4xl)
@@ -1171,7 +1059,6 @@ _Primary Button_:
 - **Copy Pattern**: `<CopyButton textToCopy={value} />` for all copyable content
 
 **Interactive States**
-
 - **Hover**: Opacity 80-90%, transition 200ms
 - **Active**: Scale 95%, pressed appearance
 - **Focus**: Ring with primary color, 2px width
@@ -1179,7 +1066,6 @@ _Primary Button_:
 - **Loading**: Spinner with primary color, scale animation
 
 **Modal System**
-
 - **BaseModal**: Foundation with portal rendering
 - **Specialized Modals**: WalletSelectionModal, BlockingMessageModal, ReceiptModal, JitPaymentModal
 - **Consistent Styling**: Dark theme, proper z-index (50), backdrop blur
@@ -1240,7 +1126,6 @@ interface EphemeralState {
 ```
 
 **State Actions**
-
 - Wallet: `setAddress`, `clearAddress`
 - Balance: `setCreditBalance` (ephemeral)
 - ArNS: `setArNSName`, `setOwnedArNSNames`
@@ -1251,7 +1136,6 @@ interface EphemeralState {
 - Config: `setConfigMode`, `updateCustomConfig`, `updateTokenMap`, `resetToDefaults`
 
 **Cache Management**
-
 - **Primary ArNS Name**: 24-hour cache per wallet address
   - Stored in `arnsNamesCache` with timestamp
   - Automatic expiration check on lookup
@@ -1291,7 +1175,6 @@ useEffect(() => {
 ```
 
 **Event Handling Patterns**
-
 - Payment success triggers balance refresh across all components
 - Upload completion triggers history update
 - Deployment completion triggers history and owned names refresh
@@ -1299,7 +1182,6 @@ useEffect(() => {
 - ArNS update triggers owned names cache invalidation
 
 **Event Listeners**
-
 - Registered in useEffect hooks with cleanup
 - Debounced where appropriate to prevent excessive API calls
 - Error handling for failed event handlers
@@ -1312,31 +1194,27 @@ JIT payments allow users to upload files or deploy sites without manually toppin
 
 **Implementation Details**
 
-_Supported Networks_:
-
+*Supported Networks*:
 - **Arweave (ARIO)**: Primary JIT network for Arweave uploads
 - **Ethereum (Base-ETH)**: Base L2 network for lower fees and fast confirmation
 - **Ethereum (Base-USDC)**: USDC stablecoin on Base L2 for predictable pricing
 - **Solana (SOL)**: Fast confirmation times on Solana network
 
-_Configuration_ (via JitPaymentCard component):
-
+*Configuration* (via JitPaymentCard component):
 ```typescript
 interface JITConfig {
-  enabled: boolean; // Global JIT enable/disable
-  maxTokenAmount: {
-    // Maximum tokens per transaction
-    ario: 200; // ~$20 worth
-    solana: 0.15; // ~$22.50 worth
-    'base-eth': 0.01; // ~$25 worth
-    'base-usdc': 25; // $25 exact (stablecoin)
+  enabled: boolean;                    // Global JIT enable/disable
+  maxTokenAmount: {                     // Maximum tokens per transaction
+    ario: 200,                          // ~$20 worth
+    solana: 0.15,                       // ~$22.50 worth
+    'base-eth': 0.01,                   // ~$25 worth
+    'base-usdc': 25,                    // $25 exact (stablecoin)
   };
-  bufferMultiplier: 1.1; // 10% buffer to prevent failures
+  bufferMultiplier: 1.1;                // 10% buffer to prevent failures
 }
 ```
 
-_Upload Flow with JIT_:
-
+*Upload Flow with JIT*:
 1. User selects files, system calculates required credits
 2. Check current balance: `creditBalance >= requiredCredits + buffer`
 3. If insufficient:
@@ -1359,15 +1237,13 @@ _Upload Flow with JIT_:
    ```
 6. Transaction completes, balance refreshed
 
-_Deploy Flow with JIT_:
-
+*Deploy Flow with JIT*:
 - Same process as upload flow
 - Applied to entire folder deployment cost
 - Buffer accounts for multiple file uploads
 - Manifest creation included in cost calculation
 
 **Token Type Mapping**
-
 ```typescript
 const jitTokenType = walletType === 'arweave'
   ? 'ario'
@@ -1378,7 +1254,6 @@ const jitTokenType = walletType === 'arweave'
 ```
 
 **User Experience**
-
 - Opt-in system with persistent preferences
 - Clear messaging about auto-top-up
 - Cost breakdown before confirmation
@@ -1387,7 +1262,6 @@ const jitTokenType = walletType === 'arweave'
 - Automatic balance refresh after top-up
 
 **Error Handling**
-
 - Insufficient token balance: Clear error message
 - Payment transaction failure: Retry option
 - Network errors: Fallback to manual top-up
@@ -1399,42 +1273,36 @@ const jitTokenType = walletType === 'arweave'
 
 The application provides clear, actionable error messages:
 
-_Network Connectivity Issues_:
-
+*Network Connectivity Issues*:
 - "Network connection lost. Please check your internet and try again."
 - Automatic retry with exponential backoff
 - Offline indicator in header
 
-_Wallet Connection Problems_:
-
+*Wallet Connection Problems*:
 - "Wallet extension not found. Please install Wander wallet."
 - "Wallet is locked. Please unlock your wallet and try again."
 - "Wrong network. Please switch to [correct network]."
 - Link to wallet installation/setup guides
 
-_Transaction Failures_:
-
+*Transaction Failures*:
 - "Transaction rejected by user."
 - "Insufficient funds to complete transaction."
 - "Transaction failed: [specific error from blockchain]"
 - Retry button with fresh transaction attempt
 
-_File Upload Errors_:
-
+*File Upload Errors*:
 - "File too large. Maximum size: [limit]"
 - "Invalid file type. Supported types: [list]"
 - "Upload failed for [filename]: [specific error]"
 - Individual file error tracking with retry per file
 
-_ArNS Errors_:
-
+*ArNS Errors*:
 - "Name not found. Please check spelling and try again."
 - "Name already registered by another user."
 - "Update failed: Invalid ANT record."
 - "Permission denied: You don't own this name."
 
 **Error Recovery Mechanisms**
-
 - **Automatic Retry**: Network errors with exponential backoff (3 attempts)
 - **Partial Success**: Continue with successful uploads if some fail
 - **State Preservation**: Save form data before error
@@ -1443,7 +1311,6 @@ _ArNS Errors_:
 - **Support Links**: Direct links to relevant documentation
 
 **Error Logging**
-
 - Client-side error logging to browser console (development)
 - Error details in upload/deployment history for troubleshooting
 - Transaction IDs included for blockchain errors
@@ -1452,22 +1319,19 @@ _ArNS Errors_:
 ### 🔧 Developer Configuration System
 
 **Configuration Modes**
-
 - **Production**: Default production endpoints and settings
 - **Development**: Development/testnet endpoints for testing
 - **Custom**: Fully configurable endpoints for advanced users
 
 **Configurable Settings**
-
 ```typescript
 interface DeveloperConfig {
-  paymentServiceUrl: string; // Default: https://payment.ardrive.io
-  uploadServiceUrl: string; // Default: https://upload.ardrive.io
-  gatewayUrl: string; // Default: https://turbo.ardrive.io
-  stripeKey: string; // Publishable key for Stripe
-  processId: string; // AR.IO process ID
-  tokenMap: {
-    // RPC URLs per token type
+  paymentServiceUrl: string;          // Default: https://payment.ardrive.io
+  uploadServiceUrl: string;           // Default: https://upload.ardrive.io
+  gatewayUrl: string;                 // Default: https://turbo.ardrive.io
+  stripeKey: string;                  // Publishable key for Stripe
+  processId: string;                  // AR.IO process ID
+  tokenMap: {                         // RPC URLs per token type
     arweave: string;
     ario: string;
     ethereum: string;
@@ -1475,15 +1339,14 @@ interface DeveloperConfig {
     solana: string;
     kyve: string;
     pol: string;
-    usdc: string; // USDC on Ethereum L1
-    'base-usdc': string; // USDC on Base L2
-    'polygon-usdc': string; // USDC on Polygon
+    usdc: string;                     // USDC on Ethereum L1
+    'base-usdc': string;              // USDC on Base L2
+    'polygon-usdc': string;           // USDC on Polygon
   };
 }
 ```
 
 **Configuration Interface** (Settings → Configuration Tab)
-
 - Mode selector: Production / Development / Custom
 - Editable fields for all endpoints (Custom mode only)
 - Copy buttons for quick sharing of URLs
@@ -1494,22 +1357,19 @@ interface DeveloperConfig {
 
 **Preset Configurations**
 
-_Production_:
-
+*Production*:
 - payment.ardrive.io, upload.ardrive.io, turbo.ardrive.io
 - Mainnet RPC endpoints for all tokens
 - Live Stripe publishable key
 - Production AR.IO process ID
 
-_Development_:
-
+*Development*:
 - payment.ardrive.dev, upload.ardrive.dev, turbo.ardrive.dev
 - Testnet RPC endpoints (Eth Sepolia, Base Sepolia etc.)
 - Test Stripe publishable key
 - Development AR.IO process ID
 
 **Use Cases**
-
 - Testing with devnet/testnet endpoints
 - Running against custom Turbo services
 - Using alternative RPC providers
@@ -1524,27 +1384,23 @@ _Development_:
 
 **Wallet Connection Problems**
 
-_Issue_: Wallet extension not detected
-
+*Issue*: Wallet extension not detected
 - **Solution**: Install Wander for Arweave, MetaMask for Ethereum, or Phantom for Solana
 - **Check**: Extension is enabled in browser settings
 - **Verify**: Extension icon visible in browser toolbar
 - **Restart**: Refresh page after installing extension
 
-_Issue_: Wallet is locked
-
+*Issue*: Wallet is locked
 - **Solution**: Unlock wallet extension and refresh page
 - **Check**: Password entered correctly
 - **Verify**: Wallet extension is not in "locked" state
 
-_Issue_: Wrong network connected
-
+*Issue*: Wrong network connected
 - **Solution**: Switch to correct network in wallet extension
 - **Check**: Arweave mainnet, Ethereum mainnet, or Solana mainnet
 - **Verify**: Network indicator in wallet matches expected network
 
-_Issue_: Email authentication not working
-
+*Issue*: Email authentication not working
 - **Solution**: Check email for verification link
 - **Check**: Email is typed correctly
 - **Verify**: Check spam folder for Privy emails
@@ -1552,28 +1408,24 @@ _Issue_: Email authentication not working
 
 **Upload Failures**
 
-_Issue_: Upload fails with "Insufficient credits"
-
+*Issue*: Upload fails with "Insufficient credits"
 - **Solution**: Buy more credits or enable JIT payments
 - **Check**: Credit balance in header shows available credits
 - **Option 1**: Go to Buy Credits page and top up manually
 - **Option 2**: Enable JIT payments in upload panel for auto-top-up
 
-_Issue_: Upload stuck at signing step
-
+*Issue*: Upload stuck at signing step
 - **Solution**: Check Wander wallet extension for signature request
 - **Action**: Approve transaction in wallet extension
 - **Timeout**: Cancel and retry if stuck for > 30 seconds
 
-_Issue_: Upload fails with "Network error"
-
+*Issue*: Upload fails with "Network error"
 - **Solution**: Check internet connection and retry
 - **Check**: Other websites loading normally
 - **Verify**: Arweave network status at arweave.net
 - **Retry**: Use retry button in upload interface
 
-_Issue_: JIT payment not triggering
-
+*Issue*: JIT payment not triggering
 - **Solution**: Check JIT settings in upload panel
 - **Verify**: JIT payments enabled (toggle should be on)
 - **Check**: Max token amount set appropriately (not 0)
@@ -1581,28 +1433,24 @@ _Issue_: JIT payment not triggering
 
 **Deployment Issues**
 
-_Issue_: "Homepage file not found in folder"
-
+*Issue*: "Homepage file not found in folder"
 - **Solution**: Ensure folder contains index.html or configured homepage file
 - **Check**: File name spelling and capitalization matches exactly
 - **Verify**: File is in root of uploaded folder, not subfolder
 
-_Issue_: Deployment fails with ArNS error
-
+*Issue*: Deployment fails with ArNS error
 - **Solution**: Verify you own the ArNS name being updated
 - **Check**: Name appears in Account → Owned Names section
 - **Refresh**: Click refresh button in owned names section
 - **Permission**: Ensure Arweave wallet used matches name owner
 
-_Issue_: ArNS update not reflecting
-
+*Issue*: ArNS update not reflecting
 - **Solution**: Wait for network propagation (can take 5-15 minutes)
 - **Check**: TTL setting is 600 seconds (10 minutes)
 - **Verify**: Transaction confirmed on Arweave explorer
 - **Clear**: Clear browser cache and try again
 
-_Issue_: Deployed site shows 404
-
+*Issue*: Deployed site shows 404
 - **Solution**: Check manifest structure and homepage configuration
 - **Verify**: All files uploaded successfully (check deployment history)
 - **Check**: Paths in manifest match actual file locations
@@ -1610,29 +1458,25 @@ _Issue_: Deployed site shows 404
 
 **Payment Issues**
 
-_Issue_: Payment processing fails
-
+*Issue*: Payment processing fails
 - **Solution**: Verify payment information and billing details
 - **Check**: Card not expired, sufficient funds available
 - **Verify**: Country selection matches billing address
 - **Retry**: Try different payment method if available
 
-_Issue_: Payment successful but credits not added
-
+*Issue*: Payment successful but credits not added
 - **Solution**: Wait 1-2 minutes for payment processing
 - **Check**: Payment confirmation email from Stripe
 - **Refresh**: Click refresh button in header to update balance
 - **Event**: Balance should auto-refresh on payment success callback
 
-_Issue_: Payment callback not working
-
+*Issue*: Payment callback not working
 - **Solution**: Ensure not blocking redirects in browser
 - **Check**: URL contains `?payment=success` parameter after redirect
 - **Verify**: Not using incognito/private browsing mode
 - **Manual**: Manually refresh balance if callback missed
 
-_Issue_: Crypto payment not confirmed
-
+*Issue*: Crypto payment not confirmed
 - **Solution**: Check blockchain explorer for transaction status
 - **Verify**: Sent to correct address (use copy button)
 - **Amount**: Sent exact amount displayed (including decimals)
@@ -1641,29 +1485,25 @@ _Issue_: Crypto payment not confirmed
 
 **ArNS Domain Issues**
 
-_Issue_: Name shows as unavailable but appears unregistered
-
+*Issue*: Name shows as unavailable but appears unregistered
 - **Solution**: Name may be in grace period or pending registration
 - **Wait**: Try again in 24 hours
 - **Alternative**: Try similar name variations
 - **Check**: Verify spelling (lowercase, no spaces)
 
-_Issue_: Can't update owned name
-
+*Issue*: Can't update owned name
 - **Solution**: Verify wallet ownership matches name owner
 - **Check**: Wallet address in header matches owner address
 - **Permission**: ArconnectSigner approved transaction in Wander
 - **Network**: Connected to Arweave mainnet
 
-_Issue_: Undername not working
-
+*Issue*: Undername not working
 - **Solution**: Verify undername format (no spaces, only hyphens)
 - **Check**: Undername properly formatted: `undername_basename.ar.io`
 - **Update**: Allow time for propagation (10-15 minutes)
 - **DNS**: Some resolvers may cache longer than TTL
 
-_Issue_: Primary name not displaying
-
+*Issue*: Primary name not displaying
 - **Solution**: Cache may be stale or name not set
 - **Check**: Name registered and active on AR.IO
 - **Refresh**: Reconnect wallet to force name lookup
@@ -1671,22 +1511,19 @@ _Issue_: Primary name not displaying
 
 **General Issues**
 
-_Issue_: Application not loading
-
+*Issue*: Application not loading
 - **Solution**: Clear browser cache and cookies
 - **Check**: JavaScript enabled in browser settings
 - **Verify**: Using supported browser (Chrome, Firefox, Safari, Edge)
 - **Update**: Ensure browser is latest version
 
-_Issue_: Balance not updating
-
+*Issue*: Balance not updating
 - **Solution**: Click refresh icon in header
 - **Event**: Trigger manual refresh with button
 - **Verify**: Connected to correct wallet
 - **Network**: Check internet connection
 
-_Issue_: UI appears broken or misaligned
-
+*Issue*: UI appears broken or misaligned
 - **Solution**: Hard refresh page (Ctrl+Shift+R or Cmd+Shift+R)
 - **Check**: Browser zoom level is 100%
 - **Clear**: Clear browser cache
@@ -1695,7 +1532,6 @@ _Issue_: UI appears broken or misaligned
 ### Support Resources
 
 **Documentation**
-
 - [AR.IO Documentation](https://docs.ar.io) - Complete AR.IO ecosystem documentation
 - [Turbo SDK Documentation](https://github.com/ardriveapp/turbo-sdk) - SDK reference and examples
 - [Wander Wallet Guide](https://arweave.app) - Wander wallet setup and usage
@@ -1703,19 +1539,16 @@ _Issue_: UI appears broken or misaligned
 - [Privy Documentation](https://docs.privy.io) - Email authentication and embedded wallets
 
 **Community Support**
-
 - GitHub Issues: [turbo-gateway-app](https://github.com/ardriveapp/turbo-app/issues)
 - Discord Community: [ar.io Discord](https://discord.com/invite/HGG52EtTc2)
 - Twitter: [@ar_io_network](https://twitter.com/ar_io_network)
 
 **API Documentation**
-
 - Upload Service: https://upload.ardrive.io/api-docs
 - Payment Service: https://payment.ardrive.io/api-docs
 - Gateway Service: https://turbo-gateway.com/api-docs (varies by gateway)
 
 **Contact Support**
-
 - Email: support@ardrive.io
 - Feature Requests: GitHub Issues, Discord or X
 - Bug Reports: GitHub Issues
@@ -1729,7 +1562,6 @@ The ar.io Console is the unified platform for interacting with the AR.IO Network
 ### Key Capabilities
 
 **For End Users**
-
 - Easy onboarding with email authentication (no wallet required for payments)
 - Seamless file uploads with automatic payment handling (JIT)
 - Simple site deployment with ArNS integration
@@ -1737,7 +1569,6 @@ The ar.io Console is the unified platform for interacting with the AR.IO Network
 - Multi-chain wallet support for flexibility
 
 **For Developers**
-
 - Complete SDK with code examples at docs.ar.io
 - Configurable environments for testing and development
 - API documentation with live endpoints
@@ -1745,14 +1576,12 @@ The ar.io Console is the unified platform for interacting with the AR.IO Network
 - Network tools: Explorer (scan.ar.io) and Gateway Dashboard (gateways.ar.io)
 
 **For Enterprises**
-
 - Transparent, predictable pricing
 - Private pricing options for high-volume needs
 - Direct access to the ar.io team via Book a Demo
 - Enterprise-ready tools and workflows
 
 **For the Ecosystem**
-
 - Central hub connecting all ar.io network tools
 - Promotes AR.IO Network adoption
 - Demonstrates best practices for Turbo SDK integration
@@ -1763,10 +1592,9 @@ Whether you're uploading files, managing domains, sharing credits, deploying web
 
 ---
 
-_Last Updated: February 2025_
+*Last Updated: February 2025*
 
-_For the latest features, technical implementation details, and development guidelines, please refer to:_
-
+*For the latest features, technical implementation details, and development guidelines, please refer to:*
 - `CLAUDE.md` - Development and architecture guide
 - `README.md` - Project overview and setup instructions
 - [docs.ar.io](https://docs.ar.io) - Official documentation

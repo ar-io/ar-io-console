@@ -5,7 +5,7 @@
  * Service workers have their own memory space and cannot share state with the main thread.
  */
 
-import { nativeFetch } from './polyfills/fetch-polyfill';
+import { nativeFetch } from "./polyfills/fetch-polyfill";
 
 // Default blacklist duration: 5 minutes
 const DEFAULT_BLACKLIST_DURATION_MS = 5 * 60 * 1000;
@@ -21,12 +21,12 @@ const HEALTH_CHECK_TIMEOUT_MS = 5000;
 const INSTANT_FAILURE_THRESHOLD_MS = 100;
 
 type FailureReason =
-  | 'timeout'
-  | 'server_error'
-  | 'network_error'
-  | 'security_block'
-  | 'ssl_error'
-  | 'unknown';
+  | "timeout"
+  | "server_error"
+  | "network_error"
+  | "security_block"
+  | "ssl_error"
+  | "unknown";
 
 interface GatewayHealthEntry {
   failedAt: number;
@@ -50,53 +50,62 @@ function analyzeFailure(
   latencyMs: number,
 ): { reason: FailureReason; duration: number } {
   const errorStr =
-    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-  const errorName = error instanceof Error ? error.name : '';
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
+  const errorName = error instanceof Error ? error.name : "";
 
   // SSL/Certificate errors - CLEAR indicator, extend blacklist
   // These won't resolve on their own and indicate a fundamental issue
   if (
-    errorStr.includes('ssl') ||
-    errorStr.includes('certificate') ||
-    errorStr.includes('cert_') ||
-    errorStr.includes('insecure') ||
-    errorStr.includes('err_cert_')
+    errorStr.includes("ssl") ||
+    errorStr.includes("certificate") ||
+    errorStr.includes("cert_") ||
+    errorStr.includes("insecure") ||
+    errorStr.includes("err_cert_")
   ) {
-    return { reason: 'ssl_error', duration: SECURITY_BLOCK_DURATION_MS };
+    return { reason: "ssl_error", duration: SECURITY_BLOCK_DURATION_MS };
   }
 
   // Explicit block messages - CLEAR indicator, extend blacklist
   if (
-    errorStr.includes('blocked by') ||
-    errorStr.includes('access denied') ||
-    errorStr.includes('forbidden') ||
-    errorStr.includes('not allowed by')
+    errorStr.includes("blocked by") ||
+    errorStr.includes("access denied") ||
+    errorStr.includes("forbidden") ||
+    errorStr.includes("not allowed by")
   ) {
-    return { reason: 'security_block', duration: SECURITY_BLOCK_DURATION_MS };
+    return { reason: "security_block", duration: SECURITY_BLOCK_DURATION_MS };
   }
 
   // Timeout - normal blacklist (gateway might recover)
-  if (errorName === 'AbortError' || errorName === 'TimeoutError' || errorStr.includes('timeout')) {
-    return { reason: 'timeout', duration: DEFAULT_BLACKLIST_DURATION_MS };
+  if (
+    errorName === "AbortError" ||
+    errorName === "TimeoutError" ||
+    errorStr.includes("timeout")
+  ) {
+    return { reason: "timeout", duration: DEFAULT_BLACKLIST_DURATION_MS };
   }
 
   // Instant failure - LOG as potential security block but use NORMAL blacklist
   // We can't be sure it's a security block vs quick DNS/network failure
-  if (latencyMs < INSTANT_FAILURE_THRESHOLD_MS && errorStr.includes('failed to fetch')) {
+  if (
+    latencyMs < INSTANT_FAILURE_THRESHOLD_MS &&
+    errorStr.includes("failed to fetch")
+  ) {
     // Log it as potential security block for visibility, but don't extend blacklist
     // This avoids false positives while still providing useful diagnostics
     return {
-      reason: 'security_block',
+      reason: "security_block",
       duration: DEFAULT_BLACKLIST_DURATION_MS,
     };
   }
 
   // Generic network error - normal blacklist
-  if (errorStr.includes('network') || errorStr.includes('failed to fetch')) {
-    return { reason: 'network_error', duration: DEFAULT_BLACKLIST_DURATION_MS };
+  if (errorStr.includes("network") || errorStr.includes("failed to fetch")) {
+    return { reason: "network_error", duration: DEFAULT_BLACKLIST_DURATION_MS };
   }
 
-  return { reason: 'unknown', duration: DEFAULT_BLACKLIST_DURATION_MS };
+  return { reason: "unknown", duration: DEFAULT_BLACKLIST_DURATION_MS };
 }
 
 /**
@@ -133,9 +142,9 @@ class SwGatewayHealthCache {
       reason,
     });
 
-    const reasonStr = reason ? ` (${reason})` : '';
+    const reasonStr = reason ? ` (${reason})` : "";
     console.log(
-      `[SW-GatewayHealth] Marked ${hostname} as unhealthy for ${durationMs / 1000}s${reasonStr}${error ? `: ${error}` : ''}`,
+      `[SW-GatewayHealth] Marked ${hostname} as unhealthy for ${durationMs / 1000}s${reasonStr}${error ? `: ${error}` : ""}`,
     );
   }
 
@@ -143,7 +152,11 @@ class SwGatewayHealthCache {
    * Mark a gateway as unhealthy with automatic failure analysis.
    * Determines blacklist duration based on error type and latency.
    */
-  markUnhealthyWithAnalysis(gateway: string, error: unknown, latencyMs: number): void {
+  markUnhealthyWithAnalysis(
+    gateway: string,
+    error: unknown,
+    latencyMs: number,
+  ): void {
     const { reason, duration } = analyzeFailure(error, latencyMs);
     const errorStr = error instanceof Error ? error.message : String(error);
     this.markUnhealthy(gateway, duration, errorStr, reason);
@@ -182,7 +195,9 @@ class SwGatewayHealthCache {
     const count = this.unhealthyGateways.size;
     this.unhealthyGateways.clear();
     if (count > 0) {
-      console.log(`[SW-GatewayHealth] Cleared ${count} unhealthy gateway entries`);
+      console.log(
+        `[SW-GatewayHealth] Cleared ${count} unhealthy gateway entries`,
+      );
     }
   }
 
@@ -226,9 +241,9 @@ export async function checkSwGatewayHealth(
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await nativeFetch(url, {
-      method: 'HEAD',
+      method: "HEAD",
       signal: controller.signal,
-      redirect: 'manual',
+      redirect: "manual",
     });
 
     clearTimeout(timeoutId);
@@ -251,21 +266,21 @@ export async function checkSwGatewayHealth(
     let isSecurityBlock = false;
 
     if (err instanceof Error) {
-      if (err.name === 'AbortError') {
+      if (err.name === "AbortError") {
         error = `Timeout after ${timeoutMs}ms`;
-      } else if (err.message.includes('Failed to fetch')) {
+      } else if (err.message.includes("Failed to fetch")) {
         // Instant failure likely indicates security block
         if (latencyMs < INSTANT_FAILURE_THRESHOLD_MS) {
-          error = 'Gateway blocked (possible security restriction)';
+          error = "Gateway blocked (possible security restriction)";
           isSecurityBlock = true;
         } else {
-          error = 'Gateway unreachable';
+          error = "Gateway unreachable";
         }
       } else {
         error = err.message;
       }
     } else {
-      error = 'Unknown error';
+      error = "Unknown error";
     }
 
     if (markUnhealthyOnFail) {
@@ -281,13 +296,17 @@ export async function checkSwGatewayHealth(
  * Select a healthy gateway from a list, with health check validation.
  * Returns the first gateway that passes the health check.
  */
-export async function selectHealthyGateway(gateways: string[]): Promise<string | null> {
+export async function selectHealthyGateway(
+  gateways: string[],
+): Promise<string | null> {
   // First filter out known unhealthy gateways
   let candidates = swGatewayHealth.filterHealthy(gateways);
 
   // If all are marked unhealthy, clear cache and use all
   if (candidates.length === 0) {
-    console.log('[SW-GatewayHealth] All gateways marked unhealthy, clearing cache');
+    console.log(
+      "[SW-GatewayHealth] All gateways marked unhealthy, clearing cache",
+    );
     swGatewayHealth.clear();
     candidates = gateways;
   }
@@ -304,6 +323,8 @@ export async function selectHealthyGateway(gateways: string[]): Promise<string |
   }
 
   // All failed - return first gateway as last resort
-  console.log('[SW-GatewayHealth] All health checks failed, using first gateway as fallback');
+  console.log(
+    "[SW-GatewayHealth] All health checks failed, using first gateway as fallback",
+  );
   return gateways[0] || null;
 }

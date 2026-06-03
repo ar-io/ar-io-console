@@ -60,7 +60,7 @@ export default function CreditSharingSection() {
         const signer = new ArconnectSigner(window.arweaveWallet);
         return TurboFactory.authenticated({
           ...turboConfig,
-          signer,
+          signer
         });
 
       case 'ethereum':
@@ -73,7 +73,7 @@ export default function CreditSharingSection() {
         }
 
         return TurboFactory.authenticated({
-          token: 'solana',
+          token: "solana",
           walletAdapter: window.solana,
           ...turboConfig,
         });
@@ -95,52 +95,43 @@ export default function CreditSharingSection() {
         const turbo = TurboFactory.unauthenticated(turboConfig);
         const balance = await turbo.getBalance(address);
 
-        const { winc, controlledWinc, effectiveBalance, givenApprovals, receivedApprovals } =
-          balance;
+        const {
+          winc,
+          controlledWinc,
+          effectiveBalance,
+          givenApprovals,
+          receivedApprovals,
+        } = balance;
 
         // Calculate shared credits using same formulas as BalanceCheckerPanel
-        const sharedCreditsOut = controlledWinc
-          ? (Number(controlledWinc) - Number(winc)) / wincPerCredit
-          : 0;
-        const receivedCreditsTotal = effectiveBalance
-          ? (Number(effectiveBalance) - Number(winc)) / wincPerCredit
-          : 0;
+        const sharedCreditsOut = controlledWinc ? (Number(controlledWinc) - Number(winc)) / wincPerCredit : 0;
+        const receivedCreditsTotal = effectiveBalance ? (Number(effectiveBalance) - Number(winc)) / wincPerCredit : 0;
 
         const sharedCreditsData: SharedCredits = {
           received: {
             totalCredits: receivedCreditsTotal,
-            approvals: receivedApprovals
-              ? receivedApprovals.map((approval: any) => ({
-                  approvalId: approval.approvalDataItemId || approval.id || 'unknown',
-                  granterAddress:
-                    approval.granterAddress ||
-                    approval.payingAddress ||
-                    approval.fromAddress ||
-                    'Invalid Address',
-                  winc: approval.approvedWincAmount || approval.winc || '0',
-                  credits:
-                    Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
-                  dateCreated: approval.creationDate || approval.dateCreated,
-                  expirationDate: approval.expirationDate,
-                  usedWincAmount: approval.usedWincAmount,
-                }))
-              : [],
+            approvals: receivedApprovals ? receivedApprovals.map((approval: any) => ({
+              approvalId: approval.approvalDataItemId || approval.id || 'unknown',
+              granterAddress: approval.granterAddress || approval.payingAddress || approval.fromAddress || 'Invalid Address',
+              winc: approval.approvedWincAmount || approval.winc || '0',
+              credits: Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
+              dateCreated: approval.creationDate || approval.dateCreated,
+              expirationDate: approval.expirationDate,
+              usedWincAmount: approval.usedWincAmount,
+            })) : []
           },
           given: {
             totalCredits: sharedCreditsOut,
-            approvals: givenApprovals
-              ? givenApprovals.map((approval: any) => ({
-                  approvalId: approval.approvalDataItemId || approval.id || 'unknown',
-                  recipientAddress: approval.approvedAddress,
-                  winc: approval.approvedWincAmount || approval.winc || '0',
-                  credits:
-                    Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
-                  dateCreated: approval.creationDate || approval.dateCreated,
-                  expirationDate: approval.expirationDate,
-                  usedWincAmount: approval.usedWincAmount,
-                }))
-              : [],
-          },
+            approvals: givenApprovals ? givenApprovals.map((approval: any) => ({
+              approvalId: approval.approvalDataItemId || approval.id || 'unknown',
+              recipientAddress: approval.approvedAddress,
+              winc: approval.approvedWincAmount || approval.winc || '0',
+              credits: Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
+              dateCreated: approval.creationDate || approval.dateCreated,
+              expirationDate: approval.expirationDate,
+              usedWincAmount: approval.usedWincAmount,
+            })) : []
+          }
         };
 
         setSharedCredits(sharedCreditsData);
@@ -170,62 +161,53 @@ export default function CreditSharingSection() {
       console.log('Revoke result:', revokedApprovals);
 
       // Mark as revoked and refresh after delay
-      setRevokedApprovals((prev) => new Set([...prev, approvalId]));
+      setRevokedApprovals(prev => new Set([...prev, approvalId]));
 
       setTimeout(async () => {
         // Refresh the data
         const turbo = TurboFactory.unauthenticated(turboConfig);
         const balance = await turbo.getBalance(address!);
 
-        const { winc, controlledWinc, effectiveBalance, givenApprovals, receivedApprovals } =
-          balance;
+        const {
+          winc,
+          controlledWinc,
+          effectiveBalance,
+          givenApprovals,
+          receivedApprovals,
+        } = balance;
 
-        const sharedCreditsOut = controlledWinc
-          ? (Number(controlledWinc) - Number(winc)) / wincPerCredit
-          : 0;
-        const receivedCreditsTotal = effectiveBalance
-          ? (Number(effectiveBalance) - Number(winc)) / wincPerCredit
-          : 0;
+        const sharedCreditsOut = controlledWinc ? (Number(controlledWinc) - Number(winc)) / wincPerCredit : 0;
+        const receivedCreditsTotal = effectiveBalance ? (Number(effectiveBalance) - Number(winc)) / wincPerCredit : 0;
 
         const updatedData: SharedCredits = {
           received: {
             totalCredits: receivedCreditsTotal,
-            approvals: receivedApprovals
-              ? receivedApprovals.map((approval: any) => ({
-                  approvalId: approval.approvalDataItemId || approval.id || 'unknown',
-                  granterAddress:
-                    approval.granterAddress ||
-                    approval.payingAddress ||
-                    approval.fromAddress ||
-                    'Invalid Address',
-                  winc: approval.approvedWincAmount || approval.winc || '0',
-                  credits:
-                    Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
-                  dateCreated: approval.creationDate || approval.dateCreated,
-                  expirationDate: approval.expirationDate,
-                  usedWincAmount: approval.usedWincAmount,
-                }))
-              : [],
+            approvals: receivedApprovals ? receivedApprovals.map((approval: any) => ({
+              approvalId: approval.approvalDataItemId || approval.id || 'unknown',
+              granterAddress: approval.granterAddress || approval.payingAddress || approval.fromAddress || 'Invalid Address',
+              winc: approval.approvedWincAmount || approval.winc || '0',
+              credits: Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
+              dateCreated: approval.creationDate || approval.dateCreated,
+              expirationDate: approval.expirationDate,
+              usedWincAmount: approval.usedWincAmount,
+            })) : []
           },
           given: {
             totalCredits: sharedCreditsOut,
-            approvals: givenApprovals
-              ? givenApprovals.map((approval: any) => ({
-                  approvalId: approval.approvalDataItemId || approval.id || 'unknown',
-                  recipientAddress: approval.approvedAddress,
-                  winc: approval.approvedWincAmount || approval.winc || '0',
-                  credits:
-                    Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
-                  dateCreated: approval.creationDate || approval.dateCreated,
-                  expirationDate: approval.expirationDate,
-                  usedWincAmount: approval.usedWincAmount,
-                }))
-              : [],
-          },
+            approvals: givenApprovals ? givenApprovals.map((approval: any) => ({
+              approvalId: approval.approvalDataItemId || approval.id || 'unknown',
+              recipientAddress: approval.approvedAddress,
+              winc: approval.approvedWincAmount || approval.winc || '0',
+              credits: Number(approval.approvedWincAmount || approval.winc || 0) / wincPerCredit,
+              dateCreated: approval.creationDate || approval.dateCreated,
+              expirationDate: approval.expirationDate,
+              usedWincAmount: approval.usedWincAmount,
+            })) : []
+          }
         };
 
         setSharedCredits(updatedData);
-        setRevokedApprovals((prev) => {
+        setRevokedApprovals(prev => {
           const newSet = new Set(prev);
           newSet.delete(approvalId);
           return newSet;
@@ -244,9 +226,10 @@ export default function CreditSharingSection() {
     return null;
   }
 
-  const hasSharedCredits =
-    sharedCredits &&
-    (sharedCredits.received.approvals.length > 0 || sharedCredits.given.approvals.length > 0);
+  const hasSharedCredits = sharedCredits && (
+    sharedCredits.received.approvals.length > 0 ||
+    sharedCredits.given.approvals.length > 0
+  );
 
   return (
     <div className="bg-card rounded-2xl border border-border/20">
@@ -262,17 +245,11 @@ export default function CreditSharingSection() {
           <div>
             <h3 className="text-lg font-bold text-foreground">Credit Sharing Details</h3>
             <p className="text-sm text-foreground/80">
-              {loading
-                ? 'Loading...'
-                : hasSharedCredits
-                  ? 'View your sharing activity'
-                  : 'No sharing activity yet'}
+              {loading ? 'Loading...' : hasSharedCredits ? 'View your sharing activity' : 'No sharing activity yet'}
             </p>
           </div>
         </div>
-        <ChevronDown
-          className={`w-5 h-5 text-foreground transition-transform ${showDetails ? 'rotate-180' : ''}`}
-        />
+        <ChevronDown className={`w-5 h-5 text-foreground transition-transform ${showDetails ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Error Message */}
@@ -291,22 +268,13 @@ export default function CreditSharingSection() {
               <div className="flex items-center gap-2 mb-3">
                 <ArrowDown className="w-4 h-4 text-success" />
                 <span className="text-sm font-medium text-foreground">
-                  Credits Available From Others (
-                  {isNaN(sharedCredits.received.totalCredits)
-                    ? '0.00'
-                    : sharedCredits.received.totalCredits.toFixed(2)}{' '}
-                  total)
+                  Credits Available From Others ({isNaN(sharedCredits.received.totalCredits) ? '0.00' : sharedCredits.received.totalCredits.toFixed(2)} total)
                 </span>
               </div>
-              <p className="text-xs text-foreground/80 mb-2">
-                These users have shared their credits with your wallet:
-              </p>
+              <p className="text-xs text-foreground/80 mb-2">These users have shared their credits with your wallet:</p>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {sharedCredits.received.approvals.map((approval) => (
-                  <div
-                    key={approval.approvalId}
-                    className="bg-card rounded-2xl p-4 border border-border/20"
-                  >
+                  <div key={approval.approvalId} className="bg-card rounded-2xl p-4 border border-border/20">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <div className="font-mono text-xs text-foreground/80">
@@ -335,7 +303,8 @@ export default function CreditSharingSection() {
                           <span className="ml-1 text-foreground">
                             {approval.expirationDate
                               ? new Date(approval.expirationDate).toLocaleString()
-                              : 'Never'}
+                              : 'Never'
+                            }
                           </span>
                         </div>
                         <div className="col-span-2">
@@ -369,22 +338,13 @@ export default function CreditSharingSection() {
               <div className="flex items-center gap-2 mb-3">
                 <ArrowUp className="w-4 h-4 text-foreground" />
                 <span className="text-sm font-medium text-foreground">
-                  Credits This Wallet Shared Out (
-                  {isNaN(sharedCredits.given.totalCredits)
-                    ? '0.00'
-                    : sharedCredits.given.totalCredits.toFixed(2)}{' '}
-                  total)
+                  Credits This Wallet Shared Out ({isNaN(sharedCredits.given.totalCredits) ? '0.00' : sharedCredits.given.totalCredits.toFixed(2)} total)
                 </span>
               </div>
-              <p className="text-xs text-foreground/80 mb-2">
-                You have shared credits with these recipients:
-              </p>
+              <p className="text-xs text-foreground/80 mb-2">You have shared credits with these recipients:</p>
               <div className="space-y-3 max-h-40 overflow-y-auto">
                 {sharedCredits.given.approvals.map((approval) => (
-                  <div
-                    key={approval.approvalId}
-                    className="bg-card rounded-2xl p-4 border border-border/20"
-                  >
+                  <div key={approval.approvalId} className="bg-card rounded-2xl p-4 border border-border/20">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="font-mono text-xs text-foreground/80">
@@ -398,13 +358,8 @@ export default function CreditSharingSection() {
                         </div>
                         {/* Revoke Button - only show for your own wallet */}
                         <button
-                          onClick={() =>
-                            handleRevokeApproval(approval.approvalId, approval.recipientAddress)
-                          }
-                          disabled={
-                            revoking === approval.approvalId ||
-                            revokedApprovals.has(approval.approvalId)
-                          }
+                          onClick={() => handleRevokeApproval(approval.approvalId, approval.recipientAddress)}
+                          disabled={revoking === approval.approvalId || revokedApprovals.has(approval.approvalId)}
                           className={`p-1.5 rounded transition-colors ${
                             revokedApprovals.has(approval.approvalId)
                               ? 'text-success bg-success/10 cursor-default'
@@ -443,7 +398,8 @@ export default function CreditSharingSection() {
                           <span className="ml-1 text-foreground">
                             {approval.expirationDate
                               ? new Date(approval.expirationDate).toLocaleString()
-                              : 'Never'}
+                              : 'Never'
+                            }
                           </span>
                         </div>
                         <div className="col-span-2">
@@ -479,9 +435,7 @@ export default function CreditSharingSection() {
           <div className="text-center py-6">
             <Users className="w-12 h-12 text-foreground/80 mx-auto mb-3" />
             <p className="text-foreground mb-2">No Credit Sharing Activity</p>
-            <p className="text-sm text-foreground/80">
-              You haven't shared or received any credits yet
-            </p>
+            <p className="text-sm text-foreground/80">You haven't shared or received any credits yet</p>
           </div>
         </div>
       )}

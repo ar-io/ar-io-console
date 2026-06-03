@@ -40,10 +40,7 @@ export function useWalletAccountListener() {
     ) {
       // Session restored from RainbowKit/Wagmi - update our store
       // Only when: store is empty, or already on Ethereum with different address
-      console.log('[Wallet Listener] Session restored/updated from RainbowKit:', {
-        from: address,
-        to: ethAddress,
-      });
+      console.log('[Wallet Listener] Session restored/updated from RainbowKit:', { from: address, to: ethAddress });
 
       // Only clear cache if there was a previous address (actual switch, not initial load)
       if (address) {
@@ -58,13 +55,8 @@ export function useWalletAccountListener() {
   // Update address if Ethereum account changes
   useEffect(() => {
     if (walletType === 'ethereum' && ethAddress && ethAddress !== address) {
-      console.log('[Wallet Listener] Ethereum address changed:', {
-        from: address,
-        to: ethAddress,
-      });
-      console.warn(
-        '[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.',
-      );
+      console.log('[Wallet Listener] Ethereum address changed:', { from: address, to: ethAddress });
+      console.warn('[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.');
 
       // Clear cached Turbo clients since we have a new wallet
       clearEthereumTurboClientCache();
@@ -84,15 +76,8 @@ export function useWalletAccountListener() {
   useEffect(() => {
     const currentConnectorId = connector?.uid || null;
 
-    if (
-      walletType === 'ethereum' &&
-      prevConnectorRef.current !== null &&
-      currentConnectorId !== prevConnectorRef.current
-    ) {
-      console.log('[Wallet Listener] Ethereum connector changed:', {
-        from: prevConnectorRef.current,
-        to: currentConnectorId,
-      });
+    if (walletType === 'ethereum' && prevConnectorRef.current !== null && currentConnectorId !== prevConnectorRef.current) {
+      console.log('[Wallet Listener] Ethereum connector changed:', { from: prevConnectorRef.current, to: currentConnectorId });
       // Clear cached Turbo clients when switching wallet apps
       clearEthereumTurboClientCache();
       clearX402SignerCache();
@@ -108,13 +93,8 @@ export function useWalletAccountListener() {
     if (walletType === 'solana' && solanaPublicKey) {
       const newAddress = solanaPublicKey.toString();
       if (newAddress !== address) {
-        console.log('[Wallet Listener] Solana address changed:', {
-          from: address,
-          to: newAddress,
-        });
-        console.warn(
-          '[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.',
-        );
+        console.log('[Wallet Listener] Solana address changed:', { from: address, to: newAddress });
+        console.warn('[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.');
 
         // Update to new address
         setAddress(newAddress, 'solana');
@@ -138,13 +118,8 @@ export function useWalletAccountListener() {
           const newAddress = await window.arweaveWallet.getActiveAddress();
 
           if (newAddress && newAddress !== address) {
-            console.log('[Wallet Listener] ArConnect address changed:', {
-              from: address,
-              to: newAddress,
-            });
-            console.warn(
-              '[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.',
-            );
+            console.log('[Wallet Listener] ArConnect address changed:', { from: address, to: newAddress });
+            console.warn('[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.');
 
             // Update to new address
             setAddress(newAddress, 'arweave');
@@ -187,13 +162,8 @@ export function useWalletAccountListener() {
       } else if (accounts[0] !== address) {
         // Account switched - but wagmi useAccount should have already handled this
         // This is a backup in case wagmi missed it
-        console.log('[Wallet Listener] MetaMask backup listener detected account change:', {
-          from: address,
-          to: accounts[0],
-        });
-        console.warn(
-          '[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.',
-        );
+        console.log('[Wallet Listener] MetaMask backup listener detected account change:', { from: address, to: accounts[0] });
+        console.warn('[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.');
 
         // Clear cached Turbo clients since we have a new wallet
         clearEthereumTurboClientCache();

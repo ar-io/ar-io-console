@@ -1,17 +1,14 @@
 import { useState } from 'react';
 import { CheckCircle, Copy, AlertTriangle, RefreshCw } from 'lucide-react';
-import {
-  tokenLabels,
-  tokenNetworkLabels,
-  errorSubmittingTransactionToTurbo,
-  SupportedTokenType,
-} from '../../../constants';
+import { tokenLabels, tokenNetworkLabels, errorSubmittingTransactionToTurbo, SupportedTokenType } from '../../../constants';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import { useStore } from '../../../store/useStore';
 import useAddressState, { TransferTransactionResult } from '../../../hooks/useAddressState';
 import useTurboWallets from '../../../hooks/useTurboWallets';
 import CopyButton from '../../CopyButton';
+
+
 
 interface CryptoManualPaymentPanelProps {
   cryptoTopupValue: number; // Amount in tokens, not quote object
@@ -24,7 +21,7 @@ export default function CryptoManualPaymentPanel({
   cryptoTopupValue,
   tokenType,
   onBack,
-  onComplete,
+  onComplete
 }: CryptoManualPaymentPanelProps) {
   const address = useAddressState();
   const { data: turboWallets } = useTurboWallets();
@@ -32,8 +29,7 @@ export default function CryptoManualPaymentPanel({
   const getCurrentConfig = useStore((state) => state.getCurrentConfig);
   const config = getCurrentConfig();
 
-  const [transferTransactionResult, setTransferTransactionResult] =
-    useState<TransferTransactionResult>();
+  const [transferTransactionResult, setTransferTransactionResult] = useState<TransferTransactionResult>();
   const [transactionSubmitted, setTransactionSubmitted] = useState(false);
   const [paymentError, setPaymentError] = useState<string>();
   const [failedTxId, setFailedTxId] = useState<string>();
@@ -50,7 +46,9 @@ export default function CryptoManualPaymentPanel({
     setPaymentError(undefined);
     if (address?.submitNativeTransaction && turboWallet) {
       try {
-        setSigningMessage('Signing transaction with your wallet and awaiting confirmation...');
+        setSigningMessage(
+          'Signing transaction with your wallet and awaiting confirmation...',
+        );
         const response = await address.submitNativeTransaction(amount, turboWallet);
         setTransferTransactionResult(response);
       } catch (e: unknown) {
@@ -137,6 +135,7 @@ export default function CryptoManualPaymentPanel({
     return `${address.slice(0, shownCount)}...${address.slice(-shownCount)}`;
   };
 
+
   return (
     <div className="px-4 sm:px-6 space-y-6">
       {/* Header matching your design system */}
@@ -145,13 +144,8 @@ export default function CryptoManualPaymentPanel({
           <Copy className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
-            Submit Transactions
-          </h3>
-          <p className="text-sm text-foreground/80">
-            Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to
-            ar.io
-          </p>
+          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Submit Transactions</h3>
+          <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to ar.io</p>
         </div>
       </div>
 
@@ -169,13 +163,11 @@ export default function CryptoManualPaymentPanel({
       <div className="bg-card rounded-2xl border border-border/20">
         <div className="p-6">
           <div className="flex items-center gap-4 mb-4">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                !transferTransactionResult
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-success text-white'
-              }`}
-            >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+              !transferTransactionResult
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-success text-white'
+            }`}>
               {transferTransactionResult ? '✓' : '1'}
             </div>
             <div>
@@ -183,8 +175,7 @@ export default function CryptoManualPaymentPanel({
                 Send {tokenLabels[tokenType]} to ar.io
               </h4>
               <p className="text-sm text-foreground/80">
-                Transfer {Number(cryptoTopupValue).toFixed(6)} {tokenLabels[tokenType]} from your
-                wallet
+                Transfer {Number(cryptoTopupValue).toFixed(6)} {tokenLabels[tokenType]} from your wallet
               </p>
             </div>
           </div>
@@ -193,8 +184,8 @@ export default function CryptoManualPaymentPanel({
             <div className="space-y-4">
               <div className="bg-card rounded-2xl p-4 border border-border/20">
                 <p className="text-sm text-foreground/80 mb-2">
-                  This step sends {tokenLabels[tokenType]} to ar.io. You can verify the recipient is
-                  ar.io's wallet address{' '}
+                  This step sends {tokenLabels[tokenType]} to ar.io.
+                  You can verify the recipient is ar.io's wallet address{' '}
                   <a
                     href={`${config.paymentServiceUrl}/info`}
                     target="_blank"
@@ -241,7 +232,10 @@ export default function CryptoManualPaymentPanel({
                     <p className="text-xs">
                       Please record this transaction ID for your records. If there are any issues,
                       you can submit it to{' '}
-                      <a href="mailto:support@ardrive.io" className="underline hover:text-success">
+                      <a
+                        href="mailto:support@ardrive.io"
+                        className="underline hover:text-success"
+                      >
                         customer support
                       </a>
                       .
@@ -273,8 +267,8 @@ export default function CryptoManualPaymentPanel({
               <CopyButton textToCopy={transferTransactionResult.txid} />
             </div>
             <p className="mt-4">
-              Please record the transaction ID for your records. If there are any issues, you can
-              submit the transaction ID to
+              Please record the transaction ID for your records. If there are
+              any issues, you can submit the transaction ID to
               <a
                 className="ml-1 underline"
                 href="mailto:support@ardrive.io"
@@ -294,19 +288,15 @@ export default function CryptoManualPaymentPanel({
         <div className="bg-card rounded-2xl border border-border/20">
           <div className="p-6">
             <div className="flex items-center gap-4 mb-4">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                  !transactionSubmitted
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-success text-white'
-                }`}
-              >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                !transactionSubmitted
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-success text-white'
+              }`}>
                 {transactionSubmitted ? '✓' : '2'}
               </div>
               <div>
-                <h4 className="font-heading font-medium text-foreground">
-                  Submit Transaction to ar.io
-                </h4>
+                <h4 className="font-heading font-medium text-foreground">Submit Transaction to ar.io</h4>
                 <p className="text-sm text-foreground/80">
                   Confirm your transaction with ar.io's payment service
                 </p>
@@ -317,8 +307,8 @@ export default function CryptoManualPaymentPanel({
               <div className="space-y-4">
                 <div className="bg-card rounded-2xl p-4 border border-border/20">
                   <p className="text-sm text-foreground/80">
-                    This step submits your transaction to ar.io for processing. Once submitted, your
-                    credits will be added to your account.
+                    This step submits your transaction to ar.io for processing.
+                    Once submitted, your credits will be added to your account.
                   </p>
                 </div>
 

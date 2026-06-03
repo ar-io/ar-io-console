@@ -12,14 +12,15 @@ Factory function to that creates a read-only or writeable client. By providing a
 // in a browser environment with ArConnect
 const ant = ANT.init({
   signer: new ArConnectSigner(window.arweaveWallet, Arweave.init({})),
-  processId: 'bh9l1cy0aksiL_x9M359faGzM_yjralacHIUo8_nQXM',
+  processId: 'bh9l1cy0aksiL_x9M359faGzM_yjralacHIUo8_nQXM'
 });
 
 // in a node environment
 const ant = ANT.init({
   signer: new ArweaveSigner(JWK),
-  processId: 'bh9l1cy0aksiL_x9M359faGzM_yjralacHIUo8_nQXM',
+  processId: 'bh9l1cy0aksiL_x9M359faGzM_yjralacHIUo8_nQXM'
 });
+
 ```
 
 #### `getInfo()`

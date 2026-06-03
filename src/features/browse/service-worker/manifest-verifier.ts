@@ -15,9 +15,13 @@
  * 6. Serve only verified content from cache
  */
 
-import type { ArweaveManifest, ManifestCheckResult, SwWayfinderConfig } from './types';
-import { verifiedCache } from './verified-cache';
-import { nativeFetch, createTimeoutSignal } from './polyfills/fetch-polyfill';
+import type {
+  ArweaveManifest,
+  ManifestCheckResult,
+  SwWayfinderConfig,
+} from "./types";
+import { verifiedCache } from "./verified-cache";
+import { nativeFetch, createTimeoutSignal } from "./polyfills/fetch-polyfill";
 import {
   startManifestVerification,
   setResolvedTxId,
@@ -32,18 +36,18 @@ import {
   getManifestState,
   isReadyToServe,
   broadcastEvent,
-} from './verification-state';
+} from "./verification-state";
 import {
   getWayfinder,
   isWayfinderReady,
   setSelectedGateway,
   getVerificationStrategy,
-} from './wayfinder-instance';
-import { swGatewayHealth } from './gateway-health';
-import { logger } from './logger';
-import type { VerificationStrategy } from '@ar.io/wayfinder-core';
+} from "./wayfinder-instance";
+import { swGatewayHealth } from "./gateway-health";
+import { logger } from "./logger";
+import type { VerificationStrategy } from "@ar.io/wayfinder-core";
 
-const TAG = 'Verifier';
+const TAG = "Verifier";
 
 // Default concurrency limit for parallel verification
 const DEFAULT_CONCURRENCY = 10;
@@ -97,10 +101,13 @@ export async function resolveArnsToTxId(
   trustedGateways: string[],
 ): Promise<{ txId: string; gateway: string }> {
   if (trustedGateways.length === 0) {
-    throw new Error('No trusted gateways available for ArNS resolution');
+    throw new Error("No trusted gateways available for ArNS resolution");
   }
 
-  logger.debug(TAG, `Resolving ArNS "${arnsName}" via ${trustedGateways.length} gateways`);
+  logger.debug(
+    TAG,
+    `Resolving ArNS "${arnsName}" via ${trustedGateways.length} gateways`,
+  );
 
   const results = await Promise.allSettled(
     trustedGateways.map(async (gateway) => {
@@ -108,8 +115,8 @@ export async function resolveArnsToTxId(
       const arnsUrl = `https://${arnsName}.${gatewayUrl.host}`;
 
       const response = await nativeFetch(arnsUrl, {
-        method: 'HEAD',
-        headers: { Accept: '*/*' },
+        method: "HEAD",
+        headers: { Accept: "*/*" },
         signal: createTimeoutSignal(GATEWAY_TIMEOUT_MS),
       });
 
@@ -117,12 +124,12 @@ export async function resolveArnsToTxId(
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const txId = response.headers.get('x-arns-resolved-id');
+      const txId = response.headers.get("x-arns-resolved-id");
       if (!txId) {
-        throw new Error('No x-arns-resolved-id header');
+        throw new Error("No x-arns-resolved-id header");
       }
 
-      return { txId, gateway: gateway.replace(/\/$/, '') };
+      return { txId, gateway: gateway.replace(/\/$/, "") };
     }),
   );
 
@@ -134,15 +141,17 @@ export async function resolveArnsToTxId(
       ): r is {
         result: PromiseFulfilledResult<{ txId: string; gateway: string }>;
         gateway: string;
-      } => r.result.status === 'fulfilled',
+      } => r.result.status === "fulfilled",
     )
     .map((r) => r.result.value);
 
   if (successful.length === 0) {
     const errors = results
-      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-      .map((r) => r.reason?.message || 'Unknown error');
-    throw new Error(`All gateways failed to resolve ArNS "${arnsName}": ${errors.join(', ')}`);
+      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+      .map((r) => r.reason?.message || "Unknown error");
+    throw new Error(
+      `All gateways failed to resolve ArNS "${arnsName}": ${errors.join(", ")}`,
+    );
   }
 
   const txIds = successful.map((r) => r.txId);
@@ -152,9 +161,13 @@ export async function resolveArnsToTxId(
     logger.error(
       TAG,
       `ArNS mismatch for "${arnsName}":`,
-      successful.map((s) => `${new URL(s.gateway).hostname}=${s.txId.slice(0, 8)}`),
+      successful.map(
+        (s) => `${new URL(s.gateway).hostname}=${s.txId.slice(0, 8)}`,
+      ),
     );
-    throw new Error(`ArNS resolution mismatch for "${arnsName}" - security issue`);
+    throw new Error(
+      `ArNS resolution mismatch for "${arnsName}" - security issue`,
+    );
   }
 
   const resolvedTxId = uniqueTxIds[0];
@@ -172,9 +185,12 @@ export async function resolveArnsToTxId(
  *
  * Uses the gateway health cache to skip known unhealthy gateways.
  */
-async function selectWorkingGateway(txId: string, gateways: string[]): Promise<string> {
+async function selectWorkingGateway(
+  txId: string,
+  gateways: string[],
+): Promise<string> {
   if (gateways.length === 0) {
-    throw new Error('No gateways available');
+    throw new Error("No gateways available");
   }
 
   // Filter out known unhealthy gateways first
@@ -182,7 +198,7 @@ async function selectWorkingGateway(txId: string, gateways: string[]): Promise<s
 
   // If all are marked unhealthy, clear cache and use all gateways
   if (candidates.length === 0) {
-    logger.debug(TAG, 'All gateways marked unhealthy, clearing cache');
+    logger.debug(TAG, "All gateways marked unhealthy, clearing cache");
     swGatewayHealth.clear();
     candidates = gateways;
   }
@@ -190,14 +206,14 @@ async function selectWorkingGateway(txId: string, gateways: string[]): Promise<s
   let lastError: Error | null = null;
 
   for (const gateway of candidates) {
-    const gatewayBase = gateway.replace(/\/+$/, '');
+    const gatewayBase = gateway.replace(/\/+$/, "");
     const rawUrl = `${gatewayBase}/raw/${txId}`;
     const startTime = Date.now();
 
     try {
       // Use HEAD request with timeout to check if gateway is responsive
       const response = await nativeFetch(rawUrl, {
-        method: 'HEAD',
+        method: "HEAD",
         signal: createTimeoutSignal(GATEWAY_TIMEOUT_MS),
       });
       if (!response.ok) {
@@ -209,11 +225,15 @@ async function selectWorkingGateway(txId: string, gateways: string[]): Promise<s
     } catch (error) {
       const latencyMs = Date.now() - startTime;
       const errMsg = error instanceof Error ? error.message : String(error);
-      const isTimeout = error instanceof Error && error.name === 'TimeoutError';
+      const isTimeout = error instanceof Error && error.name === "TimeoutError";
 
       // Detect potential security blocks (instant failures)
       const isInstantFailure = latencyMs < 100 && !isTimeout;
-      const failureType = isInstantFailure ? 'blocked' : isTimeout ? 'timeout' : 'failed';
+      const failureType = isInstantFailure
+        ? "blocked"
+        : isTimeout
+          ? "timeout"
+          : "failed";
 
       logger.debug(
         TAG,
@@ -253,14 +273,17 @@ function arrayBufferToStream(data: ArrayBuffer): ReadableStream<Uint8Array> {
  * For regular resources, we use the SDK's HashVerificationStrategy.
  */
 async function computeHash(data: ArrayBuffer): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = new Uint8Array(hashBuffer);
   // Convert to base64url (Arweave format)
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < hashArray.length; i++) {
     binary += String.fromCharCode(hashArray[i]);
   }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 /**
@@ -272,19 +295,25 @@ async function computeHash(data: ArrayBuffer): Promise<string> {
  *
  * For regular resources, use verifyResourceWithSdk() instead.
  */
-async function fetchTrustedHashForManifest(txId: string, trustedGateways: URL[]): Promise<string> {
+async function fetchTrustedHashForManifest(
+  txId: string,
+  trustedGateways: URL[],
+): Promise<string> {
   // SECURITY: Query ALL trusted gateways in parallel and require consensus
   // This prevents a single compromised gateway from returning a malicious hash
-  logger.debug(TAG, `Fetching manifest hash from ${trustedGateways.length} trusted gateways`);
+  logger.debug(
+    TAG,
+    `Fetching manifest hash from ${trustedGateways.length} trusted gateways`,
+  );
 
   const results = await Promise.allSettled(
     trustedGateways.map(async (gateway) => {
-      const gatewayBase = gateway.toString().replace(/\/+$/, '');
+      const gatewayBase = gateway.toString().replace(/\/+$/, "");
       const rawUrl = `${gatewayBase}/raw/${txId}`;
 
       // Try HEAD request first to get hash from header
       const headResponse = await nativeFetch(rawUrl, {
-        method: 'HEAD',
+        method: "HEAD",
         signal: createTimeoutSignal(GATEWAY_TIMEOUT_MS),
       });
 
@@ -294,9 +323,9 @@ async function fetchTrustedHashForManifest(txId: string, trustedGateways: URL[])
 
       // Check for hash header (x-ar-io-digest is the canonical one)
       const hashHeader =
-        headResponse.headers.get('x-ar-io-digest') ||
-        headResponse.headers.get('x-ar-io-data-hash') ||
-        headResponse.headers.get('x-arweave-data-hash');
+        headResponse.headers.get("x-ar-io-digest") ||
+        headResponse.headers.get("x-ar-io-data-hash") ||
+        headResponse.headers.get("x-arweave-data-hash");
 
       if (hashHeader) {
         return { hash: hashHeader, gateway: gateway.hostname };
@@ -321,15 +350,17 @@ async function fetchTrustedHashForManifest(txId: string, trustedGateways: URL[])
   const successful = results
     .filter(
       (r): r is PromiseFulfilledResult<{ hash: string; gateway: string }> =>
-        r.status === 'fulfilled',
+        r.status === "fulfilled",
     )
     .map((r) => r.value);
 
   if (successful.length === 0) {
     const errors = results
-      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-      .map((r) => r.reason?.message || 'Unknown error');
-    throw new Error(`All trusted gateways failed to provide hash: ${errors.join(', ')}`);
+      .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+      .map((r) => r.reason?.message || "Unknown error");
+    throw new Error(
+      `All trusted gateways failed to provide hash: ${errors.join(", ")}`,
+    );
   }
 
   // SECURITY: Verify consensus - all gateways must agree on the hash
@@ -342,7 +373,9 @@ async function fetchTrustedHashForManifest(txId: string, trustedGateways: URL[])
       `Manifest hash mismatch for ${txId}:`,
       successful.map((s) => `${s.gateway}=${s.hash.slice(0, 12)}`),
     );
-    throw new Error(`Manifest hash mismatch across trusted gateways - security issue`);
+    throw new Error(
+      `Manifest hash mismatch across trusted gateways - security issue`,
+    );
   }
 
   const trustedHash = uniqueHashes[0];
@@ -388,7 +421,10 @@ async function verifyManifestData(
   const computedHash = await computeHash(data);
   logger.debug(TAG, `Computed manifest hash: ${computedHash.slice(0, 12)}...`);
 
-  const trustedHash = await fetchTrustedHashForManifest(txId, strategy.trustedGateways);
+  const trustedHash = await fetchTrustedHashForManifest(
+    txId,
+    strategy.trustedGateways,
+  );
 
   if (computedHash !== trustedHash) {
     throw new Error(
@@ -441,7 +477,7 @@ async function fetchAndVerifyRawContent(
   txId: string,
   routingGateway: string,
 ): Promise<ManifestCheckResult> {
-  const gatewayBase = routingGateway.replace(/\/+$/, '');
+  const gatewayBase = routingGateway.replace(/\/+$/, "");
   const rawUrl = `${gatewayBase}/raw/${txId}`;
 
   logger.debug(
@@ -457,7 +493,8 @@ async function fetchAndVerifyRawContent(
     throw new Error(`Failed to fetch raw content: HTTP ${response.status}`);
   }
 
-  const contentType = response.headers.get('content-type') || 'application/octet-stream';
+  const contentType =
+    response.headers.get("content-type") || "application/octet-stream";
   const rawData = await response.arrayBuffer();
   const strategy = getVerificationStrategy();
 
@@ -465,7 +502,7 @@ async function fetchAndVerifyRawContent(
   let isManifest = false;
   let manifest: ArweaveManifest | undefined;
 
-  if (contentType.includes('application/x.arweave-manifest+json')) {
+  if (contentType.includes("application/x.arweave-manifest+json")) {
     isManifest = true;
     const text = new TextDecoder().decode(rawData);
     manifest = JSON.parse(text) as ArweaveManifest;
@@ -474,7 +511,7 @@ async function fetchAndVerifyRawContent(
     try {
       const text = new TextDecoder().decode(rawData);
       const parsed = JSON.parse(text);
-      if (parsed.manifest === 'arweave/paths' && parsed.paths) {
+      if (parsed.manifest === "arweave/paths" && parsed.paths) {
         isManifest = true;
         manifest = parsed as ArweaveManifest;
       }
@@ -523,7 +560,7 @@ async function verifyAndCacheResource(
   fallbackGateways: string[],
 ): Promise<void> {
   if (!isWayfinderReady()) {
-    throw new Error('Wayfinder not ready');
+    throw new Error("Wayfinder not ready");
   }
 
   if (verifiedCache.has(txId)) {
@@ -539,7 +576,8 @@ async function verifyAndCacheResource(
   try {
     const response = await wayfinder.request(arUrl);
     const data = await response.arrayBuffer();
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const contentType =
+      response.headers.get("content-type") || "application/octet-stream";
 
     // Verify using SDK's HashVerificationStrategy
     await verifyResourceWithSdk(txId, data, strategy);
@@ -554,7 +592,10 @@ async function verifyAndCacheResource(
     return;
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    logger.warn(TAG, `Primary gateway failed for ${path}: ${errMsg}, trying fallbacks...`);
+    logger.warn(
+      TAG,
+      `Primary gateway failed for ${path}: ${errMsg}, trying fallbacks...`,
+    );
     // Continue to fallback attempts
   }
 
@@ -563,7 +604,7 @@ async function verifyAndCacheResource(
   let lastError: Error | null = null;
 
   for (const gateway of fallbackGateways) {
-    const gatewayBase = gateway.replace(/\/+$/, '');
+    const gatewayBase = gateway.replace(/\/+$/, "");
 
     try {
       // Fetch directly from this gateway (bypassing Wayfinder's routing)
@@ -577,7 +618,8 @@ async function verifyAndCacheResource(
       }
 
       const data = await response.arrayBuffer();
-      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      const contentType =
+        response.headers.get("content-type") || "application/octet-stream";
 
       // Verify using SDK's HashVerificationStrategy
       await verifyResourceWithSdk(txId, data, strategy);
@@ -591,7 +633,10 @@ async function verifyAndCacheResource(
       verifiedCache.set(txId, { contentType, data, headers });
       recordResourceVerified(identifier, verificationId, txId, path);
 
-      logger.info(TAG, `Fallback succeeded: ${path} via ${safeHostname(gatewayBase)}`);
+      logger.info(
+        TAG,
+        `Fallback succeeded: ${path} via ${safeHostname(gatewayBase)}`,
+      );
       return;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -604,7 +649,7 @@ async function verifyAndCacheResource(
   }
 
   // All attempts failed
-  const errorMsg = lastError?.message || 'All gateways failed';
+  const errorMsg = lastError?.message || "All gateways failed";
   logger.warn(TAG, `Failed: ${path} - ${errorMsg}`);
   recordResourceFailed(identifier, verificationId, txId, path, errorMsg);
   throw lastError || new Error(errorMsg);
@@ -635,12 +680,12 @@ async function verifyAllResources(
   const entries = Object.entries(manifest.paths);
 
   if (manifest.fallback?.id) {
-    entries.push(['__fallback__', { id: manifest.fallback.id }]);
+    entries.push(["__fallback__", { id: manifest.fallback.id }]);
   }
 
   // Handle empty manifest - return true so caller triggers completion
   if (entries.length === 0) {
-    logger.info(TAG, 'Empty manifest');
+    logger.info(TAG, "Empty manifest");
     return true;
   }
 
@@ -651,7 +696,7 @@ async function verifyAllResources(
 
   // Filter out the primary gateway from fallbacks to avoid duplicate attempts
   const filteredFallbacks = fallbackGateways.filter(
-    (g) => g.replace(/\/+$/, '') !== primaryGateway.replace(/\/+$/, ''),
+    (g) => g.replace(/\/+$/, "") !== primaryGateway.replace(/\/+$/, ""),
   );
 
   const allResults: Promise<void>[] = [];
@@ -660,7 +705,10 @@ async function verifyAllResources(
   for (const [path, entry] of entries) {
     // Check abort signal before starting each new verification
     if (signal?.aborted) {
-      logger.debug(TAG, `Verification aborted, stopping after ${allResults.length} resources`);
+      logger.debug(
+        TAG,
+        `Verification aborted, stopping after ${allResults.length} resources`,
+      );
       break;
     }
 
@@ -677,7 +725,7 @@ async function verifyAllResources(
     }
 
     // Handle both formats: { id: string } and raw string txId
-    const txId = typeof entry === 'string' ? entry : entry.id;
+    const txId = typeof entry === "string" ? entry : entry.id;
 
     // Primary gateway is already set globally via setSelectedGateway before this function is called.
     // Fallbacks use direct fetch to avoid race conditions with concurrent verification.
@@ -712,7 +760,10 @@ async function verifyAllResources(
  * @param path - The resource path within the manifest
  * @returns true if verification succeeded, false if failed
  */
-export async function verifyResourceOnDemand(identifier: string, path: string): Promise<boolean> {
+export async function verifyResourceOnDemand(
+  identifier: string,
+  path: string,
+): Promise<boolean> {
   const state = getManifestState(identifier);
 
   if (!state) {
@@ -721,15 +772,18 @@ export async function verifyResourceOnDemand(identifier: string, path: string): 
   }
 
   if (!isReadyToServe(identifier)) {
-    logger.error(TAG, `Not ready to serve: ${identifier} (status=${state.status})`);
+    logger.error(
+      TAG,
+      `Not ready to serve: ${identifier} (status=${state.status})`,
+    );
     return false;
   }
 
   // Normalize path
-  let normalizedPath = path.startsWith('/') ? path.slice(1) : path;
-  if (normalizedPath === '' || normalizedPath === '/') {
+  let normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  if (normalizedPath === "" || normalizedPath === "/") {
     normalizedPath = state.indexPath;
-  } else if (normalizedPath.endsWith('/')) {
+  } else if (normalizedPath.endsWith("/")) {
     normalizedPath = normalizedPath + state.indexPath;
   }
 
@@ -738,7 +792,7 @@ export async function verifyResourceOnDemand(identifier: string, path: string): 
 
   if (!txId) {
     // Try fallback
-    txId = state.pathToTxId.get('__fallback__');
+    txId = state.pathToTxId.get("__fallback__");
     if (!txId) {
       logger.warn(TAG, `Path not in manifest: ${normalizedPath}`);
       return false;
@@ -763,7 +817,10 @@ export async function verifyResourceOnDemand(identifier: string, path: string): 
   }
 
   // Need to verify - this resource hasn't been accessed before
-  logger.debug(TAG, `On-demand verify: ${normalizedPath} → ${txId.slice(0, 8)}...`);
+  logger.debug(
+    TAG,
+    `On-demand verify: ${normalizedPath} → ${txId.slice(0, 8)}...`,
+  );
 
   const routingGateway = state.routingGateway;
   if (!routingGateway) {
@@ -818,7 +875,7 @@ async function tryGatewayWithRetry(
   headers?: Record<string, string>;
   error?: string;
 }> {
-  let lastError: string = '';
+  let lastError: string = "";
 
   for (let attempt = 0; attempt <= MAX_RETRIES_PER_GATEWAY; attempt++) {
     try {
@@ -832,7 +889,8 @@ async function tryGatewayWithRetry(
       }
 
       const data = await response.arrayBuffer();
-      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      const contentType =
+        response.headers.get("content-type") || "application/octet-stream";
 
       // Verify using SDK's verification strategy
       await verifyResourceWithSdk(txId, data, strategy);
@@ -848,18 +906,21 @@ async function tryGatewayWithRetry(
       lastError = error instanceof Error ? error.message : String(error);
 
       // Don't retry on verification failures - they won't change
-      if (lastError.includes('hash mismatch') || lastError.includes('verify')) {
+      if (lastError.includes("hash mismatch") || lastError.includes("verify")) {
         break;
       }
 
       // Don't retry on 4xx errors (client errors)
-      if (lastError.includes('HTTP 4')) {
+      if (lastError.includes("HTTP 4")) {
         break;
       }
 
       // Retry with exponential backoff for network/timeout errors
       if (attempt < MAX_RETRIES_PER_GATEWAY) {
-        const delay = Math.min(INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt), MAX_RETRY_DELAY_MS);
+        const delay = Math.min(
+          INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt),
+          MAX_RETRY_DELAY_MS,
+        );
         const gatewayHost = safeHostname(gateway);
         logger.debug(
           TAG,
@@ -892,17 +953,20 @@ async function doVerifyResourceOnDemand(
   // Get verification strategy and fallback gateways
   const strategy = getVerificationStrategy();
   const fallbackGateways = strategy.trustedGateways
-    .map((url) => url.toString().replace(/\/+$/, ''))
-    .filter((g) => g !== routingGateway.replace(/\/+$/, ''));
+    .map((url) => url.toString().replace(/\/+$/, ""))
+    .filter((g) => g !== routingGateway.replace(/\/+$/, ""));
 
   // All gateways to try: primary first, then fallbacks
-  const gatewaysToTry = [routingGateway.replace(/\/+$/, ''), ...fallbackGateways];
+  const gatewaysToTry = [
+    routingGateway.replace(/\/+$/, ""),
+    ...fallbackGateways,
+  ];
 
   // Try each gateway until one succeeds (with retry per gateway)
   // NOTE: We fetch directly instead of using Wayfinder's global gateway lock
   // to avoid race conditions when multiple resources verify concurrently
   for (const gateway of gatewaysToTry) {
-    const isPrimary = gateway === routingGateway.replace(/\/+$/, '');
+    const isPrimary = gateway === routingGateway.replace(/\/+$/, "");
     const result = await tryGatewayWithRetry(gateway, txId, strategy);
 
     if (result.success && result.data) {
@@ -914,12 +978,20 @@ async function doVerifyResourceOnDemand(
       });
 
       // Record success
-      recordResourceVerifiedOnDemand(identifier, state.verificationId, txId, normalizedPath);
+      recordResourceVerifiedOnDemand(
+        identifier,
+        state.verificationId,
+        txId,
+        normalizedPath,
+      );
 
       if (isPrimary) {
         logger.debug(TAG, `✓ On-demand verified: ${normalizedPath}`);
       } else {
-        logger.info(TAG, `Fallback succeeded for ${normalizedPath} via ${safeHostname(gateway)}`);
+        logger.info(
+          TAG,
+          `Fallback succeeded for ${normalizedPath} via ${safeHostname(gateway)}`,
+        );
       }
       return true;
     }
@@ -941,7 +1013,12 @@ async function doVerifyResourceOnDemand(
   // All attempts failed
   const errorMsg = `All gateways failed to verify ${normalizedPath}`;
   logger.error(TAG, errorMsg);
-  recordResourceFailedOnDemand(identifier, state.verificationId, normalizedPath, errorMsg);
+  recordResourceFailedOnDemand(
+    identifier,
+    state.verificationId,
+    normalizedPath,
+    errorMsg,
+  );
   return false;
 }
 
@@ -961,7 +1038,7 @@ export async function verifyIdentifier(
   // Helper to check if aborted
   const checkAborted = () => {
     if (signal?.aborted) {
-      throw new Error('Verification aborted');
+      throw new Error("Verification aborted");
     }
   };
 
@@ -977,7 +1054,10 @@ export async function verifyIdentifier(
       logger.info(TAG, `Direct txId: ${txId.slice(0, 8)}...`);
     } else {
       logger.info(TAG, `Resolving ArNS: ${identifier}`);
-      const resolved = await resolveArnsToTxId(identifier, config.trustedGateways);
+      const resolved = await resolveArnsToTxId(
+        identifier,
+        config.trustedGateways,
+      );
       checkAborted();
       txId = resolved.txId;
       setResolvedTxId(identifier, verificationId, txId, resolved.gateway);
@@ -990,14 +1070,17 @@ export async function verifyIdentifier(
         : config.trustedGateways;
 
     // Check if user has set a preferred gateway
-    const hasPreferredGateway = config.routingStrategy === 'preferred' && config.preferredGateway;
+    const hasPreferredGateway =
+      config.routingStrategy === "preferred" && config.preferredGateway;
 
     let workingGateway: string;
     let fallbackGateways: string[];
 
     if (hasPreferredGateway) {
       // Use the preferred gateway directly (don't shuffle or select)
-      const preferredGateway = config.preferredGateway!.trim().replace(/\/+$/, '');
+      const preferredGateway = config
+        .preferredGateway!.trim()
+        .replace(/\/+$/, "");
       logger.debug(TAG, `Using preferred gateway: ${preferredGateway}`);
 
       // Still need to verify the preferred gateway is responsive
@@ -1012,13 +1095,18 @@ export async function verifyIdentifier(
       }
 
       // Fallback gateways are the routing pool (in case individual resources fail)
-      fallbackGateways = routingGateways.filter((g) => g.replace(/\/+$/, '') !== preferredGateway);
+      fallbackGateways = routingGateways.filter(
+        (g) => g.replace(/\/+$/, "") !== preferredGateway,
+      );
     } else {
       // Shuffle gateways for load distribution and to avoid always hitting the same gateway on retry
       const shuffledGateways = [...routingGateways];
       for (let i = shuffledGateways.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffledGateways[i], shuffledGateways[j]] = [shuffledGateways[j], shuffledGateways[i]];
+        [shuffledGateways[i], shuffledGateways[j]] = [
+          shuffledGateways[j],
+          shuffledGateways[i],
+        ];
       }
 
       // Step 1: Find a responsive gateway (lightweight HEAD request)
@@ -1039,7 +1127,7 @@ export async function verifyIdentifier(
 
     logger.info(TAG, `Broadcasting routing-gateway event`);
     broadcastEvent({
-      type: 'routing-gateway',
+      type: "routing-gateway",
       identifier,
       manifestTxId: txId,
       gatewayUrl: workingGateway,
@@ -1051,7 +1139,10 @@ export async function verifyIdentifier(
     // SECURITY: This fetches raw content (not resolved through manifest paths)
     // and verifies its hash using the SDK's HashVerificationStrategy.
     // This prevents a malicious routing gateway from serving a forged manifest.
-    const { isManifest, manifest } = await fetchAndVerifyRawContent(txId, workingGateway);
+    const { isManifest, manifest } = await fetchAndVerifyRawContent(
+      txId,
+      workingGateway,
+    );
 
     checkAborted();
 
@@ -1060,15 +1151,20 @@ export async function verifyIdentifier(
       // We create a synthetic manifest structure to reuse the same serving code,
       // but mark it as isSingleFile so we don't try to intercept absolute paths
       const singleFileManifest: ArweaveManifest = {
-        manifest: 'arweave/paths',
-        version: '0.2.0',
-        index: { path: 'index' },
+        manifest: "arweave/paths",
+        version: "0.2.0",
+        index: { path: "index" },
         paths: { index: { id: txId } },
       };
 
-      setManifestLoaded(identifier, verificationId, singleFileManifest, true /* isSingleFile */);
+      setManifestLoaded(
+        identifier,
+        verificationId,
+        singleFileManifest,
+        true /* isSingleFile */,
+      );
       // Record the single file as verified
-      recordResourceVerified(identifier, verificationId, txId, 'index');
+      recordResourceVerified(identifier, verificationId, txId, "index");
       // Mark as ready to serve (single file is fully verified)
       setManifestVerified(identifier, verificationId);
       return;
@@ -1079,14 +1175,15 @@ export async function verifyIdentifier(
     setManifestLoaded(identifier, verificationId, manifest!);
 
     // Eagerly verify the index file so first page load is instant
-    const indexPath = manifest!.index?.path || 'index.html';
+    const indexPath = manifest!.index?.path || "index.html";
     const indexEntry = manifest!.paths[indexPath];
-    const indexTxId = typeof indexEntry === 'string' ? indexEntry : indexEntry?.id;
+    const indexTxId =
+      typeof indexEntry === "string" ? indexEntry : indexEntry?.id;
 
     if (indexTxId) {
       // Filter out the primary gateway from fallbacks
       const filteredFallbacks = fallbackGateways.filter(
-        (g) => g.replace(/\/+$/, '') !== workingGateway.replace(/\/+$/, ''),
+        (g) => g.replace(/\/+$/, "") !== workingGateway.replace(/\/+$/, ""),
       );
 
       // Verify index file eagerly
@@ -1102,12 +1199,18 @@ export async function verifyIdentifier(
           );
         } catch (error) {
           // Index verification failed - this is critical
-          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
           throw new Error(`Failed to verify index file: ${errorMsg}`);
         }
       } else {
         // Index already in cache, just record it
-        recordResourceVerified(identifier, verificationId, indexTxId, indexPath);
+        recordResourceVerified(
+          identifier,
+          verificationId,
+          indexTxId,
+          indexPath,
+        );
       }
     }
 
@@ -1119,7 +1222,7 @@ export async function verifyIdentifier(
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     // Don't fail verification for aborted - just silently stop
-    if (errorMsg !== 'Verification aborted') {
+    if (errorMsg !== "Verification aborted") {
       failVerification(identifier, verificationId, errorMsg);
     }
     throw error;
@@ -1140,7 +1243,11 @@ export async function verifyIdentifier(
 export function getVerifiedContent(
   identifier: string,
   path: string,
-  injectLocationPatch?: (html: string, identifier: string, gatewayUrl: string) => string,
+  injectLocationPatch?: (
+    html: string,
+    identifier: string,
+    gatewayUrl: string,
+  ) => string,
 ): Response | null {
   const state = getManifestState(identifier);
   // Allow serving from 'manifest-verified' (lazy mode), 'complete', or 'partial'
@@ -1148,17 +1255,17 @@ export function getVerifiedContent(
     return null;
   }
 
-  let normalizedPath = path.startsWith('/') ? path.slice(1) : path;
-  if (normalizedPath === '') {
+  let normalizedPath = path.startsWith("/") ? path.slice(1) : path;
+  if (normalizedPath === "") {
     normalizedPath = state.indexPath;
-  } else if (normalizedPath.endsWith('/')) {
+  } else if (normalizedPath.endsWith("/")) {
     normalizedPath = normalizedPath + state.indexPath;
   }
 
   const txId = state.pathToTxId.get(normalizedPath);
 
   if (!txId) {
-    const fallbackId = state.pathToTxId.get('__fallback__');
+    const fallbackId = state.pathToTxId.get("__fallback__");
     if (fallbackId) {
       const resource = verifiedCache.get(fallbackId);
       if (resource) {
@@ -1178,15 +1285,19 @@ export function getVerifiedContent(
   const contentType = resource.contentType.toLowerCase();
   logger.debug(
     TAG,
-    `Serving ${identifier}/${normalizedPath}: contentType=${contentType}, routingGateway=${state.routingGateway || 'none'}`,
+    `Serving ${identifier}/${normalizedPath}: contentType=${contentType}, routingGateway=${state.routingGateway || "none"}`,
   );
 
   if (injectLocationPatch && state.routingGateway) {
-    if (contentType.includes('text/html')) {
+    if (contentType.includes("text/html")) {
       try {
         logger.debug(TAG, `Injecting location patch for ${identifier}`);
         const html = new TextDecoder().decode(resource.data);
-        const patchedHtml = injectLocationPatch(html, identifier, state.routingGateway);
+        const patchedHtml = injectLocationPatch(
+          html,
+          identifier,
+          state.routingGateway,
+        );
         const patchedData = new TextEncoder().encode(patchedHtml);
 
         // Create response with patched content
@@ -1196,16 +1307,16 @@ export function getVerifiedContent(
         });
 
         // Remove frame-blocking headers - we're intentionally embedding in iframe
-        headers.delete('x-frame-options');
-        headers.delete('content-security-policy');
-        headers.delete('content-security-policy-report-only');
+        headers.delete("x-frame-options");
+        headers.delete("content-security-policy");
+        headers.delete("content-security-policy-report-only");
 
-        if (!headers.has('content-type')) {
-          headers.set('content-type', resource.contentType);
+        if (!headers.has("content-type")) {
+          headers.set("content-type", resource.contentType);
         }
-        headers.set('x-wayfinder-verified', 'true');
-        headers.set('x-wayfinder-verified-at', resource.verifiedAt.toString());
-        headers.set('x-wayfinder-location-patched', 'true');
+        headers.set("x-wayfinder-verified", "true");
+        headers.set("x-wayfinder-verified-at", resource.verifiedAt.toString());
+        headers.set("x-wayfinder-location-patched", "true");
 
         return new Response(patchedData, {
           status: 200,

@@ -28,22 +28,22 @@ export default function BalanceCardsGrid() {
       try {
         const balance = await getTurboBalance(address, walletType);
 
-        const { winc, controlledWinc, effectiveBalance } = balance;
+        const {
+          winc,
+          controlledWinc,
+          effectiveBalance,
+        } = balance;
 
         const credits = Number(winc) / wincPerCredit;
         const gibStorage = wincForOneGiB ? Number(winc) / Number(wincForOneGiB) : 0;
-        const sharedOut = controlledWinc
-          ? (Number(controlledWinc) - Number(winc)) / wincPerCredit
-          : 0;
-        const available = effectiveBalance
-          ? (Number(effectiveBalance) - Number(winc)) / wincPerCredit
-          : 0;
+        const sharedOut = controlledWinc ? (Number(controlledWinc) - Number(winc)) / wincPerCredit : 0;
+        const available = effectiveBalance ? (Number(effectiveBalance) - Number(winc)) / wincPerCredit : 0;
 
         setBalanceData({
           credits,
           gibStorage,
           sharedOut,
-          available,
+          available
         });
       } catch (error) {
         console.error('Failed to fetch balance data:', error);
@@ -63,12 +63,12 @@ export default function BalanceCardsGrid() {
     if (credits >= 1) {
       return credits.toLocaleString('en-US', {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 2
       });
     } else if (credits > 0) {
       return credits.toLocaleString('en-US', {
         minimumFractionDigits: 6,
-        maximumFractionDigits: 8,
+        maximumFractionDigits: 8
       });
     } else {
       return '0';
@@ -108,6 +108,7 @@ export default function BalanceCardsGrid() {
             </div>
           </div>
 
+
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
@@ -127,7 +128,9 @@ export default function BalanceCardsGrid() {
           </div>
         </>
       ) : (
-        <div className="text-center py-8 text-foreground/80">Unable to load balance data</div>
+        <div className="text-center py-8 text-foreground/80">
+          Unable to load balance data
+        </div>
       )}
     </div>
   );

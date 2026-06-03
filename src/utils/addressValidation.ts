@@ -44,8 +44,7 @@ export function validateWalletAddress(address: string): AddressValidationResult 
   return {
     isValid: false,
     type: 'unknown',
-    error:
-      'Invalid address format. Must be a valid Arweave (43 chars), Ethereum (0x + 40 hex), or Solana (32-44 base58) address.',
+    error: 'Invalid address format. Must be a valid Arweave (43 chars), Ethereum (0x + 40 hex), or Solana (32-44 base58) address.'
   };
 }
 
@@ -56,14 +55,10 @@ export function validateWalletAddress(address: string): AddressValidationResult 
  */
 export function getWalletTypeLabel(type: WalletAddressType): string {
   switch (type) {
-    case 'arweave':
-      return 'Arweave';
-    case 'ethereum':
-      return 'Ethereum';
-    case 'solana':
-      return 'Solana';
-    default:
-      return 'Unknown';
+    case 'arweave': return 'Arweave';
+    case 'ethereum': return 'Ethereum';
+    case 'solana': return 'Solana';
+    default: return 'Unknown';
   }
 }
 
@@ -89,7 +84,7 @@ export function formatWalletAddress(address: string, chars: number = 6): string 
  */
 export async function resolveEthereumAddress(
   address: string,
-  getTurboBalanceFn: (address: string, tokenType: string) => Promise<{ winc: string | number }>,
+  getTurboBalanceFn: (address: string, tokenType: string) => Promise<{ winc: string | number }>
 ): Promise<string> {
   // Only apply to Ethereum addresses
   const ethereumRegex = /^0x[a-fA-F0-9]{40}$/;
@@ -120,9 +115,7 @@ export async function resolveEthereumAddress(
 
     // If lowercase has credits, use lowercase
     if (lowercaseWinc > 0) {
-      console.log(
-        `[Address Resolution] Found credits in lowercase format. Using ${lowercaseAddress} instead of ${address}`,
-      );
+      console.log(`[Address Resolution] Found credits in lowercase format. Using ${lowercaseAddress} instead of ${address}`);
       return lowercaseAddress;
     }
 

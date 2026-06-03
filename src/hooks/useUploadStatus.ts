@@ -22,137 +22,128 @@ export function useUploadStatus() {
   const getUploadStatus = useStore((state) => state.getUploadStatus);
 
   // Initialize local state from cache for a list of transaction IDs
-  const initializeFromCache = useCallback(
-    (txIds: string[]) => {
-      const cachedStatuses: Record<string, UploadStatus> = {};
+  const initializeFromCache = useCallback((txIds: string[]) => {
+    const cachedStatuses: Record<string, UploadStatus> = {};
 
-      txIds.forEach((txId) => {
-        const cached = getUploadStatus(txId);
-        if (cached) {
-          // Use the full cached status object
-          cachedStatuses[txId] = cached as UploadStatus;
-        }
-      });
-
-      // Only update if we have cached items to avoid unnecessary re-renders
-      if (Object.keys(cachedStatuses).length > 0) {
-        setUploadStatuses((prev) => ({ ...prev, ...cachedStatuses }));
+    txIds.forEach(txId => {
+      const cached = getUploadStatus(txId);
+      if (cached) {
+        // Use the full cached status object
+        cachedStatuses[txId] = cached as UploadStatus;
       }
+    });
 
-      return cachedStatuses;
-    },
-    [getUploadStatus],
-  );
+    // Only update if we have cached items to avoid unnecessary re-renders
+    if (Object.keys(cachedStatuses).length > 0) {
+      setUploadStatuses(prev => ({ ...prev, ...cachedStatuses }));
+    }
 
-  const checkUploadStatus = useCallback(
-    async (txId: string, force: boolean = false): Promise<UploadStatus> => {
-      // Check cache first (unless forced refresh)
-      if (!force) {
-        const cachedStatus = getUploadStatus(txId);
-        if (cachedStatus) {
-          // Use the full cached status object
-          const status: UploadStatus = cachedStatus as UploadStatus;
-          setUploadStatuses((prev) => ({ ...prev, [txId]: status }));
+    return cachedStatuses;
+  }, [getUploadStatus]);
 
-          // If already finalized, don't check again
-          if (status.status === 'FINALIZED') {
-            return status;
-          }
+  const checkUploadStatus = useCallback(async (txId: string, force: boolean = false): Promise<UploadStatus> => {
+    // Check cache first (unless forced refresh)
+    if (!force) {
+      const cachedStatus = getUploadStatus(txId);
+      if (cachedStatus) {
+        // Use the full cached status object
+        const status: UploadStatus = cachedStatus as UploadStatus;
+        setUploadStatuses(prev => ({ ...prev, [txId]: status }));
+
+        // If already finalized, don't check again
+        if (status.status === 'FINALIZED') {
+          return status;
         }
       }
+    }
 
-      setStatusChecking((prev) => ({ ...prev, [txId]: true }));
+    setStatusChecking(prev => ({ ...prev, [txId]: true }));
 
-      try {
-        const config = getCurrentConfig();
-        const response = await fetch(`${config.uploadServiceUrl}/tx/${txId}/status`);
+    try {
+      const config = getCurrentConfig();
+      const response = await fetch(`${config.uploadServiceUrl}/tx/${txId}/status`);
 
-        if (!response.ok) {
-          if (response.status === 404) {
-            const status: UploadStatus = { status: 'NOT_FOUND' };
-            setUploadStatuses((prev) => ({ ...prev, [txId]: status }));
-            return status;
-          }
-          throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          const status: UploadStatus = { status: 'NOT_FOUND' };
+          setUploadStatuses(prev => ({ ...prev, [txId]: status }));
+          return status;
         }
-
-        const data = await response.json();
-        const status: UploadStatus = {
-          status: data.status?.toUpperCase() as 'CONFIRMED' | 'FINALIZED',
-          bundleId: data.bundleId,
-          info: data.info,
-          startOffsetInRootBundle: data.startOffsetInRootBundle,
-          rawContentLength: data.rawContentLength,
-          payloadContentType: data.payloadContentType,
-          payloadDataStart: data.payloadDataStart,
-          payloadContentLength: data.payloadContentLength,
-          winc: data.winc,
-        };
-
-        // Save to both local state and persistent cache (save full status)
-        setUploadStatuses((prev) => ({ ...prev, [txId]: status }));
-        setUploadStatus(txId, status);
-
-        return status;
-      } catch (error) {
-        console.error(`Failed to check status for ${txId}:`, error);
-        const status: UploadStatus = { status: 'FAILED' };
-        setUploadStatuses((prev) => ({ ...prev, [txId]: status }));
-        return status;
-      } finally {
-        setStatusChecking((prev) => ({ ...prev, [txId]: false }));
-      }
-    },
-    [getCurrentConfig, getUploadStatus, setUploadStatus],
-  );
-
-  const checkMultipleStatuses = useCallback(
-    async (txIds: string[], force: boolean = false) => {
-      if (force) {
-        // Force refresh all items
-        const promises = txIds.map((txId) => checkUploadStatus(txId, true));
-        return Promise.all(promises);
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      // First, populate local state with any cached statuses
-      const cachedStatuses: Record<string, UploadStatus> = {};
-      const idsToCheck: string[] = [];
+      const data = await response.json();
+      const status: UploadStatus = {
+        status: data.status?.toUpperCase() as 'CONFIRMED' | 'FINALIZED',
+        bundleId: data.bundleId,
+        info: data.info,
+        startOffsetInRootBundle: data.startOffsetInRootBundle,
+        rawContentLength: data.rawContentLength,
+        payloadContentType: data.payloadContentType,
+        payloadDataStart: data.payloadDataStart,
+        payloadContentLength: data.payloadContentLength,
+        winc: data.winc,
+      };
 
-      txIds.forEach((txId) => {
-        const cachedStatus = getUploadStatus(txId);
-        if (cachedStatus) {
-          // Add to local state immediately - use full cached status
-          cachedStatuses[txId] = cachedStatus as UploadStatus;
+      // Save to both local state and persistent cache (save full status)
+      setUploadStatuses(prev => ({ ...prev, [txId]: status }));
+      setUploadStatus(txId, status);
 
-          // Only check API if not finalized
-          if (cachedStatus.status !== 'FINALIZED') {
-            idsToCheck.push(txId);
-          }
-        } else {
-          // No cache, need to check
+      return status;
+    } catch (error) {
+      console.error(`Failed to check status for ${txId}:`, error);
+      const status: UploadStatus = { status: 'FAILED' };
+      setUploadStatuses(prev => ({ ...prev, [txId]: status }));
+      return status;
+    } finally {
+      setStatusChecking(prev => ({ ...prev, [txId]: false }));
+    }
+  }, [getCurrentConfig, getUploadStatus, setUploadStatus]);
+
+  const checkMultipleStatuses = useCallback(async (txIds: string[], force: boolean = false) => {
+    if (force) {
+      // Force refresh all items
+      const promises = txIds.map(txId => checkUploadStatus(txId, true));
+      return Promise.all(promises);
+    }
+
+    // First, populate local state with any cached statuses
+    const cachedStatuses: Record<string, UploadStatus> = {};
+    const idsToCheck: string[] = [];
+
+    txIds.forEach(txId => {
+      const cachedStatus = getUploadStatus(txId);
+      if (cachedStatus) {
+        // Add to local state immediately - use full cached status
+        cachedStatuses[txId] = cachedStatus as UploadStatus;
+
+        // Only check API if not finalized
+        if (cachedStatus.status !== 'FINALIZED') {
           idsToCheck.push(txId);
         }
-      });
-
-      // Update local state with all cached items first for immediate UI feedback
-      if (Object.keys(cachedStatuses).length > 0) {
-        setUploadStatuses((prev) => ({ ...prev, ...cachedStatuses }));
+      } else {
+        // No cache, need to check
+        idsToCheck.push(txId);
       }
+    });
 
-      // If no items need API checking, return the cached results
-      if (idsToCheck.length === 0) {
-        return Object.values(cachedStatuses);
-      }
+    // Update local state with all cached items first for immediate UI feedback
+    if (Object.keys(cachedStatuses).length > 0) {
+      setUploadStatuses(prev => ({ ...prev, ...cachedStatuses }));
+    }
 
-      // Check the remaining items that need updates
-      const promises = idsToCheck.map((txId) => checkUploadStatus(txId));
-      const apiResults = await Promise.all(promises);
+    // If no items need API checking, return the cached results
+    if (idsToCheck.length === 0) {
+      return Object.values(cachedStatuses);
+    }
 
-      // Return combined results
-      return [...Object.values(cachedStatuses), ...apiResults];
-    },
-    [checkUploadStatus, getUploadStatus],
-  );
+    // Check the remaining items that need updates
+    const promises = idsToCheck.map(txId => checkUploadStatus(txId));
+    const apiResults = await Promise.all(promises);
+
+    // Return combined results
+    return [...Object.values(cachedStatuses), ...apiResults];
+  }, [checkUploadStatus, getUploadStatus]);
 
   const formatFileSize = useCallback((bytes: number) => {
     if (bytes < 1024) return bytes + ' B';

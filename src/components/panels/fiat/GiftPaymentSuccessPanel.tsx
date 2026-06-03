@@ -22,9 +22,7 @@ const GiftPaymentSuccessPanel: FC<GiftPaymentSuccessPanelProps> = ({
           <CheckCircle className="w-5 h-5 text-success" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
-            Gift Sent Successfully!
-          </h3>
+          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Gift Sent Successfully!</h3>
           <p className="text-sm text-foreground/80">
             Your gift has been processed and will be delivered shortly
           </p>
@@ -33,6 +31,7 @@ const GiftPaymentSuccessPanel: FC<GiftPaymentSuccessPanelProps> = ({
 
       {/* Main Content */}
       <div className="bg-gradient-to-br from-success/5 to-success/3 rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+
         {/* Success Message */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-success/20 rounded-xl mb-4">
@@ -54,9 +53,7 @@ const GiftPaymentSuccessPanel: FC<GiftPaymentSuccessPanelProps> = ({
             <div className="flex items-center gap-3">
               <Mail className="w-5 h-5 text-success" />
               <div>
-                <div className="text-xs text-foreground/80">
-                  Recipient will receive an email at:
-                </div>
+                <div className="text-xs text-foreground/80">Recipient will receive an email at:</div>
                 <div className="font-medium text-foreground">{recipientEmail}</div>
               </div>
             </div>
@@ -65,9 +62,7 @@ const GiftPaymentSuccessPanel: FC<GiftPaymentSuccessPanelProps> = ({
               <Gift className="w-5 h-5 text-success" />
               <div>
                 <div className="text-xs text-foreground/80">Gift Amount:</div>
-                <div className="font-bold text-foreground">
-                  ${usdAmount.toFixed(2)} USD in Credits
-                </div>
+                <div className="font-bold text-foreground">${usdAmount.toFixed(2)} USD in Credits</div>
               </div>
             </div>
 
@@ -89,21 +84,15 @@ const GiftPaymentSuccessPanel: FC<GiftPaymentSuccessPanelProps> = ({
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-success rounded-full mt-2 flex-shrink-0" />
-              <span className="text-foreground/80">
-                Recipient receives an email with redemption instructions
-              </span>
+              <span className="text-foreground/80">Recipient receives an email with redemption instructions</span>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-success rounded-full mt-2 flex-shrink-0" />
-              <span className="text-foreground/80">
-                They can redeem with any wallet on our Redeem page
-              </span>
+              <span className="text-foreground/80">They can redeem with any wallet on our Redeem page</span>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-success rounded-full mt-2 flex-shrink-0" />
-              <span className="text-foreground/80">
-                Credits are immediately available after redemption
-              </span>
+              <span className="text-foreground/80">Credits are immediately available after redemption</span>
             </div>
           </div>
         </div>

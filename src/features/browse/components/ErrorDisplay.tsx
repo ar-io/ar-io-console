@@ -1,4 +1,4 @@
-import { LoadingSpinner } from './LoadingSpinner';
+import { LoadingSpinner } from "./LoadingSpinner";
 
 interface ErrorDisplayProps {
   error: Error | { message: string };
@@ -35,11 +35,11 @@ export function ErrorDisplay({
         </div>
 
         <h3 className="text-lg font-semibold text-foreground mb-2">
-          {isAutoRetrying ? 'Retrying...' : 'Error Loading Content'}
+          {isAutoRetrying ? "Retrying..." : "Error Loading Content"}
         </h3>
 
         <p className="text-sm text-foreground/60 mb-4">
-          {error.message || 'An unexpected error occurred'}
+          {error.message || "An unexpected error occurred"}
         </p>
 
         {isAutoRetrying && (
@@ -56,7 +56,12 @@ export function ErrorDisplay({
             onClick={onRetry}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

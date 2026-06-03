@@ -42,7 +42,7 @@ export function CryptoPaymentDetails({
   const [bufferPercentage, setBufferPercentage] = useState(1); // Default 1% buffer
 
   const tokenLabel = tokenLabels[tokenType];
-  const BUFFER_MULTIPLIER = 1 + bufferPercentage / 100; // Adjustable buffer
+  const BUFFER_MULTIPLIER = 1 + (bufferPercentage / 100); // Adjustable buffer
 
   // Fetch wallet balance
   const {
@@ -97,7 +97,7 @@ export function CryptoPaymentDetails({
       }
     };
 
-    const hasCost = creditsNeeded > 0 || totalCost > 0;
+    const hasCost = (creditsNeeded > 0) || (totalCost > 0);
     if (hasCost) {
       calculate();
     } else {
@@ -106,15 +106,7 @@ export function CryptoPaymentDetails({
       onMaxTokenAmountChange(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    creditsNeeded,
-    totalCost,
-    tokenType,
-    bufferPercentage,
-    x402Pricing?.usdcAmount,
-    x402Pricing?.loading,
-    x402Pricing?.error,
-  ]);
+  }, [creditsNeeded, totalCost, tokenType, bufferPercentage, x402Pricing?.usdcAmount, x402Pricing?.loading, x402Pricing?.error]);
 
   // Validate balance and update shortage info
   useEffect(() => {
@@ -146,19 +138,9 @@ export function CryptoPaymentDetails({
     } else {
       onShortageUpdate(null);
     }
-  }, [
-    tokenBalance,
-    estimatedCost,
-    balanceError,
-    isNetworkError,
-    tokenType,
-    onBalanceValidation,
-    onShortageUpdate,
-  ]);
+  }, [tokenBalance, estimatedCost, balanceError, isNetworkError, tokenType, onBalanceValidation, onShortageUpdate]);
 
-  const afterUpload = estimatedCost
-    ? Math.max(0, tokenBalance - estimatedCost.tokenAmountReadable)
-    : tokenBalance;
+  const afterUpload = estimatedCost ? Math.max(0, tokenBalance - estimatedCost.tokenAmountReadable) : tokenBalance;
 
   return (
     <div className="mb-4">
@@ -176,11 +158,9 @@ export function CryptoPaymentDetails({
                     ~{formatTokenAmount(estimatedCost.tokenAmountReadable, tokenType)} {tokenLabel}
                     {estimatedCost.estimatedUSD && estimatedCost.estimatedUSD > 0 && (
                       <span className="text-xs text-foreground/80 ml-2">
-                        (≈ $
-                        {estimatedCost.estimatedUSD < 0.01
+                        (≈ ${estimatedCost.estimatedUSD < 0.01
                           ? estimatedCost.estimatedUSD.toFixed(4)
-                          : estimatedCost.estimatedUSD.toFixed(2)}
-                        )
+                          : estimatedCost.estimatedUSD.toFixed(2)})
                       </span>
                     )}
                   </>
@@ -224,7 +204,9 @@ export function CryptoPaymentDetails({
               <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-2xl border border-warning/20">
                 <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-warning font-medium mb-1">{balanceError}</div>
+                  <div className="text-xs text-warning font-medium mb-1">
+                    {balanceError}
+                  </div>
                 </div>
               </div>
             </div>

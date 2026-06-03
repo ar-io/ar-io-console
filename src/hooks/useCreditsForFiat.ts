@@ -1,7 +1,7 @@
-import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
-import { useQuery } from '@tanstack/react-query';
-import { wincPerCredit } from '../constants';
-import { useTurboConfig } from './useTurboConfig';
+import { TurboFactory, USD } from "@ardrive/turbo-sdk/web";
+import { useQuery } from "@tanstack/react-query";
+import { wincPerCredit } from "../constants";
+import { useTurboConfig } from "./useTurboConfig";
 
 export function useCreditsForFiat(
   debouncedUsdAmount: number,
@@ -12,10 +12,11 @@ export function useCreditsForFiat(
   const { data: winc, error } = useQuery({
     queryKey: ['creditsForFiat', debouncedUsdAmount, turboConfig.paymentServiceConfig.url],
     queryFn: async () => {
-      const result = await TurboFactory.unauthenticated(turboConfig).getWincForFiat({
-        amount: USD(debouncedUsdAmount),
-        promoCodes: [],
-      });
+      const result = await TurboFactory.unauthenticated(turboConfig)
+        .getWincForFiat({
+          amount: USD(debouncedUsdAmount),
+          promoCodes: []
+        });
       return result.winc;
     },
     staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
@@ -29,5 +30,8 @@ export function useCreditsForFiat(
     errorCallback(`Error getting credits for USD amount: ${(error as Error).message}`);
   }
 
-  return [winc ? +winc / wincPerCredit : undefined, debouncedUsdAmount];
+  return [
+    winc ? +winc / wincPerCredit : undefined,
+    debouncedUsdAmount,
+  ];
 }

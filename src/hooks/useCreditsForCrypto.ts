@@ -1,7 +1,7 @@
-import { TurboFactory, tokenToBaseMap } from '@ardrive/turbo-sdk/web';
-import { useState, useRef, useEffect } from 'react';
-import { wincPerCredit, SupportedTokenType } from '../constants';
-import { useTurboConfig } from './useTurboConfig';
+import { TurboFactory, tokenToBaseMap } from "@ardrive/turbo-sdk/web";
+import { useState, useRef, useEffect } from "react";
+import { wincPerCredit, SupportedTokenType } from "../constants";
+import { useTurboConfig } from "./useTurboConfig";
 
 export function useCreditsForCrypto(
   debouncedCryptoAmount: number,
@@ -9,7 +9,9 @@ export function useCreditsForCrypto(
   errorCallback: (message: string) => void,
 ): [number | undefined, number | undefined] {
   const [winc, setWinc] = useState<string | undefined>(undefined);
-  const cryptoWhenCreditsWereLastUpdatedRef = useRef<number | undefined>(undefined);
+  const cryptoWhenCreditsWereLastUpdatedRef = useRef<number | undefined>(
+    undefined,
+  );
   const turboConfig = useTurboConfig(tokenType); // Pass token to get proper gatewayUrl for dev mode
 
   // Get credits for crypto amount when crypto amount has stopped debouncing
@@ -24,9 +26,8 @@ export function useCreditsForCrypto(
       ...turboConfig,
       token: tokenType as any,
     })
-      .getWincForToken({
-        tokenAmount:
-          tokenToBaseMap[tokenType as keyof typeof tokenToBaseMap](debouncedCryptoAmount),
+      .getWincForToken({ 
+        tokenAmount: tokenToBaseMap[tokenType as keyof typeof tokenToBaseMap](debouncedCryptoAmount),
       })
       .then(({ winc }) => {
         cryptoWhenCreditsWereLastUpdatedRef.current = debouncedCryptoAmount;
@@ -38,5 +39,8 @@ export function useCreditsForCrypto(
       });
   }, [debouncedCryptoAmount, tokenType, errorCallback, turboConfig]);
 
-  return [winc ? +winc / wincPerCredit : undefined, cryptoWhenCreditsWereLastUpdatedRef.current];
+  return [
+    winc ? +winc / wincPerCredit : undefined,
+    cryptoWhenCreditsWereLastUpdatedRef.current,
+  ];
 }

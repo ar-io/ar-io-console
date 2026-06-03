@@ -2,29 +2,9 @@ import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
-import {
-  defaultUSDAmount,
-  minUSDAmount,
-  maxUSDAmount,
-  wincPerCredit,
-  tokenLabels,
-  SupportedTokenType,
-} from '../../constants';
+import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType } from '../../constants';
 import { useStore } from '../../store/useStore';
-import {
-  Loader2,
-  Lock,
-  CreditCard,
-  DollarSign,
-  Wallet,
-  Info,
-  Shield,
-  AlertCircle,
-  HardDrive,
-  ChevronDown,
-  Check,
-  MapPin,
-} from 'lucide-react';
+import { Loader2, Lock, CreditCard, DollarSign, Wallet, Info, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
 import { useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
 import CryptoConfirmationPanel from './crypto/CryptoConfirmationPanel';
@@ -36,6 +16,7 @@ import { getPaymentIntent } from '../../services/paymentService';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import WalletSelectionModal from '../modals/WalletSelectionModal';
 import { getTurboBalance } from '../../utils';
+
 
 export default function TopUpPanel() {
   const {
@@ -80,14 +61,10 @@ export default function TopUpPanel() {
   const [showWalletModal, setShowWalletModal] = useState(false);
 
   // Payment flow state
-  const [fiatFlowStep, setFiatFlowStep] = useState<
-    'amount' | 'details' | 'confirmation' | 'success'
-  >('amount');
+  const [fiatFlowStep, setFiatFlowStep] = useState<'amount' | 'details' | 'confirmation' | 'success'>('amount');
 
   // Crypto flow state
-  const [cryptoFlowStep, setCryptoFlowStep] = useState<
-    'selection' | 'confirmation' | 'manual-payment' | 'complete'
-  >('selection');
+  const [cryptoFlowStep, setCryptoFlowStep] = useState<'selection' | 'confirmation' | 'manual-payment' | 'complete'>('selection');
   const [selectedTokenType, setSelectedTokenType] = useState<SupportedTokenType>('arweave');
   const [cryptoPaymentResult, setCryptoPaymentResult] = useState<any>(null);
 
@@ -98,16 +75,10 @@ export default function TopUpPanel() {
   const debouncedStorageAmount = useDebounce(storageAmount);
   const [credits] = useCreditsForFiat(debouncedUsdAmount, setErrorMessage);
   // Use comprehensive hook for all token types
-  const {
-    wincForToken: wincForSelectedToken,
-    error: tokenPricingError,
-    loading: tokenPricingLoading,
-  } = useWincForAnyToken(selectedTokenType, debouncedCryptoAmount);
+  const { wincForToken: wincForSelectedToken, error: tokenPricingError, loading: tokenPricingLoading } = useWincForAnyToken(selectedTokenType, debouncedCryptoAmount);
 
   // Calculate credits from winc (works for all tokens that have pricing)
-  const cryptoCredits = wincForSelectedToken
-    ? Number(wincForSelectedToken) / wincPerCredit
-    : undefined;
+  const cryptoCredits = wincForSelectedToken ? Number(wincForSelectedToken) / wincPerCredit : undefined;
   const wincForOneGiB = useWincForOneGiB();
   const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
 
@@ -140,10 +111,9 @@ export default function TopUpPanel() {
     }
   })();
 
-  const wincNeededForStorage =
-    wincForOneGiB && debouncedStorageAmount > 0
-      ? debouncedStorageInGiB * Number(wincForOneGiB)
-      : undefined;
+  const wincNeededForStorage = wincForOneGiB && debouncedStorageAmount > 0
+    ? (debouncedStorageInGiB * Number(wincForOneGiB))
+    : undefined;
   const cryptoForStorage = useCryptoPriceForWinc(wincNeededForStorage, selectedTokenType);
 
   // Calculate cost in dollars for storage
@@ -198,30 +168,18 @@ export default function TopUpPanel() {
   // Crypto preset amounts based on token type (from reference app)
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
     switch (tokenType) {
-      case 'arweave':
-        return [0.5, 1, 5, 10];
-      case 'ario':
-        return [50, 100, 500, 1000];
-      case 'base-ario':
-        return [50, 100, 500, 1000]; // Same presets as ARIO
-      case 'ethereum':
-        return [0.01, 0.05, 0.1, 0.25];
-      case 'base-eth':
-        return [0.01, 0.05, 0.1, 0.25];
-      case 'solana':
-        return [0.05, 0.1, 0.25, 0.5];
-      case 'kyve':
-        return [100, 500, 1000, 2000];
-      case 'pol':
-        return [10, 50, 100, 250];
-      case 'usdc':
-        return [10, 25, 50, 100];
-      case 'base-usdc':
-        return [10, 25, 50, 100];
-      case 'polygon-usdc':
-        return [10, 25, 50, 100];
-      default:
-        return [0.01, 0.05, 0.1, 0.25];
+      case 'arweave': return [0.5, 1, 5, 10];
+      case 'ario': return [50, 100, 500, 1000];
+      case 'base-ario': return [50, 100, 500, 1000]; // Same presets as ARIO
+      case 'ethereum': return [0.01, 0.05, 0.1, 0.25];
+      case 'base-eth': return [0.01, 0.05, 0.1, 0.25];
+      case 'solana': return [0.05, 0.1, 0.25, 0.5];
+      case 'kyve': return [100, 500, 1000, 2000];
+      case 'pol': return [10, 50, 100, 250];
+      case 'usdc': return [10, 25, 50, 100];
+      case 'base-usdc': return [10, 25, 50, 100];
+      case 'polygon-usdc': return [10, 25, 50, 100];
+      default: return [0.01, 0.05, 0.1, 0.25];
     }
   };
 
@@ -269,16 +227,12 @@ export default function TopUpPanel() {
 
     // Validate amount limits
     if (effectiveAmount < minUSDAmount) {
-      setErrorMessage(
-        `Minimum purchase amount is $${minUSDAmount}${inputType === 'storage' ? ' (reduce storage amount)' : ''}`,
-      );
+      setErrorMessage(`Minimum purchase amount is $${minUSDAmount}${inputType === 'storage' ? ' (reduce storage amount)' : ''}`);
       return;
     }
 
     if (effectiveAmount > maxUSDAmount) {
-      setErrorMessage(
-        `Maximum purchase amount is $${maxUSDAmount}${inputType === 'storage' ? ' (reduce storage amount)' : ''}`,
-      );
+      setErrorMessage(`Maximum purchase amount is $${maxUSDAmount}${inputType === 'storage' ? ' (reduce storage amount)' : ''}`);
       return;
     }
 
@@ -298,9 +252,9 @@ export default function TopUpPanel() {
       try {
         // Map wallet type to token type
         const tokenMap = {
-          arweave: 'arweave',
-          ethereum: 'ethereum',
-          solana: 'solana',
+          'arweave': 'arweave',
+          'ethereum': 'ethereum',
+          'solana': 'solana'
         } as const;
 
         const token = tokenMap[targetToken || 'arweave'];
@@ -368,6 +322,7 @@ export default function TopUpPanel() {
     window.dispatchEvent(new CustomEvent('refresh-balance'));
   };
 
+
   const handleCryptoBackToSelection = () => {
     setCryptoFlowStep('selection');
     setCryptoPaymentResult(null);
@@ -400,16 +355,7 @@ export default function TopUpPanel() {
       case 'arweave':
         return ['ario', 'arweave']; // ARIO first (preferred default for Arweave wallets)
       case 'ethereum':
-        return [
-          'base-ario',
-          'ario',
-          'base-usdc',
-          'base-eth',
-          'usdc',
-          'polygon-usdc',
-          'pol',
-          'ethereum',
-        ]; // Base ARIO first, then ARIO (AO)
+        return ['base-ario', 'ario', 'base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum']; // Base ARIO first, then ARIO (AO)
       case 'solana':
         return ['solana'];
       default:
@@ -463,9 +409,9 @@ export default function TopUpPanel() {
         setLoadingTargetBalance(true);
         try {
           const tokenMap = {
-            arweave: 'arweave',
-            ethereum: 'ethereum',
-            solana: 'solana',
+            'arweave': 'arweave',
+            'ethereum': 'ethereum',
+            'solana': 'solana'
           } as const;
           const result = await getTurboBalance(paymentTargetAddress, tokenMap[paymentTargetType]);
           setTargetBalance(result.winc ? result.winc / wincPerCredit : 0);
@@ -490,6 +436,7 @@ export default function TopUpPanel() {
     }
   }, [walletType, getAvailableTokens]);
 
+
   // Set initial target to connected wallet when user logs in
   useEffect(() => {
     if (address && walletType && !paymentTargetAddress) {
@@ -502,6 +449,7 @@ export default function TopUpPanel() {
     clearAllPaymentState();
     setFiatFlowStep('amount');
   }, [address, clearAllPaymentState]);
+
 
   // Render fiat flow screens
   if (paymentMethod === 'fiat' && fiatFlowStep !== 'amount') {
@@ -546,11 +494,7 @@ export default function TopUpPanel() {
       case 'confirmation':
         return (
           <CryptoConfirmationPanel
-            cryptoAmount={
-              inputType === 'storage' && cryptoForStorage !== undefined
-                ? cryptoForStorage
-                : cryptoAmount
-            }
+            cryptoAmount={inputType === 'storage' && cryptoForStorage !== undefined ? cryptoForStorage : cryptoAmount}
             tokenType={selectedTokenType}
             onBack={handleCryptoBackToSelection}
             onPaymentComplete={handleCryptoPaymentComplete}
@@ -593,19 +537,16 @@ export default function TopUpPanel() {
         </div>
         <div>
           <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Buy Credits</h3>
-          <p className="text-sm text-foreground/80">
-            Purchase credits for permanent storage and domains on Arweave
-          </p>
+          <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
         </div>
       </div>
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+
         {/* Payment Method Selection - Always show */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-foreground/80 mb-3">
-            Choose Payment Method
-          </label>
+          <label className="block text-sm font-medium text-foreground/80 mb-3">Choose Payment Method</label>
           <div className="inline-flex bg-card rounded-2xl p-1 border border-border/20 w-full">
             <button
               onClick={() => {
@@ -737,9 +678,7 @@ export default function TopUpPanel() {
                 >
                   <div className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-foreground/80" />
-                    <span className="text-sm font-medium text-foreground/80">
-                      Recipient Wallet Address
-                    </span>
+                    <span className="text-sm font-medium text-foreground/80">Recipient Wallet Address</span>
                   </div>
                   <ChevronDown className="w-5 h-5 text-foreground/80 rotate-180 transition-transform" />
                 </button>
@@ -807,14 +746,14 @@ export default function TopUpPanel() {
                         <span className="text-xs text-success">
                           {paymentTargetAddress === address
                             ? 'Credits will be added to your wallet'
-                            : `Valid ${getWalletTypeLabel(paymentTargetType || 'unknown')} address - sending to another wallet`}
+                            : `Valid ${getWalletTypeLabel(paymentTargetType || 'unknown')} address - sending to another wallet`
+                          }
                         </span>
                       </div>
                     </div>
                   )}
                   <div className="mt-3 text-xs text-foreground/80/70">
-                    Leave as your address to top up yourself, or enter a different address to send
-                    credits to another wallet
+                    Leave as your address to top up yourself, or enter a different address to send credits to another wallet
                   </div>
                 </div>
               </div>
@@ -826,32 +765,21 @@ export default function TopUpPanel() {
         {/* Hide selector if only one token available (e.g., Solana wallet only has SOL) */}
         {paymentMethod === 'crypto' && getAvailableTokens().length > 1 && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-foreground/80 mb-3">
-              Select Cryptocurrency
-            </label>
+            <label className="block text-sm font-medium text-foreground/80 mb-3">Select Cryptocurrency</label>
 
             {!walletType ? (
               <div className="bg-info/10 border border-info/20 rounded-2xl p-4">
                 <div className="flex items-start gap-3">
                   <Info className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-info mb-2">
-                      Wallet Required for Crypto Payments
-                    </p>
+                    <p className="font-medium text-info mb-2">Wallet Required for Crypto Payments</p>
                     <p className="text-info/80 text-sm mb-3">
                       Connect a wallet that supports the cryptocurrency you want to use:
                     </p>
                     <div className="space-y-2 text-sm text-info/80">
-                      <div>
-                        • <strong>AR or ARIO tokens:</strong> Connect Wander wallet
-                      </div>
-                      <div>
-                        • <strong>ETH (L1) or ETH (Base):</strong> Connect MetaMask or Ethereum
-                        wallet
-                      </div>
-                      <div>
-                        • <strong>SOL tokens:</strong> Connect Phantom or Solana wallet
-                      </div>
+                      <div>• <strong>AR or ARIO tokens:</strong> Connect Wander wallet</div>
+                      <div>• <strong>ETH (L1) or ETH (Base):</strong> Connect MetaMask or Ethereum wallet</div>
+                      <div>• <strong>SOL tokens:</strong> Connect Phantom or Solana wallet</div>
                     </div>
                   </div>
                 </div>
@@ -874,86 +802,65 @@ export default function TopUpPanel() {
               <div className="space-y-3">
                 {/* Native Tokens Row - Base ARIO, ARIO (AO), ETH options, POL */}
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                  {(['base-ario', 'ario', 'ethereum', 'base-eth', 'pol'] as const).map(
-                    (tokenType) => {
-                      const tokenName =
-                        tokenType === 'base-ario'
-                          ? 'ARIO'
-                          : tokenType === 'ario'
-                            ? 'ARIO'
-                            : tokenType === 'ethereum'
-                              ? 'ETH'
-                              : tokenType === 'base-eth'
-                                ? 'ETH'
-                                : 'POL';
-                      const networkName =
-                        tokenType === 'base-ario'
-                          ? 'Base'
-                          : tokenType === 'ario'
-                            ? 'AO'
-                            : tokenType === 'ethereum'
-                              ? 'Ethereum'
-                              : tokenType === 'base-eth'
-                                ? 'Base'
-                                : 'Polygon';
-                      const isFast =
-                        tokenType === 'base-ario' ||
-                        tokenType === 'ario' ||
-                        tokenType === 'base-eth' ||
-                        tokenType === 'pol';
-                      const isNoFee = tokenType === 'base-ario' || tokenType === 'ario';
+                  {(['base-ario', 'ario', 'ethereum', 'base-eth', 'pol'] as const).map((tokenType) => {
+                    const tokenName = tokenType === 'base-ario' ? 'ARIO'
+                      : tokenType === 'ario' ? 'ARIO'
+                      : tokenType === 'ethereum' ? 'ETH'
+                      : tokenType === 'base-eth' ? 'ETH'
+                      : 'POL';
+                    const networkName = tokenType === 'base-ario' ? 'Base'
+                      : tokenType === 'ario' ? 'AO'
+                      : tokenType === 'ethereum' ? 'Ethereum'
+                      : tokenType === 'base-eth' ? 'Base'
+                      : 'Polygon';
+                    const isFast = tokenType === 'base-ario' || tokenType === 'ario' || tokenType === 'base-eth' || tokenType === 'pol';
+                    const isNoFee = tokenType === 'base-ario' || tokenType === 'ario';
 
-                      return (
-                        <button
-                          key={tokenType}
-                          onClick={() => {
-                            setSelectedTokenType(tokenType);
-                            setErrorMessage('');
-                          }}
-                          className={`p-2 rounded-2xl border transition-all text-left ${
-                            selectedTokenType === tokenType
-                              ? 'border-foreground bg-foreground/10 text-foreground'
-                              : 'border-border/20 text-foreground/80 hover:bg-card hover:text-foreground'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-bold text-sm">{tokenName}</div>
-                              <div className="text-[10px] opacity-75">{networkName}</div>
-                            </div>
-                            {selectedTokenType === tokenType && (
-                              <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                    return (
+                      <button
+                        key={tokenType}
+                        onClick={() => {
+                          setSelectedTokenType(tokenType);
+                          setErrorMessage('');
+                        }}
+                        className={`p-2 rounded-2xl border transition-all text-left ${
+                          selectedTokenType === tokenType
+                            ? 'border-foreground bg-foreground/10 text-foreground'
+                            : 'border-border/20 text-foreground/80 hover:bg-card hover:text-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-sm">{tokenName}</div>
+                            <div className="text-[10px] opacity-75">{networkName}</div>
+                          </div>
+                          {selectedTokenType === tokenType && (
+                            <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                          )}
+                        </div>
+                        {(isFast || isNoFee) && (
+                          <div className="flex gap-1 mt-1">
+                            {isFast && (
+                              <span className="text-[9px] text-success font-medium">Fast</span>
+                            )}
+                            {isNoFee && (
+                              <span className="text-[9px] text-info font-medium">No Fee</span>
                             )}
                           </div>
-                          {(isFast || isNoFee) && (
-                            <div className="flex gap-1 mt-1">
-                              {isFast && (
-                                <span className="text-[9px] text-success font-medium">Fast</span>
-                              )}
-                              {isNoFee && (
-                                <span className="text-[9px] text-info font-medium">No Fee</span>
-                              )}
-                            </div>
-                          )}
-                        </button>
-                      );
-                    },
-                  )}
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* USDC Stablecoins Row */}
                 <div>
-                  <div className="text-[10px] font-medium text-foreground/80 mb-1.5 px-1 uppercase tracking-wider">
-                    Stablecoins
-                  </div>
+                  <div className="text-[10px] font-medium text-foreground/80 mb-1.5 px-1 uppercase tracking-wider">Stablecoins</div>
                   <div className="grid grid-cols-3 gap-1.5">
                     {(['usdc', 'base-usdc', 'polygon-usdc'] as const).map((tokenType) => {
-                      const networkName =
-                        tokenType === 'usdc'
-                          ? 'Ethereum'
-                          : tokenType === 'base-usdc'
-                            ? 'Base'
-                            : 'Polygon';
+                      const networkName = tokenType === 'usdc' ? 'Ethereum'
+                        : tokenType === 'base-usdc' ? 'Base'
+                        : 'Polygon';
                       const isFast = tokenType === 'base-usdc' || tokenType === 'polygon-usdc';
 
                       return (
@@ -991,26 +898,16 @@ export default function TopUpPanel() {
               </div>
             ) : (
               // Compact layout for other wallet types (Arweave, Solana)
-              <div
-                className={`grid gap-1.5 ${getAvailableTokens().length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
-              >
+              <div className={`grid gap-1.5 ${getAvailableTokens().length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {getAvailableTokens().map((tokenType) => {
-                  const tokenName =
-                    tokenType === 'ario'
-                      ? 'ARIO'
-                      : tokenType === 'arweave'
-                        ? 'AR'
-                        : tokenType === 'solana'
-                          ? 'SOL'
-                          : tokenLabels[tokenType];
-                  const networkName =
-                    tokenType === 'ario'
-                      ? 'AO Network'
-                      : tokenType === 'arweave'
-                        ? 'Arweave'
-                        : tokenType === 'solana'
-                          ? 'Solana'
-                          : '';
+                  const tokenName = tokenType === 'ario' ? 'ARIO'
+                    : tokenType === 'arweave' ? 'AR'
+                    : tokenType === 'solana' ? 'SOL'
+                    : tokenLabels[tokenType];
+                  const networkName = tokenType === 'ario' ? 'AO Network'
+                    : tokenType === 'arweave' ? 'Arweave'
+                    : tokenType === 'solana' ? 'Solana'
+                    : '';
                   const isFast = tokenType === 'ario' || tokenType === 'solana';
                   const isNoFee = tokenType === 'ario';
 
@@ -1090,9 +987,7 @@ export default function TopUpPanel() {
                 >
                   <div className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-foreground/80" />
-                    <span className="text-sm font-medium text-foreground/80">
-                      Recipient Wallet Address
-                    </span>
+                    <span className="text-sm font-medium text-foreground/80">Recipient Wallet Address</span>
                   </div>
                   <ChevronDown className="w-5 h-5 text-foreground/80 rotate-180 transition-transform" />
                 </button>
@@ -1160,14 +1055,14 @@ export default function TopUpPanel() {
                         <span className="text-xs text-success">
                           {paymentTargetAddress === address
                             ? 'Credits will be added to your wallet'
-                            : `Valid ${getWalletTypeLabel(paymentTargetType || 'unknown')} address - sending to another wallet`}
+                            : `Valid ${getWalletTypeLabel(paymentTargetType || 'unknown')} address - sending to another wallet`
+                          }
                         </span>
                       </div>
                     </div>
                   )}
                   <div className="mt-3 text-xs text-foreground/80/70">
-                    Leave as your address to top up yourself, or enter a different address to send
-                    credits to another wallet
+                    Leave as your address to top up yourself, or enter a different address to send credits to another wallet
                   </div>
                 </div>
               </div>
@@ -1280,8 +1175,7 @@ export default function TopUpPanel() {
                       { amount: 100, unit: 'GiB', label: '100 GiB' },
                       { amount: 1, unit: 'TiB', label: '1 TiB' },
                     ].map((preset) => {
-                      const isSelected =
-                        storageAmount === preset.amount && storageUnit === preset.unit;
+                      const isSelected = storageAmount === preset.amount && storageUnit === preset.unit;
                       return (
                         <button
                           key={preset.label}
@@ -1309,19 +1203,14 @@ export default function TopUpPanel() {
                     </label>
                     <div className="space-y-3 sm:space-y-0 sm:flex sm:gap-3">
                       <Listbox
-                        value={storageUnits.find((unit) => unit.value === storageUnit)}
+                        value={storageUnits.find(unit => unit.value === storageUnit)}
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
                           <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 text-lg font-medium text-foreground focus:border-foreground focus:outline-none cursor-pointer text-left">
-                            <span className="block truncate">
-                              {storageUnits.find((unit) => unit.value === storageUnit)?.label}
-                            </span>
+                            <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                              <ChevronDown
-                                className="h-5 w-5 text-foreground/80"
-                                aria-hidden="true"
-                              />
+                              <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
                             </span>
                           </Listbox.Button>
                           <Transition
@@ -1335,15 +1224,15 @@ export default function TopUpPanel() {
                                 <Listbox.Option
                                   key={unit.value}
                                   className={({ active }) =>
-                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${active ? 'bg-card text-foreground' : 'text-foreground/80'}`
+                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${
+                                      active ? 'bg-card text-foreground' : 'text-foreground/80'
+                                    }`
                                   }
                                   value={unit}
                                 >
                                   {({ selected }) => (
                                     <>
-                                      <span
-                                        className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}
-                                      >
+                                      <span className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}>
                                         {unit.label}
                                       </span>
                                       {selected ? (
@@ -1377,6 +1266,7 @@ export default function TopUpPanel() {
                       Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
                     </div>
                   </div>
+
                 </>
               )}
             </>
@@ -1384,9 +1274,7 @@ export default function TopUpPanel() {
             <>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-foreground/80">
-                  {inputType === 'storage'
-                    ? 'Enter Storage Amount'
-                    : `Select ${tokenLabels[selectedTokenType]} Amount`}
+                  {inputType === 'storage' ? 'Enter Storage Amount' : `Select ${tokenLabels[selectedTokenType]} Amount`}
                 </label>
                 <div className="inline-flex bg-card rounded-2xl p-0.5 border border-border/20">
                   <button
@@ -1432,8 +1320,7 @@ export default function TopUpPanel() {
                       { amount: 100, unit: 'GiB', label: '100 GiB' },
                       { amount: 1, unit: 'TiB', label: '1 TiB' },
                     ].map((preset) => {
-                      const isSelected =
-                        storageAmount === preset.amount && storageUnit === preset.unit;
+                      const isSelected = storageAmount === preset.amount && storageUnit === preset.unit;
                       return (
                         <button
                           key={preset.label}
@@ -1461,19 +1348,14 @@ export default function TopUpPanel() {
                     </label>
                     <div className="space-y-3 sm:space-y-0 sm:flex sm:gap-3">
                       <Listbox
-                        value={storageUnits.find((unit) => unit.value === storageUnit)}
+                        value={storageUnits.find(unit => unit.value === storageUnit)}
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
                           <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 text-lg font-medium text-foreground focus:border-foreground focus:outline-none cursor-pointer text-left">
-                            <span className="block truncate">
-                              {storageUnits.find((unit) => unit.value === storageUnit)?.label}
-                            </span>
+                            <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                              <ChevronDown
-                                className="h-5 w-5 text-foreground/80"
-                                aria-hidden="true"
-                              />
+                              <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
                             </span>
                           </Listbox.Button>
                           <Transition
@@ -1487,15 +1369,15 @@ export default function TopUpPanel() {
                                 <Listbox.Option
                                   key={unit.value}
                                   className={({ active }) =>
-                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${active ? 'bg-card text-foreground' : 'text-foreground/80'}`
+                                    `relative cursor-pointer select-none py-3 pl-4 pr-10 ${
+                                      active ? 'bg-card text-foreground' : 'text-foreground/80'
+                                    }`
                                   }
                                   value={unit}
                                 >
                                   {({ selected }) => (
                                     <>
-                                      <span
-                                        className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}
-                                      >
+                                      <span className={`block truncate text-lg font-medium ${selected ? 'font-bold text-foreground' : 'font-medium'}`}>
                                         {unit.label}
                                       </span>
                                       {selected ? (
@@ -1529,6 +1411,7 @@ export default function TopUpPanel() {
                       Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
                     </div>
                   </div>
+
                 </>
               ) : (
                 <>
@@ -1583,12 +1466,8 @@ export default function TopUpPanel() {
                       <div className="mt-3 flex items-start gap-2 p-3 bg-info/10 border border-info/20 rounded-2xl">
                         <Loader2 className="w-4 h-4 text-info flex-shrink-0 mt-0.5 animate-spin" />
                         <div>
-                          <div className="text-info font-medium text-sm mb-1">
-                            Fetching Pricing...
-                          </div>
-                          <div className="text-info/80 text-xs">
-                            Getting current {tokenLabels[selectedTokenType]} rates
-                          </div>
+                          <div className="text-info font-medium text-sm mb-1">Fetching Pricing...</div>
+                          <div className="text-info/80 text-xs">Getting current {tokenLabels[selectedTokenType]} rates</div>
                         </div>
                       </div>
                     )}
@@ -1596,9 +1475,7 @@ export default function TopUpPanel() {
                       <div className="mt-3 flex items-start gap-2 p-3 bg-warning/10 border border-warning/20 rounded-2xl">
                         <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                         <div>
-                          <div className="text-warning font-medium text-sm mb-1">
-                            Quote Generation Unavailable
-                          </div>
+                          <div className="text-warning font-medium text-sm mb-1">Quote Generation Unavailable</div>
                           <div className="text-warning/80 text-xs">{tokenPricingError}</div>
                         </div>
                       </div>
@@ -1611,12 +1488,7 @@ export default function TopUpPanel() {
         </div>
 
         {/* Purchase Summary - Shopping Cart Style */}
-        {((paymentMethod === 'fiat' &&
-          ((inputType === 'dollars' && usdAmount > 0) ||
-            (inputType === 'storage' && storageAmount > 0))) ||
-          (paymentMethod === 'crypto' &&
-            ((inputType === 'dollars' && cryptoAmount > 0) ||
-              (inputType === 'storage' && storageAmount > 0)))) && (
+        {((paymentMethod === 'fiat' && ((inputType === 'dollars' && usdAmount > 0) || (inputType === 'storage' && storageAmount > 0))) || (paymentMethod === 'crypto' && ((inputType === 'dollars' && cryptoAmount > 0) || (inputType === 'storage' && storageAmount > 0)))) && (
           <div className="bg-card border-2 border-foreground rounded-2xl p-6 mb-6">
             {/* Header */}
             <div className="text-sm text-foreground/80 mb-4">Purchase Summary</div>
@@ -1628,30 +1500,28 @@ export default function TopUpPanel() {
                 <div className="text-right">
                   <div className="text-lg font-medium text-foreground">
                     {paymentMethod === 'fiat'
-                      ? inputType === 'storage'
-                        ? formatNumber((getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12)
-                        : credits?.toLocaleString() || '...'
-                      : inputType === 'storage'
-                        ? formatNumber((getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12)
-                        : cryptoCredits?.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 4,
-                          }) || '...'}
+                      ? (inputType === 'storage'
+                          ? formatNumber((getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12)
+                          : credits?.toLocaleString() || '...'
+                        )
+                      : (inputType === 'storage'
+                          ? formatNumber((getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12)
+                          : cryptoCredits?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4}) || '...'
+                        )
+                    }
                   </div>
                   {wincForOneGiB && (
                     <div className="text-xs text-foreground/80">
-                      ~
-                      {paymentMethod === 'fiat'
-                        ? inputType === 'storage'
-                          ? formatStorage(getStorageInGiB())
-                          : credits
-                            ? formatStorage((credits * wincPerCredit) / Number(wincForOneGiB))
-                            : '...'
-                        : inputType === 'storage'
-                          ? formatStorage(getStorageInGiB())
-                          : cryptoCredits
-                            ? formatStorage((cryptoCredits * wincPerCredit) / Number(wincForOneGiB))
-                            : '...'}
+                      ~{paymentMethod === 'fiat'
+                        ? (inputType === 'storage'
+                            ? formatStorage(getStorageInGiB())
+                            : credits ? formatStorage((credits * wincPerCredit) / Number(wincForOneGiB)) : '...'
+                          )
+                        : (inputType === 'storage'
+                            ? formatStorage(getStorageInGiB())
+                            : cryptoCredits ? formatStorage((cryptoCredits * wincPerCredit) / Number(wincForOneGiB)) : '...'
+                          )
+                      }
                     </div>
                   )}
                 </div>
@@ -1662,34 +1532,34 @@ export default function TopUpPanel() {
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-foreground/80">Price</div>
                   <div className="text-lg font-medium text-foreground">
-                    $
-                    {inputType === 'storage' && wincForOneGiB && creditsForOneUSD
+                    ${inputType === 'storage' && wincForOneGiB && creditsForOneUSD
                       ? formatNumber(calculateStorageCost())
-                      : formatNumber(usdAmount)}
+                      : formatNumber(usdAmount)
+                    }
                   </div>
                 </div>
               )}
               {paymentMethod === 'crypto' && (
                 <div className="flex justify-between items-center">
-                  <div className="text-sm text-foreground/80">
-                    Pay with {tokenLabels[selectedTokenType]}
-                  </div>
+                  <div className="text-sm text-foreground/80">Pay with {tokenLabels[selectedTokenType]}</div>
                   <div className="text-right">
                     <div className="text-lg font-medium text-foreground">
                       {inputType === 'storage'
-                        ? cryptoForStorage !== undefined
-                          ? `${cryptoForStorage.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${tokenLabels[selectedTokenType]}`
-                          : '...'
-                        : `${cryptoAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${tokenLabels[selectedTokenType]}`}
+                        ? (cryptoForStorage !== undefined
+                            ? `${cryptoForStorage.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6})} ${tokenLabels[selectedTokenType]}`
+                            : '...'
+                          )
+                        : `${cryptoAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6})} ${tokenLabels[selectedTokenType]}`
+                      }
                     </div>
                     {creditsForOneUSD && (
                       <div className="text-xs text-foreground/80">
-                        ≈ $
-                        {inputType === 'storage' && wincForOneGiB
+                        ≈ ${inputType === 'storage' && wincForOneGiB
                           ? formatNumber(calculateStorageCost())
                           : cryptoCredits && creditsForOneUSD
                             ? formatNumber(cryptoCredits / creditsForOneUSD)
-                            : '...'}
+                            : '...'
+                        }
                       </div>
                     )}
                   </div>
@@ -1712,17 +1582,11 @@ export default function TopUpPanel() {
                       <div className="text-lg font-medium text-foreground">
                         {formatNumber(targetBalance !== null ? targetBalance : creditBalance)}
                       </div>
-                      {wincForOneGiB &&
-                        (targetBalance !== null ? targetBalance : creditBalance) > 0 && (
-                          <div className="text-xs text-foreground/80">
-                            ~
-                            {formatStorage(
-                              ((targetBalance !== null ? targetBalance : creditBalance) *
-                                wincPerCredit) /
-                                Number(wincForOneGiB),
-                            )}
-                          </div>
-                        )}
+                      {wincForOneGiB && (targetBalance !== null ? targetBalance : creditBalance) > 0 && (
+                        <div className="text-xs text-foreground/80">
+                          ~{formatStorage(((targetBalance !== null ? targetBalance : creditBalance) * wincPerCredit) / Number(wincForOneGiB))}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -1737,62 +1601,28 @@ export default function TopUpPanel() {
                 <div className="text-right">
                   <div className="text-lg font-bold text-success">
                     {paymentMethod === 'fiat'
-                      ? inputType === 'storage'
-                        ? formatNumber(
-                            (targetBalance !== null ? targetBalance : creditBalance) +
-                              (getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12,
-                          )
-                        : credits
-                          ? formatNumber(
-                              (targetBalance !== null ? targetBalance : creditBalance) + credits,
-                            )
-                          : '...'
-                      : inputType === 'storage'
-                        ? formatNumber(
-                            (targetBalance !== null ? targetBalance : creditBalance) +
-                              (getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12,
-                          )
-                        : cryptoCredits
-                          ? formatNumber(
-                              (targetBalance !== null ? targetBalance : creditBalance) +
-                                cryptoCredits,
-                            )
-                          : '...'}
+                      ? (inputType === 'storage'
+                          ? formatNumber((targetBalance !== null ? targetBalance : creditBalance) + (getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12)
+                          : credits ? formatNumber((targetBalance !== null ? targetBalance : creditBalance) + credits) : '...'
+                        )
+                      : (inputType === 'storage'
+                          ? formatNumber((targetBalance !== null ? targetBalance : creditBalance) + (getStorageInGiB() * Number(wincForOneGiB || 0)) / 1e12)
+                          : cryptoCredits ? formatNumber((targetBalance !== null ? targetBalance : creditBalance) + cryptoCredits) : '...'
+                        )
+                    }
                   </div>
                   {wincForOneGiB && (
                     <div className="text-xs text-success">
-                      ~
-                      {paymentMethod === 'fiat'
-                        ? inputType === 'storage'
-                          ? formatStorage(
-                              (((targetBalance !== null ? targetBalance : creditBalance) +
-                                (getStorageInGiB() * Number(wincForOneGiB)) / 1e12) *
-                                wincPerCredit) /
-                                Number(wincForOneGiB),
-                            )
-                          : credits
-                            ? formatStorage(
-                                (((targetBalance !== null ? targetBalance : creditBalance) +
-                                  credits) *
-                                  wincPerCredit) /
-                                  Number(wincForOneGiB),
-                              )
-                            : '...'
-                        : inputType === 'storage'
-                          ? formatStorage(
-                              (((targetBalance !== null ? targetBalance : creditBalance) +
-                                (getStorageInGiB() * Number(wincForOneGiB)) / 1e12) *
-                                wincPerCredit) /
-                                Number(wincForOneGiB),
-                            )
-                          : cryptoCredits
-                            ? formatStorage(
-                                (((targetBalance !== null ? targetBalance : creditBalance) +
-                                  cryptoCredits) *
-                                  wincPerCredit) /
-                                  Number(wincForOneGiB),
-                              )
-                            : '...'}
+                      ~{paymentMethod === 'fiat'
+                        ? (inputType === 'storage'
+                            ? formatStorage((((targetBalance !== null ? targetBalance : creditBalance) + (getStorageInGiB() * Number(wincForOneGiB)) / 1e12) * wincPerCredit) / Number(wincForOneGiB))
+                            : credits ? formatStorage((((targetBalance !== null ? targetBalance : creditBalance) + credits) * wincPerCredit) / Number(wincForOneGiB)) : '...'
+                          )
+                        : (inputType === 'storage'
+                            ? formatStorage((((targetBalance !== null ? targetBalance : creditBalance) + (getStorageInGiB() * Number(wincForOneGiB)) / 1e12) * wincPerCredit) / Number(wincForOneGiB))
+                            : cryptoCredits ? formatStorage((((targetBalance !== null ? targetBalance : creditBalance) + cryptoCredits) * wincPerCredit) / Number(wincForOneGiB)) : '...'
+                          )
+                      }
                     </div>
                   )}
                 </div>
@@ -1813,31 +1643,17 @@ export default function TopUpPanel() {
           onClick={handleCheckout}
           className="w-full py-4 px-6 rounded-full bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           disabled={
-            (paymentMethod === 'fiat' &&
-              ((!paymentTargetAddress && !address) || // Must have either a target address or connected wallet
-                !!targetAddressError || // Block checkout if recipient address validation failed
-                (inputType === 'dollars' &&
-                  (!credits || usdAmount < minUSDAmount || usdAmount > maxUSDAmount)) ||
-                (inputType === 'storage' &&
-                  (!wincForOneGiB ||
-                    !creditsForOneUSD ||
-                    storageAmount <= 0 ||
-                    calculateStorageCost() < minUSDAmount ||
-                    calculateStorageCost() > maxUSDAmount)))) ||
-            (paymentMethod === 'crypto' &&
-              (!!targetAddressError || // Block checkout if recipient address validation failed
-                (inputType === 'dollars' &&
-                  (cryptoAmount <= 0 ||
-                    !walletType ||
-                    !isTokenCompatibleWithWallet(selectedTokenType) ||
-                    !!tokenPricingError)) ||
-                (inputType === 'storage' &&
-                  (!wincForOneGiB ||
-                    !creditsForOneUSD ||
-                    storageAmount <= 0 ||
-                    !walletType ||
-                    !isTokenCompatibleWithWallet(selectedTokenType) ||
-                    cryptoForStorage === undefined)))) ||
+            (paymentMethod === 'fiat' && (
+              (!paymentTargetAddress && !address) || // Must have either a target address or connected wallet
+              !!targetAddressError || // Block checkout if recipient address validation failed
+              (inputType === 'dollars' && (!credits || usdAmount < minUSDAmount || usdAmount > maxUSDAmount)) ||
+              (inputType === 'storage' && (!wincForOneGiB || !creditsForOneUSD || storageAmount <= 0 || calculateStorageCost() < minUSDAmount || calculateStorageCost() > maxUSDAmount))
+            )) ||
+            (paymentMethod === 'crypto' && (
+              !!targetAddressError || // Block checkout if recipient address validation failed
+              (inputType === 'dollars' && (cryptoAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || !!tokenPricingError)) ||
+              (inputType === 'storage' && (!wincForOneGiB || !creditsForOneUSD || storageAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || cryptoForStorage === undefined))
+            )) ||
             isProcessing
           }
         >
@@ -1866,8 +1682,7 @@ export default function TopUpPanel() {
               ) : tokenPricingError ? (
                 <>
                   <AlertCircle className="w-5 h-5" />
-                  Pricing Unavailable for{' '}
-                  {tokenLabels[selectedTokenType as keyof typeof tokenLabels]}
+                  Pricing Unavailable for {tokenLabels[selectedTokenType as keyof typeof tokenLabels]}
                 </>
               ) : (
                 <>
@@ -1886,10 +1701,15 @@ export default function TopUpPanel() {
             <span>Secure payment powered by Stripe</span>
           </div>
         )}
+
       </div>
 
       {/* Wallet Selection Modal */}
-      {showWalletModal && <WalletSelectionModal onClose={() => setShowWalletModal(false)} />}
+      {showWalletModal && (
+        <WalletSelectionModal
+          onClose={() => setShowWalletModal(false)}
+        />
+      )}
     </div>
   );
 }

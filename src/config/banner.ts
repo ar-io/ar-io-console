@@ -4,14 +4,14 @@
 
 export interface BannerConfig {
   enabled: boolean;
-  id: string; // Unique identifier for localStorage tracking
+  id: string;  // Unique identifier for localStorage tracking
   message: string;
   link?: {
     text: string;
     href: string;
     external?: boolean;
   };
-  variant: 'subtle' | 'prominent'; // subtle = lavender, prominent = purple
+  variant: 'subtle' | 'prominent';  // subtle = lavender, prominent = purple
 }
 
 export const BANNER_CONFIG: BannerConfig = {

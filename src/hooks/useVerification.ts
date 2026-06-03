@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { verifyTransaction, type VerificationResult } from '../services/verificationService';
+import {
+  verifyTransaction,
+  type VerificationResult,
+} from '../services/verificationService';
 
 const VERIFY_TIMEOUT_MS = 60_000;
 
@@ -60,7 +63,11 @@ export function useVerification() {
 
       try {
         const config = getCurrentConfig();
-        const verification = await verifyTransaction(config.verifyApiUrl, txId, controller.signal);
+        const verification = await verifyTransaction(
+          config.verifyApiUrl,
+          txId,
+          controller.signal
+        );
         setResult(verification);
 
         // Update URL for deep-linking / sharing
@@ -72,16 +79,21 @@ export function useVerification() {
         if (controller.signal.aborted) return;
 
         const isNetworkError =
-          err instanceof TypeError || (err instanceof DOMException && err.name === 'AbortError');
+          err instanceof TypeError ||
+          (err instanceof DOMException && err.name === 'AbortError');
         const msg = err instanceof Error ? err.message : String(err);
 
         if (isNetworkError || msg.includes('aborted')) {
           setError(
-            'The verification service is not responding. Check your connection and try again.',
+            'The verification service is not responding. Check your connection and try again.'
           );
-        } else if (msg.includes('502') || msg.includes('503') || msg.includes('504')) {
+        } else if (
+          msg.includes('502') ||
+          msg.includes('503') ||
+          msg.includes('504')
+        ) {
           setError(
-            'The verification service is temporarily unavailable. Please try again in a moment.',
+            'The verification service is temporarily unavailable. Please try again in a moment.'
           );
         } else {
           setError(msg || 'Verification failed');
@@ -99,7 +111,7 @@ export function useVerification() {
         }
       }
     },
-    [getCurrentConfig],
+    [getCurrentConfig]
   );
 
   const reset = useCallback(() => {
@@ -110,14 +122,5 @@ export function useVerification() {
 
   const txParam = searchParams.get('tx') || null;
 
-  return {
-    verify,
-    cancel,
-    result,
-    isVerifying,
-    elapsed,
-    error,
-    reset,
-    txParam,
-  };
+  return { verify, cancel, result, isVerifying, elapsed, error, reset, txParam };
 }

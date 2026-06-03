@@ -68,11 +68,7 @@ async function uploadWithTurbo() {
       events: {
         // overall events (includes signing and upload events)
         onProgress: ({ totalBytes, processedBytes, step }) => {
-          console.log('Overall progress:', {
-            totalBytes,
-            processedBytes,
-            step,
-          });
+          console.log('Overall progress:', { totalBytes, processedBytes, step });
         },
         onError: ({ error, step }) => {
           console.log('Overall error:', { error, step });
@@ -83,43 +79,40 @@ async function uploadWithTurbo() {
     // upload a file - log signing and upload progress events
     const filePath = path.join(__dirname, './my-image.png');
     const fileSize = fs.statSync(filePath).size;
-    const { id, owner, dataCaches, fastFinalityIndexes } = await turbo.uploadFile({
-      fileStreamFactory: () => fs.createReadStream(filePath),
-      fileSizeFactory: () => fileSize,
-      events: {
-        // overall events (includes signing and upload events)
-        onProgress: ({ totalBytes, processedBytes, step }) => {
-          console.log('Overall progress:', {
-            totalBytes,
-            processedBytes,
-            step,
-          });
+    const { id, owner, dataCaches, fastFinalityIndexes } =
+      await turbo.uploadFile({
+        fileStreamFactory: () => fs.createReadStream(filePath),
+        fileSizeFactory: () => fileSize,
+        events: {
+          // overall events (includes signing and upload events)
+          onProgress: ({ totalBytes, processedBytes, step }) => {
+            console.log('Overall progress:', { totalBytes, processedBytes, step });
+          },
+          onError: ({ error, step }) => {
+            console.log('Overall error:', { error, step });
+          },
+          // signing events
+          onSigningProgress: ({ totalBytes, processedBytes }) => {
+            console.log('Signing progress:', { totalBytes, processedBytes });
+          },
+          onSigningError: (error) => {
+            console.log('Signing error:', { error });
+          },
+          onSigningSuccess: () => {
+            console.log('Signing success!');
+          },
+          // upload events
+          onUploadProgress: ({ totalBytes, processedBytes }) => {
+            console.log('Upload progress:', { totalBytes, processedBytes });
+          },
+          onUploadError: (error) => {
+            console.log('Upload error:', { error });
+          },
+          onUploadSuccess: () => {
+            console.log('Upload success!');
+          },
         },
-        onError: ({ error, step }) => {
-          console.log('Overall error:', { error, step });
-        },
-        // signing events
-        onSigningProgress: ({ totalBytes, processedBytes }) => {
-          console.log('Signing progress:', { totalBytes, processedBytes });
-        },
-        onSigningError: (error) => {
-          console.log('Signing error:', { error });
-        },
-        onSigningSuccess: () => {
-          console.log('Signing success!');
-        },
-        // upload events
-        onUploadProgress: ({ totalBytes, processedBytes }) => {
-          console.log('Upload progress:', { totalBytes, processedBytes });
-        },
-        onUploadError: (error) => {
-          console.log('Upload error:', { error });
-        },
-        onUploadSuccess: () => {
-          console.log('Upload success!');
-        },
-      },
-    });
+      });
     // upload complete!
     console.log('Successfully upload data item!', {
       id,
@@ -342,9 +335,10 @@ const rates = await turbo.getFiatRates();
 Returns the current amount of Winston Credits including all adjustments for the provided fiat currency.
 
 ```typescript
-const { winc, actualPaymentAmount, quotedPaymentAmount, adjustments } = await turbo.getWincForFiat({
-  amount: USD(100),
-});
+const { winc, actualPaymentAmount, quotedPaymentAmount, adjustments } =
+  await turbo.getWincForFiat({
+    amount: USD(100),
+  });
 ```
 
 #### `getWincForToken({ tokenAmount })`
@@ -352,9 +346,10 @@ const { winc, actualPaymentAmount, quotedPaymentAmount, adjustments } = await tu
 Returns the current amount of Winston Credits including all adjustments for the provided token amount.
 
 ```typescript
-const { winc, actualTokenAmount, equivalentWincTokenAmount } = await turbo.getWincForToken({
-  tokenAmount: WinstonToTokenAmount(100_000_000),
-});
+const { winc, actualTokenAmount, equivalentWincTokenAmount } =
+  await turbo.getWincForToken({
+    tokenAmount: WinstonToTokenAmount(100_000_000),
+  });
 ```
 
 #### `getFiatEstimateForBytes({ byteCount, currency })`
@@ -532,10 +527,11 @@ const address = await turbo.signer.getNativeAddress();
 Returns the current amount of Winston Credits including all adjustments for the provided fiat currency, amount, and optional promo codes.
 
 ```typescript
-const { winc, paymentAmount, quotedPaymentAmount, adjustments } = await turbo.getWincForFiat({
-  amount: USD(100),
-  promoCodes: ['MY_PROMO_CODE'], // promo codes require an authenticated client
-});
+const { winc, paymentAmount, quotedPaymentAmount, adjustments } =
+  await turbo.getWincForFiat({
+    amount: USD(100),
+    promoCodes: ['MY_PROMO_CODE'], // promo codes require an authenticated client
+  });
 ```
 
 #### `createCheckoutSession({ amount, owner, promoCodes })`
@@ -730,9 +726,10 @@ const { manifest, fileResponses, manifestResponse } = await turbo.uploadFolder({
     const selectedFiles = folderInput.files;
     console.log('Folder selected:', selectedFiles);
 
-    const { manifest, fileResponses, manifestResponse } = await turbo.uploadFolder({
-      files: Array.from(selectedFiles).map((file) => file),
-    });
+    const { manifest, fileResponses, manifestResponse } =
+      await turbo.uploadFolder({
+        files: Array.from(selectedFiles).map((file) => file),
+      });
 
     console.log(manifest, fileResponses, manifestResponse);
   });
@@ -844,9 +841,10 @@ const revokedApprovals = await turbo.revokeCredits({
 Returns all given or received credit share approvals for the connected wallet or the provided native address.
 
 ```typescript
-const { givenApprovals, receivedApprovals } = await turbo.getCreditShareApprovals({
-  userAddress: '2cor...VUa',
-});
+const { givenApprovals, receivedApprovals } =
+  await turbo.getCreditShareApprovals({
+    userAddress: '2cor...VUa',
+  });
 ```
 
 ## Events

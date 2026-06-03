@@ -13,8 +13,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 // WalletConnect Project ID - get one from https://cloud.walletconnect.com/
-const WALLETCONNECT_PROJECT_ID =
-  import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '9f180997f87a0c8e1ddd5bcd92ae5363';
+const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '9f180997f87a0c8e1ddd5bcd92ae5363';
 
 // Configure Wagmi with RainbowKit - supports MetaMask, WalletConnect, Coinbase, and many more
 // RainbowKit's getDefaultConfig handles session persistence automatically via wagmi's reconnect
@@ -34,9 +33,10 @@ const arioRainbowTheme = darkTheme({
 });
 
 // Configure Solana wallets - explicitly exclude MetaMask to prevent conflicts
-const solanaWallets = [new PhantomWalletAdapter(), new SolflareWalletAdapter()].filter(
-  (wallet) => !wallet.name.toLowerCase().includes('metamask'),
-);
+const solanaWallets = [
+  new PhantomWalletAdapter(),
+  new SolflareWalletAdapter(),
+].filter(wallet => !wallet.name.toLowerCase().includes('metamask'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,12 +74,12 @@ export function WalletProviders({ children }: WalletProvidersProps) {
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider theme={arioRainbowTheme}>
-            <ConnectionProvider
-              endpoint={import.meta.env.VITE_SOLANA_RPC || 'https://api.mainnet-beta.solana.com'}
-            >
+            <ConnectionProvider endpoint={import.meta.env.VITE_SOLANA_RPC || 'https://api.mainnet-beta.solana.com'}>
               <WalletProvider wallets={solanaWallets} autoConnect={false}>
                 <WalletModalProvider>
-                  <Elements stripe={STRIPE_PROMISE}>{children}</Elements>
+                  <Elements stripe={STRIPE_PROMISE}>
+                    {children}
+                  </Elements>
                 </WalletModalProvider>
               </WalletProvider>
             </ConnectionProvider>

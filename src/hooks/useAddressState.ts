@@ -1,9 +1,20 @@
-import { ArconnectSigner, TokenType, TurboSigner } from '@ardrive/turbo-sdk/web';
+import {
+  ArconnectSigner,
+  TokenType,
+  TurboSigner,
+} from '@ardrive/turbo-sdk/web';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import {
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from '@solana/web3.js';
 import { useCallback, useEffect, useState } from 'react';
 import { parseEther } from 'viem';
-import { useSendTransaction } from 'wagmi';
+import {
+  useSendTransaction,
+} from 'wagmi';
 import { mainnet } from 'wagmi/chains';
 import { useStore } from '../store/useStore';
 
@@ -30,7 +41,7 @@ const useAddressState = (): AddressState | undefined => {
 
   // wagmi hooks for Ethereum transactions
   const { sendTransactionAsync } = useSendTransaction();
-
+  
   // Solana hooks for transactions
   const { sendTransaction: solanaSendTransaction } = useWallet();
   const { connection: solanaConnection } = useConnection();
@@ -114,7 +125,7 @@ const useAddressState = (): AddressState | undefined => {
                 },
                 'processed',
               );
-
+              
               if (res.value.err) {
                 throw res.value.err;
               }
@@ -135,14 +146,7 @@ const useAddressState = (): AddressState | undefined => {
         setAddressState(undefined);
         break;
     }
-  }, [
-    address,
-    walletType,
-    clearAddress,
-    sendTransactionAsync,
-    solanaSendTransaction,
-    solanaConnection,
-  ]);
+  }, [address, walletType, clearAddress, sendTransactionAsync, solanaSendTransaction, solanaConnection]);
 
   useEffect(() => {
     updateAddressState();

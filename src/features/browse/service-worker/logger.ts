@@ -8,10 +8,10 @@
  * - DEBUG: Verbose logs - hidden by default, enable for troubleshooting
  */
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 // Default to 'info' - shows info, warn, error. Set to 'debug' for verbose.
-let currentLevel: LogLevel = 'info';
+let currentLevel: LogLevel = "info";
 
 const levels: Record<LogLevel, number> = {
   debug: 0,
@@ -49,7 +49,7 @@ export const logger = {
    * Use for: request details, cache hits, step-by-step flow
    */
   debug(tag: string, message: string, data?: unknown): void {
-    if (shouldLog('debug')) {
+    if (shouldLog("debug")) {
       if (data !== undefined) {
         console.log(formatPrefix(tag), message, data);
       } else {
@@ -63,7 +63,7 @@ export const logger = {
    * Use for: verification started/complete, important milestones
    */
   info(tag: string, message: string, data?: unknown): void {
-    if (shouldLog('info')) {
+    if (shouldLog("info")) {
       if (data !== undefined) {
         console.log(formatPrefix(tag), message, data);
       } else {
@@ -77,7 +77,7 @@ export const logger = {
    * Use for: fallbacks, retries, non-critical issues
    */
   warn(tag: string, message: string, data?: unknown): void {
-    if (shouldLog('warn')) {
+    if (shouldLog("warn")) {
       if (data !== undefined) {
         console.warn(formatPrefix(tag), message, data);
       } else {
@@ -91,7 +91,7 @@ export const logger = {
    * Use for: failures, exceptions, blocking issues
    */
   error(tag: string, message: string, data?: unknown): void {
-    if (shouldLog('error')) {
+    if (shouldLog("error")) {
       if (data !== undefined) {
         console.error(formatPrefix(tag), message, data);
       } else {

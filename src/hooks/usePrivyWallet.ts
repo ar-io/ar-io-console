@@ -8,7 +8,9 @@ export function usePrivyWallet() {
   const { setAddress, clearAddress, walletType } = useStore();
 
   // Find the Privy embedded wallet
-  const privyWallet = wallets.find((wallet) => wallet.walletClientType === 'privy');
+  const privyWallet = wallets.find(
+    (wallet) => wallet.walletClientType === 'privy'
+  );
 
   // Update store when Privy wallet is connected
   useEffect(() => {
