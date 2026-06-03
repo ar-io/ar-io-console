@@ -8,6 +8,16 @@ function checkValidAddress(address: string): boolean {
   return solanaPattern.test(address);
 }
 
+// Check if address is valid for ArNS operations (Arweave or Ethereum)
+function checkValidEthOrArAddress(address: string): boolean {
+  // Arweave addresses: 43 characters, base64-like
+  const arweavePattern = /^[a-zA-Z0-9_-]{43}$/;
+  // Ethereum addresses: 42 characters, starts with 0x
+  const ethereumPattern = /^0x[a-fA-F0-9]{40}$/;
+
+  return arweavePattern.test(address) || ethereumPattern.test(address);
+}
+
 // Helper to decode punycode names for better display
 const decodePunycode = (name: string): string => {
   try {
@@ -108,7 +118,7 @@ export function usePrimaryArNSName(address: string | null) {
                   const logo = await ant.getLogo();
                   console.log('ANT logo result:', logo);
 
-                  const isValidLogo = logo && checkValidAddress(logo);
+                  const isValidLogo = logo && (checkValidAddress(logo) || checkValidEthOrArAddress(logo));
                   console.log('Logo validation result:', isValidLogo, 'for logo:', logo);
 
                   return isValidLogo ? logo : null;
