@@ -7,6 +7,7 @@ import {
 } from '@solana/kit';
 import type { Address } from '@solana/kit';
 import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
+import { APP_NAME, APP_VERSION } from '../constants';
 
 /**
  * Get current developer configuration from store
@@ -129,11 +130,11 @@ export const WRITE_OPTIONS = {
   tags: [
     {
       name: 'App-Name',
-      value: 'ar.io Console',
+      value: APP_NAME,
     },
     {
       name: 'App-Version',
-      value: '0.4.1',
+      value: APP_VERSION,
     },
   ],
 };
