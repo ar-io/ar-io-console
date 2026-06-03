@@ -1054,7 +1054,7 @@ export default function GatewayInfoPanel() {
                 </h4>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <a
-                        href={`${currentConfig.arioGatewayUrl.replace(/\/$/, "")}/ar-io/info`}
+                        href={`${(currentConfig.arioGatewayUrl ?? "").replace(/\/$/, "")}/ar-io/info`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors border border-border/20 hover:border-primary/50 flex items-start gap-3"

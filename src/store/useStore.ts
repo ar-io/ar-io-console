@@ -278,9 +278,7 @@ interface StoreState {
             undernameTTLs?: Record<string, number>;
         }>,
     ) => void;
-    getOwnedArNSNames: (
-        address: string,
-    ) => Array<{
+    getOwnedArNSNames: (address: string) => Array<{
         name: string;
         processId: string;
         currentTarget?: string;
@@ -657,7 +655,9 @@ export const useStore = create<StoreState>()(
             getCurrentConfig: () => {
                 const { configMode, customConfig } = get();
                 if (configMode === "custom") {
-                    return customConfig;
+                    // Merge over production defaults so stale localStorage entries
+                    // never leave fields undefined after a schema migration.
+                    return { ...PRESET_CONFIGS.production, ...customConfig };
                 }
                 return PRESET_CONFIGS[configMode];
             },
