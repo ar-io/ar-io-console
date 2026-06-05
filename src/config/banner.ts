@@ -4,20 +4,20 @@
 
 export interface BannerConfig {
   enabled: boolean;
-  id: string;  // Unique identifier for localStorage tracking
+  id: string; // Unique identifier for localStorage tracking
   message: string;
   link?: {
     text: string;
     href: string;
     external?: boolean;
   };
-  variant: 'subtle' | 'prominent';  // subtle = lavender, prominent = purple
+  variant: 'subtle' | 'prominent'; // subtle = lavender, prominent = purple
 }
 
 export const BANNER_CONFIG: BannerConfig = {
   enabled: true,
   id: 'solana-migration-apr-2026',
-  message: 'Ar.io is migrating to Solana! Register before the June 1, 2026 snapshot!',
+  message: 'Ar.io has migrated to Solana! Manage your migrated assets with connected Solana wallets.',
   link: {
     text: 'Learn More',
     href: 'https://ar.io/solana-migration/',
