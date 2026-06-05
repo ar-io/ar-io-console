@@ -125,7 +125,7 @@ export function useFileUpload() {
         }
         break;
       case 'solana':
-        if (!window.solana || !window.solana.isConnected) {
+        if (!window.solana || !window.solana.isConnected || !window.solana.publicKey) {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         break;

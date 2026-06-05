@@ -46,8 +46,7 @@ const Header = () => {
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
-  // Only check ArNS for Arweave/Ethereum wallets - Solana can't own ArNS names
-  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
+  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(address);
 
   const [credits, setCredits] = useState<string>('0');
   const [creditsNumeric, setCreditsNumeric] = useState<number>(0);
@@ -438,7 +437,7 @@ const Header = () => {
                   if (walletType === 'ethereum') {
                     explorerUrl = `https://etherscan.io/address/${address}`;
                   } else if (walletType === 'solana') {
-                    explorerUrl = `https://explorer.solana.com/address/${address}`;
+                    explorerUrl = `https://solscan.io/account/${address}`;
                   } else {
                     explorerUrl = `https://viewblock.io/arweave/address/${address}`;
                   }

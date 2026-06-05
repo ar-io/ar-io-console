@@ -439,7 +439,7 @@ export default function BalanceCheckerPanel() {
                     if (isEthereum) {
                       explorerUrl = `https://etherscan.io/address/${balanceResult.address}`;
                     } else if (isSolana) {
-                      explorerUrl = `https://explorer.solana.com/address/${balanceResult.address}`;
+                      explorerUrl = `https://solscan.io/account/${balanceResult.address}`;
                     } else {
                       explorerUrl = `https://viewblock.io/arweave/address/${balanceResult.address}`;
                     }

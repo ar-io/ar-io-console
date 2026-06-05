@@ -558,7 +558,7 @@ export default function AssignDomainModal({
             <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
               <div className="flex items-center gap-2">
                 <div className="text-warning text-sm">
-                  Only Solana wallets cannot update ArNS records. Please switch wallets.
+                  ArNS record updates require a Solana wallet. Please connect a Solana wallet.
                 </div>
               </div>
             </div>

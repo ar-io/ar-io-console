@@ -12,7 +12,7 @@ import OwnedName from '@/components/OwnedName';
 export default function MyAccountPage() {
   const { address, walletType, isPaymentServiceAvailable } = useStore();
   const navigate = useNavigate();
-  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
+  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(address);
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
 
   // Redirect to home if not logged in
