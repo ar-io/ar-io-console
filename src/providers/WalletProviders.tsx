@@ -4,7 +4,6 @@ import { mainnet, base, polygon, polygonAmoy } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { Elements } from '@stripe/react-stripe-js';
 import { STRIPE_PROMISE } from '../services/paymentService';
 import { PrivyProvider } from '@privy-io/react-auth';
@@ -32,11 +31,11 @@ const arioRainbowTheme = darkTheme({
   fontStack: 'system',
 });
 
-// Configure Solana wallets - explicitly exclude MetaMask to prevent conflicts
-const solanaWallets = [
-  new PhantomWalletAdapter(),
-  new SolflareWalletAdapter(),
-].filter(wallet => !wallet.name.toLowerCase().includes('metamask'));
+// Empty array: modern wallets (Phantom, Solflare, Backpack) self-register via
+// the Wallet Standard protocol. Importing explicit adapters (e.g. SolflareWalletAdapter)
+// triggers MetaMask Snap detection side-effects that corrupt the wallet registry.
+// This matches the approach used in ar-io-network-portal.
+const solanaWallets: never[] = [];
 
 const queryClient = new QueryClient({
   defaultOptions: {

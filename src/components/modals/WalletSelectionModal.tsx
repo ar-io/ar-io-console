@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { usePrivy, useLogin, useWallets, useCreateWallet } from '@privy-io/react-auth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import BaseModal from './BaseModal';
@@ -19,7 +18,6 @@ const WalletSelectionModal = ({
 }) => {
   const { setAddress } = useStore();
   const [connectingWallet, setConnectingWallet] = useState<string>();
-  const [intentionalSolanaConnect, setIntentionalSolanaConnect] = useState(false);
   const [waitingForPrivyWallet, setWaitingForPrivyWallet] = useState(false);
 
   // Navigation hooks for post-connection redirect
@@ -185,87 +183,42 @@ const WalletSelectionModal = ({
     hasHandledEthConnection.current = false;
   }, []);
 
-  // Solana wallet hooks
-  const { setVisible: setSolanaModalVisible } = useWalletModal();
-  const { publicKey, connect: connectSolana, wallets, select, wallet } = useWallet();
+  // Solana wallet hooks - we call select() + connect() directly instead of
+  // using the library modal, because the library modal only calls select()
+  // and relies on autoConnect (which we have disabled) to trigger connect().
+  const { publicKey: solanaPublicKey, select: solanaSelect, connect: solanaConnect, wallets: solanaWallets, connected: solanaConnected } = useWallet();
 
-  // Listen for Solana wallet connection - but only when intentionally connecting
+  // When Solana wallet connects, set address and close modal
   useEffect(() => {
-    if (publicKey && intentionalSolanaConnect) {
-      // Solana wallet connected
-      const rawAddress = publicKey.toString();
-      // For now, use raw address - will be converted by Turbo SDK internally
-      setAddress(rawAddress, 'solana');
+    if (solanaConnected && solanaPublicKey) {
+      setAddress(solanaPublicKey.toString(), 'solana');
       handleConnectionSuccess();
-      setIntentionalSolanaConnect(false); // Reset flag
     }
-    // Remove setAddress and onClose from dependencies to prevent infinite loop
-    // These functions don't need to trigger re-runs of this effect
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicKey, intentionalSolanaConnect]); // Only connect when we intentionally triggered it
+  }, [solanaConnected, solanaPublicKey]);
 
-  const connectPhantom = async () => {
+  const connectSolanaWallet = async (adapterName?: string) => {
+    // If already connected, use it immediately
+    if (solanaPublicKey) {
+      setAddress(solanaPublicKey.toString(), 'solana');
+      handleConnectionSuccess();
+      return;
+    }
+
+    if (!adapterName) {
+      // No wallets installed — open install page
+      window.open('https://phantom.app/', '_blank');
+      return;
+    }
+
+    setConnectingWallet(`Connecting to ${adapterName}...`);
     try {
-      // Attempting to connect Phantom wallet
-
-      // Set the intentional connect flag
-      setIntentionalSolanaConnect(true);
-
-      // If already connected, use it immediately
-      if (publicKey) {
-        // Already connected to Solana wallet
-        const rawAddress = publicKey.toString();
-        setAddress(rawAddress, 'solana');
-        handleConnectionSuccess();
-        setIntentionalSolanaConnect(false);
-        return;
-      }
-
-      // Try to find and directly select Phantom
-      const phantomWallet = wallets.find(wallet =>
-        wallet.adapter.name === 'Phantom'
-      );
-
-      if (phantomWallet) {
-        // Found Phantom wallet, selecting and connecting
-        setConnectingWallet('Connecting to Phantom...');
-
-        // Select the Phantom wallet first
-        select(phantomWallet.adapter.name);
-
-        // Wait for wallet to be selected and ready
-        let attempts = 0;
-        const maxAttempts = 10;
-        while (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Check if wallet is now selected and ready
-          if (wallet?.adapter.name === 'Phantom') {
-            // Wallet is selected, try to connect
-            try {
-              await connectSolana();
-              break; // Success, exit loop
-            } catch {
-              // If still getting WalletNotSelectedError, continue waiting
-              if (attempts === maxAttempts - 1) {
-                // Failed to connect after multiple attempts
-              }
-            }
-          }
-          attempts++;
-        }
-
-        // Phantom connection attempt completed
-      } else {
-        // Phantom wallet not found, opening Solana modal
-        // Fallback to modal if Phantom not found
-        onClose();
-        setSolanaModalVisible(true);
-      }
-
-    } catch {
-      // Failed to connect Phantom wallet
-      setIntentionalSolanaConnect(false); // Reset flag on error
+      solanaSelect(adapterName as any);
+      // select() updates the adapter via useEffect — wait a tick then connect
+      await new Promise(resolve => setTimeout(resolve, 150));
+      await solanaConnect();
+    } catch (error) {
+      console.error('[Solana] Connection failed:', error);
     } finally {
       setConnectingWallet(undefined);
     }
@@ -422,16 +375,31 @@ const WalletSelectionModal = ({
             </div>
           </button>
 
-          <button
-            className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
-            onClick={connectPhantom}
-          >
-            <img src="/phantom-logo.svg" alt="Phantom" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold mb-1 text-base">Phantom / Solflare</div>
-              <div className="text-xs sm:text-sm text-foreground/70">Solana wallets</div>
-            </div>
-          </button>
+          {solanaWallets.filter(w => w.readyState === 'Installed').map((w) => (
+            <button
+              key={w.adapter.name}
+              className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
+              onClick={() => connectSolanaWallet(w.adapter.name)}
+            >
+              <img src={w.adapter.icon} alt={w.adapter.name} className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-lg" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold mb-1 text-base">{w.adapter.name}</div>
+                <div className="text-xs sm:text-sm text-foreground/70">Solana wallet</div>
+              </div>
+            </button>
+          ))}
+          {solanaWallets.filter(w => w.readyState === 'Installed').length === 0 && (
+            <button
+              className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
+              onClick={() => connectSolanaWallet()}
+            >
+              <img src="/phantom-logo.svg" alt="Solana" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold mb-1 text-base">Solana Wallets</div>
+                <div className="text-xs sm:text-sm text-foreground/70">Install Phantom or Solflare</div>
+              </div>
+            </button>
+          )}
         </div>
 
         <div className="mt-6 sm:mt-8 text-center">

@@ -87,25 +87,26 @@ export function useWalletAccountListener() {
   }, [connector?.uid, walletType]);
 
   // Listen for Solana wallet changes
-  const { publicKey: solanaPublicKey } = useWallet();
+  const { publicKey: solanaPublicKey, connected: solanaConnected } = useWallet();
 
+  // Handle initial Solana connection (user connected via wallet adapter modal)
+  // Only when: store has no address, or already on Solana with different address
   useEffect(() => {
-    if (walletType === 'solana' && solanaPublicKey) {
-      const newAddress = solanaPublicKey.toString();
-      if (newAddress !== address) {
-        console.log('[Wallet Listener] Solana address changed:', { from: address, to: newAddress });
-        console.warn('[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.');
+    if (
+      solanaConnected &&
+      solanaPublicKey &&
+      (!address || walletType === 'solana') &&
+      solanaPublicKey.toString() !== address
+    ) {
+      console.log('[Wallet Listener] Solana wallet connected:', { from: address, to: solanaPublicKey.toString() });
 
-        // Update to new address
-        setAddress(newAddress, 'solana');
-
-        // Clear all payment state to prevent using wrong account's payment flows
+      if (address) {
         clearAllPaymentState();
-
-        // Note: Balance will be automatically refetched by Header component's useEffect
       }
+
+      setAddress(solanaPublicKey.toString(), 'solana');
     }
-  }, [solanaPublicKey, address, walletType, setAddress, clearAllPaymentState]);
+  }, [solanaConnected, solanaPublicKey, address, walletType, setAddress, clearAllPaymentState]);
 
   // Listen for ArConnect (Wander/ArConnect) wallet switches
   useEffect(() => {
