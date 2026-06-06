@@ -16,7 +16,7 @@ const WalletSelectionModal = ({
 }: {
   onClose: () => void;
 }) => {
-  const { setAddress } = useStore();
+  const { address, walletType, setAddress } = useStore();
   const [connectingWallet, setConnectingWallet] = useState<string>();
   const [waitingForPrivyWallet, setWaitingForPrivyWallet] = useState(false);
   const [showSolanaWallets, setShowSolanaWallets] = useState(false);
@@ -187,33 +187,27 @@ const WalletSelectionModal = ({
   // Solana wallet hooks - we call select() + connect() directly instead of
   // using the library modal, because the library modal only calls select()
   // and relies on autoConnect (which we have disabled) to trigger connect().
-  const { publicKey: solanaPublicKey, select: solanaSelect, connect: solanaConnect, wallets: solanaWallets, connected: solanaConnected } = useWallet();
+  const { publicKey: solanaPublicKey, select: solanaSelect, connect: solanaConnect, wallets: solanaWallets } = useWallet();
 
-  // When Solana wallet connects, set address and close modal
+  // When Solana wallet connects, useWalletAccountListener sets the address.
+  // We just watch for our store to reflect the Solana connection and close the modal.
   useEffect(() => {
-    if (solanaConnected && solanaPublicKey) {
-      setAddress(solanaPublicKey.toString(), 'solana');
+    if (walletType === 'solana' && address) {
       handleConnectionSuccess();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solanaConnected, solanaPublicKey]);
+  }, [walletType, address]);
 
   const connectSolanaWallet = async (adapterName?: string) => {
-    // If already connected, use it immediately
-    if (solanaPublicKey) {
-      setAddress(solanaPublicKey.toString(), 'solana');
-      handleConnectionSuccess();
-      return;
-    }
-
     if (!adapterName) {
-      // No wallets installed — open install page
       window.open('https://phantom.app/', '_blank');
       return;
     }
 
     setConnectingWallet(`Connecting to ${adapterName}...`);
     try {
+      // Signal to wallet listener to not clear state during the switch
+      (window as any).__SOLANA_SWITCHING__ = true;
       solanaSelect(adapterName as any);
       // select() updates the adapter via useEffect — wait a tick then connect
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -221,6 +215,7 @@ const WalletSelectionModal = ({
     } catch (error) {
       console.error('[Solana] Connection failed:', error);
     } finally {
+      (window as any).__SOLANA_SWITCHING__ = false;
       setConnectingWallet(undefined);
     }
   };
