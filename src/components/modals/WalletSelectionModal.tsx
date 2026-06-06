@@ -19,6 +19,7 @@ const WalletSelectionModal = ({
   const { setAddress } = useStore();
   const [connectingWallet, setConnectingWallet] = useState<string>();
   const [waitingForPrivyWallet, setWaitingForPrivyWallet] = useState(false);
+  const [showSolanaWallets, setShowSolanaWallets] = useState(false);
 
   // Navigation hooks for post-connection redirect
   const location = useLocation();
@@ -327,80 +328,109 @@ const WalletSelectionModal = ({
           </h2>
         </div>
 
-        <div className="flex w-full flex-col gap-3 sm:gap-4">
-          {/* Email login option - prominently at the top */}
-          <button
-            className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
-            onClick={connectWithEmail}
-          >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-              <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold mb-1 text-base">Email Sign-in</div>
-              <div className="text-xs sm:text-sm text-foreground/70">No wallet needed</div>
-            </div>
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-2">
-            <div className="flex-1 h-px bg-border/20"></div>
-            <div className="text-xs text-foreground/60">or connect a wallet</div>
-            <div className="flex-1 h-px bg-border/20"></div>
-          </div>
-
-          <button
-            className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
-            onClick={connectWander}
-          >
-            <img src="/wander-logo.png" alt="Wander" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold mb-1 text-base">Wander</div>
-              <div className="text-xs sm:text-sm text-foreground/70">Arweave wallet</div>
-            </div>
-          </button>
-
-          <button
-            className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
-            onClick={connectEthereumWallet}
-          >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#627EEA] rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
-              </svg>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold mb-1 text-base">Ethereum Wallets</div>
-              <div className="text-xs sm:text-sm text-foreground/70">MetaMask, WalletConnect, Coinbase</div>
-            </div>
-          </button>
-
-          {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).map((w) => (
+        {showSolanaWallets ? (
+          /* Solana wallet picker sub-view */
+          <div className="flex w-full flex-col gap-3 sm:gap-4">
             <button
-              key={w.adapter.name}
-              className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
-              onClick={() => connectSolanaWallet(w.adapter.name)}
+              className="flex items-center gap-2 text-sm text-foreground/60 hover:text-foreground transition-colors mb-1"
+              onClick={() => setShowSolanaWallets(false)}
             >
-              <img src={w.adapter.icon} alt={w.adapter.name} className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-lg" />
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+
+            {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).map((w) => (
+              <button
+                key={w.adapter.name}
+                className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
+                onClick={() => connectSolanaWallet(w.adapter.name)}
+              >
+                <img src={w.adapter.icon} alt={w.adapter.name} className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-lg" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold mb-1 text-base">{w.adapter.name}</div>
+                  <div className="text-xs sm:text-sm text-foreground/70">Solana wallet</div>
+                </div>
+              </button>
+            ))}
+            {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).length === 0 && (
+              <div className="text-center py-6 text-sm text-foreground/60">
+                <p className="mb-3">No Solana wallets detected</p>
+                <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Install Phantom</a>
+                {' or '}
+                <a href="https://solflare.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Solflare</a>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Main wallet selection view */
+          <div className="flex w-full flex-col gap-3 sm:gap-4">
+            {/* Email login option - prominently at the top */}
+            <button
+              className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
+              onClick={connectWithEmail}
+            >
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              </div>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold mb-1 text-base">{w.adapter.name}</div>
-                <div className="text-xs sm:text-sm text-foreground/70">Solana wallet</div>
+                <div className="font-semibold mb-1 text-base">Email Sign-in</div>
+                <div className="text-xs sm:text-sm text-foreground/70">No wallet needed</div>
               </div>
             </button>
-          ))}
-          {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).length === 0 && (
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-2">
+              <div className="flex-1 h-px bg-border/20"></div>
+              <div className="text-xs text-foreground/60">or connect a wallet</div>
+              <div className="flex-1 h-px bg-border/20"></div>
+            </div>
+
             <button
               className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
-              onClick={() => connectSolanaWallet()}
+              onClick={connectWander}
             >
-              <img src="/phantom-logo.svg" alt="Solana" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
+              <img src="/wander-logo.png" alt="Wander" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold mb-1 text-base">Wander</div>
+                <div className="text-xs sm:text-sm text-foreground/70">Arweave wallet</div>
+              </div>
+            </button>
+
+            <button
+              className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
+              onClick={connectEthereumWallet}
+            >
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#627EEA] rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold mb-1 text-base">Ethereum Wallets</div>
+                <div className="text-xs sm:text-sm text-foreground/70">MetaMask, WalletConnect, Coinbase</div>
+              </div>
+            </button>
+
+            <button
+              className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
+              onClick={() => setShowSolanaWallets(true)}
+            >
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#9945FF] rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4.52 16.57l2.47-2.59c.13-.14.32-.22.51-.22h14.28c.32 0 .48.39.25.62l-2.47 2.59c-.13.14-.32.22-.51.22H4.77c-.32 0-.48-.39-.25-.62z"/>
+                  <path d="M4.52 4.22l2.5-2.59C7.15 1.49 7.34 1.41 7.53 1.41h14.28c.32 0 .48.39.25.62l-2.47 2.59c-.13.14-.32.22-.51.22H4.77c-.32 0-.48-.39-.25-.62z"/>
+                  <path d="M19.48 10.35l-2.47-2.59c-.13-.14-.32-.22-.51-.22H2.22c-.32 0-.48.39-.25.62l2.47 2.59c.13.14.32.22.51.22h14.28c.32 0 .48-.39.25-.62z"/>
+                </svg>
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold mb-1 text-base">Solana Wallets</div>
-                <div className="text-xs sm:text-sm text-foreground/70">Install Phantom or Solflare</div>
+                <div className="text-xs sm:text-sm text-foreground/70">Phantom, Solflare, and more</div>
               </div>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="mt-6 sm:mt-8 text-center">
           <div className="text-xs text-foreground/80 px-2">
