@@ -375,7 +375,7 @@ const WalletSelectionModal = ({
             </div>
           </button>
 
-          {solanaWallets.filter(w => w.readyState === 'Installed').map((w) => (
+          {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).map((w) => (
             <button
               key={w.adapter.name}
               className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
@@ -388,7 +388,7 @@ const WalletSelectionModal = ({
               </div>
             </button>
           ))}
-          {solanaWallets.filter(w => w.readyState === 'Installed').length === 0 && (
+          {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).length === 0 && (
             <button
               className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
               onClick={() => connectSolanaWallet()}

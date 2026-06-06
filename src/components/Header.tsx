@@ -3,6 +3,7 @@ import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload,
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import CopyButton from './CopyButton';
 import { useStore } from '../store/useStore';
 import { formatWalletAddress, getTurboBalance } from '../utils';
@@ -46,6 +47,7 @@ const Header = () => {
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
+  const { disconnect: solanaDisconnect } = useWallet(); // Solana wallet adapter disconnect
   const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(address);
 
   const [credits, setCredits] = useState<string>('0');
@@ -499,12 +501,10 @@ const Header = () => {
                       }
                       // Clear cached Turbo clients
                       clearEthereumTurboClientCache();
-                    } else if (walletType === 'solana' && window.solana) {
-                      // Properly disconnect Solana wallet to prevent conflicts
+                    } else if (walletType === 'solana') {
+                      // Disconnect via wallet adapter (handles all Solana wallets)
                       try {
-                        if (window.solana.isConnected) {
-                          await window.solana.disconnect();
-                        }
+                        await solanaDisconnect();
                       } catch {
                         // Solana wallet disconnect failed, continue anyway
                       }
