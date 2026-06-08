@@ -26,6 +26,7 @@ import CopyButton from '../../CopyButton';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { formatTokenAmount } from '../../../utils/jitPayment';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface CryptoConfirmationPanelProps {
   cryptoAmount: number;
@@ -42,6 +43,7 @@ export default function CryptoConfirmationPanel({
 }: CryptoConfirmationPanelProps) {
   const { address, walletType, paymentTargetAddress, paymentTargetType } = useStore();
   const { wallets } = useWallets(); // Get Privy wallets
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string>();
   const [failedTxId, setFailedTxId] = useState<string>();
@@ -514,13 +516,13 @@ export default function CryptoConfirmationPanel({
             tokenType,
             transactionId: result.id,
           });
-        } else if (walletType === 'solana' && window.solana && tokenType === 'solana') {
+        } else if (walletType === 'solana' && solanaPublicKey && solanaSignMessage && tokenType === 'solana') {
           const turboAuthenticated = TurboFactory.authenticated({
             token: 'solana',
             paymentServiceConfig: {
               url: turboConfig.paymentServiceUrl || 'https://payment.ardrive.io',
             },
-            walletAdapter: window.solana,
+            walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
             gatewayUrl: turboConfig.tokenMap.solana,
           });
 

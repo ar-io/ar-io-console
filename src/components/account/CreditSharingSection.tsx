@@ -7,6 +7,7 @@ import { formatWalletAddress } from '../../utils';
 import { wincPerCredit } from '../../constants';
 import CopyButton from '../CopyButton';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface SharedCredits {
   received: {
@@ -38,7 +39,8 @@ interface SharedCredits {
 export default function CreditSharingSection() {
   const { address, walletType } = useStore();
   const turboConfig = useTurboConfig();
-  const { createEthereumTurboClient } = useEthereumTurboClient(); // Shared Ethereum client with custom connect message
+  const { createEthereumTurboClient } = useEthereumTurboClient();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const [sharedCredits, setSharedCredits] = useState<SharedCredits | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -68,13 +70,13 @@ export default function CreditSharingSection() {
         return createEthereumTurboClient('ethereum');
 
       case 'solana':
-        if (!window.solana) {
-          throw new Error('Solana wallet extension not found');
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
 
         return TurboFactory.authenticated({
           token: "solana",
-          walletAdapter: window.solana,
+          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...turboConfig,
         });
 

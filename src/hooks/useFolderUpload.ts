@@ -9,6 +9,7 @@ import {
 import { useStore } from '../store/useStore';
 import { useWallets } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 // supportsJitPayment import removed - using pre-topup flow instead of per-file JIT
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
@@ -66,6 +67,7 @@ export function useFolderUpload() {
   const { address, walletType } = store;
   const { wallets } = useWallets();
   const ethAccount = useAccount();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction, connected: solanaConnected } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient();
   const freeUploadLimitBytes = useFreeUploadLimit();
   const [deploying, setDeploying] = useState(false);
@@ -122,12 +124,12 @@ export function useFolderUpload() {
         }
         break;
       case 'solana':
-        if (!window.solana || !window.solana.isConnected) {
+        if (!solanaConnected || !solanaPublicKey || !solanaSignMessage) {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         break;
     }
-  }, [address, walletType, wallets, ethAccount.isConnected]);
+  }, [address, walletType, wallets, ethAccount.isConnected, solanaConnected, solanaPublicKey, solanaSignMessage]);
 
   // Analyze folder for Smart Deploy deduplication
   // Always hashes files to show potential savings, regardless of toggle state
@@ -319,18 +321,12 @@ export function useFolderUpload() {
         return createEthereumTurboClient(tokenTypeOverride || 'ethereum');
 
       case 'solana':
-        if (walletType !== 'solana') {
-          throw new Error('Internal error: Attempting Solana operations with non-Solana wallet');
-        }
-        if (!window.solana) {
-          throw new Error('Solana wallet extension not found. Please install Phantom or Solflare');
-        }
-        if (!window.solana.isConnected || !window.solana.publicKey) {
-          throw new Error('Solana wallet not connected. Please connect your Solana wallet first.');
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         return TurboFactory.authenticated({
           token: "solana",
-          walletAdapter: window.solana,
+          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...dynamicTurboConfig,
         });
 
