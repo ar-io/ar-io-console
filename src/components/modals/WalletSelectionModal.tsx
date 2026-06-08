@@ -210,16 +210,28 @@ const WalletSelectionModal = ({
   // After select() changes the adapter, React re-renders and solanaWallet updates.
   // This effect fires when the adapter is ready, then calls connect().
   useEffect(() => {
-    if (pendingSolanaConnect && solanaWallet) {
-      // Clear immediately so this effect doesn't re-fire on subsequent renders
-      setPendingSolanaConnect(false);
-      solanaConnect().catch((error) => {
+    if (!pendingSolanaConnect || !solanaWallet) return;
+    // Clear immediately so this effect doesn't re-fire on subsequent renders
+    setPendingSolanaConnect(false);
+
+    (async () => {
+      try {
+        await solanaConnect();
+        // For wallets that auto-approve (Phantom with previously approved site),
+        // connect() resolves silently. Check if we're now connected and handle it.
+        // The wallet listener will also catch this, but we handle it here too
+        // in case the listener hasn't fired yet.
+        const pk = solanaWallet.adapter.publicKey;
+        if (pk) {
+          setAddress(pk.toString(), 'solana');
+        }
+      } catch (error) {
         console.error('[Solana] Connection failed:', error);
         setConnectingWallet(undefined);
         (window as any).__SOLANA_SWITCHING__ = false;
-      });
-    }
-  }, [pendingSolanaConnect, solanaWallet, solanaConnect]);
+      }
+    })();
+  }, [pendingSolanaConnect, solanaWallet, solanaConnect, setAddress]);
 
   const connectSolanaWallet = (adapterName?: string) => {
     if (!adapterName) {
