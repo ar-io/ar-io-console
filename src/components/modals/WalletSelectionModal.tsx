@@ -187,7 +187,7 @@ const WalletSelectionModal = ({
   // Solana wallet hooks - we call select() + connect() directly instead of
   // using the library modal, because the library modal only calls select()
   // and relies on autoConnect (which we have disabled) to trigger connect().
-  const { publicKey: solanaPublicKey, select: solanaSelect, connect: solanaConnect, wallets: solanaWallets } = useWallet();
+  const { select: solanaSelect, connect: solanaConnect, wallets: solanaWallets } = useWallet();
 
   // When Solana wallet connects, useWalletAccountListener sets the address.
   // We just watch for our store to reflect the Solana connection and close the modal.
