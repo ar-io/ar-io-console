@@ -2394,9 +2394,9 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* ArNS Discovery Section - Only for users without ArNS names */}
-      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       ((walletType !== 'arweave' && walletType !== 'ethereum') || userArnsNames.length === 0) && (
+      {/* ArNS Discovery Section - Show for non-Solana wallets or Solana users without ArNS names */}
+      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
+       (walletType !== 'solana' || userArnsNames.length === 0) && (
         <div className="mt-6">
           <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
             <div className="flex items-start gap-3 mb-4">

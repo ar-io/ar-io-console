@@ -76,8 +76,8 @@ export default function MyAccountPage() {
         </div>
       )}
 
-      {/* Domains Section */}
-      {!!walletType && (
+      {/* Domains Section - ArNS is on Solana, only show for Solana wallets */}
+      {walletType === 'solana' && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading font-bold text-xl text-foreground">Domains</h2>
