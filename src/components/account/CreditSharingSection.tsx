@@ -83,7 +83,7 @@ export default function CreditSharingSection() {
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [address, walletType, turboConfig, createEthereumTurboClient]);
+  }, [address, walletType, turboConfig, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
   // Fetch shared credits data
   useEffect(() => {

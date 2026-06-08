@@ -333,7 +333,7 @@ export function useFolderUpload() {
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [address, walletType, getCurrentConfig, validateWalletState, createEthereumTurboClient]);
+  }, [address, walletType, getCurrentConfig, validateWalletState, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
 
   // Smart content type detection based on file extensions

@@ -94,7 +94,7 @@ export default function BalanceCheckerPanel() {
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [connectedAddress, walletType, turboConfig, createEthereumTurboClient]);
+  }, [connectedAddress, walletType, turboConfig, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
   // Load recent searches from localStorage and check for pre-filled address
   useEffect(() => {

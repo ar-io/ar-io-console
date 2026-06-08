@@ -260,7 +260,7 @@ export function useFileUpload() {
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [walletType, getCurrentConfig, validateWalletState, address, createEthereumTurboClient]);
+  }, [walletType, getCurrentConfig, validateWalletState, address, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
   const uploadFile = useCallback(async (
     file: File,
