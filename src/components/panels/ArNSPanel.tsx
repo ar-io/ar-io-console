@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import useDebounce from '../../hooks/useDebounce';
-import { Globe, Search, CheckCircle, XCircle, Shield, Zap, ExternalLink, AlertCircle } from 'lucide-react';
-import { useStore } from '../../store/useStore';
+import { Globe, Search, CheckCircle, XCircle, Shield, Zap, ExternalLink } from 'lucide-react';
 import { getARIO } from '../../utils';
 
 export default function ArNSPanel() {
-  const { walletType } = useStore();
   const [nameSearch, setNameSearch] = useState('');
   const [checking, setChecking] = useState(false);
   const [availability, setAvailability] = useState<boolean | null>(null);
@@ -138,17 +136,6 @@ export default function ArNSPanel() {
         )}
       </div>
 
-      {/* Solana Wallet Warning */}
-      {walletType === 'solana' && availability === true && (
-        <div className="mb-4 p-3 rounded-2xl bg-error/5 border border-error/10">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-error flex-shrink-0" />
-            <p className="text-xs text-error">
-              ArNS domains require an Arweave or Ethereum wallet. You can search names but need to switch wallets to register.
-            </p>
-          </div>
-        </div>
-      )}
       </div>
 
       {/* ArNS Features */}

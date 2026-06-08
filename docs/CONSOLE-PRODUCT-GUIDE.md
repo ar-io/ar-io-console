@@ -174,7 +174,7 @@ The ar.io Console is accessible through any modern web browser at the deployment
 **Capture Features**
 - URL input with validation
 - Progressive disclosure: ArNS and upload options appear after capture
-- Optional ArNS name/undername assignment (Arweave wallets only)
+- Optional ArNS name/undername assignment (Solana wallets only)
 - Automatic file naming: `capture-{domain}-{timestamp}.png`
 - Standardized metadata tags for organization
 - Unified upload history with camera icon badge
@@ -600,7 +600,7 @@ All captures include standardized tags:
 **Wallet Requirements**
 - Arweave, Ethereum, and Solana wallets can deploy sites
 - All wallet types support site deployment with proper signers
-- ArconnectSigner required for ArNS/ANT updates (Arweave wallets only)
+- Solana wallet required for ArNS/ANT updates (Solana wallets only)
 - Email authentication users can deploy via embedded Ethereum wallet
 
 ---
@@ -890,10 +890,9 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 
 **Wallet Adapter Ecosystem**
 - @solana/wallet-adapter-react integration
-- Phantom wallet with WalletAdapterNetwork.Mainnet
-- Solflare wallet support
-- Custom SolanaWalletAdapter implementation
-- Direct provider access via `window.solana`
+- Phantom and Solflare auto-detected via Standard Wallet API
+- Wallet adapter integration via `useWallet()` from `@solana/wallet-adapter-react`
+- ArNS record management (only wallet type that supports ArNS updates)
 
 **Wallet Features**
 - Fiat and crypto payment support
