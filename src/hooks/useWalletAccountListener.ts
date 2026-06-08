@@ -30,19 +30,17 @@ export function useWalletAccountListener() {
 
   // Handle RainbowKit/Wagmi session restoration on page load
   // When user refreshes, wagmi auto-reconnects and we need to update our store
-  // Only restore if store is empty OR already on Ethereum - don't overwrite Solana/Arweave
+  // Only restore if store already has walletType === 'ethereum' — don't auto-connect
+  // on fresh loads or after clearing a stale Solana session
   useEffect(() => {
     if (
       ethIsConnected &&
       ethAddress &&
-      (!address || walletType === 'ethereum') &&
+      walletType === 'ethereum' &&
       ethAddress !== address
     ) {
-      // Session restored from RainbowKit/Wagmi - update our store
-      // Only when: store is empty, or already on Ethereum with different address
-      console.log('[Wallet Listener] Session restored/updated from RainbowKit:', { from: address, to: ethAddress });
+      console.log('[Wallet Listener] Ethereum session restored/updated:', { from: address, to: ethAddress });
 
-      // Only clear cache if there was a previous address (actual switch, not initial load)
       if (address) {
         clearEthereumTurboClientCache();
         clearX402SignerCache();

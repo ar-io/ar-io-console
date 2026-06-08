@@ -184,40 +184,56 @@ const WalletSelectionModal = ({
     hasHandledEthConnection.current = false;
   }, []);
 
-  // Solana wallet hooks - we call select() + connect() directly instead of
-  // using the library modal, because the library modal only calls select()
-  // and relies on autoConnect (which we have disabled) to trigger connect().
-  const { select: solanaSelect, connect: solanaConnect, wallets: solanaWallets } = useWallet();
+  // Solana wallet hooks - we call select() then connect() via useEffect,
+  // because select() updates React state and the adapter isn't ready until
+  // the next render. A setTimeout race doesn't reliably wait long enough.
+  const { select: solanaSelect, connect: solanaConnect, wallet: solanaWallet, wallets: solanaWallets } = useWallet();
+  const [pendingSolanaConnect, setPendingSolanaConnect] = useState(false);
+
+  // Clean up switching flag if modal unmounts mid-connection
+  useEffect(() => {
+    return () => { (window as any).__SOLANA_SWITCHING__ = false; };
+  }, []);
 
   // When Solana wallet connects, useWalletAccountListener sets the address.
   // We just watch for our store to reflect the Solana connection and close the modal.
   useEffect(() => {
     if (walletType === 'solana' && address) {
+      setPendingSolanaConnect(false);
+      setConnectingWallet(undefined);
+      (window as any).__SOLANA_SWITCHING__ = false;
       handleConnectionSuccess();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletType, address]);
 
-  const connectSolanaWallet = async (adapterName?: string) => {
+  // After select() changes the adapter, React re-renders and solanaWallet updates.
+  // This effect fires when the adapter is ready, then calls connect().
+  useEffect(() => {
+    if (pendingSolanaConnect && solanaWallet) {
+      // Clear immediately so this effect doesn't re-fire on subsequent renders
+      setPendingSolanaConnect(false);
+      solanaConnect().catch((error) => {
+        console.error('[Solana] Connection failed:', error);
+        setConnectingWallet(undefined);
+        (window as any).__SOLANA_SWITCHING__ = false;
+      });
+    }
+  }, [pendingSolanaConnect, solanaWallet, solanaConnect]);
+
+  const connectSolanaWallet = (adapterName?: string) => {
     if (!adapterName) {
       window.open('https://phantom.app/', '_blank');
       return;
     }
 
     setConnectingWallet(`Connecting to ${adapterName}...`);
-    try {
-      // Signal to wallet listener to not clear state during the switch
-      (window as any).__SOLANA_SWITCHING__ = true;
-      solanaSelect(adapterName as any);
-      // select() updates the adapter via useEffect — wait a tick then connect
-      await new Promise(resolve => setTimeout(resolve, 150));
-      await solanaConnect();
-    } catch (error) {
-      console.error('[Solana] Connection failed:', error);
-    } finally {
-      (window as any).__SOLANA_SWITCHING__ = false;
-      setConnectingWallet(undefined);
-    }
+    // Signal to wallet listener to not clear state during the switch
+    (window as any).__SOLANA_SWITCHING__ = true;
+    solanaSelect(adapterName as any);
+    // Don't call connect() here — wait for React to re-render with the new adapter.
+    // The useEffect above will call connect() when solanaWallet is ready.
+    setPendingSolanaConnect(true);
   };
 
   const connectWithEmail = async () => {
