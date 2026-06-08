@@ -17,7 +17,7 @@
     "type-check": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc --noEmit"
   },
   "dependencies": {
-    "@ar.io/sdk": "4.0.0-alpha.2",
+    "@ar.io/sdk": "4.0.2",
     "@ar.io/wayfinder-core": "^1.9.1",
     "@ar.io/wayfinder-react": "^1.0.28",
     "@ardrive/turbo-sdk": "^1.39.2",
