@@ -71,7 +71,7 @@ export function useFileUpload() {
   const { address, walletType } = useStore();
   const { wallets } = useWallets(); // Get Privy wallets
   const ethAccount = useAccount(); // RainbowKit/Wagmi account state
-  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction, connected: solanaConnected } = useWallet();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient(); // Shared Ethereum client with custom connect message
   const freeUploadLimitBytes = useFreeUploadLimit(); // Get free upload limit
   const [uploading, setUploading] = useState(false);
@@ -127,12 +127,12 @@ export function useFileUpload() {
         }
         break;
       case 'solana':
-        if (!solanaConnected || !solanaPublicKey || !solanaSignMessage) {
+        if (!solanaPublicKey || !solanaSignMessage) {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         break;
     }
-  }, [address, walletType, wallets, ethAccount.isConnected, solanaConnected, solanaPublicKey, solanaSignMessage]);
+  }, [address, walletType, wallets, ethAccount.isConnected, solanaPublicKey, solanaSignMessage]);
 
   // Get config function from store
   const getCurrentConfig = useStore((state) => state.getCurrentConfig);

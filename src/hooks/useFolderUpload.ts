@@ -67,7 +67,7 @@ export function useFolderUpload() {
   const { address, walletType } = store;
   const { wallets } = useWallets();
   const ethAccount = useAccount();
-  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction, connected: solanaConnected } = useWallet();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient();
   const freeUploadLimitBytes = useFreeUploadLimit();
   const [deploying, setDeploying] = useState(false);
@@ -124,12 +124,12 @@ export function useFolderUpload() {
         }
         break;
       case 'solana':
-        if (!solanaConnected || !solanaPublicKey || !solanaSignMessage) {
+        if (!solanaPublicKey || !solanaSignMessage) {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         break;
     }
-  }, [address, walletType, wallets, ethAccount.isConnected, solanaConnected, solanaPublicKey, solanaSignMessage]);
+  }, [address, walletType, wallets, ethAccount.isConnected, solanaPublicKey, solanaSignMessage]);
 
   // Analyze folder for Smart Deploy deduplication
   // Always hashes files to show potential savings, regardless of toggle state

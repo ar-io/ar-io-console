@@ -85,18 +85,20 @@ export function useWalletAccountListener() {
   }, [connector?.uid, walletType]);
 
   // Listen for Solana wallet changes
-  const { publicKey: solanaPublicKey, connected: solanaConnected } = useWallet();
+  // Use publicKey as source of truth — solanaConnected can be stale when
+  // Standard Wallet adapters auto-approve (connect() returns early without
+  // emitting 'connect' event, so WalletProviderBase never calls setConnected(true)).
+  const { publicKey: solanaPublicKey } = useWallet();
 
-  // Track whether the Solana adapter has ever connected in this session.
-  // This distinguishes "page load with stale store" from "user just disconnected".
+  // Track whether a Solana wallet has been active in this session.
   const solanaEverConnectedRef = useRef(false);
-  if (solanaConnected) {
+  if (solanaPublicKey) {
     solanaEverConnectedRef.current = true;
   }
 
-  // Handle Solana connection: update store when wallet connects
+  // Handle Solana connection: update store when publicKey appears
   useEffect(() => {
-    if (solanaConnected && solanaPublicKey) {
+    if (solanaPublicKey) {
       const newAddress = solanaPublicKey.toString();
       if (newAddress !== address) {
         console.log('[Wallet Listener] Solana wallet connected:', { from: address, to: newAddress });
@@ -106,15 +108,15 @@ export function useWalletAccountListener() {
         setAddress(newAddress, 'solana');
       }
     }
-  }, [solanaConnected, solanaPublicKey, address, walletType, setAddress, clearAllPaymentState]);
+  }, [solanaPublicKey, address, walletType, setAddress, clearAllPaymentState]);
 
-  // Handle Solana disconnection: clear store when adapter disconnects.
-  // Only runs after the adapter has been connected at least once in this session,
+  // Handle Solana disconnection: clear store when publicKey disappears.
+  // Only runs after a wallet has been active at least once in this session,
   // so it won't fire on page load when the store has a stale Solana session.
   // Skipped during wallet switching (select() disconnects old wallet before connecting new one).
   useEffect(() => {
     if (
-      !solanaConnected &&
+      !solanaPublicKey &&
       walletType === 'solana' &&
       address &&
       solanaEverConnectedRef.current &&
@@ -124,13 +126,13 @@ export function useWalletAccountListener() {
       clearAllPaymentState();
       clearAddress();
     }
-  }, [solanaConnected, walletType, address, clearAllPaymentState, clearAddress]);
+  }, [solanaPublicKey, walletType, address, clearAllPaymentState, clearAddress]);
 
   // Clear stale Solana session on page load.
   // With autoConnect=false, the wallet adapter never reconnects on reload.
   // If the store persisted walletType='solana', clear it since the adapter isn't connected.
   useEffect(() => {
-    if (walletType === 'solana' && address && !solanaConnected) {
+    if (walletType === 'solana' && address && !solanaPublicKey) {
       console.log('[Wallet Listener] Clearing stale Solana session from previous page load');
       clearAddress();
     }
