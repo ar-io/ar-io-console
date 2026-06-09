@@ -262,46 +262,18 @@ export function useArNSPricing(): UseArNSPricingReturn {
         const currentDemandFactor = await ario.getDemandFactor();
         setDemandFactor(currentDemandFactor);
 
-        // Use the more efficient approach from the example - get all fees at once
-        // This uses the same method as the ARNS-REGISTRATION-FEES-EXAMPLE.js
-        const CU_ENDPOINT = 'https://cu.ardrive.io/dry-run?process-id=qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE';
-
-        const fetchCUMessage = async (action: string): Promise<string> => {
-          const res = await fetch(CU_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              Id: '1234',
-              Target: 'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE',
-              Owner: '1234',
-              Anchor: '0',
-              Data: '1234',
-              Tags: [
-                { name: 'Action', value: action },
-                { name: 'Data-Protocol', value: 'ao' },
-                { name: 'Type', value: 'Message' },
-                { name: 'Variant', value: 'ao.TN.1' },
-              ],
-            }),
-          });
-          const json = await res.json();
-          return json.Messages?.[0]?.Data;
-        };
-
-        // Fetch ARIO price and registration fees in parallel - much more efficient!
+        // Fetch ARIO price and registration fees in parallel
         const COINGECKO_ENDPOINT = 'https://api.coingecko.com/api/v3/simple/price?ids=ar-io-network&vs_currencies=usd';
-        const [arioUSDPrice, feesRaw] = await Promise.all([
+        const [arioUSDPrice, fees] = await Promise.all([
           fetch(COINGECKO_ENDPOINT)
             .then((res) => res.json())
             .then((data) => data['ar-io-network'].usd),
-          fetchCUMessage('Registration-Fees'),
+          ario.getRegistrationFees(),
         ]);
 
         if (!arioUSDPrice || arioUSDPrice <= 0) {
           throw new Error('Failed to fetch ARIO price from CoinGecko');
         }
-
-        const fees = JSON.parse(feesRaw);
         const tiers: ArNSPricingTier[] = [];
 
         // Process the fee structure (similar to the example file)

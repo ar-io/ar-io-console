@@ -15,7 +15,7 @@ export interface BannerConfig {
 }
 
 export const BANNER_CONFIG: BannerConfig = {
-  enabled: true,
+  enabled: false,
   id: 'solana-migration-apr-2026',
   message: 'Ar.io has migrated to Solana! Manage your migrated assets with connected Solana wallets.',
   link: {
