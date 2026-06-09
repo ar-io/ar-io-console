@@ -626,7 +626,9 @@ export function useFolderUpload() {
         receipt: any;
       }> = [];
       const totalFiles = filesToUpload.length;
-      const BATCH_SIZE = 5; // Upload 5 files concurrently
+      // Solana wallets require a signMessage popup per file — concurrent uploads
+      // cause all but one to be cancelled. Upload sequentially for Solana.
+      const BATCH_SIZE = walletType === 'solana' ? 1 : 5;
       let completedFiles = 0;
       const failedUploads: { file: File; error: Error }[] = [];
 
