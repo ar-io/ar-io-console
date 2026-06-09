@@ -73,8 +73,7 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 
 External resources are available via the navigation menu:
 - **Developer Docs**: [docs.ar.io](https://docs.ar.io)
-- **Network Explorer**: [scan.ar.io](https://scan.ar.io)
-- **Gateway Dashboard**: [gateways.ar.io](https://gateways.ar.io)
+- **Network Dashboard**: [gateways.ar.io](https://gateways.ar.io)
 
 ## Wallet Capabilities
 
