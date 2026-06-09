@@ -34,7 +34,7 @@ export function useOwnedArNSNames() {
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const { connection: solanaConnection } = useConnection();
-  const { publicKey: solanaPublicKey, sendTransaction: solanaSendTransaction } = useWallet();
+  const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction } = useWallet();
 
   // Fetch names owned by current address
   const fetchOwnedNames = useCallback(
@@ -156,7 +156,8 @@ export function useOwnedArNSNames() {
         const signer = createWalletAdapterTransactionSendingSigner(
           solanaPublicKey.toBase58(),
           solanaConnection,
-          solanaSendTransaction
+          undefined,
+          solanaSignTransaction
         );
 
         const ant = (await getWritableANT(nameRecord.processId, signer)) as any;
@@ -282,7 +283,7 @@ export function useOwnedArNSNames() {
       setOwnedArNSNames,
       solanaPublicKey,
       solanaConnection,
-      solanaSendTransaction,
+      solanaSignTransaction,
     ]
   );
 

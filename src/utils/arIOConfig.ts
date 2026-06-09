@@ -2,11 +2,16 @@ import { ARIO, ANT, type SolanaSigner } from '@ar.io/sdk/solana';
 import {
   createSolanaRpc,
   createSolanaRpcSubscriptions,
-  getBase58Encoder,
-  getBase64EncodedWireTransaction,
+  address,
 } from '@solana/kit';
-import type { Address } from '@solana/kit';
-import { Connection, Transaction, VersionedTransaction } from '@solana/web3.js';
+import type {
+  Address,
+  SignatureBytes,
+  Transaction as KitTransaction,
+  TransactionWithLifetime,
+  TransactionWithinSizeLimit,
+} from '@solana/kit';
+import { VersionedMessage, VersionedTransaction } from '@solana/web3.js';
 import { APP_NAME, APP_VERSION } from '../constants';
 
 /**
@@ -87,40 +92,77 @@ export const getWritableANT = async (processId: string, signer: SolanaSigner) =>
   });
 };
 
+/**
+ * Create a kit-compatible TransactionModifyingSigner from a wallet adapter.
+ *
+ * Uses signTransaction (sign without sending) rather than sendTransaction,
+ * because wallets like Phantom may rewrite transactions (adding priority fees,
+ * tightening CU limits). A modifying signer returns the wallet's rewritten
+ * message + signature so the bytes signed == the bytes sent.
+ *
+ * Adapted from ar-io-network-portal's walletAdapterBridge.ts
+ */
 export const createWalletAdapterTransactionSendingSigner = (
   walletAddress: string,
-  connection: Connection,
-  sendTransaction: (
-    transaction: Transaction | VersionedTransaction,
-    connection: Connection,
-    options?: any
-  ) => Promise<string>
+  _connection: unknown, // kept for API compat, no longer used
+  _sendTransaction: unknown, // kept for API compat, no longer used
+  signTransaction?: (transaction: VersionedTransaction) => Promise<VersionedTransaction>,
 ): SolanaSigner => {
-  const base58Encoder = getBase58Encoder();
+  if (!signTransaction) {
+    throw new Error('Wallet does not support transaction signing');
+  }
+
+  const signerAddress = address(walletAddress) as Address;
 
   return {
-    address: walletAddress as Address,
-    signAndSendTransactions: async (transactions: readonly any[]) => {
-      const signatures: Uint8Array[] = [];
+    address: signerAddress,
+    modifyAndSignTransactions: async (
+      transactions: readonly KitTransaction[],
+    ): Promise<readonly (KitTransaction & TransactionWithinSizeLimit & TransactionWithLifetime)[]> => {
+      return Promise.all(
+        transactions.map(async (tx) => {
+          // Convert kit transaction to web3.js VersionedTransaction for the wallet
+          const messageBytes = new Uint8Array(tx.messageBytes as unknown as Uint8Array);
+          const message = VersionedMessage.deserialize(messageBytes);
+          const v3tx = new VersionedTransaction(message);
 
-      for (const transaction of transactions) {
-        const base64WireTransaction = getBase64EncodedWireTransaction(transaction as any);
-        const wireBytes = Uint8Array.from(atob(base64WireTransaction), (c) => c.charCodeAt(0));
+          // Preserve any signatures kit may have already attached (e.g. a paired keypair signer)
+          const staticAccountKeys = message.staticAccountKeys;
+          const numRequired = message.header.numRequiredSignatures;
+          for (let i = 0; i < numRequired; i++) {
+            const accountAddress = staticAccountKeys[i].toBase58();
+            const existingSig = (tx.signatures as Record<string, Uint8Array | null>)[accountAddress];
+            if (existingSig) {
+              v3tx.signatures[i] = existingSig;
+            }
+          }
 
-        let walletTransaction: Transaction | VersionedTransaction;
-        try {
-          walletTransaction = VersionedTransaction.deserialize(wireBytes);
-        } catch {
-          walletTransaction = Transaction.from(wireBytes);
-        }
+          // Let the wallet sign (and possibly rewrite) the transaction
+          const signed = await signTransaction(v3tx);
 
-        const signature = await sendTransaction(walletTransaction, connection, {
-          preflightCommitment: 'processed',
-        });
-        signatures.push(Uint8Array.from(base58Encoder.encode(signature)) as any);
-      }
+          // Extract signatures from the signed transaction
+          const signedKeys = signed.message.staticAccountKeys;
+          const numSigners = signed.message.header.numRequiredSignatures;
+          const signatures: Record<string, SignatureBytes> = {};
+          for (let i = 0; i < numSigners; i++) {
+            const s = signed.signatures[i];
+            if (s && !s.every((b) => b === 0)) {
+              signatures[signedKeys[i].toBase58()] = s as SignatureBytes;
+            }
+          }
 
-      return signatures;
+          // Carry the original lifetime constraint for kit's confirmation step
+          const lifetimeConstraint = (
+            tx as KitTransaction & Partial<TransactionWithLifetime>
+          ).lifetimeConstraint;
+
+          return {
+            messageBytes: signed.message.serialize() as unknown as KitTransaction['messageBytes'],
+            signatures: signatures as unknown as KitTransaction['signatures'],
+            ...(lifetimeConstraint ? { lifetimeConstraint } : {}),
+          } as unknown as KitTransaction & TransactionWithinSizeLimit & TransactionWithLifetime;
+        }),
+      );
     },
   } as unknown as SolanaSigner;
 };
