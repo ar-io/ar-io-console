@@ -7,7 +7,6 @@ import {
   ARIO_GAR_PROGRAM_ID,
   ARIO_ARNS_PROGRAM_ID,
   ARIO_ANT_PROGRAM_ID,
-  ARIO_ANT_ESCROW_PROGRAM_ID,
   DEVNET_PROGRAM_IDS,
 } from '@ar.io/sdk/solana';
 import { SupportedTokenType } from '../constants';
@@ -28,7 +27,6 @@ const PRESET_CONFIGS = {
     garProgramId: ARIO_GAR_PROGRAM_ID,
     arnsProgramId: ARIO_ARNS_PROGRAM_ID,
     antProgramId: ARIO_ANT_PROGRAM_ID,
-    antEscrowProgramId: ARIO_ANT_ESCROW_PROGRAM_ID,
     tokenMap: {
       arweave: 'https://turbo-gateway.com',
       ario: 'https://turbo-gateway.com',
@@ -56,7 +54,6 @@ const PRESET_CONFIGS = {
     garProgramId: DEVNET_PROGRAM_IDS.gar,
     arnsProgramId: DEVNET_PROGRAM_IDS.arns,
     antProgramId: DEVNET_PROGRAM_IDS.ant,
-    antEscrowProgramId: DEVNET_PROGRAM_IDS.antEscrow,
     tokenMap: {
       arweave: 'https://turbo-gateway.com',
       ario: 'https://turbo-gateway.com',
@@ -155,7 +152,6 @@ export interface DeveloperConfig {
   garProgramId: string;
   arnsProgramId: string;
   antProgramId: string;
-  antEscrowProgramId: string;
   tokenMap: Record<SupportedTokenType, string>;
 }
 
