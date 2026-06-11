@@ -2161,8 +2161,8 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* ArNS Association Panel - Show for all users, but only Arweave wallets can actually update records */}
-      {selectedFolder && selectedFolder.length > 0 && (walletType === 'arweave' || walletType === 'ethereum') && !deploySuccessInfo && !deploying && (
+      {/* ArNS Association Panel - Show for Solana wallets (ArNS is on Solana) */}
+      {selectedFolder && selectedFolder.length > 0 && walletType === 'solana' && !deploySuccessInfo && !deploying && (
         <ArNSAssociationPanel
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
@@ -2394,9 +2394,9 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* ArNS Discovery Section - Only for users without ArNS names */}
-      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       ((walletType !== 'arweave' && walletType !== 'ethereum') || userArnsNames.length === 0) && (
+      {/* ArNS Discovery Section - Show for non-Solana wallets or Solana users without ArNS names */}
+      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
+       (walletType !== 'solana' || userArnsNames.length === 0) && (
         <div className="mt-6">
           <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
             <div className="flex items-start gap-3 mb-4">
@@ -2458,7 +2458,7 @@ export default function DeploySitePanel() {
 
       {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS names */}
       {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       (walletType === 'arweave' || walletType === 'ethereum') && userArnsNames.length > 0 && (
+       walletType === 'solana' && userArnsNames.length > 0 && (
         <div className="mt-6">
           <ArNSAssociationPanel
             enabled={postDeployArNSEnabled}
@@ -2763,8 +2763,8 @@ export default function DeploySitePanel() {
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
-                            {/* Assign Domain Button - Always show for compatible wallets */}
-                            {(walletType === 'arweave' || walletType === 'ethereum') && (
+                            {/* Assign Domain Button - Solana wallets only */}
+                            {walletType === 'solana' && (
                               <button
                                 onClick={() => setShowAssignDomainModal(manifestId)}
                                 className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
@@ -2866,8 +2866,8 @@ export default function DeploySitePanel() {
                                       <ExternalLink className="w-4 h-4" />
                                       Visit Deployed Site
                                     </a>
-                                    {/* Assign/Change Domain - Mobile Menu */}
-                                    {(walletType === 'arweave' || walletType === 'ethereum') && (
+                                    {/* Assign/Change Domain - Solana wallets only */}
+                                    {walletType === 'solana' && (
                                       <button
                                         onClick={() => {
                                           setShowAssignDomainModal(manifestId);

@@ -55,7 +55,11 @@ export interface UseArNSPricingReturn {
   pricingTiers: ArNSPricingTier[];
   getAffordableOptions: (credits: number) => ArNSAffordabilityOption[];
   getBestDomainForBudget: (credits: number) => ArNSAffordabilityOption | null;
-  getPriceForName: (name: string, type: 'lease' | 'permabuy', years?: number) => Promise<{ ario: number; usd: number; credits: number } | null>;
+  getPriceForName: (
+    name: string,
+    type: 'lease' | 'permabuy',
+    years?: number
+  ) => Promise<{ ario: number; usd: number; credits: number } | null>;
   loading: boolean;
   error: string | null;
   demandFactor: number;
@@ -69,17 +73,31 @@ const SAMPLE_NAMES_BY_LENGTH: Record<number, string[]> = {
   4: ['tech', 'code', 'data'],
   5: ['turbo', 'drive', 'cloud'],
   8: ['myawesomeapp', 'blockchain', 'developer'],
-  13: ['mycompanyname', 'longerdomainname', 'superlongappname']
+  13: ['mycompanyname', 'longerdomainname', 'superlongappname'],
 };
 
 // Cache key and duration
 const ARNS_PRICING_CACHE_KEY = 'arns-pricing-cache';
 const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour cache like ArNS names
 
-function getCategoryForLength(length: number): { category: 'premium' | 'standard' | 'budget', description: string } {
-  if (length <= 3) return { category: 'premium', description: `Ultra-premium ${length} character${length > 1 ? 's' : ''}` };
-  if (length <= 8) return { category: 'standard', description: `Standard length (${length} chars)` };
-  return { category: 'budget', description: `Budget friendly (${length}+ chars)` };
+function getCategoryForLength(length: number): {
+  category: 'premium' | 'standard' | 'budget';
+  description: string;
+} {
+  if (length <= 3)
+    return {
+      category: 'premium',
+      description: `Ultra-premium ${length} character${length > 1 ? 's' : ''}`,
+    };
+  if (length <= 8)
+    return {
+      category: 'standard',
+      description: `Standard length (${length} chars)`,
+    };
+  return {
+    category: 'budget',
+    description: `Budget friendly (${length}+ chars)`,
+  };
 }
 
 // Cache management functions
@@ -87,15 +105,15 @@ function getCachedPricing(): ArNSPricingCache | null {
   try {
     const cached = localStorage.getItem(ARNS_PRICING_CACHE_KEY);
     if (!cached) return null;
-    
+
     const data: ArNSPricingCache = JSON.parse(cached);
-    
+
     // Check if cache is still valid
     if (Date.now() - data.timestamp > CACHE_DURATION_MS) {
       localStorage.removeItem(ARNS_PRICING_CACHE_KEY);
       return null;
     }
-    
+
     return data;
   } catch (error) {
     console.error('Failed to read ArNS pricing cache:', error);
@@ -117,25 +135,28 @@ export function useArNSPricing(): UseArNSPricingReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [demandFactor, setDemandFactor] = useState(1);
-  
+
   // Get conversion rate from USD to Turbo credits
   const [creditsPerUSD] = useCreditsForFiat(1, () => {});
 
-  const getPriceForName = async (name: string, type: 'lease' | 'permabuy', years: number = 1): Promise<{ ario: number; usd: number; credits: number } | null> => {
+  const getPriceForName = async (
+    name: string,
+    type: 'lease' | 'permabuy',
+    years: number = 1
+  ): Promise<{ ario: number; usd: number; credits: number } | null> => {
     try {
       const ario = getARIO();
-      
+
       // Get the token cost for buying this name
       const cost = await ario.getTokenCost({
         intent: 'Buy-Name',
         name,
-        type,
-        ...(type === 'lease' ? { years } : {})
+        ...(type === 'lease' ? { years } : {}),
       });
 
       // Convert from mARIO to ARIO
       const arioTokens = new mARIOToken(cost).toARIO().valueOf();
-      
+
       // Note: We'd need ARIO price in USD to convert properly
       // For now, let's use a rough estimate or fetch from CoinGecko
       const usd = 0; // TODO: Fetch ARIO price from CoinGecko
@@ -150,16 +171,15 @@ export function useArNSPricing(): UseArNSPricingReturn {
 
   const getAffordableOptions = (credits: number): ArNSAffordabilityOption[] => {
     if (credits <= 0 || !creditsPerUSD) return [];
-    
+
     const options: ArNSAffordabilityOption[] = [];
 
     // Check each pricing tier
-    pricingTiers.forEach(tier => {
-      
+    pricingTiers.forEach((tier) => {
       // Find the maximum years they can afford for this character length
       let maxYears = 0;
       let totalCostCredits = 0;
-      
+
       for (let years = 1; years <= 5; years++) {
         const yearKey = `year${years}` as keyof typeof tier.pricesInCredits;
         const cost = tier.pricesInCredits[yearKey];
@@ -177,14 +197,14 @@ export function useArNSPricing(): UseArNSPricingReturn {
         const remainingCredits = credits - totalCostCredits;
         const sampleNames = SAMPLE_NAMES_BY_LENGTH[tier.characterLength] || [];
         const recommendedName = sampleNames[0] || `${tier.characterLength}-char-name`;
-        
+
         options.push({
           tier,
           maxYears,
           totalCostCredits,
           totalCostUSD,
           remainingCredits,
-          recommendedName
+          recommendedName,
         });
       }
     });
@@ -196,7 +216,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
   const getBestDomainForBudget = (credits: number): ArNSAffordabilityOption | null => {
     const options = getAffordableOptions(credits);
     if (options.length === 0) return null;
-    
+
     // Return the longest domain they can afford (best value)
     return options[options.length - 1];
   };
@@ -204,20 +224,20 @@ export function useArNSPricing(): UseArNSPricingReturn {
   useEffect(() => {
     const loadPricing = async () => {
       if (!creditsPerUSD) return;
-      
+
       setLoading(true);
       setError(null);
 
       try {
         // First, check if we have valid cached data
         const cachedData = getCachedPricing();
-        
+
         // If cache is valid and the credits conversion rate hasn't changed much (within 5%)
         if (cachedData && Math.abs(cachedData.creditsPerUSDAtCache - creditsPerUSD) / creditsPerUSD < 0.05) {
           console.log('Using cached ArNS pricing data');
-          
+
           // Recalculate credit prices with current conversion rate if needed
-          const updatedTiers = cachedData.tiers.map(tier => ({
+          const updatedTiers = cachedData.tiers.map((tier) => ({
             ...tier,
             pricesInCredits: {
               year1: tier.pricesInUSD.year1 / creditsPerUSD, // USD / (credits per USD) = credits needed
@@ -226,9 +246,9 @@ export function useArNSPricing(): UseArNSPricingReturn {
               year4: tier.pricesInUSD.year4 / creditsPerUSD,
               year5: tier.pricesInUSD.year5 / creditsPerUSD,
               permabuy: tier.pricesInUSD.permabuy / creditsPerUSD,
-            }
+            },
           }));
-          
+
           setPricingTiers(updatedTiers);
           setDemandFactor(cachedData.demandFactor);
           setLoading(false);
@@ -237,49 +257,23 @@ export function useArNSPricing(): UseArNSPricingReturn {
 
         console.log('Fetching fresh ArNS pricing data');
         const ario = getARIO();
-        
+
         // Get the current demand factor once
         const currentDemandFactor = await ario.getDemandFactor();
         setDemandFactor(currentDemandFactor);
 
-        // Use the more efficient approach from the example - get all fees at once
-        // This uses the same method as the ARNS-REGISTRATION-FEES-EXAMPLE.js
-        const CU_ENDPOINT = "https://cu.ardrive.io/dry-run?process-id=qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE";
-        
-        const fetchCUMessage = async (action: string): Promise<string> => {
-          const res = await fetch(CU_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              Id: "1234",
-              Target: "qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE",
-              Owner: "1234",
-              Anchor: "0",
-              Data: "1234",
-              Tags: [
-                { name: "Action", value: action },
-                { name: "Data-Protocol", value: "ao" },
-                { name: "Type", value: "Message" },
-                { name: "Variant", value: "ao.TN.1" },
-              ],
-            }),
-          });
-          const json = await res.json();
-          return json.Messages?.[0]?.Data;
-        };
-
-        // Fetch ARIO price and registration fees in parallel - much more efficient!
-        const COINGECKO_ENDPOINT = "https://api.coingecko.com/api/v3/simple/price?ids=ar-io-network&vs_currencies=usd";
-        const [arioUSDPrice, feesRaw] = await Promise.all([
-          fetch(COINGECKO_ENDPOINT).then(res => res.json()).then(data => data["ar-io-network"].usd),
-          fetchCUMessage("Registration-Fees")
+        // Fetch ARIO price and registration fees in parallel
+        const COINGECKO_ENDPOINT = 'https://api.coingecko.com/api/v3/simple/price?ids=ar-io-network&vs_currencies=usd';
+        const [arioUSDPrice, fees] = await Promise.all([
+          fetch(COINGECKO_ENDPOINT)
+            .then((res) => res.json())
+            .then((data) => data['ar-io-network'].usd),
+          ario.getRegistrationFees(),
         ]);
 
         if (!arioUSDPrice || arioUSDPrice <= 0) {
           throw new Error('Failed to fetch ARIO price from CoinGecko');
         }
-
-        const fees = JSON.parse(feesRaw);
         const tiers: ArNSPricingTier[] = [];
 
         // Process the fee structure (similar to the example file)
@@ -293,12 +287,12 @@ export function useArNSPricing(): UseArNSPricingReturn {
             if (seenLongForm) continue;
             seenLongForm = true;
           }
-          
+
           const characterLength = key > 12 ? 13 : key;
           const displayName = key > 12 ? '13+ characters' : `${key} character${key > 1 ? 's' : ''}`;
           const lease = fees[key].lease;
           const permabuy = fees[key].permabuy;
-          
+
           // Convert mARIO to ARIO, then to USD with demand factor
           const formatPrice = (mARIO: number) => {
             const ario = (mARIO / 1e6) * currentDemandFactor;
@@ -314,7 +308,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
           const permabuyPrice = formatPrice(permabuy);
 
           const { category, description } = getCategoryForLength(characterLength);
-          
+
           tiers.push({
             characterLength,
             displayName,
@@ -348,16 +342,16 @@ export function useArNSPricing(): UseArNSPricingReturn {
         }
 
         setPricingTiers(tiers);
-        
+
         // Cache the pricing data for future use
         setCachedPricing({
           tiers,
           demandFactor: currentDemandFactor,
           arioUSDPrice,
           timestamp: Date.now(),
-          creditsPerUSDAtCache: creditsPerUSD
+          creditsPerUSDAtCache: creditsPerUSD,
         });
-        
+
         console.log('ArNS pricing cached for 1 hour');
       } catch (err) {
         console.error('Failed to load ArNS pricing:', err);
@@ -377,6 +371,6 @@ export function useArNSPricing(): UseArNSPricingReturn {
     getPriceForName,
     loading,
     error,
-    demandFactor
+    demandFactor,
   };
 }

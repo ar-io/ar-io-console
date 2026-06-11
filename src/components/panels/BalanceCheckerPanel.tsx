@@ -9,6 +9,7 @@ import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { usePrimaryArNSName } from '../../hooks/usePrimaryArNSName';
 import CopyButton from '../CopyButton';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface BalanceResult {
   address: string;
@@ -43,7 +44,8 @@ interface BalanceResult {
 export default function BalanceCheckerPanel() {
   const { address: connectedAddress, walletType } = useStore();
   const turboConfig = useTurboConfig();
-  const { createEthereumTurboClient } = useEthereumTurboClient(); // Shared Ethereum client with custom connect message
+  const { createEthereumTurboClient } = useEthereumTurboClient();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -79,20 +81,20 @@ export default function BalanceCheckerPanel() {
         return createEthereumTurboClient('ethereum');
 
       case 'solana':
-        if (!window.solana) {
-          throw new Error('Solana wallet extension not found. Please install Phantom or Solflare');
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
 
         return TurboFactory.authenticated({
           token: "solana",
-          walletAdapter: window.solana,
+          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...turboConfig,
         });
 
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [connectedAddress, walletType, turboConfig, createEthereumTurboClient]);
+  }, [connectedAddress, walletType, turboConfig, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
   // Load recent searches from localStorage and check for pre-filled address
   useEffect(() => {
@@ -439,7 +441,7 @@ export default function BalanceCheckerPanel() {
                     if (isEthereum) {
                       explorerUrl = `https://etherscan.io/address/${balanceResult.address}`;
                     } else if (isSolana) {
-                      explorerUrl = `https://explorer.solana.com/address/${balanceResult.address}`;
+                      explorerUrl = `https://solscan.io/account/${balanceResult.address}`;
                     } else {
                       explorerUrl = `https://viewblock.io/arweave/address/${balanceResult.address}`;
                     }

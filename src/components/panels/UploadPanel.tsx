@@ -1032,8 +1032,8 @@ export default function UploadPanel() {
                         >
                           <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                         </button>
-                        {/* Only show Assign Domain for Arweave and Ethereum wallets */}
-                        {(walletType === 'arweave' || walletType === 'ethereum') && (
+                        {/* Only show Assign Domain for Solana wallets (ArNS is on Solana) */}
+                        {walletType === 'solana' && (
                           <button
                             onClick={() => setShowAssignDomainModal(result.id)}
                             className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
@@ -1126,8 +1126,8 @@ export default function UploadPanel() {
                                   <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                                   Check Status
                                 </button>
-                                {/* Only show Assign Domain for Arweave and Ethereum wallets */}
-                                {(walletType === 'arweave' || walletType === 'ethereum') && (
+                                {/* Only show Assign Domain for Solana wallets (ArNS is on Solana) */}
+                                {walletType === 'solana' && (
                                   <button
                                     onClick={() => {
                                       setShowAssignDomainModal(result.id);

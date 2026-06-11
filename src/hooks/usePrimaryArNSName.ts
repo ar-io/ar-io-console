@@ -2,13 +2,19 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getARIO, getANT, getArweaveUrl } from '../utils';
 
-// Check if address is valid for ArNS operations (Arweave or Ethereum)
+// Check if address is valid for ArNS operations (Solana base58 public key)
 function checkValidAddress(address: string): boolean {
+  const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  return solanaPattern.test(address);
+}
+
+// Check if address is valid for ArNS operations (Arweave or Ethereum)
+function checkValidEthOrArAddress(address: string): boolean {
   // Arweave addresses: 43 characters, base64-like
   const arweavePattern = /^[a-zA-Z0-9_-]{43}$/;
   // Ethereum addresses: 42 characters, starts with 0x
   const ethereumPattern = /^0x[a-fA-F0-9]{40}$/;
-  
+
   return arweavePattern.test(address) || ethereumPattern.test(address);
 }
 
@@ -42,8 +48,8 @@ export function usePrimaryArNSName(address: string | null) {
 
   useEffect(() => {
     async function fetchArNSProfile() {
-      // Skip if no address or if it's a Solana wallet (no ArNS support)
-      if (!address || walletType === 'solana' || !checkValidAddress(address)) {
+      // ArNS now resolves against Solana addresses only
+      if (!address || walletType !== 'solana' || !checkValidAddress(address)) {
         setArnsName(null);
         setArnsLogo(null);
         return;
@@ -62,7 +68,7 @@ export function usePrimaryArNSName(address: string | null) {
         // Get primary name with longer timeout
         const ario = getARIO();
         console.log('Fetching primary name for address:', address);
-        
+
         // Create a more generous timeout promise
         const timeoutPromise = new Promise<null>((resolve) => {
           setTimeout(() => {
@@ -75,19 +81,19 @@ export function usePrimaryArNSName(address: string | null) {
           console.log('Primary name fetch failed:', error);
           return null;
         });
-        
+
         const result = await Promise.race([primaryNamePromise, timeoutPromise]);
-        
+
         if (result && result.name) {
           const primaryName = result.name;
           const displayName = decodePunycode(primaryName);
           setArnsName(displayName); // Store the decoded name for display
-          
+
           // Now try to get the logo
           let logoTxId: string | null = null;
           try {
             console.log('Fetching logo for ArNS name:', primaryName);
-            
+
             // Create timeout for logo fetch with much longer timeout
             const logoTimeoutPromise = new Promise<null>((resolve) => {
               setTimeout(() => {
@@ -100,19 +106,21 @@ export function usePrimaryArNSName(address: string | null) {
               try {
                 // Get the ArNS record to get the processId
                 console.log('Getting ArNS record for:', primaryName);
-                const record = await ario.getArNSRecord({ name: primaryName });
+                const record = await ario.getArNSRecord({
+                  name: primaryName,
+                });
                 console.log('ArNS record result:', record);
-                
+
                 if (record && record.processId) {
                   console.log('Initializing ANT client with processId:', record.processId);
                   // Initialize ANT client and get logo
-                  const ant = getANT(record.processId);
+                  const ant = await getANT(record.processId);
                   const logo = await ant.getLogo();
                   console.log('ANT logo result:', logo);
-                  
-                  const isValidLogo = logo && checkValidAddress(logo);
+
+                  const isValidLogo = logo && (checkValidAddress(logo) || checkValidEthOrArAddress(logo));
                   console.log('Logo validation result:', isValidLogo, 'for logo:', logo);
-                  
+
                   return isValidLogo ? logo : null;
                 }
                 console.log('No processId found in ArNS record');
@@ -131,7 +139,7 @@ export function usePrimaryArNSName(address: string | null) {
 
           // Set logo state
           setArnsLogo(logoTxId);
-          
+
           // Cache both name and logo
           setArNSName(address, primaryName, logoTxId || undefined);
         } else {
@@ -156,7 +164,7 @@ export function usePrimaryArNSName(address: string | null) {
   // Create the profile object
   const profile: ArNSProfile = {
     name: arnsName,
-    logo: arnsLogo ? getArweaveUrl(arnsLogo) : null
+    logo: arnsLogo ? getArweaveUrl(arnsLogo) : null,
   };
 
   return { arnsName, arnsLogo, profile, loading };

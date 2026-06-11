@@ -5,7 +5,7 @@ import CopyButton from '../CopyButton';
 
 export default function WalletOverviewCard() {
   const { address, walletType } = useStore();
-  const { arnsName, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
+  const { arnsName, loading: loadingArNS } = usePrimaryArNSName(address);
 
   if (!address || !walletType) {
     return null;
@@ -28,7 +28,7 @@ export default function WalletOverviewCard() {
               if (walletType === 'ethereum') {
                 explorerUrl = `https://etherscan.io/address/${address}`;
               } else if (walletType === 'solana') {
-                explorerUrl = `https://explorer.solana.com/address/${address}`;
+                explorerUrl = `https://solscan.io/account/${address}`;
               } else {
                 explorerUrl = `https://viewblock.io/arweave/address/${address}`;
               }

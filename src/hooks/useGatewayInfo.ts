@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { type AoGateway } from '@ar.io/sdk';
+import { type Gateway } from '@ar.io/sdk';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
@@ -22,13 +22,13 @@ async function fetchWithRetry(
       // Retry on rate limit or server errors
       if (response.status === 429 || response.status >= 500) {
         const retryAfter = response.headers.get('Retry-After');
-        const delayMs = retryAfter
-          ? parseInt(retryAfter, 10) * 1000
-          : initialDelayMs * Math.pow(2, attempt);
+        const delayMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : initialDelayMs * Math.pow(2, attempt);
 
         if (attempt < maxRetries - 1) {
-          console.warn(`[GatewayInfo] ${url} returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          console.warn(
+            `[GatewayInfo] ${url} returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
           continue;
         }
       }
@@ -39,8 +39,11 @@ async function fetchWithRetry(
 
       if (attempt < maxRetries - 1) {
         const delayMs = initialDelayMs * Math.pow(2, attempt);
-        console.warn(`[GatewayInfo] ${url} failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries}):`, error);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        console.warn(
+          `[GatewayInfo] ${url} failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries}):`,
+          error
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
   }
@@ -53,17 +56,14 @@ async function fetchWithRetry(
  * Tries arweave.net first, falls back to turbo-gateway.com if it fails.
  */
 async function fetchArweavePriceWithFallback(bytes: number): Promise<number> {
-  const endpoints = [
-    'https://arweave.net',
-    'https://turbo-gateway.com',
-  ];
+  const endpoints = ['https://arweave.net', 'https://turbo-gateway.com'];
 
   for (const endpoint of endpoints) {
     try {
-      const response = await fetchWithRetry(
-        `${endpoint}/price/${bytes}`,
-        { maxRetries: 2, initialDelayMs: 500 }
-      );
+      const response = await fetchWithRetry(`${endpoint}/price/${bytes}`, {
+        maxRetries: 2,
+        initialDelayMs: 500,
+      });
       if (response.ok) {
         const price = Number(await response.text());
         if (!isNaN(price) && price > 0) {
@@ -121,7 +121,7 @@ interface GatewayInfo {
 }
 
 // Use the actual AR.IO SDK type
-type ArIOGatewayInfo = AoGateway;
+type ArIOGatewayInfo = Gateway;
 
 interface PricingInfo {
   wincPerGiB: string;
@@ -191,7 +191,7 @@ export function useGatewayInfo() {
           try {
             const parsedCache: CachedGatewayInfo = JSON.parse(cached);
             const isExpired = Date.now() - parsedCache.timestamp > CACHE_DURATION;
-            
+
             if (!isExpired) {
               // Using cached gateway info
               setUploadServiceInfo(parsedCache.data.uploadServiceInfo);
@@ -255,7 +255,9 @@ export function useGatewayInfo() {
           try {
             const { getARIO } = await import('../utils');
             const io = getARIO();
-            arIOData = await io.getGateway({ address: gatewayData.wallet });
+            arIOData = await io.getGateway({
+              address: gatewayData.wallet,
+            });
             setArIOGatewayInfo(arIOData);
           } catch (err) {
             console.warn('Gateway not found in AR.IO network or lookup failed:', err);
@@ -315,7 +317,7 @@ export function useGatewayInfo() {
           let turboFeePercentage = undefined;
 
           if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
-            turboFeePercentage = (1 - (arweaveUSDPerGiB / turboUSDPerGiB)) * 100;
+            turboFeePercentage = (1 - arweaveUSDPerGiB / turboUSDPerGiB) * 100;
           }
 
           pricingData = {
@@ -343,7 +345,6 @@ export function useGatewayInfo() {
           timestamp: Date.now(),
         };
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch gateway information');
       } finally {
@@ -357,10 +358,10 @@ export function useGatewayInfo() {
   const refresh = async () => {
     setRefreshing(true);
     setError(null);
-    
+
     // Clear cache and refetch
     localStorage.removeItem(cacheKey);
-    
+
     try {
       // Fetch all data fresh
       let uploadData = null;
@@ -409,7 +410,9 @@ export function useGatewayInfo() {
         try {
           const { getARIO } = await import('../utils');
           const io = getARIO();
-          arIOData = await io.getGateway({ address: gatewayData.wallet });
+          arIOData = await io.getGateway({
+            address: gatewayData.wallet,
+          });
           setArIOGatewayInfo(arIOData);
         } catch (err) {
           console.warn('Gateway not found in AR.IO network or lookup failed:', err);
@@ -468,7 +471,7 @@ export function useGatewayInfo() {
         let turboFeePercentage = undefined;
 
         if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
-          turboFeePercentage = (1 - (arweaveUSDPerGiB / turboUSDPerGiB)) * 100;
+          turboFeePercentage = (1 - arweaveUSDPerGiB / turboUSDPerGiB) * 100;
         }
 
         pricingDataRefresh = {
@@ -495,7 +498,6 @@ export function useGatewayInfo() {
         timestamp: Date.now(),
       };
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh gateway information');
     } finally {

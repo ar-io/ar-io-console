@@ -30,19 +30,17 @@ export function useWalletAccountListener() {
 
   // Handle RainbowKit/Wagmi session restoration on page load
   // When user refreshes, wagmi auto-reconnects and we need to update our store
-  // Only restore if store is empty OR already on Ethereum - don't overwrite Solana/Arweave
+  // Only restore if store already has walletType === 'ethereum' — don't auto-connect
+  // on fresh loads or after clearing a stale Solana session
   useEffect(() => {
     if (
       ethIsConnected &&
       ethAddress &&
-      (!address || walletType === 'ethereum') &&
+      walletType === 'ethereum' &&
       ethAddress !== address
     ) {
-      // Session restored from RainbowKit/Wagmi - update our store
-      // Only when: store is empty, or already on Ethereum with different address
-      console.log('[Wallet Listener] Session restored/updated from RainbowKit:', { from: address, to: ethAddress });
+      console.log('[Wallet Listener] Ethereum session restored/updated:', { from: address, to: ethAddress });
 
-      // Only clear cache if there was a previous address (actual switch, not initial load)
       if (address) {
         clearEthereumTurboClientCache();
         clearX402SignerCache();
@@ -87,25 +85,60 @@ export function useWalletAccountListener() {
   }, [connector?.uid, walletType]);
 
   // Listen for Solana wallet changes
+  // Use publicKey as source of truth — solanaConnected can be stale when
+  // Standard Wallet adapters auto-approve (connect() returns early without
+  // emitting 'connect' event, so WalletProviderBase never calls setConnected(true)).
   const { publicKey: solanaPublicKey } = useWallet();
 
+  // Track whether a Solana wallet has been active in this session.
+  const solanaEverConnectedRef = useRef(false);
+  if (solanaPublicKey) {
+    solanaEverConnectedRef.current = true;
+  }
+
+  // Handle Solana connection: update store when publicKey appears
   useEffect(() => {
-    if (walletType === 'solana' && solanaPublicKey) {
+    if (solanaPublicKey) {
       const newAddress = solanaPublicKey.toString();
       if (newAddress !== address) {
-        console.log('[Wallet Listener] Solana address changed:', { from: address, to: newAddress });
-        console.warn('[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.');
-
-        // Update to new address
+        console.log('[Wallet Listener] Solana wallet connected:', { from: address, to: newAddress });
+        if (address && walletType === 'solana') {
+          clearAllPaymentState();
+        }
         setAddress(newAddress, 'solana');
-
-        // Clear all payment state to prevent using wrong account's payment flows
-        clearAllPaymentState();
-
-        // Note: Balance will be automatically refetched by Header component's useEffect
       }
     }
   }, [solanaPublicKey, address, walletType, setAddress, clearAllPaymentState]);
+
+  // Handle Solana disconnection: clear store when publicKey disappears.
+  // Only runs after a wallet has been active at least once in this session,
+  // so it won't fire on page load when the store has a stale Solana session.
+  // Skipped during wallet switching (select() disconnects old wallet before connecting new one).
+  useEffect(() => {
+    if (
+      !solanaPublicKey &&
+      walletType === 'solana' &&
+      address &&
+      solanaEverConnectedRef.current &&
+      !(window as any).__SOLANA_SWITCHING__
+    ) {
+      console.log('[Wallet Listener] Solana wallet disconnected, clearing session');
+      clearAllPaymentState();
+      clearAddress();
+    }
+  }, [solanaPublicKey, walletType, address, clearAllPaymentState, clearAddress]);
+
+  // Clear stale Solana session on page load.
+  // With autoConnect=false, the wallet adapter never reconnects on reload.
+  // If the store persisted walletType='solana', clear it since the adapter isn't connected.
+  useEffect(() => {
+    if (walletType === 'solana' && address && !solanaPublicKey) {
+      console.log('[Wallet Listener] Clearing stale Solana session from previous page load');
+      clearAddress();
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Listen for ArConnect (Wander/ArConnect) wallet switches
   useEffect(() => {

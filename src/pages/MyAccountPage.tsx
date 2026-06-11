@@ -12,7 +12,7 @@ import OwnedName from '@/components/OwnedName';
 export default function MyAccountPage() {
   const { address, walletType, isPaymentServiceAvailable } = useStore();
   const navigate = useNavigate();
-  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
+  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(address);
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
 
   // Redirect to home if not logged in
@@ -57,13 +57,7 @@ export default function MyAccountPage() {
 
         <div>
           <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground mb-1">
-            {loadingArNS ? (
-              'Loading...'
-            ) : arnsName ? (
-              `${makePossessive(arnsName)} Account`
-            ) : (
-              'My Account'
-            )}
+            {loadingArNS ? 'Loading...' : arnsName ? `${makePossessive(arnsName)} Account` : 'My Account'}
           </h1>
           <p className="text-sm text-foreground/80">
             {walletType && 'View your account details, like credits and recent activity.'}
@@ -82,8 +76,8 @@ export default function MyAccountPage() {
         </div>
       )}
 
-      {/* Domains Section - Only show for Arweave and Ethereum wallets */}
-      {(walletType === 'arweave' || walletType === 'ethereum') && (
+      {/* Domains Section - ArNS is on Solana, only show for Solana wallets */}
+      {walletType === 'solana' && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading font-bold text-xl text-foreground">Domains</h2>
@@ -121,7 +115,9 @@ export default function MyAccountPage() {
             ) : (
               <>
                 <div className="grid gap-4 mb-6">
-                  {ownedNames.slice(0, 5).map((domain) => <OwnedName key={domain.name} domain={domain}/>)}
+                  {ownedNames.slice(0, 5).map((domain) => (
+                    <OwnedName key={domain.name} domain={domain} />
+                  ))}
                 </div>
 
                 {/* View All Domains Button - Always show if user has domains */}
@@ -148,7 +144,6 @@ export default function MyAccountPage() {
 
         {/* Activity Overview */}
         <ActivityOverview />
-
       </div>
     </div>
   );

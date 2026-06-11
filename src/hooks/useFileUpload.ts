@@ -8,6 +8,7 @@ import {
 import { useStore } from '../store/useStore';
 import { useWallets } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { supportsJitPayment } from '../utils/jitPayment';
 import { formatUploadError } from '../utils/errorMessages';
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
@@ -70,6 +71,7 @@ export function useFileUpload() {
   const { address, walletType } = useStore();
   const { wallets } = useWallets(); // Get Privy wallets
   const ethAccount = useAccount(); // RainbowKit/Wagmi account state
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient(); // Shared Ethereum client with custom connect message
   const freeUploadLimitBytes = useFreeUploadLimit(); // Get free upload limit
   const [uploading, setUploading] = useState(false);
@@ -125,12 +127,12 @@ export function useFileUpload() {
         }
         break;
       case 'solana':
-        if (!window.solana || !window.solana.isConnected) {
+        if (!solanaPublicKey || !solanaSignMessage) {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         break;
     }
-  }, [address, walletType, wallets, ethAccount.isConnected]);
+  }, [address, walletType, wallets, ethAccount.isConnected, solanaPublicKey, solanaSignMessage]);
 
   // Get config function from store
   const getCurrentConfig = useStore((state) => state.getCurrentConfig);
@@ -234,13 +236,13 @@ export function useFileUpload() {
         return ethereumClient;
 
       case 'solana':
-        if (!window.solana) {
-          throw new Error('Solana wallet extension not found. Please install Phantom or Solflare');
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
 
         const solanaClient = TurboFactory.authenticated({
           token: "solana",
-          walletAdapter: window.solana,
+          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...fullTurboConfig,
         });
 
@@ -258,7 +260,7 @@ export function useFileUpload() {
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [walletType, getCurrentConfig, validateWalletState, address, createEthereumTurboClient]);
+  }, [walletType, getCurrentConfig, validateWalletState, address, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
   const uploadFile = useCallback(async (
     file: File,

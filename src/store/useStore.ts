@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TurboCryptoFundResponse } from '@ardrive/turbo-sdk/web';
 import { PaymentIntent, PaymentIntentResult } from '@stripe/stripe-js';
+import {
+  ARIO_CORE_PROGRAM_ID,
+  ARIO_GAR_PROGRAM_ID,
+  ARIO_ARNS_PROGRAM_ID,
+  ARIO_ANT_PROGRAM_ID,
+  DEVNET_PROGRAM_IDS,
+} from '@ar.io/sdk/solana';
 import { SupportedTokenType } from '../constants';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 
@@ -13,8 +20,13 @@ const PRESET_CONFIGS = {
     captureServiceUrl: 'https://vilenarios.com/local/capture',
     verifyApiUrl: 'https://vilenarios.com/local/verify',
     arioGatewayUrl: 'https://turbo-gateway.com',
-    stripeKey: 'pk_live_51JUAtwC8apPOWkDLMQqNF9sPpfneNSPnwX8YZ8y1FNDl6v94hZIwzgFSYl27bWE4Oos8CLquunUswKrKcaDhDO6m002Yj9AeKj',
+    stripeKey:
+      'pk_live_51JUAtwC8apPOWkDLMQqNF9sPpfneNSPnwX8YZ8y1FNDl6v94hZIwzgFSYl27bWE4Oos8CLquunUswKrKcaDhDO6m002Yj9AeKj',
     processId: 'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE',
+    coreProgramId: ARIO_CORE_PROGRAM_ID,
+    garProgramId: ARIO_GAR_PROGRAM_ID,
+    arnsProgramId: ARIO_ARNS_PROGRAM_ID,
+    antProgramId: ARIO_ANT_PROGRAM_ID,
     tokenMap: {
       arweave: 'https://turbo-gateway.com',
       ario: 'https://turbo-gateway.com',
@@ -24,7 +36,7 @@ const PRESET_CONFIGS = {
       solana: 'https://hardworking-restless-sea.solana-mainnet.quiknode.pro/44d938fae3eb6735ec30d8979551827ff70227f5/',
       kyve: 'https://api.kyve.network',
       pol: 'https://polygon-bor-rpc.publicnode.com',
-      'usdc': 'https://cloudflare-eth.com',
+      usdc: 'https://cloudflare-eth.com',
       'base-usdc': 'https://mainnet.base.org',
       'polygon-usdc': 'https://polygon-bor-rpc.publicnode.com',
     } as Record<SupportedTokenType, string>,
@@ -35,8 +47,13 @@ const PRESET_CONFIGS = {
     captureServiceUrl: 'https://vilenarios.com/local/capture',
     verifyApiUrl: 'https://vilenarios.com/local/verify',
     arioGatewayUrl: 'https://turbo-gateway.com',
-    stripeKey: 'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
+    stripeKey:
+      'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
     processId: 'agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA',
+    coreProgramId: DEVNET_PROGRAM_IDS.core,
+    garProgramId: DEVNET_PROGRAM_IDS.gar,
+    arnsProgramId: DEVNET_PROGRAM_IDS.arns,
+    antProgramId: DEVNET_PROGRAM_IDS.ant,
     tokenMap: {
       arweave: 'https://turbo-gateway.com',
       ario: 'https://turbo-gateway.com',
@@ -46,7 +63,7 @@ const PRESET_CONFIGS = {
       solana: 'https://api.devnet.solana.com',
       kyve: 'https://api.korellia.kyve.network',
       pol: 'https://rpc-amoy.polygon.technology',
-      'usdc': 'https://eth-sepolia.public.blastapi.io',
+      usdc: 'https://eth-sepolia.public.blastapi.io',
       'base-usdc': 'https://sepolia.base.org',
       'polygon-usdc': 'https://rpc-amoy.polygon.technology',
     } as Record<SupportedTokenType, string>,
@@ -83,14 +100,14 @@ interface DeployResult {
   timestamp?: number;
   receipt?: any; // Store receipt for manifest
   // ArNS-specific fields
-  arnsName?: string;      // ArNS name updated
-  undername?: string;     // Undername if used
-  targetId?: string;      // Transaction ID the name now points to
+  arnsName?: string; // ArNS name updated
+  undername?: string; // Undername if used
+  targetId?: string; // Transaction ID the name now points to
   arnsStatus?: 'success' | 'failed' | 'pending';
-  arnsError?: string;     // Error message if failed
+  arnsError?: string; // Error message if failed
   // App metadata fields (user-provided)
-  appName?: string;       // User's app/site name
-  appVersion?: string;    // User's app/site version
+  appName?: string; // User's app/site name
+  appVersion?: string; // User's app/site version
 }
 
 // File hash cache entry for Smart Deploy deduplication
@@ -123,7 +140,6 @@ export type { BrowseConfig };
 export type BrowseRoutingStrategy = RoutingStrategy;
 export type BrowseVerificationMethod = VerificationMethod;
 
-
 export interface DeveloperConfig {
   paymentServiceUrl: string;
   uploadServiceUrl: string;
@@ -132,6 +148,10 @@ export interface DeveloperConfig {
   arioGatewayUrl: string;
   stripeKey: string;
   processId: string;
+  coreProgramId: string;
+  garProgramId: string;
+  arnsProgramId: string;
+  antProgramId: string;
   tokenMap: Record<SupportedTokenType, string>;
 }
 
@@ -143,28 +163,44 @@ interface StoreState {
 
   // ArNS state
   arnsNamesCache: Record<string, { name: string; logo?: string; timestamp: number }>;
-  ownedArnsCache: Record<string, { names: Array<{name: string; processId: string; currentTarget?: string; undernames?: string[]; ttl?: number; undernameTTLs?: Record<string, number>}>; timestamp: number }>;
-  
+  ownedArnsCache: Record<
+    string,
+    {
+      names: Array<{
+        name: string;
+        processId: string;
+        currentTarget?: string;
+        undernames?: string[];
+        ttl?: number;
+        undernameTTLs?: Record<string, number>;
+      }>;
+      timestamp: number;
+    }
+  >;
+
   // Upload history state
   uploadHistory: UploadResult[];
-  
+
   // Deploy history state
   deployHistory: DeployResult[];
-  
+
   // Upload status cache (persisted) - stores full API response
-  uploadStatusCache: Record<string, {
-    status: 'CONFIRMED' | 'FINALIZED' | 'FAILED' | 'NOT_FOUND';
-    bundleId?: string;
-    info?: string;
-    startOffsetInRootBundle?: number;
-    rawContentLength?: number;
-    payloadContentType?: string;
-    payloadDataStart?: number;
-    payloadContentLength?: number;
-    winc?: string;
-    timestamp: number; // When status was fetched
-  }>;
-  
+  uploadStatusCache: Record<
+    string,
+    {
+      status: 'CONFIRMED' | 'FINALIZED' | 'FAILED' | 'NOT_FOUND';
+      bundleId?: string;
+      info?: string;
+      startOffsetInRootBundle?: number;
+      rawContentLength?: number;
+      payloadContentType?: string;
+      payloadDataStart?: number;
+      payloadContentLength?: number;
+      winc?: string;
+      timestamp: number; // When status was fetched
+    }
+  >;
+
   // Payment state - matching reference app exactly
   paymentAmount?: number;
   paymentIntent?: PaymentIntent;
@@ -192,7 +228,7 @@ interface StoreState {
 
   // Theme state
   theme: ThemeMode;
-  
+
   // Developer configuration state
   configMode: ConfigMode;
   customConfig: DeveloperConfig;
@@ -217,24 +253,44 @@ interface StoreState {
   setCreditBalance: (balance: number) => void;
   setArNSName: (address: string, name: string, logo?: string) => void;
   getArNSName: (address: string) => { name: string; logo?: string } | null;
-  setOwnedArNSNames: (address: string, names: Array<{name: string; processId: string; currentTarget?: string; undernames?: string[]; ttl?: number; undernameTTLs?: Record<string, number>}>) => void;
-  getOwnedArNSNames: (address: string) => Array<{name: string; processId: string; currentTarget?: string; undernames?: string[]; ttl?: number; undernameTTLs?: Record<string, number>}> | null;
+  setOwnedArNSNames: (
+    address: string,
+    names: Array<{
+      name: string;
+      processId: string;
+      currentTarget?: string;
+      undernames?: string[];
+      ttl?: number;
+      undernameTTLs?: Record<string, number>;
+    }>
+  ) => void;
+  getOwnedArNSNames: (address: string) => Array<{
+    name: string;
+    processId: string;
+    currentTarget?: string;
+    undernames?: string[];
+    ttl?: number;
+    undernameTTLs?: Record<string, number>;
+  }> | null;
   addUploadResults: (results: UploadResult[]) => void;
   updateUploadWithArNS: (uploadId: string, arnsName: string, undername?: string, arnsTransactionId?: string) => void;
   clearUploadHistory: () => void;
   addDeployResults: (results: DeployResult[]) => void;
   clearDeployHistory: () => void;
-  setUploadStatus: (txId: string, status: {
-    status: 'CONFIRMED' | 'FINALIZED' | 'FAILED' | 'NOT_FOUND';
-    bundleId?: string;
-    info?: string;
-    startOffsetInRootBundle?: number;
-    rawContentLength?: number;
-    payloadContentType?: string;
-    payloadDataStart?: number;
-    payloadContentLength?: number;
-    winc?: string;
-  }) => void;
+  setUploadStatus: (
+    txId: string,
+    status: {
+      status: 'CONFIRMED' | 'FINALIZED' | 'FAILED' | 'NOT_FOUND';
+      bundleId?: string;
+      info?: string;
+      startOffsetInRootBundle?: number;
+      rawContentLength?: number;
+      payloadContentType?: string;
+      payloadDataStart?: number;
+      payloadContentLength?: number;
+      winc?: string;
+    }
+  ) => void;
   getUploadStatus: (txId: string) => {
     status: 'CONFIRMED' | 'FINALIZED' | 'FAILED' | 'NOT_FOUND';
     bundleId?: string;
@@ -246,7 +302,7 @@ interface StoreState {
     payloadContentLength?: number;
     winc?: string;
   } | null;
-  
+
   // Payment actions - matching reference app
   setPaymentAmount: (amount?: number) => void;
   setPaymentIntent: (intent?: PaymentIntent) => void;
@@ -255,7 +311,7 @@ interface StoreState {
   setPromoCode: (code?: string) => void;
   setPaymentTarget: (address: string | null, type: 'arweave' | 'ethereum' | 'solana' | null) => void;
   clearPaymentTarget: () => void;
-  
+
   // Crypto actions
   setCryptoTopupValue: (value?: number) => void;
   setCryptoManualTopup: (value: boolean) => void;
@@ -270,7 +326,7 @@ interface StoreState {
   setJitPaymentEnabled: (enabled: boolean) => void;
   setJitMaxTokenAmount: (token: SupportedTokenType, amount: number) => void;
   setJitBufferMultiplier: (multiplier: number) => void;
-  
+
   // Developer configuration actions
   setConfigMode: (mode: ConfigMode) => void;
   updateCustomConfig: (key: keyof DeveloperConfig, value: string | Record<SupportedTokenType, string>) => void;
@@ -283,7 +339,14 @@ interface StoreState {
   isPaymentServiceAvailable: () => boolean;
 
   // Smart Deploy actions
-  updateFileHashCache: (entries: Array<{ hash: string; txId: string; size: number; contentType: string }>) => void;
+  updateFileHashCache: (
+    entries: Array<{
+      hash: string;
+      txId: string;
+      size: number;
+      contentType: string;
+    }>
+  ) => void;
   getFileHashEntry: (hash: string) => FileHashEntry | null;
   clearFileHashCache: () => void;
   setSmartDeployEnabled: (enabled: boolean) => void;
@@ -312,7 +375,7 @@ export const useStore = create<StoreState>()(
       uploadHistory: [],
       deployHistory: [],
       uploadStatusCache: {},
-      
+
       // Theme state
       theme: 'system', // Default to system preference
 
@@ -352,30 +415,37 @@ export const useStore = create<StoreState>()(
       // Just-in-time payment state (defaults - persistent)
       jitPaymentEnabled: true, // Default opt-in
       jitMaxTokenAmount: {
-        ario: 200,      // 200 ARIO ≈ $20
+        ario: 200, // 200 ARIO ≈ $20
         'base-ario': 200, // 200 ARIO ≈ $20 (on Base L2)
-        solana: 0.15,   // 0.15 SOL ≈ $22.50
+        solana: 0.15, // 0.15 SOL ≈ $22.50
         'base-eth': 0.01, // 0.01 ETH ≈ $25
-        'base-usdc': 25,  // 25 USDC = $25 (stablecoin)
+        'base-usdc': 25, // 25 USDC = $25 (stablecoin)
         arweave: 0,
         ethereum: 0,
         kyve: 0,
         pol: 0,
-        'usdc': 0,        // Not supported for JIT (too slow)
+        usdc: 0, // Not supported for JIT (too slow)
         'polygon-usdc': 0, // Not supported for JIT (too slow)
       },
       jitBufferMultiplier: 1.1, // Default 10% buffer
       // Actions
       setAddress: (address, type) => set({ address, walletType: type }),
-      clearAddress: () => set({ address: null, walletType: null, creditBalance: 0, arnsNamesCache: {}, ownedArnsCache: {} }),
+      clearAddress: () =>
+        set({
+          address: null,
+          walletType: null,
+          creditBalance: 0,
+          arnsNamesCache: {},
+          ownedArnsCache: {},
+        }),
       setCreditBalance: (balance) => set({ creditBalance: balance }),
       setArNSName: (address, name, logo) => {
         const cache = get().arnsNamesCache;
-        set({ 
-          arnsNamesCache: { 
-            ...cache, 
-            [address]: { name, logo, timestamp: Date.now() }
-          }
+        set({
+          arnsNamesCache: {
+            ...cache,
+            [address]: { name, logo, timestamp: Date.now() },
+          },
         });
       },
       getArNSName: (address) => {
@@ -392,8 +462,8 @@ export const useStore = create<StoreState>()(
         set({
           ownedArnsCache: {
             ...cache,
-            [address]: { names, timestamp: Date.now() }
-          }
+            [address]: { names, timestamp: Date.now() },
+          },
         });
       },
       getOwnedArNSNames: (address) => {
@@ -412,10 +482,8 @@ export const useStore = create<StoreState>()(
       },
       updateUploadWithArNS: (uploadId, arnsName, undername, arnsTransactionId) => {
         const currentHistory = get().uploadHistory;
-        const updatedHistory = currentHistory.map(upload => 
-          upload.id === uploadId 
-            ? { ...upload, arnsName, undername, arnsTransactionId }
-            : upload
+        const updatedHistory = currentHistory.map((upload) =>
+          upload.id === uploadId ? { ...upload, arnsName, undername, arnsTransactionId } : upload
         );
         set({ uploadHistory: updatedHistory });
       },
@@ -428,27 +496,27 @@ export const useStore = create<StoreState>()(
       clearDeployHistory: () => set({ deployHistory: [], fileHashCache: {} }), // Also clear file hash cache
       setUploadStatus: (txId, status) => {
         const cache = get().uploadStatusCache;
-        set({ 
-          uploadStatusCache: { 
-            ...cache, 
-            [txId]: { ...status, timestamp: Date.now() }
-          }
+        set({
+          uploadStatusCache: {
+            ...cache,
+            [txId]: { ...status, timestamp: Date.now() },
+          },
         });
       },
       getUploadStatus: (txId) => {
         const cache = get().uploadStatusCache;
         const cached = cache[txId];
         if (!cached) return null;
-        
+
         // Cache expires after 1 hour for confirmed files, 24 hours for finalized
         const maxAge = cached.status === 'FINALIZED' ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000;
         if (Date.now() - cached.timestamp > maxAge) {
           return null; // Expired
         }
-        
+
         return { status: cached.status, info: cached.info };
       },
-      
+
       // Payment actions - matching reference app exactly
       setPaymentAmount: (amount) => set({ paymentAmount: amount }),
       setPaymentIntent: (intent) => set({ paymentIntent: intent }),
@@ -457,25 +525,26 @@ export const useStore = create<StoreState>()(
       setPromoCode: (code) => set({ promoCode: code }),
       setPaymentTarget: (address, type) => set({ paymentTargetAddress: address, paymentTargetType: type }),
       clearPaymentTarget: () => set({ paymentTargetAddress: null, paymentTargetType: null }),
-      
+
       // Crypto actions
       setCryptoTopupValue: (value) => set({ cryptoTopupValue: value }),
       setCryptoManualTopup: (value) => set({ cryptoManualTopup: value }),
       setCryptoTopupResponse: (response) => set({ cryptoTopupResponse: response }),
       setShowResumeTransactionPanel: (show) => set({ showResumeTransactionPanel: show }),
-      clearAllPaymentState: () => set({
-        paymentAmount: undefined,
-        paymentIntent: undefined,
-        paymentInformation: undefined,
-        paymentIntentResult: undefined,
-        promoCode: undefined,
-        paymentTargetAddress: null,
-        paymentTargetType: null,
-        cryptoTopupValue: undefined,
-        cryptoManualTopup: false,
-        cryptoTopupResponse: undefined,
-        showResumeTransactionPanel: false,
-      }),
+      clearAllPaymentState: () =>
+        set({
+          paymentAmount: undefined,
+          paymentIntent: undefined,
+          paymentInformation: undefined,
+          paymentIntentResult: undefined,
+          promoCode: undefined,
+          paymentTargetAddress: null,
+          paymentTargetType: null,
+          cryptoTopupValue: undefined,
+          cryptoManualTopup: false,
+          cryptoTopupResponse: undefined,
+          showResumeTransactionPanel: false,
+        }),
 
       // Theme action
       setTheme: (theme) => set({ theme }),
@@ -496,10 +565,12 @@ export const useStore = create<StoreState>()(
 
         if (mode === 'custom') {
           // When switching TO custom mode, initialize with current preset values
-          const currentPresetConfig = currentMode !== 'custom' ? PRESET_CONFIGS[currentMode] : PRESET_CONFIGS.production;
+          const currentPresetConfig =
+            currentMode !== 'custom' ? PRESET_CONFIGS[currentMode] : PRESET_CONFIGS.production;
           // Only initialize if customConfig is empty or matches a preset (not user-modified)
-          const isUnmodified = JSON.stringify(customConfig) === JSON.stringify(PRESET_CONFIGS.production) ||
-                               JSON.stringify(customConfig) === JSON.stringify(PRESET_CONFIGS.development);
+          const isUnmodified =
+            JSON.stringify(customConfig) === JSON.stringify(PRESET_CONFIGS.production) ||
+            JSON.stringify(customConfig) === JSON.stringify(PRESET_CONFIGS.development);
           if (isUnmodified) {
             set({ customConfig: currentPresetConfig });
           }
@@ -508,7 +579,7 @@ export const useStore = create<StoreState>()(
           set({ customConfig: PRESET_CONFIGS[mode] });
         }
       },
-      
+
       updateCustomConfig: (key, value) => {
         const currentConfig = get().customConfig;
         set({
@@ -518,7 +589,7 @@ export const useStore = create<StoreState>()(
           },
         });
       },
-      
+
       updateTokenMap: (token, url) => {
         const currentConfig = get().customConfig;
         set({
@@ -531,15 +602,17 @@ export const useStore = create<StoreState>()(
           },
         });
       },
-      
+
       getCurrentConfig: () => {
         const { configMode, customConfig } = get();
         if (configMode === 'custom') {
-          return customConfig;
+          // Merge over production defaults so stale localStorage entries
+          // never leave fields undefined after a schema migration.
+          return { ...PRESET_CONFIGS.production, ...customConfig };
         }
         return PRESET_CONFIGS[configMode];
       },
-      
+
       resetToDefaults: () => {
         const { configMode } = get();
         if (configMode !== 'custom') {
@@ -576,7 +649,10 @@ export const useStore = create<StoreState>()(
         if (cacheKeys.length > MAX_CACHE_ENTRIES) {
           // Sort by timestamp (oldest first) and remove excess
           const sortedEntries = cacheKeys
-            .map(key => ({ key, timestamp: mergedCache[key].timestamp }))
+            .map((key) => ({
+              key,
+              timestamp: mergedCache[key].timestamp,
+            }))
             .sort((a, b) => a.timestamp - b.timestamp);
 
           const entriesToRemove = sortedEntries.slice(0, cacheKeys.length - MAX_CACHE_ENTRIES);
@@ -584,7 +660,9 @@ export const useStore = create<StoreState>()(
             delete mergedCache[key];
           });
 
-          console.log(`Smart Deploy cache: evicted ${entriesToRemove.length} old entries (limit: ${MAX_CACHE_ENTRIES})`);
+          console.log(
+            `Smart Deploy cache: evicted ${entriesToRemove.length} old entries (limit: ${MAX_CACHE_ENTRIES})`
+          );
         }
 
         set({ fileHashCache: mergedCache });
@@ -626,17 +704,22 @@ export const useStore = create<StoreState>()(
         if (!lastDeployedAppName) return null;
         const app = deployedApps[lastDeployedAppName];
         if (!app) return null;
-        return { appName: lastDeployedAppName, appVersion: app.appVersion };
+        return {
+          appName: lastDeployedAppName,
+          appVersion: app.appVersion,
+        };
       },
 
       // Browse Data feature actions
-      setBrowseConfig: (config) => set((state) => ({
-        browseConfig: { ...state.browseConfig, ...config }
-      })),
+      setBrowseConfig: (config) =>
+        set((state) => ({
+          browseConfig: { ...state.browseConfig, ...config },
+        })),
       resetBrowseConfig: () => set({ browseConfig: DEFAULT_BROWSE_CONFIG }),
     }),
     {
       name: 'turbo-gateway-store',
+      version: 1,
       partialize: (state) => ({
         address: state.address,
         walletType: state.walletType,

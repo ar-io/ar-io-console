@@ -174,7 +174,7 @@ The ar.io Console is accessible through any modern web browser at the deployment
 **Capture Features**
 - URL input with validation
 - Progressive disclosure: ArNS and upload options appear after capture
-- Optional ArNS name/undername assignment (Arweave wallets only)
+- Optional ArNS name/undername assignment (Solana wallets only)
 - Automatic file naming: `capture-{domain}-{timestamp}.png`
 - Standardized metadata tags for organization
 - Unified upload history with camera icon badge
@@ -600,7 +600,7 @@ All captures include standardized tags:
 **Wallet Requirements**
 - Arweave, Ethereum, and Solana wallets can deploy sites
 - All wallet types support site deployment with proper signers
-- ArconnectSigner required for ArNS/ANT updates (Arweave wallets only)
+- Solana wallet required for ArNS/ANT updates (Solana wallets only)
 - Email authentication users can deploy via embedded Ethereum wallet
 
 ---
@@ -699,7 +699,7 @@ All captures include standardized tags:
 **Wallet Requirements**
 - Only Arweave wallets can update ArNS records
 - ArconnectSigner required for ANT operations
-- Ethereum and Solana wallets cannot manage ArNS
+- Ethereum and Arweave wallets cannot manage ArNS
 
 ---
 
@@ -777,12 +777,7 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 
 ### 🌐 External Network Tools
 
-**Network Explorer (scan.ar.io)**
-- Search transactions and messages on the ar.io network
-- View block details and transaction history
-- Explore network activity and data
-
-**Gateway Dashboard (gateways.ar.io)**
+**Network Dashboard (gateways.ar.io)**
 - View all gateways on the ar.io network
 - Delegate stake to gateway operators
 - Monitor gateway performance and health
@@ -890,10 +885,9 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 
 **Wallet Adapter Ecosystem**
 - @solana/wallet-adapter-react integration
-- Phantom wallet with WalletAdapterNetwork.Mainnet
-- Solflare wallet support
-- Custom SolanaWalletAdapter implementation
-- Direct provider access via `window.solana`
+- Phantom and Solflare auto-detected via Standard Wallet API
+- Wallet adapter integration via `useWallet()` from `@solana/wallet-adapter-react`
+- ArNS record management (only wallet type that supports ArNS updates)
 
 **Wallet Features**
 - Fiat and crypto payment support
@@ -929,8 +923,7 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - Search Domains (`/domains`)
 - Pricing Calculator (`/calculator`)
 - Check Balance (`/balances`)
-- Network Explorer (external: scan.ar.io)
-- Gateway Dashboard (external: gateways.ar.io)
+- Network Dashboard (external: gateways.ar.io)
 - Developer Docs (external: docs.ar.io)
 
 *Profile Dropdown* (Logged In Users):
@@ -952,7 +945,7 @@ Developer documentation is available at **docs.ar.io** with comprehensive guides
 - Landing: `/`
 - Services: `/topup`, `/upload`, `/capture`, `/deploy`, `/share`, `/gift`, `/redeem`, `/account`
 - Tools: `/domains`, `/calculator`, `/services-calculator`, `/balances`, `/settings`, `/deployments`
-- External: scan.ar.io (Explorer), gateways.ar.io (Gateway Dashboard), docs.ar.io (Developer Docs)
+- External: gateways.ar.io (Network Dashboard), docs.ar.io (Developer Docs)
 - Payment callbacks integrated with route parameters
 
 ### 📱 Responsive Design
@@ -1573,7 +1566,7 @@ The ar.io Console is the unified platform for interacting with the AR.IO Network
 - Configurable environments for testing and development
 - API documentation with live endpoints
 - Open-source codebase for contributions and customization
-- Network tools: Explorer (scan.ar.io) and Gateway Dashboard (gateways.ar.io)
+- Network tools: Network Dashboard (gateways.ar.io)
 
 **For Enterprises**
 - Transparent, predictable pricing

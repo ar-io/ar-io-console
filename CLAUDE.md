@@ -107,9 +107,9 @@ The Browse feature allows users to view permaweb content with optional cryptogra
 
 | Wallet | Signer | Notes |
 |--------|--------|-------|
-| Arweave (Wander) | `ArconnectSigner` via `window.arweaveWallet` | Required for ArNS updates |
+| Arweave (Wander) | `ArconnectSigner` via `window.arweaveWallet` | Uploads and payments only |
 | Ethereum (all) | `InjectedEthereumSigner` from `@ar.io/sdk/web` | Supports MetaMask, RainbowKit, WalletConnect, Coinbase |
-| Solana (Phantom/Solflare) | Custom `SolanaWalletAdapter` | Uses `window.solana` |
+| Solana (Phantom/Solflare) | Wallet adapter via `useWallet()` | Required for ArNS updates; auto-detected via Standard Wallet API |
 
 **Email Auth (Privy):** Creates embedded Ethereum wallet via `@privy-io/react-auth`
 
@@ -184,16 +184,15 @@ import { useEthereumTurboClient } from '../hooks/useEthereumTurboClient';
 const { createEthereumTurboClient } = useEthereumTurboClient();
 const turbo = await createEthereumTurboClient('base-ario'); // or 'base-eth', 'base-usdc', etc.
 
-// Solana wallet
+// Solana wallet (uses wallet adapter — works with Phantom, Solflare, or any Standard Wallet API wallet)
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useWallet } from '@solana/wallet-adapter-react';
-const { publicKey, signMessage } = useWallet();
-// Create adapter that implements TurboWalletSigner interface
-const solanaAdapter = {
-  publicKey,
-  signMessage: async (message: Uint8Array) => signMessage!(message),
-};
-const turbo = TurboFactory.authenticated({ signer: solanaAdapter, token: 'solana', ...turboConfig });
+const { publicKey, signMessage, signTransaction } = useWallet();
+const turbo = TurboFactory.authenticated({
+  token: 'solana',
+  walletAdapter: { publicKey, signMessage: signMessage!, signTransaction: signTransaction! },
+  ...turboConfig,
+});
 
 // Manual Ethereum client (for non-hook contexts - prefer the hook above)
 import { InjectedEthereumSigner } from '@ar.io/sdk/web';
@@ -296,7 +295,7 @@ Network-specific settings in `constants.ts`:
 | Buy Credits (Crypto) | ✅ AR/ARIO | ✅ ETH/Base-ETH/Base-ARIO/POL/USDC | ✅ SOL |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ✅ | ✅ | ❌ |
+| Update ArNS Records | ❌ | ❌ | ✅ |
 | JIT Payments | ✅ ARIO | ✅ Base-ARIO, Base-ETH, Base-USDC | ✅ SOL |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 

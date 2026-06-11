@@ -43,7 +43,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
       case 'arweave':
         return `https://viewblock.io/arweave/tx/${txId}`;
       case 'ario':
-        return `https://scan.ar.io/#/message/${txId}`;
+        return `https://solscan.io/tx/${txId}`;
       case 'solana':
         return `https://solscan.io/tx/${txId}`;
       default:

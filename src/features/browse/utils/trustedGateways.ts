@@ -1,8 +1,8 @@
-import { ARIO } from "@ar.io/sdk";
-import type { GatewayWithStake } from "../types";
+import { getARIO } from '@/utils';
+import type { GatewayWithStake } from '../types';
 
-const CACHE_KEY = "ar-io-console-trusted-gateways-v2";
-const ALL_GATEWAYS_CACHE_KEY = "ar-io-console-all-gateways-v1";
+const CACHE_KEY = 'ar-io-console-trusted-gateways-v2';
+const ALL_GATEWAYS_CACHE_KEY = 'ar-io-console-all-gateways-v1';
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const TOP_POOL_SIZE = 20; // Always fetch top 20 by stake, then pick from this pool
 
@@ -18,9 +18,7 @@ interface TrustedGatewayCache {
  * @param count Number of gateways to return (1-20, default 3)
  * @returns Array of gateways with URL and stake info
  */
-export async function getTrustedGateways(
-  count: number = 3,
-): Promise<GatewayWithStake[]> {
+export async function getTrustedGateways(count: number = 3): Promise<GatewayWithStake[]> {
   const validCount = Math.max(1, Math.min(20, count));
 
   // Check cache for the top 20 pool
@@ -33,7 +31,7 @@ export async function getTrustedGateways(
 
   // Fetch from AR.IO network
   try {
-    const ario = ARIO.mainnet();
+    const ario = getARIO();
 
     // Fetch ALL gateways since the SDK can't sort by total stake (operator + delegated)
     const result = await ario.getGateways({
@@ -41,28 +39,25 @@ export async function getTrustedGateways(
     });
 
     if (!result.items || result.items.length === 0) {
-      throw new Error("No gateways returned from AR.IO network");
+      throw new Error('No gateways returned from AR.IO network');
     }
 
     // Filter active gateways and calculate total stake (operator + delegated)
     const gatewaysWithTotalStake = result.items
-      .filter(
-        (gateway) => gateway.status === "joined" && gateway.settings?.fqdn,
-      )
-      .map((gateway) => ({
+      .filter((gateway: any) => gateway.status === 'joined' && gateway.settings?.fqdn)
+      .map((gateway: any) => ({
         url: `https://${gateway.settings.fqdn}`,
-        totalStake:
-          (gateway.operatorStake || 0) + (gateway.totalDelegatedStake || 0),
+        totalStake: (gateway.operatorStake || 0) + (gateway.totalDelegatedStake || 0),
       }));
 
     // Sort by TOTAL stake descending
-    gatewaysWithTotalStake.sort((a, b) => b.totalStake - a.totalStake);
+    gatewaysWithTotalStake.sort((a: GatewayWithStake, b: GatewayWithStake) => b.totalStake - a.totalStake);
 
     // Take top N by total stake for the pool
     const topPool = gatewaysWithTotalStake.slice(0, TOP_POOL_SIZE);
 
     if (topPool.length === 0) {
-      throw new Error("No active staked gateways found");
+      throw new Error('No active staked gateways found');
     }
 
     // Cache the full pool (with stake info)
@@ -72,8 +67,8 @@ export async function getTrustedGateways(
     const shuffled = shuffleArray([...topPool]);
     return shuffled.slice(0, validCount);
   } catch (error) {
-    console.error("[Gateways] Failed to fetch staked gateways:", error);
-    return [{ url: "https://turbo-gateway.com", totalStake: 0 }];
+    console.error('[Gateways] Failed to fetch staked gateways:', error);
+    return [{ url: 'https://turbo-gateway.com', totalStake: 0 }];
   }
 }
 
@@ -95,7 +90,7 @@ export async function getTopStakedGateways(): Promise<GatewayWithStake[]> {
 
   // Now return from cache (sorted)
   const freshCached = getCachedGateways();
-  return freshCached || [{ url: "https://turbo-gateway.com", totalStake: 0 }];
+  return freshCached || [{ url: 'https://turbo-gateway.com', totalStake: 0 }];
 }
 
 /**
@@ -112,32 +107,29 @@ export async function getAllJoinedGateways(): Promise<GatewayWithStake[]> {
 
   // Fetch from AR.IO network
   try {
-    const ario = ARIO.mainnet();
+    const ario = getARIO();
 
     const result = await ario.getGateways({
       limit: 1000,
     });
 
     if (!result.items || result.items.length === 0) {
-      throw new Error("No gateways returned from AR.IO network");
+      throw new Error('No gateways returned from AR.IO network');
     }
 
     // Filter active gateways and calculate total stake (operator + delegated)
     const gatewaysWithTotalStake = result.items
-      .filter(
-        (gateway) => gateway.status === "joined" && gateway.settings?.fqdn,
-      )
-      .map((gateway) => ({
+      .filter((gateway: any) => gateway.status === 'joined' && gateway.settings?.fqdn)
+      .map((gateway: any) => ({
         url: `https://${gateway.settings.fqdn}`,
-        totalStake:
-          (gateway.operatorStake || 0) + (gateway.totalDelegatedStake || 0),
+        totalStake: (gateway.operatorStake || 0) + (gateway.totalDelegatedStake || 0),
       }));
 
     // Sort by TOTAL stake descending
-    gatewaysWithTotalStake.sort((a, b) => b.totalStake - a.totalStake);
+    gatewaysWithTotalStake.sort((a: GatewayWithStake, b: GatewayWithStake) => b.totalStake - a.totalStake);
 
     if (gatewaysWithTotalStake.length === 0) {
-      throw new Error("No active staked gateways found");
+      throw new Error('No active staked gateways found');
     }
 
     // Cache all gateways
@@ -145,8 +137,8 @@ export async function getAllJoinedGateways(): Promise<GatewayWithStake[]> {
 
     return gatewaysWithTotalStake;
   } catch (error) {
-    console.error("[Gateways] Failed to fetch all joined gateways:", error);
-    return [{ url: "https://turbo-gateway.com", totalStake: 0 }];
+    console.error('[Gateways] Failed to fetch all joined gateways:', error);
+    return [{ url: 'https://turbo-gateway.com', totalStake: 0 }];
   }
 }
 
@@ -233,7 +225,7 @@ export async function getRoutingGateways(): Promise<URL[]> {
   try {
     // 5 second timeout to prevent hanging on unresponsive endpoints
     const signal = AbortSignal.timeout(5000);
-    const response = await fetch("https://turbo-gateway.com/ar-io/peers", {
+    const response = await fetch('https://turbo-gateway.com/ar-io/peers', {
       signal,
     });
     if (!response.ok) {
@@ -246,11 +238,11 @@ export async function getRoutingGateways(): Promise<URL[]> {
     // Format: { gateways: { "domain:port": { url: "https://...", dataWeight: 50 }, ... } }
     const gateways: URL[] = [];
 
-    if (data.gateways && typeof data.gateways === "object") {
+    if (data.gateways && typeof data.gateways === 'object') {
       // Extract URLs from gateway objects
       for (const gatewayInfo of Object.values(data.gateways)) {
         const info = gatewayInfo as { url?: string };
-        if (info.url && typeof info.url === "string") {
+        if (info.url && typeof info.url === 'string') {
           try {
             gateways.push(new URL(info.url));
           } catch {
@@ -261,9 +253,9 @@ export async function getRoutingGateways(): Promise<URL[]> {
     } else if (Array.isArray(data)) {
       // Fallback: handle array format if endpoint changes
       for (const peer of data) {
-        if (!peer || typeof peer !== "string") continue;
+        if (!peer || typeof peer !== 'string') continue;
         try {
-          if (peer.startsWith("http://") || peer.startsWith("https://")) {
+          if (peer.startsWith('http://') || peer.startsWith('https://')) {
             gateways.push(new URL(peer));
           } else {
             gateways.push(new URL(`https://${peer}`));
@@ -273,11 +265,11 @@ export async function getRoutingGateways(): Promise<URL[]> {
         }
       }
     } else {
-      throw new Error("Unexpected response format from peers endpoint");
+      throw new Error('Unexpected response format from peers endpoint');
     }
 
     if (gateways.length === 0) {
-      throw new Error("No valid gateways found in peers response");
+      throw new Error('No valid gateways found in peers response');
     }
 
     // Shuffle for load distribution
@@ -289,7 +281,7 @@ export async function getRoutingGateways(): Promise<URL[]> {
     // Return a reasonable subset (e.g., 20 gateways)
     return gateways.slice(0, Math.min(20, gateways.length));
   } catch (error) {
-    console.error("[Gateways] Failed to fetch routing gateways:", error);
+    console.error('[Gateways] Failed to fetch routing gateways:', error);
     // Return empty array - service worker will fall back to verification gateways
     return [];
   }

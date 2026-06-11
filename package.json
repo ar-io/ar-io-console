@@ -1,6 +1,6 @@
 {
   "name": "ar-io-console",
-  "version": "1.2.3",
+  "version": "2.0.0",
   "type": "module",
   "description": "ar.io Console - Upload and access permanent data through the ar.io Network",
   "scripts": {
@@ -17,14 +17,13 @@
     "type-check": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc --noEmit"
   },
   "dependencies": {
-    "@ar.io/sdk": "^3.21.0",
+    "@ar.io/sdk": "4.0.2",
     "@ar.io/wayfinder-core": "^1.9.1",
     "@ar.io/wayfinder-react": "^1.0.28",
     "@ardrive/turbo-sdk": "^1.39.2",
     "@fontsource-variable/besley": "^5.2.8",
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@headlessui/react": "^2.1.2",
-    "@permaweb/aoconnect": "^0.0.69",
     "@privy-io/react-auth": "^3.0.1",
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.2",
@@ -33,6 +32,7 @@
     "@solana/wallet-adapter-react": "^0.15.35",
     "@solana/wallet-adapter-react-ui": "^0.9.35",
     "@solana/wallet-adapter-wallets": "^0.19.32",
+    "@solana/kit": "^6.9.0",
     "@solana/web3.js": "^1.95.2",
     "@stripe/react-stripe-js": "^2.8.0",
     "@stripe/stripe-js": "^4.3.0",

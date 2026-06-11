@@ -498,8 +498,8 @@ export default function CapturePanel() {
         </div>
       )}
 
-      {/* ArNS Association Panel - Show for Arweave/Ethereum wallets when not uploading and URL is valid */}
-      {!uploading && hasValidUrl && (walletType === 'arweave' || walletType === 'ethereum') && (
+      {/* ArNS Association Panel - Show for Solana wallets when not uploading and URL is valid */}
+      {!uploading && hasValidUrl && walletType === 'solana' && (
         <ArNSAssociationPanel
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
@@ -694,7 +694,7 @@ export default function CapturePanel() {
                             >
                               <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                             </button>
-                            {(walletType === 'arweave' || walletType === 'ethereum') && (
+                            {walletType === 'solana' && (
                               <button
                                 onClick={() => setShowAssignDomainModal(result.id)}
                                 className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
@@ -784,7 +784,7 @@ export default function CapturePanel() {
                                       <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                                       Check Status
                                     </button>
-                                    {(walletType === 'arweave' || walletType === 'ethereum') && (
+                                    {walletType === 'solana' && (
                                       <button
                                         onClick={() => {
                                           setShowAssignDomainModal(result.id);

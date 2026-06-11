@@ -16,7 +16,7 @@ import {
   Edit3,
   Info,
   ChevronDown,
-  Users
+  Users,
 } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
@@ -24,7 +24,18 @@ import { formatWalletAddress } from '../../utils';
 import { useStore } from '../../store/useStore';
 
 export default function GatewayInfoPanel() {
-  const { uploadServiceInfo, gatewayInfo, arIOGatewayInfo, pricingInfo, arweaveNodeInfo, peersInfo, loading, error, refreshing, refresh } = useGatewayInfo();
+  const {
+    uploadServiceInfo,
+    gatewayInfo,
+    arIOGatewayInfo,
+    pricingInfo,
+    arweaveNodeInfo,
+    peersInfo,
+    loading,
+    error,
+    refreshing,
+    refresh,
+  } = useGatewayInfo();
   const {
     configMode,
     setConfigMode,
@@ -33,7 +44,7 @@ export default function GatewayInfoPanel() {
     getCurrentConfig,
     resetToDefaults,
     x402OnlyMode,
-    setX402OnlyMode
+    setX402OnlyMode,
   } = useStore();
 
   const currentConfig = getCurrentConfig();
@@ -70,9 +81,7 @@ export default function GatewayInfoPanel() {
         </div>
         <div className="flex-1">
           <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Settings</h3>
-          <p className="text-sm text-foreground/80">
-            Configure settings and view live service status
-          </p>
+          <p className="text-sm text-foreground/80">Configure settings and view live service status</p>
         </div>
         <button
           onClick={refresh}
@@ -104,12 +113,15 @@ export default function GatewayInfoPanel() {
             <div>
               <h4 className="text-lg font-bold font-heading text-foreground">Endpoint Configuration</h4>
               <p className="text-sm text-foreground/80">
-                {configMode === 'production' ? 'Production' : configMode === 'development' ? 'Development' : 'Custom'} environment
+                {configMode === 'production' ? 'Production' : configMode === 'development' ? 'Development' : 'Custom'}{' '}
+                environment
                 {x402OnlyMode && ' • X402-Only mode enabled'}
               </p>
             </div>
           </div>
-          <ChevronDown className={`w-5 h-5 text-foreground/80 transition-transform ${configExpanded ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-5 h-5 text-foreground/80 transition-transform ${configExpanded ? 'rotate-180' : ''}`}
+          />
         </button>
 
         {configExpanded && (
@@ -207,9 +219,9 @@ export default function GatewayInfoPanel() {
                         <div className="text-xs">
                           <div className="font-medium text-foreground mb-1">X402-Only Mode</div>
                           <p className="text-foreground/80 leading-relaxed">
-                            Enable for bundlers that only support x402 payments (BASE-USDC microtransactions).
-                            Disables all payment service features: credits, fiat top-ups, gifts, and balance checking.
-                            Only crypto payments via x402 will be available.
+                            Enable for bundlers that only support x402 payments (BASE-USDC microtransactions). Disables
+                            all payment service features: credits, fiat top-ups, gifts, and balance checking. Only
+                            crypto payments via x402 will be available.
                           </p>
                         </div>
                       </PopoverPanel>
@@ -313,29 +325,88 @@ export default function GatewayInfoPanel() {
                   ) : (
                     <div className="flex items-center gap-2">
                       <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono">
-                        {currentConfig.stripeKey.substring(0, 20)}...{currentConfig.stripeKey.substring(currentConfig.stripeKey.length - 4)}
+                        {currentConfig.stripeKey.substring(0, 20)}
+                        ...
+                        {currentConfig.stripeKey.substring(currentConfig.stripeKey.length - 4)}
                       </code>
                       <CopyButton textToCopy={currentConfig.stripeKey} />
                     </div>
                   )}
                 </div>
 
-                {/* Process ID */}
+                {/* Solana Program IDs */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO Process ID</label>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO Core Program ID</label>
                   {configMode === 'custom' ? (
                     <input
                       type="text"
-                      value={currentConfig.processId}
-                      onChange={(e) => updateCustomConfig('processId', e.target.value)}
+                      value={currentConfig.coreProgramId}
+                      onChange={(e) => updateCustomConfig('coreProgramId', e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   ) : (
                     <div className="flex items-center gap-2">
                       <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
-                        {currentConfig.processId}
+                        {currentConfig.coreProgramId}
                       </code>
-                      <CopyButton textToCopy={currentConfig.processId} />
+                      <CopyButton textToCopy={currentConfig.coreProgramId} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO GAR Program ID</label>
+                  {configMode === 'custom' ? (
+                    <input
+                      type="text"
+                      value={currentConfig.garProgramId}
+                      onChange={(e) => updateCustomConfig('garProgramId', e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                        {currentConfig.garProgramId}
+                      </code>
+                      <CopyButton textToCopy={currentConfig.garProgramId} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO ArNS Program ID</label>
+                  {configMode === 'custom' ? (
+                    <input
+                      type="text"
+                      value={currentConfig.arnsProgramId}
+                      onChange={(e) => updateCustomConfig('arnsProgramId', e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                        {currentConfig.arnsProgramId}
+                      </code>
+                      <CopyButton textToCopy={currentConfig.arnsProgramId} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO ANT Program ID</label>
+                  {configMode === 'custom' ? (
+                    <input
+                      type="text"
+                      value={currentConfig.antProgramId}
+                      onChange={(e) => updateCustomConfig('antProgramId', e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                        {currentConfig.antProgramId}
+                      </code>
+                      <CopyButton textToCopy={currentConfig.antProgramId} />
                     </div>
                   )}
                 </div>
@@ -402,7 +473,6 @@ export default function GatewayInfoPanel() {
 
       {/* Main Content Container with Gradient */}
       <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
         {/* Live Service Status */}
         {uploadServiceInfo && (
           <div className="mb-8">
@@ -422,9 +492,7 @@ export default function GatewayInfoPanel() {
                   <Users className="w-4 h-4 text-foreground/80" />
                   <div className="text-xs text-foreground/80 uppercase tracking-wider">AR.IO Peers</div>
                 </div>
-                <div className="text-lg font-bold text-foreground">
-                  {peersInfo?.gatewayCount ?? '—'}
-                </div>
+                <div className="text-lg font-bold text-foreground">{peersInfo?.gatewayCount ?? '—'}</div>
               </div>
 
               <div className="bg-card rounded-2xl p-4">
@@ -432,9 +500,7 @@ export default function GatewayInfoPanel() {
                   <Server className="w-4 h-4 text-foreground/80" />
                   <div className="text-xs text-foreground/80 uppercase tracking-wider">Arweave Peers</div>
                 </div>
-                <div className="text-lg font-bold text-foreground">
-                  {peersInfo?.arweaveNodeCount ?? '—'}
-                </div>
+                <div className="text-lg font-bold text-foreground">{peersInfo?.arweaveNodeCount ?? '—'}</div>
               </div>
             </div>
 
@@ -443,7 +509,10 @@ export default function GatewayInfoPanel() {
               <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Service Wallets</h5>
               <div className="grid md:grid-cols-2 gap-3">
                 {Object.entries(uploadServiceInfo.addresses).map(([chain, address]) => (
-                  <div key={chain} className="bg-card rounded-2xl p-3 flex justify-between items-center border border-border/20">
+                  <div
+                    key={chain}
+                    className="bg-card rounded-2xl p-3 flex justify-between items-center border border-border/20"
+                  >
                     <div>
                       <span className="text-xs text-foreground/80 uppercase tracking-wider">{chain}</span>
                       <div className="font-mono text-sm text-foreground">{formatWalletAddress(address, 12)}</div>
@@ -472,16 +541,16 @@ export default function GatewayInfoPanel() {
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Free Tier</div>
                     <div className="text-lg font-bold text-success">
-                      {uploadServiceInfo ? `${Math.round(uploadServiceInfo.freeUploadLimitBytes / 1024)} KiB` : '105 KiB'}
+                      {uploadServiceInfo
+                        ? `${Math.round(uploadServiceInfo.freeUploadLimitBytes / 1024)} KiB`
+                        : '105 KiB'}
                     </div>
                     <div className="text-xs text-foreground/80 mt-1">No cost for small files</div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Rate</div>
-                    <div className="text-lg font-bold text-primary">
-                      ${pricingInfo.usdPerGiB.toFixed(4)}
-                    </div>
+                    <div className="text-lg font-bold text-primary">${pricingInfo.usdPerGiB.toFixed(4)}</div>
                     <div className="text-xs text-foreground/80 mt-1">Per GiB via ar.io</div>
                   </div>
 
@@ -492,8 +561,7 @@ export default function GatewayInfoPanel() {
                         ? pricingInfo.baseGatewayPrice === 0
                           ? 'FREE'
                           : `$${pricingInfo.baseGatewayPrice.toFixed(4)}`
-                        : 'Unavailable'
-                      }
+                        : 'Unavailable'}
                     </div>
                     <div className="text-xs text-foreground/80 mt-1">Per GiB raw network cost</div>
                   </div>
@@ -503,12 +571,9 @@ export default function GatewayInfoPanel() {
                     <div className="text-lg font-bold text-primary">
                       {pricingInfo.turboFeePercentage !== undefined
                         ? `+${pricingInfo.turboFeePercentage.toFixed(1)}%`
-                        : 'Unavailable'
-                      }
+                        : 'Unavailable'}
                     </div>
-                    <div className="text-xs text-foreground/80 mt-1">
-                      vs raw Arweave network
-                    </div>
+                    <div className="text-xs text-foreground/80 mt-1">vs raw Arweave network</div>
                   </div>
                 </div>
               </div>
@@ -517,14 +582,18 @@ export default function GatewayInfoPanel() {
             {/* Access Pricing (x402) */}
             {gatewayInfo?.x402?.enabled && gatewayInfo.x402.dataEgress?.pricing && (
               <div>
-                <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Access Pricing (x402)</h5>
+                <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">
+                  Access Pricing (x402)
+                </h5>
                 <div className="grid md:grid-cols-4 gap-4">
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Min Price</div>
                     <div className="text-lg font-bold text-success">
                       ${parseFloat(gatewayInfo.x402.dataEgress.pricing.minPrice).toFixed(4)}
                     </div>
-                    <div className="text-xs text-foreground/80 mt-1">{gatewayInfo.x402.dataEgress.pricing.currency}</div>
+                    <div className="text-xs text-foreground/80 mt-1">
+                      {gatewayInfo.x402.dataEgress.pricing.currency}
+                    </div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
@@ -532,7 +601,9 @@ export default function GatewayInfoPanel() {
                     <div className="text-lg font-bold text-foreground">
                       ${gatewayInfo.x402.dataEgress.pricing.exampleCosts['1MB'].toFixed(4)}
                     </div>
-                    <div className="text-xs text-foreground/80 mt-1">{gatewayInfo.x402.dataEgress.pricing.currency}</div>
+                    <div className="text-xs text-foreground/80 mt-1">
+                      {gatewayInfo.x402.dataEgress.pricing.currency}
+                    </div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
@@ -540,14 +611,14 @@ export default function GatewayInfoPanel() {
                     <div className="text-lg font-bold text-primary">
                       ${gatewayInfo.x402.dataEgress.pricing.exampleCosts['1GB'].toFixed(4)}
                     </div>
-                    <div className="text-xs text-foreground/80 mt-1">{gatewayInfo.x402.dataEgress.pricing.currency}</div>
+                    <div className="text-xs text-foreground/80 mt-1">
+                      {gatewayInfo.x402.dataEgress.pricing.currency}
+                    </div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Network</div>
-                    <div className="text-lg font-bold text-foreground capitalize">
-                      {gatewayInfo.x402.network}
-                    </div>
+                    <div className="text-lg font-bold text-foreground capitalize">{gatewayInfo.x402.network}</div>
                     <div className="text-xs text-foreground/80 mt-1">Payment network</div>
                   </div>
                 </div>
@@ -583,7 +654,10 @@ export default function GatewayInfoPanel() {
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Success Rate</div>
                     <div className="text-lg font-bold text-foreground">
-                      {((arIOGatewayInfo.stats.passedEpochCount / arIOGatewayInfo.stats.totalEpochCount) * 100).toFixed(1)}%
+                      {((arIOGatewayInfo.stats.passedEpochCount / arIOGatewayInfo.stats.totalEpochCount) * 100).toFixed(
+                        1
+                      )}
+                      %
                     </div>
                   </div>
 
@@ -607,13 +681,13 @@ export default function GatewayInfoPanel() {
             {/* Arweave Network */}
             {arweaveNodeInfo && (
               <div>
-                <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Arweave Network</h5>
+                <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">
+                  Arweave Network
+                </h5>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Block Height</div>
-                    <div className="text-lg font-bold text-primary">
-                      {arweaveNodeInfo.height.toLocaleString()}
-                    </div>
+                    <div className="text-lg font-bold text-primary">{arweaveNodeInfo.height.toLocaleString()}</div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
@@ -626,16 +700,12 @@ export default function GatewayInfoPanel() {
 
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Peers</div>
-                    <div className="text-lg font-bold text-foreground">
-                      {arweaveNodeInfo.peers}
-                    </div>
+                    <div className="text-lg font-bold text-foreground">{arweaveNodeInfo.peers}</div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">
                     <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Queue</div>
-                    <div className="text-lg font-bold text-foreground">
-                      {arweaveNodeInfo.queue_length}
-                    </div>
+                    <div className="text-lg font-bold text-foreground">{arweaveNodeInfo.queue_length}</div>
                   </div>
                 </div>
               </div>
@@ -649,7 +719,7 @@ export default function GatewayInfoPanel() {
         <h4 className="text-lg font-bold font-heading text-foreground">API and Documentation</h4>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <a
-            href={`${currentConfig.arioGatewayUrl.replace(/\/$/, '')}/ar-io/info`}
+            href={`${(currentConfig.arioGatewayUrl ?? '').replace(/\/$/, '')}/ar-io/info`}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors border border-border/20 hover:border-primary/50 flex items-start gap-3"

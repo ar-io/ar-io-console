@@ -1,20 +1,16 @@
-import { TurboUnauthenticatedConfiguration } from "@ardrive/turbo-sdk";
+import { TurboUnauthenticatedConfiguration } from '@ardrive/turbo-sdk';
 import packageJson from '../package.json';
 
 // Use VITE_NODE_ENV to determine production mode
 const isProd = import.meta.env.VITE_NODE_ENV === 'production';
 
 // Legacy constants for backwards compatibility
-export const defaultPaymentServiceUrl = isProd
-  ? "https://payment.ardrive.io"
-  : "https://payment.ardrive.dev";
-export const uploadServiceUrl = isProd
-  ? "https://upload.ardrive.io"
-  : "https://upload.ardrive.dev";
+export const defaultPaymentServiceUrl = isProd ? 'https://payment.ardrive.io' : 'https://payment.ardrive.dev';
+export const uploadServiceUrl = isProd ? 'https://upload.ardrive.io' : 'https://upload.ardrive.dev';
 export const arioProcessId = isProd
-  ? "qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE"
-  : "agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA";
-export const termsOfServiceUrl = "https://ardrive.io/tos-and-privacy/";
+  ? 'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE'
+  : 'agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA';
+export const termsOfServiceUrl = 'https://ardrive.io/tos-and-privacy/';
 export const defaultUSDAmount = 10.0;
 
 // Dynamic configuration functions (will be used by components)
@@ -30,7 +26,7 @@ export const getTurboConfig = (config?: {
       processId: config.processId,
     };
   }
-  
+
   // Fallback to legacy behavior
   return {
     paymentServiceConfig: { url: defaultPaymentServiceUrl },
@@ -43,7 +39,7 @@ export const getTurboConfig = (config?: {
 export const turboConfig: TurboUnauthenticatedConfiguration = getTurboConfig();
 export const wincPerCredit = 1_000_000_000_000;
 export const defaultDebounceMs = 500;
-export const ardriveAppUrl = "https://app.ardrive.io";
+export const ardriveAppUrl = 'https://app.ardrive.io';
 
 // App metadata for tagging uploads
 export const APP_NAME = 'ar.io Console';
@@ -54,8 +50,20 @@ export const maxARAmount = 200;
 export const minUSDAmount = 5;
 
 // Crypto token configuration - matching reference app
-export const supportedCryptoTokens = ['arweave', 'ario', 'base-ario', 'ethereum', 'base-eth', 'solana', 'kyve', 'pol', 'usdc', 'base-usdc', 'polygon-usdc'] as const;
-export type SupportedTokenType = typeof supportedCryptoTokens[number];
+export const supportedCryptoTokens = [
+  'arweave',
+  'ario',
+  'base-ario',
+  'ethereum',
+  'base-eth',
+  'solana',
+  'kyve',
+  'pol',
+  'usdc',
+  'base-usdc',
+  'polygon-usdc',
+] as const;
+export type SupportedTokenType = (typeof supportedCryptoTokens)[number];
 
 // Currency labels matching reference app
 export const tokenLabels: Record<SupportedTokenType, string> = {
@@ -67,7 +75,7 @@ export const tokenLabels: Record<SupportedTokenType, string> = {
   solana: 'SOL',
   kyve: 'KYVE',
   pol: 'POL',
-  'usdc': 'USDC (ETH)',
+  usdc: 'USDC (ETH)',
   'base-usdc': 'USDC (Base)',
   'polygon-usdc': 'USDC (Polygon)',
 } as const;
@@ -82,7 +90,7 @@ export const tokenNetworkLabels: Record<SupportedTokenType, string> = {
   solana: 'Solana Network',
   kyve: 'KYVE Network',
   pol: 'Polygon Network',
-  'usdc': 'Ethereum Mainnet',
+  usdc: 'Ethereum Mainnet',
   'base-usdc': 'the Base Network',
   'polygon-usdc': 'Polygon Network',
 } as const;
@@ -90,78 +98,81 @@ export const tokenNetworkLabels: Record<SupportedTokenType, string> = {
 // Network descriptions for user clarity
 export const tokenNetworkDescriptions: Record<SupportedTokenType, string> = {
   arweave: 'Native AR tokens on the Arweave blockchain',
-  ario: 'ARIO tokens on the AO Super Computer',
+  ario: 'ARIO tokens on the Solana network',
   'base-ario': 'ARIO tokens bridged to Base Layer 2 network',
   ethereum: 'ETH on Ethereum Layer 1 mainnet',
   'base-eth': 'ETH on Base Layer 2 network',
   solana: 'Native SOL tokens on the Solana blockchain',
   kyve: 'KYVE tokens on the KYVE network',
   pol: 'POL tokens on the Polygon network',
-  'usdc': 'USDC stablecoin on Ethereum mainnet',
+  usdc: 'USDC stablecoin on Ethereum mainnet',
   'base-usdc': 'USDC stablecoin on Base Layer 2',
   'polygon-usdc': 'USDC stablecoin on Polygon network',
 } as const;
 
 // Token processing time expectations for user communication
-export const tokenProcessingTimes: Record<SupportedTokenType, { 
-  time: string; 
-  speed: 'fast' | 'medium' | 'slow';
-  description: string;
-}> = {
-  arweave: { 
-    time: '15-45 minutes', 
+export const tokenProcessingTimes: Record<
+  SupportedTokenType,
+  {
+    time: string;
+    speed: 'fast' | 'medium' | 'slow';
+    description: string;
+  }
+> = {
+  arweave: {
+    time: '15-45 minutes',
     speed: 'slow',
-    description: 'Arweave network confirmations take time for security'
+    description: 'Arweave network confirmations take time for security',
   },
   ario: {
     time: 'near instant-3 minutes',
     speed: 'fast',
-    description: 'ARIO transfers on AO are typically fast'
+    description: 'ARIO transfers on Solana are typically fast',
   },
   'base-ario': {
     time: 'near instant-3 minutes',
     speed: 'fast',
-    description: 'ARIO on Base L2 offers faster confirmation times'
+    description: 'ARIO on Base L2 offers faster confirmation times',
   },
-  ethereum: { 
-    time: '10-30 minutes', 
+  ethereum: {
+    time: '10-30 minutes',
     speed: 'slow',
-    description: 'Ethereum L1 requires multiple confirmations'
+    description: 'Ethereum L1 requires multiple confirmations',
   },
-  'base-eth': { 
-    time: 'near instant-3 minutes', 
+  'base-eth': {
+    time: 'near instant-3 minutes',
     speed: 'fast',
-    description: 'Base L2 offers faster confirmation times'
+    description: 'Base L2 offers faster confirmation times',
   },
-  solana: { 
-    time: '1-2 minutes', 
+  solana: {
+    time: '1-2 minutes',
     speed: 'fast',
-    description: 'Solana transactions confirm quickly'
+    description: 'Solana transactions confirm quickly',
   },
   kyve: {
     time: '5-15 minutes',
     speed: 'medium',
-    description: 'KYVE network processing time'
+    description: 'KYVE network processing time',
   },
   pol: {
     time: '2-5 minutes',
     speed: 'fast',
-    description: 'Polygon network is optimized for speed'
+    description: 'Polygon network is optimized for speed',
   },
-  'usdc': {
+  usdc: {
     time: '10-30 minutes',
     speed: 'slow',
-    description: 'USDC on Ethereum L1 requires multiple confirmations'
+    description: 'USDC on Ethereum L1 requires multiple confirmations',
   },
   'base-usdc': {
     time: 'near instant-3 minutes',
     speed: 'fast',
-    description: 'USDC on Base L2 offers faster confirmation times'
+    description: 'USDC on Base L2 offers faster confirmation times',
   },
   'polygon-usdc': {
     time: '2-5 minutes',
     speed: 'fast',
-    description: 'USDC on Polygon network is optimized for speed'
+    description: 'USDC on Polygon network is optimized for speed',
   },
 } as const;
 
@@ -221,14 +232,13 @@ export const BASE_ARIO_CONFIG = {
 } as const;
 
 // ERC-20 ABI for token balance checking
-export const ERC20_ABI = [
-  'function balanceOf(address owner) view returns (uint256)',
-] as const;
+export const ERC20_ABI = ['function balanceOf(address owner) view returns (uint256)'] as const;
 
 // Preset amounts for each token type
 // Error messages matching reference app
 export const valueStringError = `Error: Unable to fetch credit estimate`;
-export const errorSubmittingTransactionToTurbo = 'Error submitting transaction to Turbo. Please try again or contact support.';
+export const errorSubmittingTransactionToTurbo =
+  'Error submitting transaction to Turbo. Please try again or contact support.';
 
 // Button values matching reference app
 export const BUTTON_VALUES = {

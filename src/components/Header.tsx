@@ -1,8 +1,9 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings, Server, ScanSearch, Compass, PencilLine, ShieldCheck } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import CopyButton from './CopyButton';
 import { useStore } from '../store/useStore';
 import { formatWalletAddress, getTurboBalance } from '../utils';
@@ -34,8 +35,7 @@ const utilityServices = [
   { name: 'Verify Data', page: 'verify' as const, icon: ShieldCheck },
   { name: 'Search Domains', page: 'domains' as const, icon: Globe },
   { name: 'Manage Domains', href: 'https://arns.ar.io/#/manage/names', icon: PencilLine, external: true },
-  { name: 'Network Explorer', href: 'https://scan.ar.io', icon: ScanSearch, external: true },
-  { name: 'Gateway Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
+  { name: 'Network Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
   { name: 'Developer Docs', href: 'https://docs.ar.io', icon: Code, external: true },
 ];
 
@@ -46,8 +46,8 @@ const Header = () => {
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
-  // Only check ArNS for Arweave/Ethereum wallets - Solana can't own ArNS names
-  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(walletType !== 'solana' ? address : null);
+  const { disconnect: solanaDisconnect } = useWallet(); // Solana wallet adapter disconnect
+  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(address);
 
   const [credits, setCredits] = useState<string>('0');
   const [creditsNumeric, setCreditsNumeric] = useState<number>(0);
@@ -438,7 +438,7 @@ const Header = () => {
                   if (walletType === 'ethereum') {
                     explorerUrl = `https://etherscan.io/address/${address}`;
                   } else if (walletType === 'solana') {
-                    explorerUrl = `https://explorer.solana.com/address/${address}`;
+                    explorerUrl = `https://solscan.io/account/${address}`;
                   } else {
                     explorerUrl = `https://viewblock.io/arweave/address/${address}`;
                   }
@@ -500,12 +500,10 @@ const Header = () => {
                       }
                       // Clear cached Turbo clients
                       clearEthereumTurboClientCache();
-                    } else if (walletType === 'solana' && window.solana) {
-                      // Properly disconnect Solana wallet to prevent conflicts
+                    } else if (walletType === 'solana') {
+                      // Disconnect via wallet adapter (handles all Solana wallets)
                       try {
-                        if (window.solana.isConnected) {
-                          await window.solana.disconnect();
-                        }
+                        await solanaDisconnect();
                       } catch {
                         // Solana wallet disconnect failed, continue anyway
                       }

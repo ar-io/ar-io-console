@@ -37,7 +37,7 @@ npm run dev       # Start dev server at http://localhost:3000
 - **Wallets**: Arweave (Wander), Ethereum (Wagmi/RainbowKit/Privy), Solana (wallet-adapter)
 - **Payments**: Stripe (fiat), native crypto, X402 protocol (Base USDC)
 - **Styling**: Tailwind CSS, Besley + Plus Jakarta Sans fonts
-- **Key SDKs**: `@ardrive/turbo-sdk` ^1.39.2, `@ar.io/sdk` ^3.19.0-alpha.10
+- **Key SDKs**: `@ardrive/turbo-sdk`, `@ar.io/sdk` 4.0.2
 
 ## Environment Variables
 
@@ -73,8 +73,7 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 
 External resources are available via the navigation menu:
 - **Developer Docs**: [docs.ar.io](https://docs.ar.io)
-- **Network Explorer**: [scan.ar.io](https://scan.ar.io)
-- **Gateway Dashboard**: [gateways.ar.io](https://gateways.ar.io)
+- **Network Dashboard**: [gateways.ar.io](https://gateways.ar.io)
 
 ## Wallet Capabilities
 
@@ -83,7 +82,7 @@ External resources are available via the navigation menu:
 | Buy Credits (Fiat/Crypto) | ✅ | ✅ | ✅ |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ✅ | ✅ | ❌ |
+| Update ArNS Records | ❌ | ❌ | ✅ |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
 ## Documentation
