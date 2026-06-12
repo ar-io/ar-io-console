@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { User, Globe, ExternalLink, RefreshCw, Calendar, ArrowRight } from 'lucide-react';
+import { User, Globe, RefreshCw, ArrowRight } from 'lucide-react';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { makePossessive } from '../utils';

@@ -13,7 +13,6 @@ import { supportsJitPayment } from '../utils/jitPayment';
 import { formatUploadError } from '../utils/errorMessages';
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
-import { useFreeUploadLimit } from './useFreeUploadLimit';
 import { getContentType } from '../utils/mimeTypes';
 
 interface UploadResult {
@@ -72,8 +71,7 @@ export function useFileUpload() {
   const { wallets } = useWallets(); // Get Privy wallets
   const ethAccount = useAccount(); // RainbowKit/Wagmi account state
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
-  const { createEthereumTurboClient } = useEthereumTurboClient(); // Shared Ethereum client with custom connect message
-  const freeUploadLimitBytes = useFreeUploadLimit(); // Get free upload limit
+  const { createEthereumTurboClient } = useEthereumTurboClient();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
@@ -475,7 +473,7 @@ export function useFileUpload() {
       setErrors(prev => ({ ...prev, [fileName]: errorMessage }));
       throw error;
     }
-  }, [address, walletType, wallets, ethAccount.chainId, createTurboClient, freeUploadLimitBytes]);
+  }, [address, walletType, wallets, ethAccount.chainId, createTurboClient]);
 
   const uploadMultipleFiles = useCallback(async (
     files: File[],
@@ -648,7 +646,7 @@ export function useFileUpload() {
 
     setUploading(false);
     return { results, failedFiles: failedFileNames };
-  }, [uploadFile, validateWalletState, isCancelled, createTurboClient]);
+  }, [uploadFile, validateWalletState, isCancelled, createTurboClient, getCurrentConfig]);
 
   const reset = useCallback(() => {
     setUploadProgress({});

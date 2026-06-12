@@ -14,7 +14,7 @@ export default function BaseModal({ onClose, children, showCloseButton = false }
     <>
       {/* Modal backdrop */}
       <div 
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9998]"
+        className="fixed inset-0 bg-black/80 z-[9998]"
         onClick={onClose}
         style={{
           position: 'fixed',

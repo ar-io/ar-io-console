@@ -174,6 +174,7 @@ export default function TryItNowPanel() {
         });
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privyWallets, waitingForWallet]);
 
   // Check if file is previewable (image)

@@ -1119,9 +1119,10 @@ export default function DeploySitePanel() {
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
+    const urls = previewUrlsRef.current;
     return () => {
-      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-      previewUrlsRef.current.clear();
+      urls.forEach(url => URL.revokeObjectURL(url));
+      urls.clear();
     };
   }, []);
 
