@@ -353,9 +353,9 @@ export default function TopUpPanel() {
   const getAvailableTokens = useCallback((): SupportedTokenType[] => {
     switch (walletType) {
       case 'arweave':
-        return ['ario', 'arweave']; // ARIO first (preferred default for Arweave wallets)
+        return ['arweave'];
       case 'ethereum':
-        return ['base-ario', 'ario', 'base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum']; // Base ARIO first, then ARIO (AO)
+        return ['base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum'];
       case 'solana':
         return ['solana'];
       default:

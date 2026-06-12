@@ -30,10 +30,9 @@ export function JitTokenSelector({
 
     // Regular mode
     if (walletType === 'ethereum') {
-      // Ethereum wallets: BASE-ARIO, ARIO (AO), BASE-USDC, and BASE-ETH
-      return ['base-ario', 'ario', 'base-usdc', 'base-eth'];
+      return ['base-usdc', 'base-eth'];
     } else if (walletType === 'arweave') {
-      return ['ario'];
+      return []; // Arweave wallets don't support JIT payments
     } else if (walletType === 'solana') {
       return ['solana'];
     }

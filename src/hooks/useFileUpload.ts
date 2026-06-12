@@ -287,7 +287,7 @@ export function useFileUpload() {
     if (options?.selectedJitToken && supportsJitPayment(options.selectedJitToken)) {
       jitTokenType = options.selectedJitToken;
     } else if (walletType === 'arweave') {
-      jitTokenType = 'ario';
+      jitTokenType = null; // Arweave wallets don't support JIT payments
     } else if (walletType === 'ethereum') {
       // Detect token type from current network chainId
       // Priority: wagmi account chainId > Privy > window.ethereum
