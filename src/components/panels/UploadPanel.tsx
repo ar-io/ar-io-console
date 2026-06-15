@@ -567,7 +567,7 @@ export default function UploadPanel() {
         setJitSectionExpanded(true); // Expand the JIT section
       }
     }
-  }, [showConfirmModal, totalCost, creditBalance, setPaymentTab, setJitSectionExpanded]);
+  }, [showConfirmModal, totalCost, creditBalance, setPaymentTab, setJitSectionExpanded, setLocalJitEnabled]);
 
   const handleUpload = () => {
     if (!address) {

@@ -2,12 +2,10 @@ import {
   TurboFactory,
   ArconnectSigner,
   ARToTokenAmount,
-  ARIOToTokenAmount,
   ETHToTokenAmount,
   SOLToTokenAmount,
   POLToTokenAmount,
 } from '@ardrive/turbo-sdk/web';
-import { InjectedEthereumSigner } from '@dha-team/arbundles';
 import { useState } from 'react';
 import { Clock, RefreshCw, Wallet, AlertCircle, CheckCircle, Users, Loader2, XCircle } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
@@ -102,20 +100,15 @@ export default function CryptoConfirmationPanel({
   };
 
   // Determine if user can pay directly or needs manual payment
-  // SDK v1.35.0-alpha.2 officially supports USDC direct wallet payments
-  // ARIO payments from Ethereum wallets use InjectedEthereumSigner from @ar.io/sdk
-  // Base ARIO uses walletAdapter pattern like other Base tokens
   const canPayDirectly =
-    (walletType === 'arweave' && (tokenType === 'arweave' || tokenType === 'ario')) ||
+    (walletType === 'arweave' && tokenType === 'arweave') ||
     (walletType === 'ethereum' &&
       (tokenType === 'ethereum' ||
         tokenType === 'base-eth' ||
         tokenType === 'pol' ||
         tokenType === 'usdc' ||
         tokenType === 'base-usdc' ||
-        tokenType === 'base-ario' ||
-        tokenType === 'polygon-usdc' ||
-        tokenType === 'ario')) ||
+        tokenType === 'polygon-usdc')) ||
     (walletType === 'solana' && tokenType === 'solana');
 
   const handlePayment = async () => {
@@ -127,7 +120,7 @@ export default function CryptoConfirmationPanel({
     try {
       if (canPayDirectly) {
         // Direct payment via Turbo SDK with proper wallet support
-        if (walletType === 'arweave' && window.arweaveWallet && (tokenType === 'arweave' || tokenType === 'ario')) {
+        if (walletType === 'arweave' && window.arweaveWallet && tokenType === 'arweave') {
           const signer = new ArconnectSigner(window.arweaveWallet);
           const turbo = TurboFactory.authenticated({
             signer,
@@ -138,87 +131,7 @@ export default function CryptoConfirmationPanel({
             gatewayUrl: turboConfig.tokenMap[tokenType], // Dev mode uses testnet RPC URLs
           });
 
-          // Use SDK helper functions - returns BigNumber (which SDK expects)
-          let tokenAmount;
-          if (tokenType === 'arweave') {
-            tokenAmount = ARToTokenAmount(cryptoAmount);
-          } else if (tokenType === 'ario') {
-            tokenAmount = ARIOToTokenAmount(cryptoAmount);
-          } else {
-            throw new Error(`Unsupported token type for Arweave wallet: ${tokenType}`);
-          }
-
-          const result = await turbo.topUpWithTokens({
-            tokenAmount,
-            turboCreditDestinationAddress,
-          });
-
-          onPaymentComplete({
-            ...result,
-            quote,
-            tokenType,
-            transactionId: result.id,
-          });
-        } else if (walletType === 'ethereum' && tokenType === 'ario') {
-          // ARIO payment via Ethereum wallet using InjectedEthereumSigner
-          // ARIO is an AO-based token, so it requires signing AO data items
-          // We use InjectedEthereumSigner from @ar.io/sdk which can sign AO data items using an Ethereum wallet
-          const { ethers } = await import('ethers');
-
-          // Check if this is a Privy embedded wallet
-          const privyWallet = wallets.find((w) => w.walletClientType === 'privy');
-
-          let ethersSigner;
-
-          if (privyWallet) {
-            // Use Privy embedded wallet
-            const privyProvider = await privyWallet.getEthereumProvider();
-            const provider = new ethers.BrowserProvider(privyProvider);
-            ethersSigner = await provider.getSigner();
-          } else if (window.ethereum) {
-            // Fallback to regular Ethereum wallet (MetaMask, WalletConnect)
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            ethersSigner = await provider.getSigner();
-          } else {
-            throw new Error('No Ethereum wallet available');
-          }
-
-          const ethAddress = await ethersSigner.getAddress();
-
-          // Create InjectedEthereumSigner for AO data item signing
-          const injectedProvider = {
-            getSigner: () => ({
-              signMessage: async (message: any) => {
-                const arg = typeof message === 'string' ? message : message.raw || message;
-                return await ethersSigner.signMessage(arg);
-              },
-              getAddress: async () => ethAddress,
-            }),
-          };
-
-          const injectedSigner = new InjectedEthereumSigner(injectedProvider as any);
-
-          // Set public key (required for AO data item signing)
-          // The user will sign a message to derive their public key
-          const connectMessage = 'Sign this message to connect to ar.io for ARIO payment';
-          const signature = await ethersSigner.signMessage(connectMessage);
-          const messageHash = ethers.hashMessage(connectMessage);
-          const recoveredKey = ethers.SigningKey.recoverPublicKey(messageHash, signature);
-          injectedSigner.publicKey = Buffer.from(ethers.getBytes(recoveredKey));
-
-          // Create Turbo client with the InjectedEthereumSigner
-          // For ARIO (AO-based token), we use `signer` NOT `walletAdapter`
-          const turbo = TurboFactory.authenticated({
-            signer: injectedSigner,
-            token: 'ario',
-            paymentServiceConfig: {
-              url: turboConfig.paymentServiceUrl || 'https://payment.ardrive.io',
-            },
-            gatewayUrl: turboConfig.tokenMap['ario'],
-          });
-
-          // Convert to smallest unit using SDK helper
-          const tokenAmount = ARIOToTokenAmount(cryptoAmount);
+          const tokenAmount = ARToTokenAmount(cryptoAmount);
 
           const result = await turbo.topUpWithTokens({
             tokenAmount,
@@ -238,10 +151,9 @@ export default function CryptoConfirmationPanel({
             tokenType === 'pol' ||
             tokenType === 'usdc' ||
             tokenType === 'base-usdc' ||
-            tokenType === 'base-ario' ||
             tokenType === 'polygon-usdc')
         ) {
-          // ETH L1/Base ETH/POL/USDC/Base-ARIO direct payment via Ethereum wallet
+          // ETH L1/Base ETH/POL/USDC direct payment via Ethereum wallet
           const { ethers } = await import('ethers');
 
           // Check if this is a Privy embedded wallet
@@ -274,8 +186,7 @@ export default function CryptoConfirmationPanel({
               ? isDevMode
                 ? 17000
                 : 1 // Holesky testnet : Ethereum mainnet
-              : tokenType === 'base-eth' || tokenType === 'base-usdc' || tokenType === 'base-ario'
-                ? isDevMode
+              : tokenType === 'base-eth' || tokenType === 'base-usdc'                 ? isDevMode
                   ? 84532
                   : 8453 // Base Sepolia : Base mainnet
                 : tokenType === 'pol' || tokenType === 'polygon-usdc'
@@ -299,8 +210,7 @@ export default function CryptoConfirmationPanel({
                 signer = await provider.getSigner();
               } catch {
                 const networkName =
-                  tokenType === 'base-eth' || tokenType === 'base-usdc' || tokenType === 'base-ario'
-                    ? isDevMode
+                  tokenType === 'base-eth' || tokenType === 'base-usdc'                     ? isDevMode
                       ? 'Base Sepolia testnet'
                       : 'Base network'
                     : tokenType === 'pol' || tokenType === 'polygon-usdc'
@@ -314,7 +224,7 @@ export default function CryptoConfirmationPanel({
               }
             } else if (window.ethereum) {
               // Only attempt auto-switching for regular wallets
-              if (tokenType === 'base-eth' || tokenType === 'base-usdc' || tokenType === 'base-ario') {
+              if (tokenType === 'base-eth' || tokenType === 'base-usdc') {
                 try {
                   await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
@@ -374,7 +284,7 @@ export default function CryptoConfirmationPanel({
                     }
                   } else {
                     const networkName = isDevMode ? 'Base Sepolia testnet' : 'Base Network';
-                    const tokenName = tokenType === 'base-usdc' ? 'USDC' : tokenType === 'base-ario' ? 'ARIO' : 'ETH';
+                    const tokenName = tokenType === 'base-usdc' ? 'USDC' : 'ETH';
                     throw new Error(`Please switch to ${networkName} in your wallet for ${tokenName} payments.`);
                   }
                 }
@@ -497,9 +407,6 @@ export default function CryptoConfirmationPanel({
             tokenAmount = POLToTokenAmount(cryptoAmount);
           } else if (tokenType === 'usdc' || tokenType === 'base-usdc' || tokenType === 'polygon-usdc') {
             // USDC uses 6 decimals
-            tokenAmount = (cryptoAmount * 1e6).toString();
-          } else if (tokenType === 'base-ario') {
-            // Base ARIO uses 6 decimals (same as ARIO on AO)
             tokenAmount = (cryptoAmount * 1e6).toString();
           } else {
             tokenAmount = ETHToTokenAmount(cryptoAmount);

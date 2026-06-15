@@ -390,7 +390,7 @@ export function useEthereumTurboClient() {
 
       return client;
     },
-    [getCurrentConfig, address, wallets, wagmiConfig, ethAccount.isConnected, ethAccount.connector, getOrCreateSigner]
+    [getCurrentConfig, address, wallets, wagmiConfig, ethAccount.isConnected, ethAccount.connector, ethAccount.chainId, getOrCreateSigner]
   );
 
   /**

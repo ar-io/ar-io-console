@@ -119,6 +119,7 @@ const WalletSelectionModal = ({
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privyWallets, waitingForPrivyWallet, onClose]);
 
   // Check if user is already authenticated with Privy when modal opens
@@ -177,6 +178,7 @@ const WalletSelectionModal = ({
         handleConnectionSuccess();
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ethAccount.isConnected, ethAccount.address, intentionalEthConnect, onClose]);
 
   // Reset the handled flag when the modal opens (component mounts)

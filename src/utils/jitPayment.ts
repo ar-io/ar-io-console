@@ -2,10 +2,10 @@ import { SupportedTokenType } from '../constants';
 
 /**
  * Check if a wallet type supports just-in-time (on-demand) payments
- * Currently supported: ARIO, Base-ARIO, SOL, Base-ETH, Base-USDC
+ * Currently supported: SOL, Base-ETH, Base-USDC
  */
 export function supportsJitPayment(tokenType: SupportedTokenType | null): boolean {
-  return tokenType === 'ario' || tokenType === 'base-ario' || tokenType === 'solana' || tokenType === 'base-eth' || tokenType === 'base-usdc';
+  return tokenType === 'solana' || tokenType === 'base-eth' || tokenType === 'base-usdc';
 }
 
 /**

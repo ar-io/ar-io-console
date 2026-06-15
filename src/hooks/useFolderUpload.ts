@@ -1003,7 +1003,7 @@ export function useFolderUpload() {
     } finally {
       setDeploying(false);
     }
-  }, [createTurboClient, validateWalletState, isCancelled, uploadFileWithRetry, walletType, freeUploadLimitBytes, getContentType, fileHashes, getFileHashEntry, updateFileHashCache]);
+  }, [createTurboClient, validateWalletState, isCancelled, uploadFileWithRetry, walletType, getContentType, fileHashes, getFileHashEntry, updateFileHashCache, getCurrentConfig]);
 
   const reset = useCallback(() => {
     setDeployProgress(0);
