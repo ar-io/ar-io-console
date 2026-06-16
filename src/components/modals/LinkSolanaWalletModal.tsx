@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import BaseModal from './BaseModal';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
@@ -8,7 +9,20 @@ interface LinkSolanaWalletModalProps {
 }
 
 export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: LinkSolanaWalletModalProps) {
-  const { solanaWallets, linkWallet, isLinking } = useLinkedSolanaWallet();
+  const { solanaWallets, linkWallet, isLinking, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet();
+  const [initialAddress] = useState(linkedAddress);
+  const hasAutoClosedRef = useRef(false);
+
+  // Auto-close after successful linking or reconnection
+  useEffect(() => {
+    if (hasAutoClosedRef.current) return;
+    const linked = linkedAddress && linkedAddress !== initialAddress;
+    const reconnected = isReconnect && isSolanaConnected;
+    if (linked || reconnected) {
+      hasAutoClosedRef.current = true;
+      onClose();
+    }
+  }, [linkedAddress, initialAddress, isReconnect, isSolanaConnected, onClose]);
 
   const installedWallets = solanaWallets.filter(
     (w) => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')
