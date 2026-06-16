@@ -32,7 +32,7 @@ export function useLinkedSolanaWallet() {
     ? !!solanaPublicKey
     : !!solanaPublicKey && !!linkedSolanaAddress && solanaPublicKey.toString() === linkedSolanaAddress;
 
-  // After select() + connect(), watch for the adapter to connect and save the linked address
+  // After select(), wait for the adapter to be ready, then connect and save
   useEffect(() => {
     if (!pendingLink || !solanaWallet) return;
     setPendingLink(false);
@@ -40,39 +40,18 @@ export function useLinkedSolanaWallet() {
     (async () => {
       try {
         await solanaConnect();
+        // Check adapter publicKey directly (handles silent auto-approve)
         const pk = solanaWallet.adapter.publicKey;
         if (pk) {
           setLinkedSolanaWallet(pk.toString(), solanaWallet.adapter.name);
-          setIsLinking(false);
-          setShowLinkModal(false);
         }
       } catch (error) {
         console.error('[LinkedSolana] Connection failed:', error);
+      } finally {
         setIsLinking(false);
       }
     })();
   }, [pendingLink, solanaWallet, solanaConnect, setLinkedSolanaWallet]);
-
-  // If adapter connects and matches the linked address, sync (handles silent auto-approve)
-  useEffect(() => {
-    if (
-      !isPrimarySolana &&
-      solanaPublicKey &&
-      linkedSolanaAddress &&
-      solanaPublicKey.toString() === linkedSolanaAddress
-    ) {
-      // Signer is available — no action needed, isSolanaConnected will be true
-    } else if (
-      !isPrimarySolana &&
-      solanaPublicKey &&
-      isLinking
-    ) {
-      // New connection during linking flow — save it
-      setLinkedSolanaWallet(solanaPublicKey.toString(), solanaWallet?.adapter.name || 'Solana');
-      setIsLinking(false);
-      setShowLinkModal(false);
-    }
-  }, [solanaPublicKey, linkedSolanaAddress, isPrimarySolana, isLinking, solanaWallet, setLinkedSolanaWallet]);
 
   const linkWallet = useCallback((adapterName: string) => {
     setIsLinking(true);

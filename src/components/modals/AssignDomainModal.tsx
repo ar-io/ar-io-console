@@ -142,6 +142,7 @@ export default function AssignDomainModal({
   };
 
   return (
+    <>
     <BaseModal onClose={onClose} showCloseButton={false}>
       <div className="w-[90vw] sm:w-[600px] max-w-[90vw] h-[85vh] sm:h-[600px] max-h-[90vh] flex flex-col text-foreground mx-auto">
         {/* Header */}
@@ -574,11 +575,11 @@ export default function AssignDomainModal({
             <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-warning">
-                  Reconnect your Solana wallet to sign this transaction
+                  Your linked Solana wallet session has expired. Reconnect to sign.
                 </div>
                 <button
                   onClick={promptReconnect}
-                  className="px-4 py-2 bg-warning text-white rounded-full text-sm font-medium hover:bg-warning/90 transition-colors"
+                  className="px-4 py-2 bg-warning text-white rounded-full text-sm font-medium hover:bg-warning/90 transition-colors whitespace-nowrap ml-3"
                 >
                   Reconnect
                 </button>
@@ -623,12 +624,13 @@ export default function AssignDomainModal({
         </div>
       </div>
 
-      {showLinkModal && (
-        <LinkSolanaWalletModal
-          onClose={() => setShowLinkModal(false)}
-          isReconnect={!needsLinking}
-        />
-      )}
     </BaseModal>
+    {showLinkModal && (
+      <LinkSolanaWalletModal
+        onClose={() => setShowLinkModal(false)}
+        isReconnect={!needsLinking}
+      />
+    )}
+    </>
   );
 }

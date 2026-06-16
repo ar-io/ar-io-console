@@ -109,6 +109,9 @@ export default function MyAccountPage() {
                       Reconnect
                     </button>
                   )}
+                  <button onClick={() => setShowLinkModal(true)} className="text-xs text-foreground/60 hover:text-foreground transition-colors">
+                    Change
+                  </button>
                   <button onClick={unlinkWallet} className="p-1.5 text-foreground/40 hover:text-error transition-colors" title="Unlink wallet">
                     <Unlink className="w-3.5 h-3.5" />
                   </button>
