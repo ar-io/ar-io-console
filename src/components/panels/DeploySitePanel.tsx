@@ -13,6 +13,7 @@ import CopyButton from '../CopyButton';
 import { getArweaveUrl, getArweaveRawUrl } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { useNavigate } from 'react-router-dom';
 import ReceiptModal from '../modals/ReceiptModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
@@ -945,6 +946,7 @@ export default function DeploySitePanel() {
     lastDeployedAppName,
   } = useStore();
 
+  const { hasArNSAccess } = useLinkedSolanaWallet();
   // Fetch and track the bundler's free upload limit
   const freeUploadLimitBytes = useFreeUploadLimit();
 
@@ -2163,7 +2165,7 @@ export default function DeploySitePanel() {
       )}
 
       {/* ArNS Association Panel - Show for Solana wallets (ArNS is on Solana) */}
-      {selectedFolder && selectedFolder.length > 0 && walletType === 'solana' && !deploySuccessInfo && !deploying && (
+      {selectedFolder && selectedFolder.length > 0 && hasArNSAccess && !deploySuccessInfo && !deploying && (
         <ArNSAssociationPanel
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
@@ -2397,7 +2399,7 @@ export default function DeploySitePanel() {
 
       {/* ArNS Discovery Section - Show for non-Solana wallets or Solana users without ArNS names */}
       {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
-       (walletType !== 'solana' || userArnsNames.length === 0) && (
+       (!hasArNSAccess || userArnsNames.length === 0) && (
         <div className="mt-6">
           <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
             <div className="flex items-start gap-3 mb-4">
@@ -2459,7 +2461,7 @@ export default function DeploySitePanel() {
 
       {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS names */}
       {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       walletType === 'solana' && userArnsNames.length > 0 && (
+       hasArNSAccess && userArnsNames.length > 0 && (
         <div className="mt-6">
           <ArNSAssociationPanel
             enabled={postDeployArNSEnabled}
@@ -2765,7 +2767,7 @@ export default function DeploySitePanel() {
                               <ExternalLink className="w-4 h-4" />
                             </a>
                             {/* Assign Domain Button - Solana wallets only */}
-                            {walletType === 'solana' && (
+                            {hasArNSAccess && (
                               <button
                                 onClick={() => setShowAssignDomainModal(manifestId)}
                                 className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
@@ -2868,7 +2870,7 @@ export default function DeploySitePanel() {
                                       Visit Deployed Site
                                     </a>
                                     {/* Assign/Change Domain - Solana wallets only */}
-                                    {walletType === 'solana' && (
+                                    {hasArNSAccess && (
                                       <button
                                         onClick={() => {
                                           setShowAssignDomainModal(manifestId);

@@ -13,6 +13,7 @@ import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import BaseModal from '../modals/BaseModal';
 import { getArweaveUrl } from '../../utils';
 import UploadProgressSummary from '../UploadProgressSummary';
@@ -344,6 +345,7 @@ export default function UploadPanel() {
     isPaymentServiceAvailable,
   } = useStore();
 
+  const { hasArNSAccess } = useLinkedSolanaWallet();
   // Fetch and track the bundler's free upload limit
   const freeUploadLimitBytes = useFreeUploadLimit();
 
@@ -1044,7 +1046,7 @@ export default function UploadPanel() {
                           <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                         </button>
                         {/* Only show Assign Domain for Solana wallets (ArNS is on Solana) */}
-                        {walletType === 'solana' && (
+                        {hasArNSAccess && (
                           <button
                             onClick={() => setShowAssignDomainModal(result.id)}
                             className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
@@ -1138,7 +1140,7 @@ export default function UploadPanel() {
                                   Check Status
                                 </button>
                                 {/* Only show Assign Domain for Solana wallets (ArNS is on Solana) */}
-                                {walletType === 'solana' && (
+                                {hasArNSAccess && (
                                   <button
                                     onClick={() => {
                                       setShowAssignDomainModal(result.id);

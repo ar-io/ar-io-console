@@ -11,6 +11,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
@@ -87,6 +88,7 @@ export default function CapturePanel() {
   const [showUndername, setShowUndername] = useState(false);
   const [customTTL, setCustomTTL] = useState<number | undefined>(undefined);
   const { updateArNSRecord } = useOwnedArNSNames();
+  const { hasArNSAccess } = useLinkedSolanaWallet();
 
   // Upload state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -499,7 +501,7 @@ export default function CapturePanel() {
       )}
 
       {/* ArNS Association Panel - Show for Solana wallets when not uploading and URL is valid */}
-      {!uploading && hasValidUrl && walletType === 'solana' && (
+      {!uploading && hasValidUrl && hasArNSAccess && (
         <ArNSAssociationPanel
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
@@ -694,7 +696,7 @@ export default function CapturePanel() {
                             >
                               <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                             </button>
-                            {walletType === 'solana' && (
+                            {hasArNSAccess && (
                               <button
                                 onClick={() => setShowAssignDomainModal(result.id)}
                                 className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
@@ -784,7 +786,7 @@ export default function CapturePanel() {
                                       <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                                       Check Status
                                     </button>
-                                    {walletType === 'solana' && (
+                                    {hasArNSAccess && (
                                       <button
                                         onClick={() => {
                                           setShowAssignDomainModal(result.id);

@@ -47,7 +47,8 @@ const Header = () => {
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
   const { disconnect: solanaDisconnect } = useWallet(); // Solana wallet adapter disconnect
-  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(address);
+  const arnsAddress = useStore((s) => s.getArNSAddress());
+  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(arnsAddress);
 
   const [credits, setCredits] = useState<string>('0');
   const [creditsNumeric, setCreditsNumeric] = useState<number>(0);

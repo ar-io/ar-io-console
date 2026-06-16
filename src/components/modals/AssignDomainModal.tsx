@@ -12,8 +12,9 @@ import {
 } from 'lucide-react';
 import { Listbox } from '@headlessui/react';
 import BaseModal from './BaseModal';
+import LinkSolanaWalletModal from './LinkSolanaWalletModal';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
-import { useStore } from '../../store/useStore';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { sanitizeUndername, hasInvalidCharacters } from '../../utils/undernames';
 
 interface AssignDomainModalProps {
@@ -31,8 +32,8 @@ export default function AssignDomainModal({
   existingUndername,
   onSuccess,
 }: AssignDomainModalProps) {
-  const { walletType } = useStore();
   const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails, updateArNSRecord } = useOwnedArNSNames();
+  const { isSolanaConnected, needsLinking, showLinkModal, setShowLinkModal, promptReconnect } = useLinkedSolanaWallet();
 
   const [selectedArnsName, setSelectedArnsName] = useState(existingArnsName || '');
   const [selectedUndername, setSelectedUndername] = useState(existingUndername || '');
@@ -553,13 +554,34 @@ export default function AssignDomainModal({
             </div>
           )}
 
-          {/* Wallet Compatibility Warning */}
-          {walletType !== 'solana' && (
-            <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
-              <div className="flex items-center gap-2">
-                <div className="text-warning text-sm">
-                  ArNS record updates require a Solana wallet. Please connect a Solana wallet.
+          {/* Solana Wallet Status */}
+          {needsLinking && (
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-foreground/80">
+                  Link a Solana wallet to manage ArNS domains
                 </div>
+                <button
+                  onClick={() => setShowLinkModal(true)}
+                  className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Link Wallet
+                </button>
+              </div>
+            </div>
+          )}
+          {!needsLinking && !isSolanaConnected && (
+            <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-warning">
+                  Reconnect your Solana wallet to sign this transaction
+                </div>
+                <button
+                  onClick={promptReconnect}
+                  className="px-4 py-2 bg-warning text-white rounded-full text-sm font-medium hover:bg-warning/90 transition-colors"
+                >
+                  Reconnect
+                </button>
               </div>
             </div>
           )}
@@ -580,7 +602,7 @@ export default function AssignDomainModal({
             disabled={
               !selectedArnsName ||
               isAssigning ||
-              walletType !== 'solana' ||
+              !isSolanaConnected ||
               (undernameMode === 'new' && !selectedUndername) ||
               (undernameMode === 'existing' && !selectedUndername)
             }
@@ -600,6 +622,13 @@ export default function AssignDomainModal({
           </button>
         </div>
       </div>
+
+      {showLinkModal && (
+        <LinkSolanaWalletModal
+          onClose={() => setShowLinkModal(false)}
+          isReconnect={!needsLinking}
+        />
+      )}
     </BaseModal>
   );
 }
