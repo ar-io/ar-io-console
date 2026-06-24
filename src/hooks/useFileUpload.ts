@@ -518,9 +518,11 @@ export function useFileUpload() {
     if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
       try {
         const turbo = await createTurboClient(selectedToken);
-        await turbo.topUpWithTokens({
+        console.log('[DEBUG] topUpWithTokens starting:', { selectedToken, tokenAmount: options.tokenAmount });
+        const topUpResult = await turbo.topUpWithTokens({
           tokenAmount: BigInt(options.tokenAmount),
         });
+        console.log('[DEBUG] topUpWithTokens result:', JSON.stringify(topUpResult, (_, v) => typeof v === 'bigint' ? v.toString() : v));
         window.dispatchEvent(new CustomEvent('refresh-balance'));
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';

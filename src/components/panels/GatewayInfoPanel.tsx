@@ -63,14 +63,9 @@ export default function GatewayInfoPanel() {
     window.location.reload();
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-foreground/80">Loading service information...</p>
-      </div>
-    );
-  }
+  // Don't block the entire page while loading — render with available data
+  // and show inline loading states per section. This prevents the page from
+  // hanging when a slow/rate-limited API (e.g., arweave.net 429) blocks pricing.
 
   return (
     <div className="px-4 sm:px-6">
@@ -92,6 +87,13 @@ export default function GatewayInfoPanel() {
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-primary' : ''}`} />
         </button>
       </div>
+
+      {loading && (
+        <div className="flex items-center gap-2 text-foreground/60 text-sm mb-4">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          Loading service status...
+        </div>
+      )}
 
       {error && (
         <div className="bg-error/10 border border-error/20 rounded-2xl p-4 mb-4 sm:mb-6">

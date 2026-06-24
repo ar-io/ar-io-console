@@ -10,14 +10,17 @@ import { useStore } from '../store/useStore';
  */
 async function fetchWithRetry(
   url: string,
-  options: { maxRetries?: number; initialDelayMs?: number } = {}
+  options: { maxRetries?: number; initialDelayMs?: number; timeoutMs?: number } = {}
 ): Promise<Response> {
-  const { maxRetries = 3, initialDelayMs = 1000 } = options;
+  const { maxRetries = 3, initialDelayMs = 1000, timeoutMs = 10000 } = options;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const response = await fetch(url);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
 
       // Retry on rate limit or server errors
       if (response.status === 429 || response.status >= 500) {
@@ -52,11 +55,10 @@ async function fetchWithRetry(
 }
 
 /**
- * Fetch Arweave L1 price with fallback.
- * Tries arweave.net first, falls back to turbo-gateway.com if it fails.
+ * Fetch Arweave L1 price via turbo-gateway.com.
  */
 async function fetchArweavePriceWithFallback(bytes: number): Promise<number> {
-  const endpoints = ['https://arweave.net', 'https://turbo-gateway.com'];
+  const endpoints = ['https://turbo-gateway.com'];
 
   for (const endpoint of endpoints) {
     try {
@@ -292,7 +294,7 @@ export function useGatewayInfo() {
 
           try {
             // Fetch raw Arweave L1 network price (returns winston - 1 AR = 10^12 winston).
-            // Uses fallback: arweave.net -> turbo-gateway.com
+            // Fetches from turbo-gateway.com
             arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
 
             // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
@@ -447,7 +449,7 @@ export function useGatewayInfo() {
 
         try {
           // Fetch raw Arweave L1 network price (returns winston).
-          // Uses fallback: arweave.net -> turbo-gateway.com
+          // Fetches from turbo-gateway.com
           arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
 
           // Fetch AR/USD price from CoinGecko (free tier, may rate limit).

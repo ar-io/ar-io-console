@@ -616,6 +616,17 @@ export default function UploadPanel() {
       jitMaxTokenAmountSmallest = converter ? converter(localJitMax) : 0;
     }
 
+    console.log('[DEBUG] upload params:', {
+      shouldEnableJit,
+      jitMaxTokenAmountSmallest,
+      selectedJitToken,
+      localJitMax,
+      paymentTab,
+      creditsNeeded,
+      totalCost,
+      creditBalance,
+    });
+
     try {
       // Pre-topup flow for crypto payments (one payment for all files)
       const { results, failedFiles } = await uploadMultipleFiles(files, {

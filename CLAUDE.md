@@ -9,9 +9,9 @@ npm install          # Install dependencies
 npm run dev          # Start dev server at http://localhost:3000
 npm run lint         # ESLint validation
 npm run type-check   # TypeScript checking (strict mode)
-npm run build        # Dev build (no type check, 4GB memory)
-npm run build:prod   # Production build with type check (8GB memory)
-npm run build:staging # Staging build with source maps (8GB memory)
+npm run build        # Build with type check (4GB memory)
+npm run build:prod   # Production build with type check (8GB vite, no sourcemaps)
+npm run build:staging # Staging build with type check + source maps (8GB vite)
 npm run clean        # Remove dist and caches
 npm run clean:all    # Full clean and reinstall
 npm run preview      # Preview production build
@@ -19,10 +19,12 @@ npm run preview      # Preview production build
 
 **Notes:**
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
-- Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev, 8GB prod build)
+- Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
+- `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
 - No test framework configured
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
+- Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
 - BrowsePage is lazy-loaded (`React.lazy`) to isolate wayfinder dependencies
 - `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
 
@@ -316,6 +318,9 @@ Notable relaxed rules in `eslint.config.js`:
 - `@typescript-eslint/no-explicit-any`: **off** — `any` is used liberally, especially for SDK interop
 - `@typescript-eslint/no-non-null-assertion`: **off** — `!` assertions are allowed
 - `no-console`: **off** — console.log is used in production code
+- `@typescript-eslint/no-unused-vars`: **warn**
+- `no-undef`: **off**, `no-case-declarations`: **off**
+- `prefer-const`: **warn**
 - `react-hooks/exhaustive-deps`: **warn** (not error)
 
 ## Styling
