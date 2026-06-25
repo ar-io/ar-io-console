@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGatewayInfo } from '../../hooks/useGatewayInfo';
+import { clearEthereumTurboClientCache } from '../../hooks/useEthereumTurboClient';
 import {
   Server,
   Globe,
@@ -59,8 +60,12 @@ export default function GatewayInfoPanel() {
   };
 
   const applyConfiguration = () => {
-    // Force a page reload to ensure all components reinitialize with new config
-    window.location.reload();
+    // Clear cached Turbo clients so they re-create with the new URLs
+    clearEthereumTurboClientCache();
+    // Trigger balance refresh so components pick up the new endpoints
+    window.dispatchEvent(new CustomEvent('refresh-balance'));
+    // Refresh gateway info to reflect the new config
+    refresh();
   };
 
   // Don't block the entire page while loading — render with available data
