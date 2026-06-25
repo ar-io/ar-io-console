@@ -310,6 +310,23 @@ const Header = () => {
                     </Link>
                   );
                 })}
+
+                {/* Settings - always accessible, even without login */}
+                <div className="border-t border-border/20 my-1" />
+                <Link
+                  to="/settings"
+                  onClick={() => close()}
+                  className={`flex items-center gap-3 py-2 px-4 text-sm transition-colors ${
+                    location.pathname === '/settings'
+                      ? 'bg-primary/15 text-foreground font-medium'
+                      : 'text-foreground/80 hover:bg-primary/10 hover:text-foreground'
+                  }`}
+                >
+                  <Settings className={`w-4 h-4 ${
+                    location.pathname === '/settings' ? 'text-primary' : 'text-foreground/60'
+                  }`} />
+                  Settings
+                </Link>
               </>
             )}
           </PopoverPanel>
