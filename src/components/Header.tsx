@@ -76,8 +76,10 @@ const Header = () => {
       // Use utility function that properly handles all wallet types
       const balance = await getTurboBalance(address, walletType);
 
-      // Convert winc to credits and format with smart precision
-      const creditsAmount = Number(balance.winc) / 1e12;
+      // Use effectiveBalance (owned + received shared credits) for the spendable amount.
+      // Fall back to winc (owned only) if effectiveBalance isn't returned.
+      const spendableWinc = balance.effectiveBalance ?? balance.winc;
+      const creditsAmount = Number(spendableWinc) / 1e12;
       setCreditBalance(creditsAmount);
       setCreditsNumeric(creditsAmount);
 

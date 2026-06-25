@@ -13,7 +13,7 @@ export function CreditBalance() {
       if (!address || !walletType) return null;
 
       const result = await getTurboBalance(address, walletType);
-      return result.winc;
+      return result.effectiveBalance ?? result.winc;
     },
     enabled: !!address && !!walletType,
     refetchInterval: 30000, // Refetch every 30 seconds
