@@ -467,17 +467,6 @@ const Header = () => {
               </button>
             </div>
 
-            <button
-              className="flex items-center gap-2 px-6 py-3 text-foreground/80 hover:text-foreground hover:bg-card transition-colors"
-              onClick={() => {
-                navigate('/settings');
-                close();
-              }}
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
-
             {/* Export Wallet - Show for Privy users */}
             {isPrivyUser && (
               <button
