@@ -429,7 +429,7 @@ export const useStore = create<StoreState>()(
       },
       jitBufferMultiplier: 1.1, // Default 10% buffer
       // Actions
-      setAddress: (address, type) => set({ address, walletType: type }),
+      setAddress: (address, type) => set({ address, walletType: type, creditBalance: 0 }),
       clearAddress: () =>
         set({
           address: null,
