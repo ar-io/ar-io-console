@@ -2280,7 +2280,7 @@ export default function DeploySitePanel() {
                 )}
                 {deployStage === 'updating-arns' && (
                   <>
-                    <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                     <span>Connecting {selectedUndername ? selectedUndername + '_' : ''}{selectedArnsName}.ar.io to your site...</span>
                   </>
                 )}
@@ -2401,10 +2401,10 @@ export default function DeploySitePanel() {
       {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
        (!hasArNSAccess || userArnsNames.length === 0) && (
         <div className="mt-6">
-          <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/5 rounded-xl border border-primary/20 p-6">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-warning/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                <Globe className="w-5 h-5 text-warning" />
+              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                <Globe className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <h4 className="text-lg font-bold text-foreground mb-1">Want a Friendly Domain Name?</h4>
@@ -2436,7 +2436,7 @@ export default function DeploySitePanel() {
               </div>
               
               <div className="text-sm text-foreground/80 mb-2">Get something like:</div>
-              <div className="font-mono text-sm text-warning font-medium">
+              <div className="font-mono text-sm text-primary font-medium">
                 https://mysite.ar.io
               </div>
             </div>
@@ -2444,7 +2444,7 @@ export default function DeploySitePanel() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => window.location.href = '/domains'}
-                className="flex-1 py-3 px-4 bg-warning text-foreground rounded-lg font-medium hover:bg-warning/90 transition-colors"
+                className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 Search for Your Name
               </button>
@@ -2548,7 +2548,7 @@ export default function DeploySitePanel() {
                   setPostDeployArNSUpdating(false);
                 }}
                 disabled={!postDeployArNSName || postDeployArNSUpdating || (postDeployShowUndername && !postDeployUndername)}
-                className="w-full py-3 px-4 bg-warning text-foreground rounded-lg hover:bg-warning/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+                className="w-full py-3 px-4 bg-foreground text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
               >
                 {postDeployArNSUpdating ? (
                   <>

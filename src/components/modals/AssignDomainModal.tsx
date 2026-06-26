@@ -183,9 +183,9 @@ export default function AssignDomainModal({
                 Loading your ArNS names...
               </div>
             ) : names.length === 0 ? (
-              <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
+              <div className="bg-card border border-border/20 rounded-2xl p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-foreground/60 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-sm font-medium text-foreground mb-1">No ArNS names found</div>
                     <div className="text-sm text-foreground/80 mb-3">
@@ -572,14 +572,14 @@ export default function AssignDomainModal({
             </div>
           )}
           {!needsLinking && !isSolanaConnected && (
-            <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-warning">
+                <div className="text-sm text-foreground/80">
                   Your linked Solana wallet session has expired. Reconnect to sign.
                 </div>
                 <button
                   onClick={promptReconnect}
-                  className="px-4 py-2 bg-warning text-white rounded-full text-sm font-medium hover:bg-warning/90 transition-colors whitespace-nowrap ml-3"
+                  className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap ml-3"
                 >
                   Reconnect
                 </button>

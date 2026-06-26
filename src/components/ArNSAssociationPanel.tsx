@@ -155,9 +155,9 @@ export default function ArNSAssociationPanel({
               Loading your ArNS names...
             </div>
           ) : names.length === 0 ? (
-            <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
+            <div className="bg-card border border-border/20 rounded-2xl p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-foreground/60 flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="text-sm font-medium text-foreground mb-1">
                     No ArNS names found
