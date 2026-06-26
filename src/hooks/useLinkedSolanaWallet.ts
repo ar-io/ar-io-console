@@ -44,17 +44,22 @@ export function useLinkedSolanaWallet() {
         const pk = solanaWallet.adapter.publicKey;
         if (pk) {
           setLinkedSolanaWallet(pk.toString(), solanaWallet.adapter.name);
+        } else {
+          console.warn('[LinkedSolana] Wallet connected but no publicKey returned — user may have cancelled');
         }
       } catch (error) {
         console.error('[LinkedSolana] Connection failed:', error);
       } finally {
         setIsLinking(false);
+        (window as any).__SOLANA_SWITCHING__ = false;
       }
     })();
   }, [pendingLink, solanaWallet, solanaConnect, setLinkedSolanaWallet]);
 
   const linkWallet = useCallback((adapterName: string) => {
     setIsLinking(true);
+    // Prevent useWalletAccountListener from treating the adapter switch as a disconnect
+    (window as any).__SOLANA_SWITCHING__ = true;
     solanaSelect(adapterName as any);
     setPendingLink(true);
   }, [solanaSelect]);

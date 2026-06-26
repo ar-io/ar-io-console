@@ -453,8 +453,16 @@ export const useStore = create<StoreState>()(
         }),
       setLinkedSolanaWallet: (address, walletName) =>
         set({ linkedSolanaAddress: address, linkedSolanaWalletName: walletName }),
-      clearLinkedSolanaWallet: () =>
-        set({ linkedSolanaAddress: null, linkedSolanaWalletName: null }),
+      clearLinkedSolanaWallet: () => {
+        const { linkedSolanaAddress: addr, ownedArnsCache } = get();
+        // Remove cached ArNS names for the linked address to avoid stale data
+        if (addr && ownedArnsCache[addr]) {
+          const { [addr]: _, ...rest } = ownedArnsCache;
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest });
+        } else {
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null });
+        }
+      },
       getArNSAddress: () => {
         const { walletType, address, linkedSolanaAddress } = get();
         if (walletType === 'solana') return address;

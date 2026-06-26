@@ -11,6 +11,7 @@ interface LinkSolanaWalletModalProps {
 export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: LinkSolanaWalletModalProps) {
   const { solanaWallets, linkWallet, isLinking, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet();
   const [initialAddress] = useState(linkedAddress);
+  const [linkingAdapter, setLinkingAdapter] = useState<string | null>(null);
   const hasAutoClosedRef = useRef(false);
 
   // Auto-close after successful linking or reconnection
@@ -56,7 +57,10 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
                 key={w.adapter.name}
                 disabled={isLinking}
                 className="w-full bg-card border border-border/20 p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group disabled:opacity-50"
-                onClick={() => linkWallet(w.adapter.name)}
+                onClick={() => {
+                  setLinkingAdapter(w.adapter.name);
+                  linkWallet(w.adapter.name);
+                }}
               >
                 <img
                   src={w.adapter.icon}
@@ -67,7 +71,7 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
                   <div className="font-semibold text-base">{w.adapter.name}</div>
                   <div className="text-xs text-foreground/70">Solana wallet</div>
                 </div>
-                {isLinking && (
+                {isLinking && linkingAdapter === w.adapter.name && (
                   <Loader2 className="w-4 h-4 animate-spin text-foreground/60" />
                 )}
               </button>
