@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, http } from 'wagmi';
 import { mainnet, base, polygon, polygonAmoy } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
@@ -20,7 +20,14 @@ const wagmiConfig = getDefaultConfig({
   appName: 'ar.io',
   projectId: WALLETCONNECT_PROJECT_ID,
   chains: [mainnet, base, polygon, polygonAmoy],
+  transports: {
+    [mainnet.id]: http('https://ethereum.publicnode.com'),
+    [base.id]: http('https://mainnet.base.org'),
+    [polygon.id]: http('https://polygon-bor-rpc.publicnode.com'),
+    [polygonAmoy.id]: http('https://rpc-amoy.polygon.technology'),
+  },
   ssr: false,
+  pollingInterval: 60_000, // 60s instead of default 4s — prevents RPC rate limiting
 });
 
 // Custom RainbowKit theme to match ar.io's dark theme
