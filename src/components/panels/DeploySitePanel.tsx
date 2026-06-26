@@ -977,7 +977,7 @@ export default function DeploySitePanel() {
   const [postDeployShowUndername, setPostDeployShowUndername] = useState(false);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
   const [postDeployArNSUpdating, setPostDeployArNSUpdating] = useState(false);
-  // Post-deployment ArNS enabled state (disabled by default, user can enable)
+  // Post-deployment ArNS enabled state — auto-enabled when user has ArNS names
   const [postDeployArNSEnabled, setPostDeployArNSEnabled] = useState(false);
   const [postDeployCustomTTL, setPostDeployCustomTTL] = useState<number | undefined>(undefined);
   // Domain assignment modal state
@@ -1058,6 +1058,13 @@ export default function DeploySitePanel() {
     initializeFromCache
   } = useUploadStatus();
   const { updateArNSRecord, refreshSpecificName, names: userArnsNames } = useOwnedArNSNames();
+
+  // Auto-enable post-deploy ArNS panel when deploy succeeds and user has ArNS names
+  useEffect(() => {
+    if (deploySuccessInfo && !deploySuccessInfo.arnsConfigured && userArnsNames.length > 0) {
+      setPostDeployArNSEnabled(true);
+    }
+  }, [deploySuccessInfo, userArnsNames.length]);
 
   // Smart Deploy: Analyze folder when selected (hash files for deduplication)
   // Always analyze to show potential savings - toggle only affects actual deploy
@@ -2443,7 +2450,7 @@ export default function DeploySitePanel() {
             
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => window.location.href = '/domains'}
+                onClick={() => navigate('/domains')}
                 className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 Search for Your Name
@@ -2766,16 +2773,14 @@ export default function DeploySitePanel() {
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
-                            {/* Assign Domain Button - Solana wallets only */}
-                            {hasArNSAccess && (
-                              <button
-                                onClick={() => setShowAssignDomainModal(manifestId)}
-                                className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                                title={arnsAssociation ? "Change Domain" : "Assign Domain"}
-                              >
-                                <Globe className="w-4 h-4" />
-                              </button>
-                            )}
+                            {/* Assign Domain — modal handles wallet linking/reconnect */}
+                            <button
+                              onClick={() => setShowAssignDomainModal(manifestId)}
+                              className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                              title={arnsAssociation ? "Change Domain" : "Assign Domain"}
+                            >
+                              <Globe className="w-4 h-4" />
+                            </button>
                           </div>
 
                           {/* Mobile: Status + 3-dot menu */}
@@ -2869,19 +2874,17 @@ export default function DeploySitePanel() {
                                       <ExternalLink className="w-4 h-4" />
                                       Visit Deployed Site
                                     </a>
-                                    {/* Assign/Change Domain - Solana wallets only */}
-                                    {hasArNSAccess && (
-                                      <button
-                                        onClick={() => {
-                                          setShowAssignDomainModal(manifestId);
-                                          close();
-                                        }}
-                                        className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                      >
-                                        <Globe className="w-4 h-4" />
-                                        {arnsAssociation ? "Change Domain" : "Assign Domain"}
-                                      </button>
-                                    )}
+                                    {/* Assign Domain — modal handles wallet linking/reconnect */}
+                                    <button
+                                      onClick={() => {
+                                        setShowAssignDomainModal(manifestId);
+                                        close();
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                    >
+                                      <Globe className="w-4 h-4" />
+                                      {arnsAssociation ? "Change Domain" : "Assign Domain"}
+                                    </button>
                                   </>
                                 )}
                               </PopoverPanel>

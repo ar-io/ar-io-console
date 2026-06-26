@@ -13,7 +13,6 @@ import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
-import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import BaseModal from '../modals/BaseModal';
 import { getArweaveUrl } from '../../utils';
 import UploadProgressSummary from '../UploadProgressSummary';
@@ -345,7 +344,6 @@ export default function UploadPanel() {
     isPaymentServiceAvailable,
   } = useStore();
 
-  const { hasArNSAccess } = useLinkedSolanaWallet();
   // Fetch and track the bundler's free upload limit
   const freeUploadLimitBytes = useFreeUploadLimit();
 
@@ -1045,16 +1043,14 @@ export default function UploadPanel() {
                         >
                           <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                         </button>
-                        {/* Only show Assign Domain for Solana wallets (ArNS is on Solana) */}
-                        {hasArNSAccess && (
-                          <button
-                            onClick={() => setShowAssignDomainModal(result.id)}
-                            className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                            title="Assign Domain"
-                          >
-                            <Globe className="w-4 h-4" />
-                          </button>
-                        )}
+                        {/* Assign Domain — modal handles wallet linking/reconnect */}
+                        <button
+                          onClick={() => setShowAssignDomainModal(result.id)}
+                          className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                          title="Assign ArNS Domain"
+                        >
+                          <Globe className="w-4 h-4" />
+                        </button>
                         <a
                           href={getArweaveUrl(result.id, result.dataCaches)}
                           target="_blank"
@@ -1139,19 +1135,17 @@ export default function UploadPanel() {
                                   <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                                   Check Status
                                 </button>
-                                {/* Only show Assign Domain for Solana wallets (ArNS is on Solana) */}
-                                {hasArNSAccess && (
-                                  <button
-                                    onClick={() => {
-                                      setShowAssignDomainModal(result.id);
-                                      close();
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                  >
-                                    <Globe className="w-4 h-4" />
-                                    Assign Domain
-                                  </button>
-                                )}
+                                {/* Assign Domain — modal handles wallet linking/reconnect */}
+                                <button
+                                  onClick={() => {
+                                    setShowAssignDomainModal(result.id);
+                                    close();
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                >
+                                  <Globe className="w-4 h-4" />
+                                  Assign Domain
+                                </button>
                                 <a
                                   href={getArweaveUrl(result.id, result.dataCaches)}
                                   target="_blank"

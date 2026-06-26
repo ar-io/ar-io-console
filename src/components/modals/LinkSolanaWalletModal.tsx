@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, AlertCircle } from 'lucide-react';
 import BaseModal from './BaseModal';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 
@@ -9,7 +9,7 @@ interface LinkSolanaWalletModalProps {
 }
 
 export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: LinkSolanaWalletModalProps) {
-  const { solanaWallets, linkWallet, isLinking, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet();
+  const { solanaWallets, linkWallet, isLinking, linkError, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet();
   const [initialAddress] = useState(linkedAddress);
   const [linkingAdapter, setLinkingAdapter] = useState<string | null>(null);
   const hasAutoClosedRef = useRef(false);
@@ -48,6 +48,14 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Error state */}
+        {linkError && (
+          <div className="flex items-start gap-2 p-3 bg-error/10 border border-error/20 rounded-xl mb-4">
+            <AlertCircle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-error">{linkError}</p>
+          </div>
+        )}
 
         {/* Wallet list */}
         <div className="flex flex-col gap-3">

@@ -18,6 +18,7 @@ export function useLinkedSolanaWallet() {
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction, select: solanaSelect, connect: solanaConnect, wallet: solanaWallet, wallets: solanaWallets } = useWallet();
 
   const [isLinking, setIsLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [pendingLink, setPendingLink] = useState(false);
 
@@ -39,16 +40,18 @@ export function useLinkedSolanaWallet() {
 
     (async () => {
       try {
+        setLinkError(null);
         await solanaConnect();
         // Check adapter publicKey directly (handles silent auto-approve)
         const pk = solanaWallet.adapter.publicKey;
         if (pk) {
           setLinkedSolanaWallet(pk.toString(), solanaWallet.adapter.name);
         } else {
-          console.warn('[LinkedSolana] Wallet connected but no publicKey returned — user may have cancelled');
+          setLinkError('Connection was cancelled or wallet returned no address. Please try again.');
         }
       } catch (error) {
         console.error('[LinkedSolana] Connection failed:', error);
+        setLinkError(error instanceof Error ? error.message : 'Failed to connect wallet. Please try again.');
       } finally {
         setIsLinking(false);
         (window as any).__SOLANA_SWITCHING__ = false;
@@ -58,6 +61,7 @@ export function useLinkedSolanaWallet() {
 
   const linkWallet = useCallback((adapterName: string) => {
     setIsLinking(true);
+    setLinkError(null);
     // Prevent useWalletAccountListener from treating the adapter switch as a disconnect
     (window as any).__SOLANA_SWITCHING__ = true;
     solanaSelect(adapterName as any);
@@ -94,6 +98,7 @@ export function useLinkedSolanaWallet() {
     promptReconnect,
     // UI state
     isLinking,
+    linkError,
     showLinkModal,
     setShowLinkModal,
     linkedWalletName: linkedSolanaWalletName,
