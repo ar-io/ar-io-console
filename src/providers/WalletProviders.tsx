@@ -27,7 +27,7 @@ const wagmiConfig = getDefaultConfig({
     [polygonAmoy.id]: http('https://rpc-amoy.polygon.technology'),
   },
   ssr: false,
-  pollingInterval: 60_000, // 60s instead of default 4s — prevents RPC rate limiting
+  pollingInterval: 600_000, // 10 min — app fetches balances on-demand, not via wagmi polling
 });
 
 // Custom RainbowKit theme to match ar.io's dark theme
