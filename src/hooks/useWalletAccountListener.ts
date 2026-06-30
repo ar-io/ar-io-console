@@ -96,13 +96,15 @@ export function useWalletAccountListener() {
     solanaEverConnectedRef.current = true;
   }
 
-  // Handle Solana connection: update store when publicKey appears
+  // Handle Solana connection: update store when publicKey appears.
+  // Only update the primary session for Solana-primary users.
+  // For linked wallets (Arweave/Ethereum primary), useLinkedSolanaWallet manages its own state.
   useEffect(() => {
-    if (solanaPublicKey) {
+    if (solanaPublicKey && walletType === 'solana') {
       const newAddress = solanaPublicKey.toString();
       if (newAddress !== address) {
-        console.log('[Wallet Listener] Solana wallet connected:', { from: address, to: newAddress });
-        if (address && walletType === 'solana') {
+        console.log('[Wallet Listener] Solana wallet connected (primary):', { from: address, to: newAddress });
+        if (address) {
           clearAllPaymentState();
         }
         setAddress(newAddress, 'solana');

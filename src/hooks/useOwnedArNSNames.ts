@@ -28,7 +28,8 @@ interface ArNSUpdateResult {
 }
 
 export function useOwnedArNSNames() {
-  const { address, walletType, setOwnedArNSNames, getOwnedArNSNames } = useStore();
+  const { setOwnedArNSNames, getOwnedArNSNames, getArNSAddress } = useStore();
+  const arnsAddress = getArNSAddress();
   const [names, setNames] = useState<ArNSName[]>([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
@@ -36,14 +37,14 @@ export function useOwnedArNSNames() {
   const { connection: solanaConnection } = useConnection();
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction } = useWallet();
 
-  // Fetch names owned by current address
+  // Fetch names owned by the ArNS address (primary Solana or linked Solana)
   const fetchOwnedNames = useCallback(
     async (forceRefresh: boolean = false): Promise<ArNSName[]> => {
-      if (!address || walletType !== 'solana') return []; // ArNS ownership now resolves via Solana addresses
+      if (!arnsAddress) return [];
 
       // Check cache first (unless forcing refresh)
       if (!forceRefresh) {
-        const cached = getOwnedArNSNames(address);
+        const cached = getOwnedArNSNames(arnsAddress!);
         if (cached) {
           const arnsNames: ArNSName[] = cached.map((cached) => ({
             name: cached.name,
@@ -63,7 +64,7 @@ export function useOwnedArNSNames() {
         // Use AR.IO SDK to get owned names with custom CU
         const ario = getARIO();
         const records = await ario.getArNSRecordsForAddress({
-          address: address,
+          address: arnsAddress!,
           limit: 100, // Get up to 100 names
           sortBy: 'startTimestamp',
           sortOrder: 'desc', // Most recent first
@@ -80,7 +81,7 @@ export function useOwnedArNSNames() {
         }));
 
         // Check if we have cached ANT details for any of these names
-        const cached = getOwnedArNSNames(address);
+        const cached = getOwnedArNSNames(arnsAddress!);
         if (cached) {
           // Merge cached ANT details with fresh name list
           processedNames.forEach((name) => {
@@ -101,14 +102,14 @@ export function useOwnedArNSNames() {
         }));
 
         // Cache the results
-        setOwnedArNSNames(address, cacheData);
+        setOwnedArNSNames(arnsAddress!, cacheData);
         setNames(processedNames);
         return processedNames;
       } catch (error) {
         console.error('Failed to fetch owned ArNS names:', error);
 
         // If fetch fails, still try to use any cached data
-        const cached = getOwnedArNSNames(address);
+        const cached = getOwnedArNSNames(arnsAddress!);
         if (cached) {
           const fallbackNames: ArNSName[] = cached.map((cached) => ({
             name: cached.name,
@@ -127,14 +128,12 @@ export function useOwnedArNSNames() {
         setLoading(false);
       }
     },
-    [address, walletType, getOwnedArNSNames, setOwnedArNSNames]
+    [arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
 
   // Update ArNS name to point to new manifest
   const updateArNSRecord = useCallback(
     async (name: string, manifestId: string, undername?: string, customTTL?: number): Promise<ArNSUpdateResult> => {
-      const { walletType } = useStore.getState();
-
       const nameRecord = names.find((n) => n.name === name);
       if (!nameRecord) {
         return {
@@ -146,10 +145,10 @@ export function useOwnedArNSNames() {
       setUpdating((prev) => ({ ...prev, [name]: true }));
 
       try {
-        if (walletType !== 'solana' || !solanaPublicKey) {
+        if (!solanaPublicKey || !solanaSignTransaction) {
           return {
             success: false,
-            error: 'Connect a Solana wallet to update ArNS records.',
+            error: 'Solana wallet not connected. Please reconnect to update ArNS records.',
           };
         }
 
@@ -202,7 +201,7 @@ export function useOwnedArNSNames() {
         }
 
         // Refresh only the updated name's state for efficiency
-        if (address) {
+        if (arnsAddress) {
           console.log('Refreshing ArNS state for updated name:', name);
           setTimeout(async () => {
             try {
@@ -229,7 +228,7 @@ export function useOwnedArNSNames() {
                 );
 
                 // Also update the cache with the refreshed data
-                const cachedNames = getOwnedArNSNames(address) || [];
+                const cachedNames = getOwnedArNSNames(arnsAddress!) || [];
                 const updatedCacheNames = cachedNames.map((cachedName) =>
                   cachedName.name === name
                     ? {
@@ -250,7 +249,7 @@ export function useOwnedArNSNames() {
                   });
                 }
 
-                setOwnedArNSNames(address, updatedCacheNames);
+                setOwnedArNSNames(arnsAddress!, updatedCacheNames);
                 console.log('Refreshed ANT state and cache for', name, ':', freshState);
               }
             } catch (error) {
@@ -277,7 +276,7 @@ export function useOwnedArNSNames() {
     },
     [
       names,
-      address,
+      arnsAddress,
       fetchOwnedNames,
       getOwnedArNSNames,
       setOwnedArNSNames,
@@ -331,8 +330,8 @@ export function useOwnedArNSNames() {
         setNames((prevNames) => prevNames.map((n) => (n.name === name ? updatedName : n)));
 
         // Update cache with the new details
-        if (address) {
-          const cachedNames = getOwnedArNSNames(address) || [];
+        if (arnsAddress) {
+          const cachedNames = getOwnedArNSNames(arnsAddress!) || [];
           let updatedCache;
 
           // Check if this name is already in cache
@@ -363,7 +362,7 @@ export function useOwnedArNSNames() {
             ];
           }
 
-          setOwnedArNSNames(address, updatedCache);
+          setOwnedArNSNames(arnsAddress!, updatedCache);
           console.log('Updated cache with ANT details for:', name);
         }
 
@@ -389,13 +388,13 @@ export function useOwnedArNSNames() {
         setLoadingDetails((prev) => ({ ...prev, [name]: false }));
       }
     },
-    [names, address, getOwnedArNSNames, setOwnedArNSNames]
+    [names, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
 
   // Refresh a specific ArNS name's state
   const refreshSpecificName = useCallback(
     async (name: string): Promise<boolean> => {
-      if (!address) return false;
+      if (!arnsAddress) return false;
 
       console.log('Refreshing specific ArNS name:', name);
       const nameRecord = names.find((n) => n.name === name);
@@ -438,7 +437,7 @@ export function useOwnedArNSNames() {
         );
 
         // Update cache
-        const cachedNames = getOwnedArNSNames(address) || [];
+        const cachedNames = getOwnedArNSNames(arnsAddress!) || [];
         const updatedCacheNames = cachedNames.map((cachedName) =>
           cachedName.name === name
             ? {
@@ -463,7 +462,7 @@ export function useOwnedArNSNames() {
           });
         }
 
-        setOwnedArNSNames(address, updatedCacheNames);
+        setOwnedArNSNames(arnsAddress!, updatedCacheNames);
         console.log('Successfully refreshed ArNS name:', name, freshState);
         return true;
       } catch (error) {
@@ -471,16 +470,15 @@ export function useOwnedArNSNames() {
         return false;
       }
     },
-    [names, address, getOwnedArNSNames, setOwnedArNSNames]
+    [names, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
 
-  // Auto-fetch on address/wallet change - proactive loading for better UX
+  // Auto-fetch when ArNS address is available (primary Solana or linked wallet)
   useEffect(() => {
-    if (address && walletType === 'solana') {
-      // Fetch names immediately when user connects
+    if (arnsAddress) {
       fetchOwnedNames();
     }
-  }, [address, walletType, fetchOwnedNames]);
+  }, [arnsAddress, fetchOwnedNames]);
 
   return {
     names,

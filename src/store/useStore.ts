@@ -161,6 +161,10 @@ interface StoreState {
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
   creditBalance: number;
 
+  // Linked Solana wallet for ArNS (non-Solana primary users)
+  linkedSolanaAddress: string | null;
+  linkedSolanaWalletName: string | null;
+
   // ArNS state
   arnsNamesCache: Record<string, { name: string; logo?: string; timestamp: number }>;
   ownedArnsCache: Record<
@@ -250,6 +254,9 @@ interface StoreState {
   // Actions
   setAddress: (address: string | null, type: 'arweave' | 'ethereum' | 'solana' | null) => void;
   clearAddress: () => void;
+  setLinkedSolanaWallet: (address: string, walletName: string) => void;
+  clearLinkedSolanaWallet: () => void;
+  getArNSAddress: () => string | null;
   setCreditBalance: (balance: number) => void;
   setArNSName: (address: string, name: string, logo?: string) => void;
   getArNSName: (address: string) => { name: string; logo?: string } | null;
@@ -370,6 +377,10 @@ export const useStore = create<StoreState>()(
       walletType: null,
       creditBalance: 0,
 
+      // Linked Solana wallet for ArNS
+      linkedSolanaAddress: null,
+      linkedSolanaWalletName: null,
+
       arnsNamesCache: {},
       ownedArnsCache: {},
       uploadHistory: [],
@@ -437,7 +448,26 @@ export const useStore = create<StoreState>()(
           creditBalance: 0,
           arnsNamesCache: {},
           ownedArnsCache: {},
+          linkedSolanaAddress: null,
+          linkedSolanaWalletName: null,
         }),
+      setLinkedSolanaWallet: (address, walletName) =>
+        set({ linkedSolanaAddress: address, linkedSolanaWalletName: walletName }),
+      clearLinkedSolanaWallet: () => {
+        const { linkedSolanaAddress: addr, ownedArnsCache } = get();
+        // Remove cached ArNS names for the linked address to avoid stale data
+        if (addr && ownedArnsCache[addr]) {
+          const { [addr]: _, ...rest } = ownedArnsCache;
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest });
+        } else {
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null });
+        }
+      },
+      getArNSAddress: () => {
+        const { walletType, address, linkedSolanaAddress } = get();
+        if (walletType === 'solana') return address;
+        return linkedSolanaAddress;
+      },
       setCreditBalance: (balance) => set({ creditBalance: balance }),
       setArNSName: (address, name, logo) => {
         const cache = get().arnsNamesCache;
@@ -720,6 +750,8 @@ export const useStore = create<StoreState>()(
       partialize: (state) => ({
         address: state.address,
         walletType: state.walletType,
+        linkedSolanaAddress: state.linkedSolanaAddress,
+        linkedSolanaWalletName: state.linkedSolanaWalletName,
         arnsNamesCache: state.arnsNamesCache,
         ownedArnsCache: state.ownedArnsCache,
         uploadHistory: state.uploadHistory,
