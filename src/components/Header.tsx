@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck, X } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -42,13 +42,12 @@ const utilityServices = [
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable } = useStore();
+  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable, linkedSolanaAddress, clearLinkedSolanaWallet } = useStore();
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
   const { disconnect: solanaDisconnect } = useWallet(); // Solana wallet adapter disconnect
   const arnsAddress = useStore((s) => s.getArNSAddress());
-  const isArNSFromLinkedWallet = walletType !== 'solana' && arnsAddress !== null;
   const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(arnsAddress);
 
   const [credits, setCredits] = useState<string>('0');
@@ -380,12 +379,7 @@ const Header = () => {
               {loadingArNS ? (
                 <span className="text-foreground/60">Loading...</span>
               ) : arnsName ? (
-                <>
-                  <span className="font-medium">{arnsName}</span>
-                  {isArNSFromLinkedWallet && (
-                    <span className="text-foreground/40 text-xs" title="ArNS name from linked Solana wallet">via SOL</span>
-                  )}
-                </>
+                <span className="font-medium">{arnsName}</span>
               ) : (
                 formatWalletAddress(address)
               )}
@@ -408,6 +402,24 @@ const Header = () => {
                 </div>
                 <CopyButton textToCopy={address} />
               </div>
+              {linkedSolanaAddress && walletType !== 'solana' && (
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-foreground/40">Solana</span>
+                    <span className="font-mono text-xs text-foreground/60">{formatWalletAddress(linkedSolanaAddress, 6)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <CopyButton textToCopy={linkedSolanaAddress} />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); clearLinkedSolanaWallet(); }}
+                      className="p-1 text-foreground/30 hover:text-error transition-colors"
+                      title="Unlink wallet"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Credit Balance Section - Display Only (hide in x402-only mode) */}
