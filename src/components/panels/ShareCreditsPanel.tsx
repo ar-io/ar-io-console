@@ -357,14 +357,16 @@ export default function ShareCreditsPanel() {
               Never
             </button>
           </div>
-          <input
-            type="number"
-            value={expiresBySeconds}
-            onChange={(e) => setExpiresBySeconds(Number(e.target.value))}
-            className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
-            placeholder="Custom time in seconds (0 = no expiration)"
-            min="0"
-          />
+          {expiresBySeconds > 0 && (
+            <input
+              type="number"
+              value={expiresBySeconds}
+              onChange={(e) => setExpiresBySeconds(Math.max(0, Number(e.target.value)))}
+              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
+              placeholder="Custom time in seconds"
+              min="1"
+            />
+          )}
           {expiresBySeconds > 0 && (
             <p className="text-xs text-foreground/80 mt-1">
               Expires in {expiresBySeconds < 3600
