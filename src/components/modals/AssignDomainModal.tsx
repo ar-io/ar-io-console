@@ -12,8 +12,9 @@ import {
 } from 'lucide-react';
 import { Listbox } from '@headlessui/react';
 import BaseModal from './BaseModal';
+import LinkSolanaWalletModal from './LinkSolanaWalletModal';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
-import { useStore } from '../../store/useStore';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { sanitizeUndername, hasInvalidCharacters } from '../../utils/undernames';
 
 interface AssignDomainModalProps {
@@ -31,8 +32,8 @@ export default function AssignDomainModal({
   existingUndername,
   onSuccess,
 }: AssignDomainModalProps) {
-  const { walletType } = useStore();
   const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails, updateArNSRecord } = useOwnedArNSNames();
+  const { isSolanaConnected, needsLinking, showLinkModal, setShowLinkModal, promptReconnect } = useLinkedSolanaWallet();
 
   const [selectedArnsName, setSelectedArnsName] = useState(existingArnsName || '');
   const [selectedUndername, setSelectedUndername] = useState(existingUndername || '');
@@ -141,6 +142,7 @@ export default function AssignDomainModal({
   };
 
   return (
+    <>
     <BaseModal onClose={onClose} showCloseButton={false}>
       <div className="w-[90vw] sm:w-[600px] max-w-[90vw] h-[85vh] sm:h-[600px] max-h-[90vh] flex flex-col text-foreground mx-auto">
         {/* Header */}
@@ -181,9 +183,9 @@ export default function AssignDomainModal({
                 Loading your ArNS names...
               </div>
             ) : names.length === 0 ? (
-              <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
+              <div className="bg-card border border-border/20 rounded-2xl p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-foreground/60 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-sm font-medium text-foreground mb-1">No ArNS names found</div>
                     <div className="text-sm text-foreground/80 mb-3">
@@ -553,53 +555,85 @@ export default function AssignDomainModal({
             </div>
           )}
 
-          {/* Wallet Compatibility Warning */}
-          {walletType !== 'solana' && (
-            <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
-              <div className="flex items-center gap-2">
-                <div className="text-warning text-sm">
-                  ArNS record updates require a Solana wallet. Please connect a Solana wallet.
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Solana wallet status banners are in the sticky footer below */}
         </div>
 
         {/* Fixed Actions Footer */}
-        <div className="flex-shrink-0 flex justify-between items-center p-4 sm:p-6 border-t border-border/20">
-          <button
-            onClick={onClose}
-            disabled={isAssigning}
-            className="text-sm text-foreground/80 hover:text-foreground disabled:opacity-50"
-          >
-            Cancel
-          </button>
+        <div className="flex-shrink-0 border-t border-border/20">
+          {/* Wallet status banner pinned above the buttons */}
+          {needsLinking && (
+            <div className="px-4 sm:px-6 pt-4 pb-2">
+              <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <div className="text-sm text-foreground/80">
+                  Link a Solana wallet to assign domains
+                </div>
+                <button
+                  onClick={() => setShowLinkModal(true)}
+                  className="px-3 py-1.5 bg-primary text-white rounded-full text-xs font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Link Wallet
+                </button>
+              </div>
+            </div>
+          )}
+          {!needsLinking && !isSolanaConnected && (
+            <div className="px-4 sm:px-6 pt-4 pb-2">
+              <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <div className="text-sm text-foreground/80">
+                  Solana wallet session expired
+                </div>
+                <button
+                  onClick={promptReconnect}
+                  className="px-3 py-1.5 bg-primary text-white rounded-full text-xs font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Reconnect
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-between items-center p-4 sm:p-6">
+            <button
+              onClick={onClose}
+              disabled={isAssigning}
+              className="text-sm text-foreground/80 hover:text-foreground disabled:opacity-50"
+            >
+              Cancel
+            </button>
 
-          <button
-            onClick={handleAssignDomain}
-            disabled={
-              !selectedArnsName ||
-              isAssigning ||
-              walletType !== 'solana' ||
-              (undernameMode === 'new' && !selectedUndername) ||
-              (undernameMode === 'existing' && !selectedUndername)
-            }
-            className="px-6 py-3 rounded-full bg-primary text-white font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {isAssigning ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Assigning Domain...
-              </>
-            ) : (
-              <>
-                <Globe className="w-4 h-4" />
-                {existingArnsName ? 'Update Domain' : 'Assign Domain'}
-              </>
-            )}
-          </button>
+            <button
+              onClick={handleAssignDomain}
+              disabled={
+                !selectedArnsName ||
+                isAssigning ||
+                !isSolanaConnected ||
+                (undernameMode === 'new' && !selectedUndername) ||
+                (undernameMode === 'existing' && !selectedUndername)
+              }
+              className="px-6 py-3 rounded-full bg-primary text-white font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isAssigning ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Assigning Domain...
+                </>
+              ) : (
+                <>
+                  <Globe className="w-4 h-4" />
+                  {existingArnsName ? 'Update Domain' : 'Assign Domain'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
     </BaseModal>
+    {showLinkModal && (
+      <LinkSolanaWalletModal
+        onClose={() => setShowLinkModal(false)}
+        isReconnect={!needsLinking}
+      />
+    )}
+    </>
   );
 }

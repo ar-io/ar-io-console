@@ -41,15 +41,16 @@ export interface ArNSProfile {
 }
 
 export function usePrimaryArNSName(address: string | null) {
-  const { walletType, getArNSName, setArNSName } = useStore();
+  const getArNSName = useStore((s) => s.getArNSName);
+  const setArNSName = useStore((s) => s.setArNSName);
   const [arnsName, setArnsName] = useState<string | null>(null);
   const [arnsLogo, setArnsLogo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function fetchArNSProfile() {
-      // ArNS now resolves against Solana addresses only
-      if (!address || walletType !== 'solana' || !checkValidAddress(address)) {
+      // ArNS resolves against Solana addresses (valid base58 public keys)
+      if (!address || !checkValidAddress(address)) {
         setArnsName(null);
         setArnsLogo(null);
         return;
@@ -159,7 +160,7 @@ export function usePrimaryArNSName(address: string | null) {
     }
 
     fetchArNSProfile();
-  }, [address, walletType, getArNSName, setArNSName]);
+  }, [address, getArNSName, setArNSName]);
 
   // Create the profile object
   const profile: ArNSProfile = {

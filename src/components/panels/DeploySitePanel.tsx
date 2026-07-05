@@ -13,6 +13,7 @@ import CopyButton from '../CopyButton';
 import { getArweaveUrl, getArweaveRawUrl } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { useNavigate } from 'react-router-dom';
 import ReceiptModal from '../modals/ReceiptModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
@@ -945,6 +946,7 @@ export default function DeploySitePanel() {
     lastDeployedAppName,
   } = useStore();
 
+  const { hasArNSAccess } = useLinkedSolanaWallet();
   // Fetch and track the bundler's free upload limit
   const freeUploadLimitBytes = useFreeUploadLimit();
 
@@ -975,7 +977,7 @@ export default function DeploySitePanel() {
   const [postDeployShowUndername, setPostDeployShowUndername] = useState(false);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
   const [postDeployArNSUpdating, setPostDeployArNSUpdating] = useState(false);
-  // Post-deployment ArNS enabled state (disabled by default, user can enable)
+  // Post-deployment ArNS enabled state — auto-enabled when user has ArNS names
   const [postDeployArNSEnabled, setPostDeployArNSEnabled] = useState(false);
   const [postDeployCustomTTL, setPostDeployCustomTTL] = useState<number | undefined>(undefined);
   // Domain assignment modal state
@@ -1056,6 +1058,13 @@ export default function DeploySitePanel() {
     initializeFromCache
   } = useUploadStatus();
   const { updateArNSRecord, refreshSpecificName, names: userArnsNames } = useOwnedArNSNames();
+
+  // Auto-enable post-deploy ArNS panel when deploy succeeds and user has ArNS names
+  useEffect(() => {
+    if (deploySuccessInfo && !deploySuccessInfo.arnsConfigured && userArnsNames.length > 0) {
+      setPostDeployArNSEnabled(true);
+    }
+  }, [deploySuccessInfo, userArnsNames.length]);
 
   // Smart Deploy: Analyze folder when selected (hash files for deduplication)
   // Always analyze to show potential savings - toggle only affects actual deploy
@@ -2163,7 +2172,7 @@ export default function DeploySitePanel() {
       )}
 
       {/* ArNS Association Panel - Show for Solana wallets (ArNS is on Solana) */}
-      {selectedFolder && selectedFolder.length > 0 && walletType === 'solana' && !deploySuccessInfo && !deploying && (
+      {selectedFolder && selectedFolder.length > 0 && hasArNSAccess && !deploySuccessInfo && !deploying && (
         <ArNSAssociationPanel
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
@@ -2278,7 +2287,7 @@ export default function DeploySitePanel() {
                 )}
                 {deployStage === 'updating-arns' && (
                   <>
-                    <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                     <span>Connecting {selectedUndername ? selectedUndername + '_' : ''}{selectedArnsName}.ar.io to your site...</span>
                   </>
                 )}
@@ -2397,12 +2406,12 @@ export default function DeploySitePanel() {
 
       {/* ArNS Discovery Section - Show for non-Solana wallets or Solana users without ArNS names */}
       {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
-       (walletType !== 'solana' || userArnsNames.length === 0) && (
+       (!hasArNSAccess || userArnsNames.length === 0) && (
         <div className="mt-6">
-          <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/5 rounded-xl border border-primary/20 p-6">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-warning/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                <Globe className="w-5 h-5 text-warning" />
+              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                <Globe className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <h4 className="text-lg font-bold text-foreground mb-1">Want a Friendly Domain Name?</h4>
@@ -2434,15 +2443,15 @@ export default function DeploySitePanel() {
               </div>
               
               <div className="text-sm text-foreground/80 mb-2">Get something like:</div>
-              <div className="font-mono text-sm text-warning font-medium">
+              <div className="font-mono text-sm text-primary font-medium">
                 https://mysite.ar.io
               </div>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => window.location.href = '/domains'}
-                className="flex-1 py-3 px-4 bg-warning text-foreground rounded-lg font-medium hover:bg-warning/90 transition-colors"
+                onClick={() => navigate('/domains')}
+                className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 Search for Your Name
               </button>
@@ -2459,7 +2468,7 @@ export default function DeploySitePanel() {
 
       {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS names */}
       {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       walletType === 'solana' && userArnsNames.length > 0 && (
+       hasArNSAccess && userArnsNames.length > 0 && (
         <div className="mt-6">
           <ArNSAssociationPanel
             enabled={postDeployArNSEnabled}
@@ -2546,7 +2555,7 @@ export default function DeploySitePanel() {
                   setPostDeployArNSUpdating(false);
                 }}
                 disabled={!postDeployArNSName || postDeployArNSUpdating || (postDeployShowUndername && !postDeployUndername)}
-                className="w-full py-3 px-4 bg-warning text-foreground rounded-lg hover:bg-warning/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+                className="w-full py-3 px-4 bg-foreground text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
               >
                 {postDeployArNSUpdating ? (
                   <>
@@ -2764,16 +2773,14 @@ export default function DeploySitePanel() {
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
-                            {/* Assign Domain Button - Solana wallets only */}
-                            {walletType === 'solana' && (
-                              <button
-                                onClick={() => setShowAssignDomainModal(manifestId)}
-                                className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                                title={arnsAssociation ? "Change Domain" : "Assign Domain"}
-                              >
-                                <Globe className="w-4 h-4" />
-                              </button>
-                            )}
+                            {/* Assign Domain — modal handles wallet linking/reconnect */}
+                            <button
+                              onClick={() => setShowAssignDomainModal(manifestId)}
+                              className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                              title={arnsAssociation ? "Change Domain" : "Assign Domain"}
+                            >
+                              <Globe className="w-4 h-4" />
+                            </button>
                           </div>
 
                           {/* Mobile: Status + 3-dot menu */}
@@ -2867,19 +2874,17 @@ export default function DeploySitePanel() {
                                       <ExternalLink className="w-4 h-4" />
                                       Visit Deployed Site
                                     </a>
-                                    {/* Assign/Change Domain - Solana wallets only */}
-                                    {walletType === 'solana' && (
-                                      <button
-                                        onClick={() => {
-                                          setShowAssignDomainModal(manifestId);
-                                          close();
-                                        }}
-                                        className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                      >
-                                        <Globe className="w-4 h-4" />
-                                        {arnsAssociation ? "Change Domain" : "Assign Domain"}
-                                      </button>
-                                    )}
+                                    {/* Assign Domain — modal handles wallet linking/reconnect */}
+                                    <button
+                                      onClick={() => {
+                                        setShowAssignDomainModal(manifestId);
+                                        close();
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                    >
+                                      <Globe className="w-4 h-4" />
+                                      {arnsAssociation ? "Change Domain" : "Assign Domain"}
+                                    </button>
                                   </>
                                 )}
                               </PopoverPanel>

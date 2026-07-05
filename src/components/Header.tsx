@@ -47,7 +47,9 @@ const Header = () => {
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
   const { disconnect: solanaDisconnect } = useWallet(); // Solana wallet adapter disconnect
-  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(address);
+  const arnsAddress = useStore((s) => s.getArNSAddress());
+  const isArNSFromLinkedWallet = walletType !== 'solana' && arnsAddress !== null;
+  const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(arnsAddress);
 
   const [credits, setCredits] = useState<string>('0');
   const [creditsNumeric, setCreditsNumeric] = useState<number>(0);
@@ -374,11 +376,16 @@ const Header = () => {
                 'bg-green-500'
               }`} />
             )}
-            <div className="text-foreground">
+            <div className="text-foreground flex items-center gap-1">
               {loadingArNS ? (
                 <span className="text-foreground/60">Loading...</span>
               ) : arnsName ? (
-                <span className="font-medium">{arnsName}</span>
+                <>
+                  <span className="font-medium">{arnsName}</span>
+                  {isArNSFromLinkedWallet && (
+                    <span className="text-foreground/40 text-xs" title="ArNS name from linked Solana wallet">via SOL</span>
+                  )}
+                </>
               ) : (
                 formatWalletAddress(address)
               )}
