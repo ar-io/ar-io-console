@@ -72,7 +72,10 @@ function parseAmount(raw: string | null): number | null {
 
 function parseToken(raw: string | null): SupportedTokenType | null {
   if (!raw) return null;
-  return TOKEN_ALIASES[raw.trim().toLowerCase()] ?? null;
+  const key = raw.trim().toLowerCase();
+  // Own-property check so prototype keys (`__proto__`, `constructor`, …) from
+  // untrusted query input resolve to null instead of leaking a chain value.
+  return Object.hasOwn(TOKEN_ALIASES, key) ? TOKEN_ALIASES[key] : null;
 }
 
 function parseSource(raw: string | null): string | null {
