@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -11,10 +11,9 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Gift, Ticket, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, Phone, BookOpen, Calculator, Compass
+  Camera, BookOpen, Calculator, Compass
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
-import { CompanyCarousel } from '../components/CompanyCarousel';
 
 const LandingPage = () => {
   const { address } = useStore();
@@ -48,59 +47,6 @@ const LandingPage = () => {
 
   // Get free upload limit from bundler
   const freeUploadLimitBytes = useFreeUploadLimit();
-
-  // Initialize Cal.com embed for scheduling modal
-  useEffect(() => {
-    const w = window as any;
-    (function (C: any, A: string, L: string) {
-      const p = (a: any, ar: any) => { a.q.push(ar); };
-      const d = C.document;
-      C.Cal = C.Cal || function (...args: any[]) {
-        const cal = C.Cal;
-        const ar = args;
-        if (!cal.loaded) {
-          cal.ns = {};
-          cal.q = cal.q || [];
-          d.head.appendChild(d.createElement("script")).src = A;
-          cal.loaded = true;
-        }
-        if (ar[0] === L) {
-          const api: any = function (...innerArgs: any[]) { p(api, innerArgs); };
-          const namespace = ar[1];
-          api.q = api.q || [];
-          if (typeof namespace === "string") {
-            cal.ns[namespace] = cal.ns[namespace] || api;
-            p(cal.ns[namespace], ar);
-            p(cal, ["initNamespace", namespace]);
-          } else {
-            p(cal, ar);
-          }
-          return;
-        }
-        p(cal, ar);
-      };
-    })(w, "https://app.cal.com/embed/embed.js", "init");
-
-    // Initialize with default namespace
-    if (w.Cal) {
-      w.Cal("init", { origin: "https://app.cal.com" });
-      w.Cal("ui", { layout: "month_view" });
-    }
-  }, []);
-
-  // Company data for the carousel
-  const companies = [
-    { name: 'Forward Research', url: 'https://fwd.ar.io/', logo: '/forward-research-logo.jpg', description: 'Arweave core development team' },
-    { name: 'Drip Haus', url: 'https://drip.haus/', logo: '/drip-haus-logo.png', description: 'NFT curation and discovery platform' },
-    { name: 'Manifold', url: 'https://manifold.xyz/', logo: '/manifold_logo.jpg', description: 'NFT creation and deployment tools' },
-    { name: 'Meta/Instagram', url: 'https://www.theblock.co/post/182569/meta-arweave-instagram-nfts', logo: '/meta-logo.svg', description: 'Digital collectibles platform' },
-    { name: 'RedStone Oracle', url: 'https://www.redstone.finance/', logo: '/RedStone_squarelogo.png', description: 'Permanent price feed storage' },
-    { name: 'KYVE Network', url: 'https://www.kyve.network/', logo: '/kyve-logo.jpeg', description: 'Blockchain data archival' },
-    { name: 'Metaplex', url: 'https://www.metaplex.com/', logo: '/metaplex_studios_logo.jpeg', description: 'Solana NFT metadata storage' },
-    { name: 'Load Network', url: 'https://www.load.network/', logo: '/load-network-logo.svg', description: 'High performance EVM storage chain' },
-    { name: 'Solana Mobile', url: 'https://solanamobile.com/', logo: '/Solana_logo.png', description: 'Mobile app storage and distribution' }
-  ];
-
 
   // Consistent feature styling using primary brand color
   const getFeatureColor = () => {
@@ -247,12 +193,11 @@ const LandingPage = () => {
         {/* CTA Section */}
         <div className="relative z-10 mt-7 flex flex-col sm:flex-row items-center gap-4">
           <button
-            data-cal-link="kempsterrrr/ar-io-ecosystem-intro"
-            data-cal-config='{"layout":"month_view"}'
+            onClick={() => navigate(loggedIn ? '/upload' : '/try')}
             className="group relative rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-lg cursor-pointer"
           >
-            <Phone className="w-5 h-5" />
-            <span>Book a Demo</span>
+            <Upload className="w-5 h-5" />
+            <span>Try it Out</span>
           </button>
 
           <a
@@ -326,33 +271,6 @@ const LandingPage = () => {
             onClose={handleWalletModalClose}
           />
         )}
-      </div>
-
-      {/* Service Metrics */}
-      <div className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Service Metrics</h2>
-          <p className="text-foreground/80">Real performance metrics from production infrastructure</p>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">20B+</div>
-            <div className="text-sm text-foreground/80">Files protected</div>
-          </div>
-          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">200TiB+</div>
-            <div className="text-sm text-foreground/80">Permanent data stored</div>
-          </div>
-          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">~860</div>
-            <div className="text-sm text-foreground/80">Uploads per second</div>
-          </div>
-          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-6 text-center">
-            <div className="text-3xl font-heading font-bold text-primary mb-1">99.9%</div>
-            <div className="text-sm text-foreground/80">Gateway uptime</div>
-          </div>
-        </div>
       </div>
 
       {/* How it Works */}
@@ -469,18 +387,6 @@ const LandingPage = () => {
               <span>Calculate your costs</span>
             </button>
           </div>
-        </div>
-
-        {/* Private Pricing CTA */}
-        <div className="mt-6 text-center">
-          <button
-            data-cal-link="kempsterrrr/ar-io-intro"
-            data-cal-config='{"layout":"month_view"}'
-            className="inline-flex items-center gap-2 text-sm text-foreground/70 hover:text-primary transition-colors cursor-pointer"
-          >
-            <Phone className="w-4 h-4" />
-            <span>Need custom or enterprise pricing? <span className="underline font-medium">Let's talk</span></span>
-          </button>
         </div>
       </div>
 
@@ -846,30 +752,18 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Used by the Best */}
-      <div className="mb-12">
-        <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Used by the Best</h2>
-          <p className="text-foreground/80">Powering critical platforms across the web</p>
-        </div>
-
-        <CompanyCarousel companies={companies} />
-      </div>
-
       {/* Final CTA Section */}
       <section className="bg-card rounded-2xl border border-border/20 p-8 sm:p-12 text-center">
         <h2 className="font-heading font-bold text-3xl mb-4 text-foreground">Ready to build on ar.io?</h2>
         <p className="text-lg text-foreground/80 max-w-2xl mx-auto mb-8">
-          Talk to our team about custom integrations, enterprise solutions, or technical guidance.
-          We'll help you choose the right architecture for permanent data storage at scale.
+          Start uploading files to the permaweb in seconds. No account required for small files.
         </p>
         <button
-          data-cal-link="kempsterrrr/ar-io-ecosystem-intro"
-          data-cal-config='{"layout":"month_view"}'
+          onClick={() => navigate(loggedIn ? '/upload' : '/try')}
           className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl text-lg cursor-pointer"
         >
-          <Phone className="w-5 h-5" />
-          <span>Book a Demo</span>
+          <Upload className="w-5 h-5" />
+          <span>Try it Out</span>
         </button>
       </section>
 
