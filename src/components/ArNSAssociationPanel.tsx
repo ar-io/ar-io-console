@@ -125,6 +125,8 @@ export default function ArNSAssociationPanel({
       setCustomTTLInput(currentTTL.toString());
     }
   }, [currentTTL]);
+  const canUseArNS = isSolanaConnected && !needsLinking;
+
   return (
     <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-6 mb-6">
       <div className="flex items-start gap-3 mb-4">
@@ -138,9 +140,10 @@ export default function ArNSAssociationPanel({
               id="arns-enabled"
               checked={enabled}
               onChange={(e) => onEnabledChange(e.target.checked)}
-              className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors"
+              disabled={!canUseArNS}
+              className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
             />
-            <label htmlFor="arns-enabled" className="font-medium text-foreground cursor-pointer">
+            <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
               Add domain name
             </label>
           </div>
@@ -150,43 +153,44 @@ export default function ArNSAssociationPanel({
         </div>
       </div>
 
-      {enabled && (
+      {/* Solana wallet status: needs linking or reconnection — shown when checkbox is disabled */}
+      {needsLinking && (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-foreground/80">
+              <LinkIcon className="w-4 h-4 text-primary" />
+              Link a Solana wallet to assign ArNS domains
+            </div>
+            <button
+              onClick={() => setShowLinkModal(true)}
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Link Wallet
+            </button>
+          </div>
+        </div>
+      )}
+      {!needsLinking && !isSolanaConnected && (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-foreground/80">
+              Solana wallet session expired. Reconnect to assign a domain.
+            </div>
+            <button
+              onClick={promptReconnect}
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap ml-3"
+            >
+              Reconnect
+            </button>
+          </div>
+        </div>
+      )}
+      {showLinkModal && (
+        <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} isReconnect={!needsLinking} />
+      )}
+
+      {enabled && canUseArNS && (
         <div className="space-y-4">
-          {/* Solana wallet status: needs linking or reconnection */}
-          {needsLinking && (
-            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-foreground/80">
-                  <LinkIcon className="w-4 h-4 text-primary" />
-                  Link a Solana wallet to assign ArNS domains
-                </div>
-                <button
-                  onClick={() => setShowLinkModal(true)}
-                  className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  Link Wallet
-                </button>
-              </div>
-            </div>
-          )}
-          {!needsLinking && !isSolanaConnected && (
-            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-foreground/80">
-                  Solana wallet session expired. Reconnect before deploying to assign a domain.
-                </div>
-                <button
-                  onClick={promptReconnect}
-                  className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap ml-3"
-                >
-                  Reconnect
-                </button>
-              </div>
-            </div>
-          )}
-          {showLinkModal && (
-            <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} isReconnect={!needsLinking} />
-          )}
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-foreground/80">
               <Loader2 className="w-4 h-4 animate-spin" />

@@ -2171,8 +2171,8 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* ArNS Association Panel - Show for Solana wallets (ArNS is on Solana) */}
-      {selectedFolder && selectedFolder.length > 0 && hasArNSAccess && !deploySuccessInfo && !deploying && (
+      {/* ArNS Association Panel - shown for all wallet types; panel handles linking/reconnection internally */}
+      {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
         <ArNSAssociationPanel
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
@@ -2466,8 +2466,8 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS names */}
-      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
+      {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS access */}
+      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
        hasArNSAccess && userArnsNames.length > 0 && (
         <div className="mt-6">
           <ArNSAssociationPanel
