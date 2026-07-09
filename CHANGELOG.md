@@ -2,6 +2,17 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [Unreleased]
+
+### Added
+- Top Up deep-link support: external apps (e.g. ArDrive Desktop) can open
+  `/topup?destinationAddress=<arweaveAddr>&source=ardrive-desktop` (optionally
+  `&amount=<usd>&token=<ar|eth|sol>`) to pre-seed the credit destination. A
+  "Funding: …" badge shows where credits will be delivered, and both the fiat
+  and crypto payment paths credit the seeded address. A missing or invalid
+  `destinationAddress` falls back to the existing connected-wallet / manual-entry
+  behavior. Unit tests added for the deep-link parser (runnable via `npm test`).
+
 ## [1.2.3] - 2026-05-05
 
 ### Changed

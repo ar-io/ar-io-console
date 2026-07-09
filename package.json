@@ -14,7 +14,9 @@
     "clean:all": "cross-env rimraf dist node_modules tsconfig.tsbuildinfo tsconfig.node.tsbuildinfo && npm install",
     "lint": "cross-env NODE_OPTIONS=--max-old-space-size=2048 eslint .",
     "preview": "cross-env NODE_OPTIONS=--max-old-space-size=2048 vite preview",
-    "type-check": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc --noEmit"
+    "type-check": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@ar.io/sdk": "4.0.2",
@@ -76,6 +78,7 @@
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.3",
     "vite": "^5.4.0",
+    "vitest": "^2.1.9",
     "vite-plugin-node-polyfills": "^0.22.0",
     "vite-plugin-pwa": "^1.2.0",
     "workbox-window": "^7.4.0"

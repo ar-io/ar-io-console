@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
@@ -14,6 +15,7 @@ import PaymentConfirmationPanel from './fiat/PaymentConfirmationPanel';
 import PaymentSuccessPanel from './fiat/PaymentSuccessPanel';
 import { getPaymentIntent } from '../../services/paymentService';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
+import { parseTopUpDeepLink, formatDeepLinkSource } from '../../utils/topupDeepLink';
 import WalletSelectionModal from '../modals/WalletSelectionModal';
 import { getTurboBalance } from '../../utils';
 
@@ -31,6 +33,16 @@ export default function TopUpPanel() {
     setPaymentTarget,
     clearPaymentTarget,
   } = useStore();
+
+  // Deep-link support: external apps (e.g. ArDrive Desktop) can open
+  // `/topup?destinationAddress=<arweaveAddr>&source=ardrive-desktop` (optionally
+  // `&amount=<usd>&token=<ar|eth|sol>`) to pre-seed the credit destination.
+  // When no valid destinationAddress is present, `deepLink.destinationAddress`
+  // is null and the page behaves exactly as it does without any params.
+  const [searchParams] = useSearchParams();
+  const deepLink = useMemo(() => parseTopUpDeepLink(searchParams), [searchParams]);
+  const deepLinkSourceLabel = formatDeepLinkSource(deepLink.source);
+  const deepLinkAppliedRef = useRef(false);
 
   const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>('fiat');
   const [inputType, setInputType] = useState<'dollars' | 'storage'>('dollars');
@@ -437,12 +449,37 @@ export default function TopUpPanel() {
   }, [walletType, getAvailableTokens]);
 
 
-  // Set initial target to connected wallet when user logs in
+  // Set the initial credit destination. A deep-link destinationAddress (e.g.
+  // from ArDrive Desktop) takes priority over the connected wallet and is
+  // re-applied whenever the target is cleared (e.g. on wallet connect/switch),
+  // so a browser-wallet payment still credits the deep-linked address. Without a
+  // deep-link this is unchanged from before: default to the connected wallet.
   useEffect(() => {
-    if (address && walletType && !paymentTargetAddress) {
+    if (paymentTargetAddress) return;
+    if (deepLink.destinationAddress) {
+      setPaymentTarget(deepLink.destinationAddress, 'arweave');
+    } else if (address && walletType) {
       setPaymentTarget(address, walletType);
     }
-  }, [address, walletType, paymentTargetAddress, setPaymentTarget]);
+  }, [address, walletType, paymentTargetAddress, setPaymentTarget, deepLink]);
+
+  // Pre-select amount/token from the deep-link once. Gated on a valid
+  // destinationAddress so a stray `?amount=`/`?token=` never alters the default.
+  useEffect(() => {
+    if (deepLinkAppliedRef.current) return;
+    if (!deepLink.destinationAddress) return;
+    deepLinkAppliedRef.current = true;
+
+    if (deepLink.amount !== null) {
+      const clampedAmount = Math.min(Math.max(deepLink.amount, minUSDAmount), maxUSDAmount);
+      setUsdAmount(clampedAmount);
+      setUsdAmountInput(String(clampedAmount));
+    }
+    if (deepLink.token) {
+      setSelectedTokenType(deepLink.token);
+      setPaymentMethod('crypto');
+    }
+  }, [deepLink]);
 
   // Clear payment state when wallet changes
   useEffect(() => {
@@ -543,6 +580,26 @@ export default function TopUpPanel() {
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+
+        {/* Deep-link funding badge - shows where credits are delivered when
+            the top-up destination was pre-seeded by an external app */}
+        {deepLink.destinationAddress && (
+          <div className="mb-6 flex items-start gap-3 bg-primary/10 border border-primary/20 rounded-2xl p-4">
+            <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-foreground">
+                Funding:{' '}
+                <span className="font-mono">{truncateAddress(deepLink.destinationAddress)}</span>
+                {deepLinkSourceLabel && (
+                  <span className="text-foreground/80"> · via {deepLinkSourceLabel}</span>
+                )}
+              </div>
+              <div className="text-xs text-foreground/80 mt-0.5">
+                Credits will be delivered to this Arweave address.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Payment Method Selection - Always show */}
         <div className="mb-6">
