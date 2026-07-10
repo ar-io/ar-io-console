@@ -193,7 +193,7 @@ const LandingPage = () => {
         {/* CTA Section */}
         <div className="relative z-10 mt-7 flex flex-col sm:flex-row items-center gap-4">
           <button
-            onClick={() => navigate(loggedIn ? '/upload' : '/try')}
+            onClick={() => navigate('/try')}
             className="group relative rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-lg cursor-pointer"
           >
             <Upload className="w-5 h-5" />
@@ -254,16 +254,6 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Subtle Try it Out link */}
-          <div className="mt-3 text-center">
-            <button
-              onClick={() => navigate(loggedIn ? '/upload' : '/try')}
-              className="text-sm text-foreground/80 hover:text-foreground underline decoration-foreground/40 hover:decoration-foreground inline-flex items-center gap-1.5 group transition-colors"
-            >
-              <span>or try uploading a file for free</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
         </div>
 
         {showWalletModal && (
@@ -342,7 +332,7 @@ const LandingPage = () => {
 
           <button
             className="rounded-full border border-border/20 px-4 sm:px-8 py-3 sm:py-4 font-medium flex items-center gap-2 hover:bg-card hover:border-foreground transition-all group text-sm sm:text-lg"
-            onClick={() => navigate(loggedIn ? '/upload' : '/try')}
+            onClick={() => navigate('/try')}
           >
             <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Try it Out</span>
@@ -759,7 +749,7 @@ const LandingPage = () => {
           Start uploading files to the permaweb in seconds. No account required for small files.
         </p>
         <button
-          onClick={() => navigate(loggedIn ? '/upload' : '/try')}
+          onClick={() => navigate('/try')}
           className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl text-lg cursor-pointer"
         >
           <Upload className="w-5 h-5" />
