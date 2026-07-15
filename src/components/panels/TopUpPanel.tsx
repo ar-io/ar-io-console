@@ -579,9 +579,6 @@ export default function TopUpPanel() {
         </div>
       </div>
 
-      {/* Recovery banner for failed top-up transactions */}
-      <PendingTxRecoveryBanner />
-
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
 
@@ -1764,6 +1761,9 @@ export default function TopUpPanel() {
         )}
 
       </div>
+
+      {/* Recovery banner for failed top-up transactions + manual TX recovery */}
+      <PendingTxRecoveryBanner />
 
       {/* Wallet Selection Modal */}
       {showWalletModal && (
