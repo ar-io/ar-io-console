@@ -10,7 +10,7 @@ import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
 import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit';
 import {
   ArrowRight, Zap, Github,
-  CreditCard, Gift, Ticket, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
+  CreditCard, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
   Camera, BookOpen, Calculator, Compass
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
@@ -120,26 +120,15 @@ const LandingPage = () => {
       loginText: 'Share Credits',
       connectText: 'Connect Wallet to Share'
     },
-    {
-      name: 'Gift',
-      icon: Gift,
-      title: 'Send Credits as Gifts',
-      description: 'Send credits to anyone via email with optional personal messages. Recipients can redeem with any wallet.',
-      benefits: ['Email delivery', 'Custom messages', 'Any amount'],
-      action: 'gift',
-      loginText: 'Send Gift',
-      connectText: 'Connect Wallet to Send Gifts'
-    },
-    {
-      name: 'Redeem',
-      icon: Ticket,
-      title: 'Redeem Gift Codes',
-      description: 'Enter gift codes received via email to add credits to your wallet. Simple redemption process with instant credit delivery.',
-      benefits: ['Shared via Gift email', 'Instant delivery', 'Any wallet you want'],
-      action: 'redeem',
-      loginText: 'Redeem Gift Code',
-      connectText: 'Redeem Gift Code'
-    },
+    // DEPRECATED: Gifting feature disabled
+    // {
+    //   name: 'Gift',
+    //   ...
+    // },
+    // {
+    //   name: 'Redeem',
+    //   ...
+    // },
     {
       name: 'Domains',
       icon: Globe2,
@@ -433,7 +422,7 @@ const LandingPage = () => {
                 </div>
                 <button onClick={() => {
                   const feature = features[selectedFeatureIndex];
-                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
+                  if (feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     navigate(`/${feature.action}`);
@@ -441,7 +430,7 @@ const LandingPage = () => {
                     setShowWalletModal(true);
                   }
                 }} className={`px-6 py-2 rounded-full font-medium ${getFeatureColor().button}`}>
-                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
+                  {(features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
                     ? features[selectedFeatureIndex].loginText
                     : loggedIn
                       ? features[selectedFeatureIndex].loginText
@@ -517,7 +506,7 @@ const LandingPage = () => {
                 </div>
                 <button onClick={() => {
                   const feature = features[selectedFeatureIndex];
-                  if (feature.action === 'redeem' || feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
+                  if (feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     navigate(`/${feature.action}`);
@@ -525,7 +514,7 @@ const LandingPage = () => {
                     setShowWalletModal(true);
                   }
                 }} className={`px-6 py-2 rounded-full font-medium ${getFeatureColor().button}`}>
-                  {(features[selectedFeatureIndex].action === 'redeem' || features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
+                  {(features[selectedFeatureIndex].action === 'balances' || features[selectedFeatureIndex].action === 'settings' || features[selectedFeatureIndex].action === 'browse' || features[selectedFeatureIndex].action === 'domains')
                     ? features[selectedFeatureIndex].loginText
                     : loggedIn
                       ? features[selectedFeatureIndex].loginText

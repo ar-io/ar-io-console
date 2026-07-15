@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Gift, Globe, Code, Search, Ticket, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck, X } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck, X } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -23,8 +23,9 @@ const accountServices = [
   { name: 'Capture Page', page: 'capture' as const, icon: Camera },
   { name: 'Deploy Site', page: 'deploy' as const, icon: Zap },
   { name: 'Share Credits', page: 'share' as const, icon: Share2 },
-  { name: 'Redeem Gift', page: 'redeem' as const, icon: Ticket },
-  { name: 'Send Gift', page: 'gift' as const, icon: Gift },
+  // DEPRECATED: Gifting feature disabled
+  // { name: 'Redeem Gift', page: 'redeem' as const, icon: Ticket },
+  // { name: 'Send Gift', page: 'gift' as const, icon: Gift },
 ];
 
 // Public utility services
@@ -175,7 +176,7 @@ const Header = () => {
   // Filter services based on payment service availability (x402-only mode)
   // Payment service dependent routes: topup, share, gift, balances, redeem
   // Note: calculator is NOT included - it works in x402-only mode with USDC pricing
-  const paymentServiceRoutes = ['topup', 'share', 'gift', 'balances', 'redeem'];
+  const paymentServiceRoutes = ['topup', 'share', 'balances']; // 'gift' and 'redeem' deprecated
   const filteredAccountServices = accountServices.filter(service =>
     isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page)
   );

@@ -15,10 +15,11 @@ const getFaqData = (freeLimit: number) => [
     question: "What are Credits?",
     answer: "Credits offer users the ability to pay via credit card instead of using AR tokens. Credits represent a 1:1 value with storage costs and are used solely to pay for uploads. Credits never expire once purchased."
   },
-  {
-    question: "How do I gift Credits?",
-    answer: "You can gift credits by going to the Gift tab, entering an amount and recipient email address. The recipient will receive an email with a redemption code that they can use to add credits to their wallet."
-  },
+  // DEPRECATED: Gifting feature disabled
+  // {
+  //   question: "How do I gift Credits?",
+  //   answer: "..."
+  // },
   {
     question: "Can I share Credits between wallets?",
     answer: "Yes! Use the Share tab to transfer credits to another wallet address. You can set an expiration time for the shared credits, and revoke access at any time."

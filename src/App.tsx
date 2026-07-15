@@ -8,12 +8,13 @@ import TopUpPage from './pages/TopUpPage';
 import UploadPage from './pages/UploadPage';
 import CapturePage from './pages/CapturePage';
 import ShareCreditsPage from './pages/ShareCreditsPage';
-import GiftPage from './pages/GiftPage';
+// DEPRECATED: Gifting feature disabled — imports retained for potential future re-enablement
+// import GiftPage from './pages/GiftPage';
 import DomainsPage from './pages/DomainsPage';
 import CalculatorPage from './pages/CalculatorPage';
 import ServicesCalculatorPage from './pages/ServicesCalculatorPage';
 import BalanceCheckerPage from './pages/BalanceCheckerPage';
-import RedeemPage from './pages/RedeemPage';
+// import RedeemPage from './pages/RedeemPage';
 import GatewayInfoPage from './pages/GatewayInfoPage';
 import DeploySitePage from './pages/DeploySitePage';
 import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
@@ -105,13 +106,14 @@ function AppRoutes() {
           <Route path="deploy" element={<DeploySitePage />} />
           <Route path="deployments" element={<RecentDeploymentsPage />} />
           <Route path="share" element={<ShareCreditsPage />} />
-          <Route path="gift" element={<GiftPage />} />
+          {/* DEPRECATED: Gifting feature disabled */}
+          {/* <Route path="gift" element={<GiftPage />} /> */}
           <Route path="domains" element={<DomainsPage />} />
           <Route path="calculator" element={<CalculatorPage />} />
           <Route path="services-calculator" element={<ServicesCalculatorPage />} />
           <Route path="balances" element={<BalanceCheckerPage />} />
           <Route path="account" element={<AccountPage />} />
-          <Route path="redeem" element={<RedeemPage />} />
+          {/* <Route path="redeem" element={<RedeemPage />} /> */}
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
           <Route path="verify" element={<VerifyPage />} />

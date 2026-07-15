@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
-import { AlertTriangle, RefreshCw, X, ExternalLink } from 'lucide-react';
-import { getPendingTopUpTxs, removePendingTopUpTx, PendingTopUpTx } from '../../../utils/pendingTopUp';
+import { AlertTriangle, RefreshCw, X, ExternalLink, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { getPendingTopUpTxs, removePendingTopUpTx, savePendingTopUpTx, PendingTopUpTx } from '../../../utils/pendingTopUp';
 import { tokenLabels, SupportedTokenType } from '../../../constants';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import CopyButton from '../../CopyButton';
+
+// Token types that support top-up recovery
+const recoverableTokens: { value: string; label: string }[] = [
+  { value: 'ethereum', label: 'ETH (Mainnet)' },
+  { value: 'base-eth', label: 'ETH (Base)' },
+  { value: 'base-usdc', label: 'USDC (Base)' },
+  { value: 'usdc', label: 'USDC (Ethereum)' },
+  { value: 'polygon-usdc', label: 'USDC (Polygon)' },
+  { value: 'pol', label: 'POL (Polygon)' },
+  { value: 'solana', label: 'SOL' },
+  { value: 'arweave', label: 'AR' },
+];
 
 export default function PendingTxRecoveryBanner() {
   const [pendingTxs, setPendingTxs] = useState<PendingTopUpTx[]>([]);
@@ -12,11 +24,16 @@ export default function PendingTxRecoveryBanner() {
   const [retryMessages, setRetryMessages] = useState<Record<string, string>>({});
   const turboConfig = useTurboConfig();
 
+  // Manual TX recovery state
+  const [showManualRecovery, setShowManualRecovery] = useState(false);
+  const [manualTxId, setManualTxId] = useState('');
+  const [manualTokenType, setManualTokenType] = useState('ethereum');
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [manualMessage, setManualMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   useEffect(() => {
     setPendingTxs(getPendingTopUpTxs());
   }, []);
-
-  if (pendingTxs.length === 0) return null;
 
   const handleRetry = async (tx: PendingTopUpTx) => {
     setRetryingTxId(tx.txId);
@@ -57,6 +74,57 @@ export default function PendingTxRecoveryBanner() {
       }
     } finally {
       setRetryingTxId(null);
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    const trimmed = manualTxId.trim();
+    if (!trimmed) return;
+
+    setManualSubmitting(true);
+    setManualMessage(null);
+
+    try {
+      const turbo = TurboFactory.unauthenticated({
+        ...turboConfig,
+        token: manualTokenType as any,
+      });
+
+      const response = await turbo.submitFundTransaction({ txId: trimmed });
+
+      if (response.status === 'failed') {
+        setManualMessage({
+          type: 'error',
+          text: 'Transaction not confirmed on-chain yet. Please wait a few minutes and try again.',
+        });
+      } else {
+        // Also clear from localStorage if it was there
+        removePendingTopUpTx(trimmed);
+        setPendingTxs((prev) => prev.filter((t) => t.txId !== trimmed));
+        setManualMessage({ type: 'success', text: 'Credits delivered successfully!' });
+        setManualTxId('');
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
+      }
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        // Save it so the user can easily retry later
+        savePendingTopUpTx({
+          txId: trimmed,
+          tokenType: manualTokenType,
+          amount: 0,
+          timestamp: Date.now(),
+        });
+        setPendingTxs(getPendingTopUpTxs());
+        setManualMessage({
+          type: 'error',
+          text: 'Transaction not found on-chain yet. It has been saved above — you can retry later.',
+        });
+      } else {
+        setManualMessage({ type: 'error', text: `Submission failed: ${errorMessage}` });
+      }
+    } finally {
+      setManualSubmitting(false);
     }
   };
 
@@ -174,6 +242,69 @@ export default function PendingTxRecoveryBanner() {
           </div>
         );
       })}
+
+      {/* Manual TX recovery — always visible so users can paste a TX hash from any source */}
+      <div className="rounded-2xl border border-border/20 bg-card">
+        <button
+          onClick={() => setShowManualRecovery(!showManualRecovery)}
+          className="w-full flex items-center justify-between p-4 text-sm text-foreground/60 hover:text-foreground transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Search className="w-4 h-4" />
+            <span>Have a transaction ID? Recover credits manually</span>
+          </div>
+          {showManualRecovery ? (
+            <ChevronUp className="w-4 h-4" />
+          ) : (
+            <ChevronDown className="w-4 h-4" />
+          )}
+        </button>
+
+        {showManualRecovery && (
+          <div className="px-4 pb-4 space-y-3">
+            <p className="text-xs text-foreground/60">
+              If you sent crypto for a top-up but didn't receive credits, paste
+              the transaction hash below and select the token you used.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={manualTxId}
+                onChange={(e) => { setManualTxId(e.target.value); setManualMessage(null); }}
+                placeholder="Transaction hash (e.g. 0x...)"
+                className="flex-1 px-3 py-2 text-sm font-mono bg-background border border-border/20 rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
+              />
+              <select
+                value={manualTokenType}
+                onChange={(e) => setManualTokenType(e.target.value)}
+                className="px-3 py-2 text-sm bg-background border border-border/20 rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
+              >
+                {recoverableTokens.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {manualMessage && (
+              <p className={`text-xs ${manualMessage.type === 'success' ? 'text-success' : 'text-warning'}`}>
+                {manualMessage.text}
+              </p>
+            )}
+
+            <button
+              onClick={handleManualSubmit}
+              disabled={!manualTxId.trim() || manualSubmitting}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${manualSubmitting ? 'animate-spin' : ''}`} />
+              {manualSubmitting ? 'Submitting...' : 'Submit Transaction'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
