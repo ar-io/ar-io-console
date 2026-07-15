@@ -17,6 +17,7 @@ import { getPaymentIntent } from '../../services/paymentService';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import { parseTopUpDeepLink, formatDeepLinkSource } from '../../utils/topupDeepLink';
 import WalletSelectionModal from '../modals/WalletSelectionModal';
+import PendingTxRecoveryBanner from './crypto/PendingTxRecoveryBanner';
 import { getTurboBalance } from '../../utils';
 
 
@@ -577,6 +578,9 @@ export default function TopUpPanel() {
           <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
         </div>
       </div>
+
+      {/* Recovery banner for failed top-up transactions */}
+      <PendingTxRecoveryBanner />
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">

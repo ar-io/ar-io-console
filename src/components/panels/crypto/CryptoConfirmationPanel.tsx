@@ -24,6 +24,7 @@ import CopyButton from '../../CopyButton';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { formatTokenAmount } from '../../../utils/jitPayment';
+import { savePendingTopUpTx, removePendingTopUpTx } from '../../../utils/pendingTopUp';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 interface CryptoConfirmationPanelProps {
@@ -472,8 +473,23 @@ export default function CryptoConfirmationPanel({
         return;
       }
 
-      // Provide specific error messages based on error type
+      // Always try to extract transaction ID from error message first.
+      // This is critical: the on-chain TX may have succeeded even if the
+      // backend notification failed. We must capture the TX ID for recovery
+      // regardless of which error branch we enter.
       if (error instanceof Error) {
+        const txIdMatch = error.message.match(/turbo\.submitFundTransaction\([^)]*\)['"]:\s*(\S+)/);
+        const extractedTxId = txIdMatch?.[1] || undefined;
+        if (extractedTxId) {
+          setFailedTxId(extractedTxId);
+          savePendingTopUpTx({
+            txId: extractedTxId,
+            tokenType,
+            amount: cryptoAmount,
+            timestamp: Date.now(),
+          });
+        }
+
         if (error.message.includes('insufficient funds') || (error as any).code === 'INSUFFICIENT_FUNDS') {
           setPaymentError(
             `Insufficient ${tokenLabels[tokenType]} balance. You need enough to cover both the payment amount and gas fees. Current transaction requires approximately ${cryptoAmount} ${tokenLabels[tokenType]} + gas fees.`
@@ -481,17 +497,21 @@ export default function CryptoConfirmationPanel({
         } else if (error.message.includes('user rejected') || error.message.includes('denied')) {
           setPaymentError('Transaction was cancelled. Please try again if you want to proceed.');
         } else if (error.message.includes('network') || error.message.includes('connection')) {
-          setPaymentError('Network connection issue. Please check your connection and try again.');
+          if (extractedTxId) {
+            // On-chain TX succeeded but backend notification failed due to network issue
+            setPaymentError(
+              `Your on-chain transaction was sent successfully, but we couldn't notify the ar.io backend due to a network issue. Your transaction ID has been saved — use the Retry button to complete the process.`
+            );
+          } else {
+            setPaymentError('Network connection issue. Please check your connection and try again.');
+          }
         } else if (error.message.includes('gas')) {
           setPaymentError('Transaction gas estimation failed. Please try again or check your wallet settings.');
+        } else if (extractedTxId) {
+          setPaymentError(
+            `Your on-chain transaction was sent successfully, but the ar.io backend wasn't notified. Your transaction ID has been saved — use the Retry button to complete the process.`
+          );
         } else {
-          // Try to extract transaction ID from error message
-          const txIdMatch = error.message.match(/turbo\.submitFundTransaction\([^)]*\)['"]:\s*(\S+)/);
-          if (txIdMatch && txIdMatch[1]) {
-            setFailedTxId(txIdMatch[1]);
-          } else {
-            setFailedTxId(undefined);
-          }
           setPaymentError(`Payment failed: ${error.message}`);
         }
       } else {
@@ -533,6 +553,7 @@ export default function CryptoConfirmationPanel({
         );
         setIsRetrying(false);
       } else {
+        removePendingTopUpTx(failedTxId);
         setFailedTxId(undefined);
         setPaymentError(undefined);
         onPaymentComplete(response);
