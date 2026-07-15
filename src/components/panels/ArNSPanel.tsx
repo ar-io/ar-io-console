@@ -10,8 +10,10 @@ export default function ArNSPanel() {
 
   const debouncedSearch = useDebounce(nameSearch);
 
+  const hasInvalidHyphens = /^-|-$/.test(nameSearch);
+
   const checkAvailability = async () => {
-    if (!debouncedSearch) return;
+    if (!debouncedSearch || hasInvalidHyphens) return;
 
     setChecking(true);
     try {
@@ -73,9 +75,7 @@ export default function ArNSPanel() {
                 type="text"
                 value={nameSearch}
                 onChange={(e) => {
-                  let cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                  // Remove leading and trailing dashes
-                  cleaned = cleaned.replace(/^-+|-+$/g, '');
+                  const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
                   setNameSearch(cleaned);
                   setAvailability(null);
                 }}
@@ -89,13 +89,19 @@ export default function ArNSPanel() {
           </div>
           <button
             onClick={checkAvailability}
-            disabled={!nameSearch || checking}
+            disabled={!nameSearch || checking || hasInvalidHyphens}
             className="w-full sm:w-auto px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Search className="w-4 h-4" />
             {checking ? 'Checking...' : 'Check'}
           </button>
         </div>
+
+        {hasInvalidHyphens && (
+          <p className="mt-2 text-xs text-warning">
+            ArNS names cannot start or end with a hyphen.
+          </p>
+        )}
 
         {/* Single consolidated availability display */}
         {availability !== null && nameSearch && (
