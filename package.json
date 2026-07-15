@@ -3,6 +3,7 @@
   "version": "2.2.0",
   "type": "module",
   "description": "ar.io Console - Upload and access permanent data through the ar.io Network",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "postinstall": "patch-package",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite",
