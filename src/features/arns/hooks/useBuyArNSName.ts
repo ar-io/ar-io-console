@@ -217,9 +217,10 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         const normalized =
           processId && err instanceof Error
             ? new Error(
-                `Your ANT for '${lowered}' was created, but the purchase didn't complete. ` +
-                  'Your credits were not charged. Retrying reuses the same ANT (no extra SOL). ' +
-                  `(${err.message})`,
+                `Your ANT for '${lowered}' was created, but the purchase didn't confirm. ` +
+                  'If any credits were charged, the name will finish registering or be ' +
+                  'automatically refunded — check your balance before retrying. Retrying ' +
+                  `reuses the same ANT (no extra SOL). (${err.message})`,
               )
             : err instanceof Error
               ? err
