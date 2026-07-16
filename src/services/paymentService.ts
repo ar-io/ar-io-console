@@ -18,7 +18,7 @@ export const getPaymentServiceConfig = () => {
   // Fallback to legacy behavior
   const isProd = import.meta.env.VITE_NODE_ENV === 'production';
   return {
-    paymentServiceUrl: isProd ? 'https://payment.ardrive.io' : 'https://payment.ardrive.dev',
+    paymentServiceUrl: isProd ? 'https://payment.ardrive.io' : 'https://payment.services.ar-io.dev',
     stripeKey: isProd 
       ? 'pk_live_51JUAtwC8apPOWkDLMQqNF9sPpfneNSPnwX8YZ8y1FNDl6v94hZIwzgFSYl27bWE4Oos8CLquunUswKrKcaDhDO6m002Yj9AeKj'
       : 'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',

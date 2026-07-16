@@ -5,11 +5,11 @@ import packageJson from '../package.json';
 const isProd = import.meta.env.VITE_NODE_ENV === 'production';
 
 // Legacy constants for backwards compatibility
-export const defaultPaymentServiceUrl = isProd ? 'https://payment.ardrive.io' : 'https://payment.ardrive.dev';
-export const uploadServiceUrl = isProd ? 'https://upload.ardrive.io' : 'https://upload.ardrive.dev';
+export const defaultPaymentServiceUrl = isProd ? 'https://payment.ardrive.io' : 'https://payment.services.ar-io.dev';
+export const uploadServiceUrl = isProd ? 'https://upload.ardrive.io' : 'https://upload.services.ar-io.dev';
 export const arioProcessId = isProd
   ? 'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE'
-  : 'agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA';
+  : ''; // Legacy AO field — not used on Solana devnet
 export const termsOfServiceUrl = 'https://ardrive.io/tos-and-privacy/';
 export const defaultUSDAmount = 10.0;
 

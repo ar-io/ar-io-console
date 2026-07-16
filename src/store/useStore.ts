@@ -42,21 +42,21 @@ const PRESET_CONFIGS = {
     } as Record<SupportedTokenType, string>,
   },
   development: {
-    paymentServiceUrl: 'https://payment.ardrive.dev',
-    uploadServiceUrl: 'https://upload.ardrive.dev',
+    paymentServiceUrl: 'https://payment.services.ar-io.dev',
+    uploadServiceUrl: 'https://upload.services.ar-io.dev',
     captureServiceUrl: 'https://vilenarios.com/local/capture',
     verifyApiUrl: 'https://vilenarios.com/local/verify',
-    arioGatewayUrl: 'https://turbo-gateway.com',
+    arioGatewayUrl: 'https://ar-io.dev',
     stripeKey:
       'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
-    processId: 'agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA',
+    processId: '', // Legacy AO field — not used on Solana devnet
     coreProgramId: DEVNET_PROGRAM_IDS.core,
     garProgramId: DEVNET_PROGRAM_IDS.gar,
     arnsProgramId: DEVNET_PROGRAM_IDS.arns,
     antProgramId: DEVNET_PROGRAM_IDS.ant,
     tokenMap: {
-      arweave: 'https://turbo-gateway.com',
-      ario: 'https://turbo-gateway.com',
+      arweave: 'https://ar-io.dev',
+      ario: 'https://ar-io.dev',
       'base-ario': 'https://sepolia.base.org',
       ethereum: 'https://eth-sepolia.public.blastapi.io',
       'base-eth': 'https://sepolia.base.org',
