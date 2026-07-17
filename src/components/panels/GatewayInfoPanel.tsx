@@ -120,7 +120,7 @@ export default function GatewayInfoPanel() {
             <div>
               <h4 className="text-lg font-bold font-heading text-foreground">Endpoint Configuration</h4>
               <p className="text-sm text-foreground/80">
-                {configMode === 'production' ? 'Production' : configMode === 'development' ? 'Development' : 'Custom'}{' '}
+                {configMode === 'production' ? 'Production' : configMode === 'development' ? 'Testnet' : 'Custom'}{' '}
                 environment
                 {x402OnlyMode && ' • X402-Only mode enabled'}
               </p>
@@ -156,7 +156,7 @@ export default function GatewayInfoPanel() {
                   onClick={() => handleModeChange('development')}
                 >
                   <Wrench className="w-4 h-4 inline mr-2" />
-                  Development
+                  Testnet
                 </button>
                 <button
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
@@ -171,6 +171,29 @@ export default function GatewayInfoPanel() {
                 </button>
               </div>
             </div>
+
+            {/* Testnet Faucet Link */}
+            {configMode === 'development' && (
+              <div className="mb-4 sm:mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-foreground/80">
+                      Request tokens for the ar.io Testnet. Restrictions apply — see docs.ar.io for details.
+                    </p>
+                    <a
+                      href="https://faucet.services.ar-io.dev/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-primary hover:opacity-80 transition-opacity"
+                    >
+                      Open Testnet Faucet
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Service URLs */}
             <div className="space-y-4 mb-4 sm:mb-6">
