@@ -179,7 +179,16 @@ export default function GatewayInfoPanel() {
                   <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm text-foreground/80">
-                      Request tokens for the ar.io Testnet. Restrictions apply — see docs.ar.io for details.
+                      Request tokens for the ar.io Testnet. Restrictions apply — see{' '}
+                      <a
+                        href="https://docs.ar.io/build/testnet"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:opacity-80 transition-opacity underline"
+                      >
+                        docs
+                      </a>{' '}
+                      for details.
                     </p>
                     <a
                       href="https://faucet.services.ar-io.dev/"
