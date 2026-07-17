@@ -201,7 +201,7 @@ const Header = () => {
         <div className="ml-4 flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
           <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
           <span className="text-xs text-primary font-medium uppercase">
-            {configMode} MODE
+            {configMode === 'development' ? 'TESTNET' : configMode} MODE
           </span>
         </div>
       )}
