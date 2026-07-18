@@ -69,7 +69,7 @@ export function useFolderUpload() {
   const ethAccount = useAccount();
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient();
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
   const [deploying, setDeploying] = useState(false);
   const [deployProgress, setDeployProgress] = useState<number>(0);
   const [fileProgress, setFileProgress] = useState<Record<string, number>>({});

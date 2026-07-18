@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
+import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFolderUpload } from '../../hooks/useFolderUpload';
 import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
@@ -520,7 +520,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
   const canUseJit = selectedJitToken && supportsJitPayment(selectedJitToken);
 
   // Get free upload limit to count free files
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
 
   // Check if deployment is completely free (all files under free limit)
   const isFreeDeployment = totalCost === 0;
@@ -948,7 +948,7 @@ export default function DeploySitePanel() {
 
   const { hasArNSAccess } = useLinkedSolanaWallet();
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
@@ -1025,6 +1025,7 @@ export default function DeploySitePanel() {
   }, [showConfirmModal, x402OnlyMode]);
 
   const wincForOneGiB = useWincForOneGiB();
+  const perDataItemFeeWinc = usePerDataItemFee();
   const {
     deployFolder,
     deploying,
@@ -1398,12 +1399,14 @@ export default function DeploySitePanel() {
 
   const calculateTotalCost = (): number => {
     if (!wincForOneGiB || !selectedFolder) return 0;
+    const itemFee = perDataItemFeeWinc ? Number(perDataItemFeeWinc) : 0;
 
     // If Smart Deploy is enabled and we have stats, use pre-calculated billableSize
     // This accounts for cached files being skipped
     if (smartDeployEnabled && deduplicationStats) {
       const gibSize = deduplicationStats.billableSize / (1024 ** 3);
-      const totalWinc = gibSize * Number(wincForOneGiB);
+      const billableFileCount = deduplicationStats.newFiles ?? Array.from(selectedFolder).filter(f => !isFileFree(f.size, freeUploadLimitBytes)).length;
+      const totalWinc = gibSize * Number(wincForOneGiB) + billableFileCount * itemFee;
       return totalWinc / wincPerCredit;
     }
 
@@ -1414,8 +1417,7 @@ export default function DeploySitePanel() {
         return; // FREE - under free limit
       }
       const gibSize = file.size / (1024 ** 3);
-      const fileWinc = gibSize * Number(wincForOneGiB);
-      totalWinc += fileWinc;
+      totalWinc += gibSize * Number(wincForOneGiB) + itemFee;
     });
 
     return totalWinc / wincPerCredit;
@@ -3079,7 +3081,7 @@ export default function DeploySitePanel() {
                                         {isFileFree(file.size, freeUploadLimitBytes) ? (
                                           <span className="text-success">FREE</span>
                                         ) : wincForOneGiB ? (
-                                          `${((file.size / (1024 ** 3)) * Number(wincForOneGiB) / wincPerCredit).toFixed(6)} Credits`
+                                          `${(((file.size / (1024 ** 3)) * Number(wincForOneGiB) + (perDataItemFeeWinc ? Number(perDataItemFeeWinc) : 0)) / wincPerCredit).toFixed(6)} Credits`
                                         ) : (
                                           'Unknown Cost'
                                         )}

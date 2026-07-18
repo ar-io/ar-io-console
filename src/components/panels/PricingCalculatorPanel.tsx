@@ -6,12 +6,14 @@ import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import { useCryptoPriceForWinc, useWincForCrypto } from '../../hooks/useCryptoPrice';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
+import { useFreeUploadLimit, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
 import { useStore } from '../../store/useStore';
 import { SupportedTokenType, tokenLabels } from '../../constants';
 import WalletSelectionModal from '../modals/WalletSelectionModal';
 
 export default function PricingCalculatorPanel() {
   const { address, creditBalance, x402OnlyMode } = useStore();
+  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [inputType, setInputType] = useState<'storage' | 'dollars'>('storage');
   const [storageAmount, setStorageAmount] = useState(1);
@@ -264,7 +266,9 @@ export default function PricingCalculatorPanel() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
             <Zap className="w-4 h-4" />
-            Files under 100 KiB are FREE!
+            {freeUploadLimitBytes > 0
+              ? `Files under ${formatFreeLimit(freeUploadLimitBytes)} are FREE${freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit)` : ''}!`
+              : 'Small files may be FREE!'}
           </div>
         </div>
 

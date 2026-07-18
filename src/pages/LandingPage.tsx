@@ -46,7 +46,7 @@ const LandingPage = () => {
     : '...';
 
   // Get free upload limit from bundler
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
 
   // Consistent feature styling using primary brand color
   const getFeatureColor = () => {
@@ -341,9 +341,13 @@ const LandingPage = () => {
           <div className="bg-card rounded-2xl border border-success/30 p-4 md:p-8 text-center">
             <div className="text-4xl font-heading font-bold text-success mb-2">FREE</div>
             <div className="text-lg text-foreground font-medium mb-1">
-              {freeUploadLimitBytes > 0 ? `Up to ${formatFreeLimit(freeUploadLimitBytes)}` : 'Small files'}
+              {freeUploadLimitBytes > 0 ? `Up to ${formatFreeLimit(freeUploadLimitBytes)} per file` : 'Small files'}
             </div>
-            <div className="text-sm text-foreground/80 mb-4">No wallet or credits required</div>
+            <div className="text-sm text-foreground/80 mb-4">
+              {freeTier.lifetimeBytes > 0
+                ? `${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit`
+                : 'No wallet or credits required'}
+            </div>
             <button
               onClick={() => navigate('/try')}
               className="inline-flex items-center gap-1 text-sm text-success hover:text-success/80 font-medium group"

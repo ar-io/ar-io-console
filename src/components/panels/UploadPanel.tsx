@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
+import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
@@ -345,7 +345,7 @@ export default function UploadPanel() {
   } = useStore();
 
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
 
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -385,12 +385,12 @@ export default function UploadPanel() {
   });
 
   const wincForOneGiB = useWincForOneGiB();
+  const perDataItemFeeWinc = usePerDataItemFee();
 
   // Calculate total file size and billable size (excluding free files)
   const totalFileSize = files.reduce((acc, file) => acc + file.size, 0);
-  const billableFileSize = files.reduce((acc, file) => {
-    return isFileFree(file.size, freeUploadLimitBytes) ? acc : acc + file.size;
-  }, 0);
+  const billableFiles = files.filter(file => !isFileFree(file.size, freeUploadLimitBytes));
+  const billableFileSize = billableFiles.reduce((acc, file) => acc + file.size, 0);
 
   // Get x402 pricing ONLY when user has opened the "Pay with Crypto" section
   // This ensures we show CREDITS by default and only fetch x402 pricing when user clicks "Pay with Crypto"
@@ -540,21 +540,37 @@ export default function UploadPanel() {
   };
 
 
-  const calculateUploadCost = (bytes: number) => {
-    if (isFileFree(bytes, freeUploadLimitBytes)) return 0; // Free tier: Files under bundler's free limit
+  const calculateUploadCost = (bytes: number, isFree: boolean) => {
+    if (isFree) return 0; // Free tier: Files under bundler's per-item limit
 
     // Always return credit-based pricing for file list display
     // x402 pricing is only used in the payment modal for USDC payment option
     if (!wincForOneGiB) return null;
 
     const gibSize = bytes / (1024 * 1024 * 1024);
-    const wincCost = gibSize * Number(wincForOneGiB);
+    let wincCost = gibSize * Number(wincForOneGiB);
+    // Add per-data-item fee if available
+    if (perDataItemFeeWinc) {
+      wincCost += Number(perDataItemFeeWinc);
+    }
     const creditCost = wincCost / wincPerCredit;
     return creditCost;
   };
 
-  // Use billableFileSize (sum of non-free files) to respect per-file free tiers
-  const totalCost = calculateUploadCost(billableFileSize);
+  // Total cost: sum of each billable file's storage + per-item fee
+  const totalCost = (() => {
+    if (billableFiles.length === 0) return 0;
+    if (!wincForOneGiB) return null;
+    let totalWinc = 0;
+    for (const file of billableFiles) {
+      const gibSize = file.size / (1024 * 1024 * 1024);
+      totalWinc += gibSize * Number(wincForOneGiB);
+      if (perDataItemFeeWinc) {
+        totalWinc += Number(perDataItemFeeWinc);
+      }
+    }
+    return totalWinc / wincPerCredit;
+  })();
 
   // Auto-switch to crypto tab when user has insufficient credits
   // This guides users to the crypto payment option when credits won't cover the upload
@@ -749,7 +765,7 @@ export default function UploadPanel() {
                 </p>
                 <p className="text-sm text-foreground/80">
                   {freeUploadLimitBytes > 0 ? (
-                    <>Files under {formatFreeLimit(freeUploadLimitBytes)} are <span className="text-success font-semibold">FREE</span> • </>
+                    <>Files under {formatFreeLimit(freeUploadLimitBytes)} are <span className="text-success font-semibold">FREE</span>{freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit)` : ''} • </>
                   ) : null}
                   Max 10GiB per file
                 </p>
@@ -816,8 +832,8 @@ export default function UploadPanel() {
 
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {files.map((file, index) => {
-                  const cost = calculateUploadCost(file.size);
                   const isFree = isFileFree(file.size, freeUploadLimitBytes);
+                  const cost = calculateUploadCost(file.size, isFree);
                   const previewUrl = getPreviewUrl(index);
                   const isImage = isPreviewableImage(file);
 

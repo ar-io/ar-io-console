@@ -91,6 +91,11 @@ interface UploadServiceInfo {
   };
   gateway: string;
   freeUploadLimitBytes: number;
+  freeTier?: {
+    maxItemBytes: number;
+    lifetimeBytes: number;
+    ipBytes: number;
+  };
 }
 
 interface X402Pricing {
