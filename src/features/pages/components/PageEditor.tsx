@@ -9,7 +9,9 @@ import {
   Rocket,
   Settings,
   User,
+  Wallet,
 } from 'lucide-react';
+import { promptSignIn } from '@/utils';
 import type { PageDef } from '../schema';
 import type { RenderCtx } from '../render/renderPageHtml';
 import type { Tag } from '../publish/tags';
@@ -31,6 +33,8 @@ export interface PageEditorProps {
   saved: boolean;
   /** True while a publish is in flight — disables Publish to prevent a double upload. */
   publishing?: boolean;
+  /** Whether a wallet is connected. Logged out, Publish becomes a "Sign in" CTA. */
+  signedIn: boolean;
   /** Label for the back button (e.g. "Templates" for create, "All pages" for edit). */
   backLabel?: string;
   // Domain (ArNS) state
@@ -60,7 +64,7 @@ export interface PageEditorProps {
 }
 
 export default function PageEditor(props: PageEditorProps) {
-  const { def, previewDef, update, ctx, saved, publishing = false, backLabel = 'Templates', onBack, onPublish } = props;
+  const { def, previewDef, update, ctx, saved, publishing = false, backLabel = 'Templates', signedIn, onBack, onPublish } = props;
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
   const [sizeBytes, setSizeBytes] = useState(0);
   const preview = previewDef ?? def;
@@ -93,11 +97,19 @@ export default function PageEditor(props: PageEditorProps) {
           </span>
           <button
             type="button"
-            onClick={onPublish}
+            onClick={signedIn ? onPublish : promptSignIn}
             disabled={publishing}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Rocket className="h-4 w-4" /> Publish
+            {signedIn ? (
+              <>
+                <Rocket className="h-4 w-4" /> Publish
+              </>
+            ) : (
+              <>
+                <Wallet className="h-4 w-4" /> Sign in to publish
+              </>
+            )}
           </button>
         </div>
       </div>

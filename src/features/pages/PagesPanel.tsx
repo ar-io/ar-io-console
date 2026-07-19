@@ -374,7 +374,7 @@ export default function PagesPanel() {
     async ({ jitEnabled, selectedJitToken }: { jitEnabled: boolean; selectedJitToken: SupportedTokenType }) => {
       if (!def || publishing) return;
       if (!address) {
-        setPublishNotice('Connect a wallet to publish your page.');
+        setPublishNotice('Sign in to publish your page.');
         return;
       }
       setPublishNotice(null);
@@ -476,6 +476,7 @@ export default function PagesPanel() {
           ctx={previewCtx}
           saved={saved}
           publishing={publishing}
+          signedIn={!!address}
           backLabel={editorOrigin === 'dashboard' ? 'All pages' : 'Templates'}
           arnsEnabled={arnsEnabled}
           onArnsEnabledChange={setArnsEnabled}

@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, X } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, X } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -143,9 +143,16 @@ const Header = () => {
     const handleRefreshBalance = () => {
       fetchBalance();
     };
+    // Any CTA anywhere can open the sign-in (wallet) modal by dispatching
+    // `open-signin` (see promptSignIn in utils). The Header owns the one modal.
+    const handleOpenSignIn = () => setShowWalletModal(true);
 
     window.addEventListener('refresh-balance', handleRefreshBalance);
-    return () => window.removeEventListener('refresh-balance', handleRefreshBalance);
+    window.addEventListener('open-signin', handleOpenSignIn);
+    return () => {
+      window.removeEventListener('refresh-balance', handleRefreshBalance);
+      window.removeEventListener('open-signin', handleOpenSignIn);
+    };
   }, [fetchBalance]);
 
   const handleRefresh = () => {
@@ -219,43 +226,17 @@ const Header = () => {
           <PopoverPanel className="absolute right-1 sm:right-0 mt-2 w-56 sm:w-64 overflow-auto rounded-2xl bg-background border border-border/20 shadow-lg z-50 py-1">
             {({ close }) => (
               <>
-                {/* Services - Always show, but require login */}
-                <div className="px-4 py-2 flex items-center justify-between">
+                {/* Services — reachable without login; each flow prompts to connect a wallet at the action */}
+                <div className="px-4 py-2">
                   <span className="text-xs font-semibold text-foreground/60 uppercase tracking-wider">Services</span>
-                  {!address && (
-                    <span className="text-xs text-foreground/40 flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Login Required
-                    </span>
-                  )}
                 </div>
                 {filteredAccountServices.map((service) => {
                   const isActive = location.pathname === `/${service.page}`;
 
-                  // Buy Credits (topup) and Create Page (pages) are accessible
-                  // without login: the Pages editor works locally and only
-                  // publishing needs a wallet, matching the "Try Pages" banner.
-                  const requiresLogin = service.page !== 'topup' && service.page !== 'pages';
-
-                  // If not logged in and service requires login, show locked button
-                  if (!address && requiresLogin) {
-                    return (
-                      <button
-                        key={service.page}
-                        onClick={() => {
-                          close();
-                          setShowWalletModal(true);
-                        }}
-                        className="w-full flex items-center gap-3 py-2 px-4 text-sm text-foreground/40 hover:bg-primary/10 hover:text-foreground transition-colors group"
-                      >
-                        <service.icon className="w-4 h-4 text-foreground/40 group-hover:text-foreground/60" />
-                        <span className="flex-1 text-left">{service.name}</span>
-                        <Lock className="w-3 h-3 text-foreground/30" />
-                      </button>
-                    );
-                  }
-
-                  // Normal link for accessible services (logged-in users or topup)
+                  // Every service is reachable without login: the panels render and
+                  // preview locally, and each flow prompts to connect a wallet at the
+                  // action (pay / upload / deploy / sign). Navigation only — this never
+                  // triggers signing. Sign-in stays on the header button + wallet modal.
                   return (
                     <Link
                       key={service.page}

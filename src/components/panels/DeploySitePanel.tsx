@@ -10,7 +10,7 @@ import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { supportsJitPayment, calculateRequiredTokenAmount, formatTokenAmount, getTokenConverter } from '../../utils/jitPayment';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
-import { getArweaveUrl, getArweaveRawUrl } from '../../utils';
+import { getArweaveUrl, getArweaveRawUrl, promptSignIn } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
@@ -1651,7 +1651,7 @@ export default function DeploySitePanel() {
     }
 
     if (!address) {
-      setDeployMessage({ type: 'error', text: 'Please connect your wallet first' });
+      setDeployMessage({ type: 'error', text: 'Please sign in first' });
       return;
     }
 
@@ -1815,15 +1815,6 @@ export default function DeploySitePanel() {
       });
     }
   };
-
-  if (!address) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-xl font-heading font-bold mb-4">Connect Wallet Required</h3>
-        <p className="text-foreground/80">Connect your wallet to deploy sites</p>
-      </div>
-    );
-  }
 
   const totalFileSize = calculateTotalSize();
   const totalCost = calculateTotalCost();
@@ -2213,11 +2204,16 @@ export default function DeploySitePanel() {
       {/* Deploy Button - Hide during success display and deployment */}
       {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
         <button
-          onClick={() => setShowConfirmModal(true)}
-          disabled={deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername)}
+          onClick={address ? () => setShowConfirmModal(true) : promptSignIn}
+          disabled={!!address && (deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
           className="w-full mt-4 py-4 px-6 rounded-lg bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {deploying ? (
+          {!address ? (
+            <>
+              <Wallet className="w-5 h-5" />
+              Sign in to deploy site
+            </>
+          ) : deploying ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               Deploying Site...

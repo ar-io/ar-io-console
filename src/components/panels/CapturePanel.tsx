@@ -6,7 +6,7 @@ import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { wincPerCredit, APP_NAME, APP_VERSION } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Camera, CheckCircle, XCircle, Shield, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, Link, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, Link, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
@@ -16,7 +16,7 @@ import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
 import BaseModal from '../modals/BaseModal';
-import { getArweaveUrl } from '../../utils';
+import { getArweaveUrl, promptSignIn } from '../../utils';
 import UploadProgressSummary from '../UploadProgressSummary';
 import { CryptoPaymentDetails } from '../CryptoPaymentDetails';
 import { JitTokenSelector } from '../JitTokenSelector';
@@ -265,7 +265,7 @@ export default function CapturePanel() {
 
   const handleCapture = async () => {
     if (!address) {
-      setCaptureMessage({ type: 'error', text: 'Please connect your wallet to capture screenshots' });
+      setCaptureMessage({ type: 'error', text: 'Please sign in to capture screenshots' });
       return;
     }
 
@@ -445,16 +445,6 @@ export default function CapturePanel() {
         </div>
       </div>
 
-      {/* Connection Warning */}
-      {!address && (
-        <div className="mb-4 sm:mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-warning" />
-            <span className="text-sm text-warning">Connect your wallet to capture pages</span>
-          </div>
-        </div>
-      )}
-
       {/* Capture Message */}
       {captureMessage && (
         <div className={`mb-4 sm:mb-6 p-4 rounded-lg border ${
@@ -523,12 +513,21 @@ export default function CapturePanel() {
       {/* Capture Button - After ArNS config, only show when URL is valid */}
       {!uploading && hasValidUrl && (
         <button
-          onClick={handleCapture}
-          disabled={isCapturing || !address || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername)}
+          onClick={address ? handleCapture : promptSignIn}
+          disabled={!!address && (isCapturing || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
           className="w-full py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          <Camera className="w-5 h-5" />
-          {isCapturing ? 'Capturing...' : 'Capture & Upload'}
+          {address ? (
+            <>
+              <Camera className="w-5 h-5" />
+              {isCapturing ? 'Capturing...' : 'Capture & Upload'}
+            </>
+          ) : (
+            <>
+              <Wallet className="w-5 h-5" />
+              Sign in to capture pages
+            </>
+          )}
         </button>
       )}
 

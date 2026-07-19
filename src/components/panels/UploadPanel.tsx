@@ -7,14 +7,14 @@ import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { useImagePreviews } from '../../hooks/useImagePreviews';
 import { wincPerCredit, SupportedTokenType } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { CheckCircle, XCircle, Upload, ExternalLink, Shield, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
+import { CheckCircle, XCircle, Upload, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
 import BaseModal from '../modals/BaseModal';
-import { getArweaveUrl } from '../../utils';
+import { getArweaveUrl, promptSignIn } from '../../utils';
 import UploadProgressSummary from '../UploadProgressSummary';
 import { JitTokenSelector } from '../JitTokenSelector';
 import { supportsJitPayment, getTokenConverter, calculateRequiredTokenAmount, formatTokenAmount } from '../../utils/jitPayment';
@@ -587,7 +587,7 @@ export default function UploadPanel() {
 
   const handleUpload = () => {
     if (!address) {
-      setUploadMessage({ type: 'error', text: 'Please connect your wallet to upload files' });
+      setUploadMessage({ type: 'error', text: 'Please sign in to upload files' });
       return;
     }
     setShowConfirmModal(true);
@@ -707,16 +707,6 @@ export default function UploadPanel() {
           <p className="text-sm text-foreground/80">Store your files permanently on the Arweave network</p>
         </div>
       </div>
-
-      {/* Connection Warning */}
-      {!address && (
-        <div className="mb-4 sm:mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-warning" />
-            <span className="text-sm text-warning">Connect your wallet to upload files</span>
-          </div>
-        </div>
-      )}
 
       {/* Upload Message */}
       {uploadMessage && (
@@ -894,14 +884,23 @@ export default function UploadPanel() {
                 </div>
               </div>
 
-              {/* Upload Button */}
+              {/* Upload Button — the CTA is the sign-in gate when logged out */}
               <button
-                onClick={handleUpload}
-                disabled={files.length === 0}
+                onClick={address ? handleUpload : promptSignIn}
+                disabled={!!address && files.length === 0}
                 className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <Upload className="w-5 h-5" />
-                Upload {files.length} File{files.length !== 1 ? 's' : ''}
+                {address ? (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Upload {files.length} File{files.length !== 1 ? 's' : ''}
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-5 h-5" />
+                    Sign in to upload files
+                  </>
+                )}
               </button>
             </div>
           )}
