@@ -5,7 +5,7 @@ import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
 import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit';
 
 export default function PricingCalculator() {
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
   const [inputType, setInputType] = useState<'storage' | 'dollars'>('storage');
   const [storageAmount, setStorageAmount] = useState(1);
   const [storageUnit, setStorageUnit] = useState<'MB' | 'GB' | 'TB'>('GB');
@@ -82,7 +82,7 @@ export default function PricingCalculator() {
         <h2 className="text-2xl font-bold text-foreground mb-2">Pricing Calculator</h2>
         <p className="text-foreground/80 text-sm max-w-2xl mx-auto">
           Calculate storage costs or see how much storage your budget gets you.
-          {freeUploadLimitBytes > 0 && ` Files under ${formatFreeLimit(freeUploadLimitBytes)} are always FREE!`}
+          {freeUploadLimitBytes > 0 && ` Files under ${formatFreeLimit(freeUploadLimitBytes)} are FREE${freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit)` : ''}!`}
         </p>
       </div>
 
@@ -284,7 +284,7 @@ export default function PricingCalculator() {
                   {freeUploadLimitBytes > 0 && (
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      <span>Files under {formatFreeLimit(freeUploadLimitBytes)} are completely FREE</span>
+                      <span>Files under {formatFreeLimit(freeUploadLimitBytes)} are FREE{freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit)` : ''}</span>
                     </li>
                   )}
                   <li className="flex items-start gap-2">

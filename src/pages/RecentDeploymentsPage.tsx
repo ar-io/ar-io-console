@@ -27,7 +27,7 @@ export default function RecentDeploymentsPage() {
   const wincForOneGiB = useWincForOneGiB();
 
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
 
   // Memoize deployment grouping to prevent lag - exact same as DeploySitePanel
   const deploymentGroups = useMemo(() => {

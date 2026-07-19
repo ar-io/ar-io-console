@@ -20,6 +20,29 @@ export function useWincForOneGiB() {
   return wincForOneGiB;
 }
 
+/**
+ * Hook to get the per-data-item fee in winc.
+ * Each data item uploaded incurs this fixed fee on top of storage costs.
+ */
+export function usePerDataItemFee() {
+  const [perDataItemFeeWinc, setPerDataItemFeeWinc] = useState<string | undefined>(
+    undefined,
+  );
+  const turboConfig = useTurboConfig();
+
+  useEffect(() => {
+    TurboFactory.unauthenticated(turboConfig)
+      .getFiatRates()
+      .then((rates: any) => {
+        if (rates.perDataItemFeeWinc) {
+          setPerDataItemFeeWinc(rates.perDataItemFeeWinc);
+        }
+      });
+  }, [turboConfig]);
+
+  return perDataItemFeeWinc;
+}
+
 export function useWincForToken(token: "arweave" | "ario", amount: number) {
   const [wincForToken, setWincForToken] = useState<string | undefined>(
     undefined,

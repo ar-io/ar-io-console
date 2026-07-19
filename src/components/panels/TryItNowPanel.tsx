@@ -78,7 +78,7 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
 
 export default function TryItNowPanel() {
   const { address, uploadHistory, addUploadResults, setAddress } = useStore();
-  const freeLimit = useFreeUploadLimit();
+  const { freeUploadLimitBytes: freeLimit, freeTier } = useFreeUploadLimit();
   const { uploadFile } = useFileUpload();
   const { uploadStatuses, getStatusIcon, checkUploadStatus, statusChecking, formatFileSize } = useUploadStatus();
 
@@ -385,6 +385,9 @@ export default function TryItNowPanel() {
                 </p>
                 <p className="text-sm text-foreground/80">
                   Max file size: <span className="text-foreground font-medium">{formatFreeLimit(freeLimit)}</span>
+                  {freeTier.lifetimeBytes > 0 && (
+                    <span className="block mt-1 text-xs text-foreground/60">{formatFreeLimit(freeTier.lifetimeBytes)} lifetime free limit</span>
+                  )}
                 </p>
               </div>
               <input

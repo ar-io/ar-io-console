@@ -584,7 +584,11 @@ export default function GatewayInfoPanel() {
                         ? `${Math.round(uploadServiceInfo.freeUploadLimitBytes / 1024)} KiB`
                         : '105 KiB'}
                     </div>
-                    <div className="text-xs text-foreground/80 mt-1">No cost for small files</div>
+                    <div className="text-xs text-foreground/80 mt-1">
+                      {uploadServiceInfo?.freeTier?.lifetimeBytes
+                        ? `${Math.round(uploadServiceInfo.freeTier.lifetimeBytes / (1024 * 1024))} MiB lifetime limit`
+                        : 'Per-item max for free uploads'}
+                    </div>
                   </div>
 
                   <div className="bg-card rounded-2xl p-4">

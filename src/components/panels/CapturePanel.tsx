@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
+import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useTurboCapture } from '../../hooks/useTurboCapture';
 import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
@@ -74,7 +74,7 @@ export default function CapturePanel() {
   } = useStore();
 
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
 
   // Capture state
   const [urlInput, setUrlInput] = useState('');
@@ -122,6 +122,7 @@ export default function CapturePanel() {
   });
 
   const wincForOneGiB = useWincForOneGiB();
+  const perDataItemFeeWinc = usePerDataItemFee();
   const {
     uploadMultipleFiles,
     uploading,
@@ -254,7 +255,10 @@ export default function CapturePanel() {
     if (!wincForOneGiB) return null;
 
     const gibSize = bytes / (1024 * 1024 * 1024);
-    const wincCost = gibSize * Number(wincForOneGiB);
+    let wincCost = gibSize * Number(wincForOneGiB);
+    if (perDataItemFeeWinc) {
+      wincCost += Number(perDataItemFeeWinc);
+    }
     const creditCost = wincCost / wincPerCredit;
     return creditCost;
   };
