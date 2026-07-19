@@ -12,15 +12,15 @@
  */
 
 export interface ResolveCtx {
-  /** Gateway origin for tx resolution, e.g. `https://arweave.net`. */
+  /** Gateway origin for tx resolution, e.g. `https://turbo-gateway.com`. */
   gateway: string;
   /** ArNS host suffix for name resolution, e.g. `ar.io`. */
   arnsHost: string;
 }
 
-/** Sensible defaults matching the finished sample pages. */
+/** Sensible defaults matching the app's default config (turbo-gateway.com / ar.io). */
 export const DEFAULT_RESOLVE_CTX: ResolveCtx = {
-  gateway: 'https://arweave.net',
+  gateway: 'https://turbo-gateway.com',
   arnsHost: 'ar.io',
 };
 

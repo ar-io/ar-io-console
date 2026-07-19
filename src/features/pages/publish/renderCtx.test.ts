@@ -55,9 +55,9 @@ describe('renderCtxFor', () => {
     expect(ctx.selfTxId).toBeUndefined();
   });
 
-  it('falls back to arweave.net when no gateway is set', () => {
+  it('falls back to turbo-gateway.com when no gateway is set', () => {
     const ctx = renderCtxFor(def, { configMode: 'production' });
-    expect(ctx.gateway).toBe('https://arweave.net');
+    expect(ctx.gateway).toBe('https://turbo-gateway.com');
     expect(ctx.arnsHost).toBe('ar.io');
   });
 });

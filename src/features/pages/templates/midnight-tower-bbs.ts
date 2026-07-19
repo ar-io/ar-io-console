@@ -139,7 +139,8 @@ function styleFor(def: PageDef): string {
 }
 .pg-${ID} .frame::before { content: "\\2554"; position: absolute; top: -2px; left: 2px; color: var(--dim); line-height: 1; }
 .pg-${ID} .frame::after { content: "\\255D"; position: absolute; bottom: -2px; right: 2px; color: var(--dim); line-height: 1; }
-.pg-${ID} .masthead { overflow-x: auto; text-align: center; margin: 0 0 18px; }
+.pg-${ID} .masthead { overflow-x: auto; text-align: center; margin: 0 0 18px; scrollbar-width: none; -ms-overflow-style: none; }
+.pg-${ID} .masthead::-webkit-scrollbar { display: none; }
 .pg-${ID} .avatar {
   position: relative; width: clamp(72px, 20vw, 96px); aspect-ratio: 1 / 1;
   margin: 0 auto 14px; border: 1px solid var(--dim); background: var(--ink); overflow: hidden;

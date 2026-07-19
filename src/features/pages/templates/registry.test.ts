@@ -3,7 +3,7 @@ import { templates } from './index';
 import { getTemplate, listTemplates, renderPageHtml, type RenderCtx } from '../render/renderPageHtml';
 import { validatePageDef, type TemplateId } from '../schema';
 
-const ctx: RenderCtx = { gateway: 'https://arweave.net', arnsHost: 'ar.io' };
+const ctx: RenderCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io' };
 
 const all = listTemplates();
 

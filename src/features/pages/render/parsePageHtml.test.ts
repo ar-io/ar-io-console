@@ -5,7 +5,7 @@ import { validatePageDef } from '../schema';
 import { gridSystemTemplate } from '../templates/grid-system';
 import { dialUpHomesteadTemplate } from '../templates/dial-up-homestead';
 
-const ctx: RenderCtx = { gateway: 'https://arweave.net', arnsHost: 'ar.io' };
+const ctx: RenderCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io' };
 
 describe('parsePageHtml — round-trip with renderPageHtml', () => {
   it('recovers the grid-system def exactly', () => {

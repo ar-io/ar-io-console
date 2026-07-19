@@ -4,7 +4,7 @@ import { validatePageDef, type PageDef, type TemplateId } from '../schema';
 import { gridSystemTemplate } from '../templates/grid-system';
 import { dialUpHomesteadTemplate } from '../templates/dial-up-homestead';
 
-const ctx: RenderCtx = { gateway: 'https://arweave.net', arnsHost: 'ar.io' };
+const ctx: RenderCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io' };
 
 const gridDef = validatePageDef(gridSystemTemplate.seed);
 const dialDef = validatePageDef(dialUpHomesteadTemplate.seed);
@@ -79,7 +79,7 @@ describe('renderPageHtml — applies the correct template', () => {
     expect(grid).toContain('href="https://akkurat.ar.io"');
     expect(grid).toContain('data-ar="ar://akkurat"');
     // the verify block tx resolves against the gateway
-    expect(grid).toContain('https://arweave.net/a34Zp9Kd1QmXv7Ns2Rt5Lb8Yz3Fc6Hg0Jw4Ue1Oi9Pq');
+    expect(grid).toContain('https://turbo-gateway.com/a34Zp9Kd1QmXv7Ns2Rt5Lb8Yz3Fc6Hg0Jw4Ue1Oi9Pq');
   });
 });
 

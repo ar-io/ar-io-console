@@ -9,7 +9,7 @@ import { validatePageDef, type PageDef, type Block } from '../schema';
  * breakout, or external asset loads in the published HTML.
  */
 
-const ctx: RenderCtx = { gateway: 'https://arweave.net', arnsHost: 'ar.io', selfTxId: 'a'.repeat(43) };
+const ctx: RenderCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io', selfTxId: 'a'.repeat(43) };
 
 const XSS = '</script></style></title><script>alert(1)</script><img src=x onerror=alert(2)>';
 const XSS_URL = 'javascript:alert(3)';

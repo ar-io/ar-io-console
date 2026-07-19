@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isArUrl, parseArUrl, resolveArUrl, type ResolveCtx } from './arResolve';
 
-const ctx: ResolveCtx = { gateway: 'https://arweave.net', arnsHost: 'ar.io' };
+const ctx: ResolveCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io' };
 
 // A real 43-char base64url Arweave tx id.
 const TX = 'qX7mR2kP9wL4nT8vB1cZ6yH3jF5dG0sA7eU2oI9pW4t';
@@ -43,7 +43,7 @@ describe('parseArUrl', () => {
 
 describe('resolveArUrl', () => {
   it('resolves a tx id against the gateway', () => {
-    expect(resolveArUrl(`ar://${TX}`, ctx)).toBe(`https://arweave.net/${TX}`);
+    expect(resolveArUrl(`ar://${TX}`, ctx)).toBe(`https://turbo-gateway.com/${TX}`);
   });
   it('resolves an ArNS name against the host', () => {
     expect(resolveArUrl('ar://jenny', ctx)).toBe('https://jenny.ar.io');
@@ -52,8 +52,8 @@ describe('resolveArUrl', () => {
     expect(resolveArUrl('ar://links_myname', ctx)).toBe('https://links_myname.ar.io');
   });
   it('normalises a trailing slash on the gateway', () => {
-    expect(resolveArUrl(`ar://${TX}`, { gateway: 'https://arweave.net/', arnsHost: 'ar.io' })).toBe(
-      `https://arweave.net/${TX}`,
+    expect(resolveArUrl(`ar://${TX}`, { gateway: 'https://turbo-gateway.com/', arnsHost: 'ar.io' })).toBe(
+      `https://turbo-gateway.com/${TX}`,
     );
   });
   it('passes through https and mailto unchanged', () => {

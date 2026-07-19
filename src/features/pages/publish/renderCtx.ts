@@ -69,7 +69,7 @@ export function renderCtxFor(
   config: RenderCtxConfig,
   opts: RenderCtxOpts = {},
 ): RenderCtx {
-  const gateway = (config.arioGatewayUrl || 'https://arweave.net').replace(/\/+$/, '');
+  const gateway = (config.arioGatewayUrl || 'https://turbo-gateway.com').replace(/\/+$/, '');
   const ctx: RenderCtx = { gateway, arnsHost: arnsHostFor(config) };
   if (opts.arnsName) ctx.arnsName = opts.arnsName;
   if (opts.selfTxId) ctx.selfTxId = opts.selfTxId;

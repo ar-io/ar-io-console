@@ -10,7 +10,7 @@ import { validatePageDef, type PageDef, type Block } from '../schema';
  * This guards against any of the 16 templates breaking on real user input.
  */
 
-const ctx: RenderCtx = { gateway: 'https://arweave.net', arnsHost: 'ar.io', selfTxId: 'a'.repeat(43) };
+const ctx: RenderCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io', selfTxId: 'a'.repeat(43) };
 
 const EVERY_BLOCK: Block[] = [
   { type: 'heading', text: 'Section' },
