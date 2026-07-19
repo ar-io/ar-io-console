@@ -38,10 +38,19 @@ export default function PublishSuccess({
         </div>
         <h3 className="font-heading text-2xl font-bold text-foreground">Your page is live</h3>
         <p className="mt-1 text-sm text-foreground/70">
-          {isArns
-            ? 'Published permanently and pointed at your domain.'
-            : 'Published permanently to the permaweb.'}
+          {result.version && result.version >= 2
+            ? `Version ${result.version} is now live — published permanently${
+                isArns ? ' at your domain' : ' to the permaweb'
+              }.`
+            : isArns
+              ? 'Published permanently and pointed at your domain.'
+              : 'Published permanently to the permaweb.'}
         </p>
+        {result.version && result.version >= 2 && (
+          <p className="mt-1 text-xs text-foreground/50">
+            Earlier versions stay permanent — roll back anytime from version history.
+          </p>
+        )}
       </div>
 
       {/* Partial success: page live, ArNS failed */}

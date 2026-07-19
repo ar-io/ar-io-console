@@ -14,15 +14,17 @@ import {
   ArrowLeft,
   CheckCircle2,
   ExternalLink,
+  Globe,
   History,
   Loader2,
   RadioTower,
 } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
+import AssignDomainModal from '@/components/modals/AssignDomainModal';
 import { getArweaveUrl } from '@/utils';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
-import type { ConsolePage } from '@/store/useStore';
+import { useStore, type ConsolePage } from '@/store/useStore';
 
 export interface VersionHistoryProps {
   page: ConsolePage;
@@ -41,9 +43,11 @@ function formatSize(bytes: number): string {
 export default function VersionHistory({ page, onBack, onMakeLive }: VersionHistoryProps) {
   const { hasArNSAccess, needsLinking, isSolanaConnected, promptReconnect, showLinkModal, setShowLinkModal } =
     useLinkedSolanaWallet();
+  const updatePageArNS = useStore((s) => s.updatePageArNS);
 
   const [busyVersion, setBusyVersion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAssign, setShowAssign] = useState(false);
 
   const hasDomain = Boolean(page.arns);
   const arnsLabel = page.arns
@@ -96,9 +100,20 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
 
       {/* Rollback context banners */}
       {!hasDomain && (
-        <div className="mb-4 rounded-xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
-          Roll back needs a domain. Assign an ArNS name to this page to point it at any previous
-          version. Each version's transaction link below is always permanent and copyable.
+        <div className="mb-4 rounded-xl border border-border/20 bg-card p-3">
+          <p className="text-xs text-foreground/70">
+            Roll back needs a domain. Assign an ArNS name to this page to point it at any previous
+            version. Each version's transaction link below is always permanent and copyable.
+          </p>
+          {page.latestTxId && (
+            <button
+              type="button"
+              onClick={() => setShowAssign(true)}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+            >
+              <Globe className="h-3.5 w-3.5" /> Assign a domain
+            </button>
+          )}
         </div>
       )}
       {hasDomain && needsLinking && (
@@ -210,6 +225,24 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
 
       {showLinkModal && (
         <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} isReconnect={!needsLinking} />
+      )}
+
+      {showAssign && page.latestTxId && (
+        <AssignDomainModal
+          onClose={() => setShowAssign(false)}
+          manifestId={page.latestTxId}
+          existingArnsName={page.arns?.name}
+          existingUndername={page.arns?.undername}
+          onSuccess={(name, undername, transactionId) => {
+            updatePageArNS(page.id, {
+              name,
+              undername,
+              targetTxId: page.latestTxId,
+              arnsTxId: transactionId,
+            });
+            setShowAssign(false);
+          }}
+        />
       )}
     </div>
   );

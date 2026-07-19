@@ -8,6 +8,8 @@ interface LivePreviewProps {
   ctx: RenderCtx;
   /** How long to wait after the last edit before re-rendering (default 250ms). */
   debounceMs?: number;
+  /** Reports the byte size of the rendered HTML whenever it changes. */
+  onSize?: (bytes: number) => void;
   className?: string;
 }
 
@@ -31,7 +33,7 @@ function safeRender(def: PageDef, ctx: RenderCtx): string {
  * `srcDoc` updates. The frame is fully sandboxed (no script execution / no
  * navigation) since it is a preview.
  */
-export default function LivePreview({ def, ctx, debounceMs = 250, className }: LivePreviewProps) {
+export default function LivePreview({ def, ctx, debounceMs = 250, onSize, className }: LivePreviewProps) {
   const [html, setHtml] = useState<string>(() => safeRender(def, ctx));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -42,6 +44,12 @@ export default function LivePreview({ def, ctx, debounceMs = 250, className }: L
       if (timer.current) clearTimeout(timer.current);
     };
   }, [def, ctx, debounceMs]);
+
+  // Report the rendered size up so the editor can show a live size meter without
+  // rendering the page a second time.
+  useEffect(() => {
+    onSize?.(new Blob([html]).size);
+  }, [html, onSize]);
 
   return (
     <div className={className}>

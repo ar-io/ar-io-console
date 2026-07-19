@@ -25,6 +25,7 @@ import {
   PenLine,
   ShieldCheck,
   Trash2,
+  Unlink,
   XCircle,
 } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
@@ -106,6 +107,7 @@ export interface PageCardProps {
   onEdit: () => void;
   onDuplicate: () => void;
   onAssignDomain: () => void;
+  onRemoveDomain: () => void;
   onVersionHistory: () => void;
   onDelete: () => void;
 }
@@ -118,6 +120,7 @@ export default function PageCard({
   onEdit,
   onDuplicate,
   onAssignDomain,
+  onRemoveDomain,
   onVersionHistory,
   onDelete,
 }: PageCardProps) {
@@ -325,6 +328,19 @@ export default function PageCard({
                       >
                         <Globe className="h-4 w-4" />
                         {page.arns ? 'Change domain' : 'Assign domain'}
+                      </button>
+                    )}
+                    {!isDraft && page.arns && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onRemoveDomain();
+                          close();
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-foreground/80 transition-colors hover:bg-primary/10 hover:text-foreground"
+                      >
+                        <Unlink className="h-4 w-4" />
+                        Remove domain
                       </button>
                     )}
                     {!isDraft && (

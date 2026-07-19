@@ -14,6 +14,7 @@ import type { PageDef } from '../schema';
 import type { RenderCtx } from '../render/renderPageHtml';
 import type { Tag } from '../publish/tags';
 import LivePreview from './LivePreview';
+import SizeMeter from './SizeMeter';
 import { Section } from './controls/primitives';
 import ProfileControls from './controls/ProfileControls';
 import BlocksControls from './controls/BlocksControls';
@@ -48,6 +49,11 @@ export interface PageEditorProps {
   onLabelsChange: (labels: string[]) => void;
   note: string;
   onNoteChange: (note: string) => void;
+  // Pricing (for the live size meter)
+  freeUploadLimitBytes: number;
+  lifetimeFreeBytes?: number;
+  wincForOneGiB?: string;
+  perDataItemFeeWinc?: string;
   // Actions
   onBack: () => void;
   onPublish: () => void;
@@ -56,7 +62,18 @@ export interface PageEditorProps {
 export default function PageEditor(props: PageEditorProps) {
   const { def, previewDef, update, ctx, saved, publishing = false, backLabel = 'Templates', onBack, onPublish } = props;
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [sizeBytes, setSizeBytes] = useState(0);
   const preview = previewDef ?? def;
+
+  const sizeMeter = (
+    <SizeMeter
+      sizeBytes={sizeBytes}
+      freeUploadLimitBytes={props.freeUploadLimitBytes}
+      lifetimeFreeBytes={props.lifetimeFreeBytes}
+      wincForOneGiB={props.wincForOneGiB}
+      perDataItemFeeWinc={props.perDataItemFeeWinc}
+    />
+  );
 
   return (
     <div>
@@ -97,6 +114,7 @@ export default function PageEditor(props: PageEditorProps) {
           <ChevronDown className={`h-4 w-4 transition-transform ${mobilePreviewOpen ? 'rotate-180' : ''}`} />
         </button>
         {mobilePreviewOpen && <LivePreview def={preview} ctx={ctx} className="mt-4" />}
+        <div className="mt-3">{sizeMeter}</div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -147,10 +165,12 @@ export default function PageEditor(props: PageEditorProps) {
           </Section>
         </div>
 
-        {/* Right: sticky preview (desktop) */}
+        {/* Right: sticky preview (desktop). This instance stays mounted across
+            breakpoints, so its onSize keeps the meter current even on mobile. */}
         <div className="hidden lg:block">
-          <div className="sticky top-6">
-            <LivePreview def={preview} ctx={ctx} />
+          <div className="sticky top-6 space-y-3">
+            <LivePreview def={preview} ctx={ctx} onSize={setSizeBytes} />
+            {sizeMeter}
           </div>
         </div>
       </div>

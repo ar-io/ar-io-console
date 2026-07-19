@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Sparkles,
   Trash2,
+  Unlink,
   X,
 } from 'lucide-react';
 import { useStore, type ConsolePage } from '@/store/useStore';
@@ -56,6 +57,7 @@ export default function PagesDashboard({
   } = useUploadStatus();
 
   const [assignPage, setAssignPage] = useState<ConsolePage | null>(null);
+  const [removeDomainPage, setRemoveDomainPage] = useState<ConsolePage | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ConsolePage | null>(null);
 
   // Newest-first (pages are stored newest-first already, but sort defensively).
@@ -223,6 +225,7 @@ export default function PagesDashboard({
               onEdit={() => onEdit(page)}
               onDuplicate={() => onDuplicate(page)}
               onAssignDomain={() => setAssignPage(page)}
+              onRemoveDomain={() => setRemoveDomainPage(page)}
               onVersionHistory={() => onVersionHistory(page)}
               onDelete={() => setDeleteConfirm(page)}
             />
@@ -249,6 +252,18 @@ export default function PagesDashboard({
         />
       )}
 
+      {/* Remove domain confirmation */}
+      {removeDomainPage && (
+        <RemoveDomainConfirm
+          page={removeDomainPage}
+          onCancel={() => setRemoveDomainPage(null)}
+          onConfirm={() => {
+            updatePageArNS(removeDomainPage.id, undefined);
+            setRemoveDomainPage(null);
+          }}
+        />
+      )}
+
       {/* Delete confirmation */}
       {deleteConfirm && (
         <DeleteConfirm
@@ -260,6 +275,69 @@ export default function PagesDashboard({
           }}
         />
       )}
+    </div>
+  );
+}
+
+function RemoveDomainConfirm({
+  page,
+  onCancel,
+  onConfirm,
+}: {
+  page: ConsolePage;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const label = page.arns
+    ? page.arns.undername
+      ? `${page.arns.undername}_${page.arns.name}`
+      : page.arns.name
+    : '';
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-border/20 bg-background p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-warning/15">
+            <Unlink className="h-4 w-4 text-warning" />
+          </div>
+          <h3 className="font-heading text-lg font-bold text-foreground">Remove domain?</h3>
+        </div>
+        <p className="mb-3 text-sm text-foreground/70">
+          This clears the <span className="font-medium text-foreground">{label}</span> association from
+          this page in your console.
+        </p>
+        <div className="mb-5 flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span>
+            The ArNS name itself keeps resolving to the last version until you point it somewhere else
+            from the Domains page.
+          </span>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-border/20 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

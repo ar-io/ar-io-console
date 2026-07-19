@@ -491,6 +491,10 @@ export default function PagesPanel() {
           onLabelsChange={handleLabelsChange}
           note={note}
           onNoteChange={setNote}
+          freeUploadLimitBytes={freeUploadLimitBytes}
+          lifetimeFreeBytes={freeTier.lifetimeBytes}
+          wincForOneGiB={wincForOneGiB}
+          perDataItemFeeWinc={perDataItemFeeWinc}
           onBack={editorOrigin === 'dashboard' ? goToDashboard : goToGallery}
           onPublish={openPublish}
         />
@@ -548,7 +552,9 @@ export default function PagesPanel() {
           def={previewDef ?? def}
           ctx={previewCtx}
           arns={arnsEnabled && arnsName ? { name: arnsName, undername: arnsUndername || undefined } : undefined}
-          note={note.trim()}
+          note={note}
+          nextVersion={(getPage(def.id)?.currentVersion ?? 0) + 1}
+          onNoteChange={setNote}
           publishing={publishing}
           stage={stage}
           error={error}

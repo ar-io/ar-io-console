@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { AlertTriangle, Info, Loader2, Rocket, Sparkles } from 'lucide-react';
 import BaseModal from '@/components/modals/BaseModal';
-import { wincPerCredit, tokenLabels, type SupportedTokenType } from '@/constants';
+import { tokenLabels, type SupportedTokenType } from '@/constants';
 import { isFileFree, formatFreeLimit } from '@/hooks/useFreeUploadLimit';
 import { supportsJitPayment } from '@/utils/jitPayment';
 import type { PageDef } from '../schema';
 import type { RenderCtx } from '../render/renderPageHtml';
 import { renderPageHtml } from '../render/renderPageHtml';
 import { arnsLabel } from '../publish/permalink';
+import { MAX_PAGE_BYTES, estimatePageCredits } from '../publish/cost';
 import type { PublishStage } from '../hooks/usePagePublish';
 
 interface PublishModalProps {
@@ -15,6 +16,10 @@ interface PublishModalProps {
   ctx: RenderCtx;
   arns?: { name: string; undername?: string };
   note: string;
+  /** Version number this publish will create (1 for a first publish). */
+  nextVersion?: number;
+  /** Edit the changelog note inline (shown on re-publishes). */
+  onNoteChange?: (note: string) => void;
   publishing: boolean;
   stage: PublishStage;
   error: string | null;
@@ -31,15 +36,6 @@ interface PublishModalProps {
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
   jitPaymentEnabled: boolean;
 }
-
-const GiB = 1024 ** 3;
-/**
- * Hard ceiling for a single self-contained page (PRD §12). A page is ONE data item,
- * so an oversized one is almost always huge inlined media — block publishing and
- * point the user at reducing images rather than silently minting a huge permanent
- * page. (Avatars are auto-downscaled; this guards hand-pasted data-URIs.)
- */
-const MAX_PAGE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 function defaultJitToken(walletType: PublishModalProps['walletType']): SupportedTokenType {
   if (walletType === 'arweave') return 'ario';
@@ -61,6 +57,8 @@ export default function PublishModal({
   ctx,
   arns,
   note,
+  nextVersion,
+  onNoteChange,
   publishing,
   stage,
   error,
@@ -89,11 +87,7 @@ export default function PublishModal({
 
   const credits = useMemo(() => {
     if (free) return 0;
-    const wincNum = wincForOneGiB ? Number(wincForOneGiB) : NaN;
-    if (!Number.isFinite(wincNum) || wincNum <= 0) return NaN;
-    const perItem = perDataItemFeeWinc ? Number(perDataItemFeeWinc) : 0;
-    const winc = (wincNum * size) / GiB + perItem;
-    return winc / wincPerCredit;
+    return estimatePageCredits(size, wincForOneGiB, perDataItemFeeWinc);
   }, [free, wincForOneGiB, perDataItemFeeWinc, size]);
 
   const billable = !free;
@@ -128,10 +122,40 @@ export default function PublishModal({
           <div className="space-y-2">
             <Row label="Page" value={def.title || def.profile.displayName || 'Untitled'} />
             {domainLabel && <Row label="Domain" value={domainLabel} />}
+            {typeof nextVersion === 'number' && (
+              <Row
+                label="Version"
+                value={nextVersion <= 1 ? 'First version' : `Version ${nextVersion}`}
+              />
+            )}
             <Row label="Size" value={`${(size / 1024).toFixed(1)} KB`} />
-            {note && <Row label="Note" value={note} />}
           </div>
         </div>
+
+        {/* Changelog note — only for re-publishes; a first version has nothing to note */}
+        {onNoteChange && typeof nextVersion === 'number' && nextVersion >= 2 && (
+          <div className="mb-3">
+            <label htmlFor="publish-note" className="mb-1.5 block text-xs font-medium text-foreground/70">
+              What changed? <span className="text-foreground/40">(optional)</span>
+            </label>
+            <input
+              id="publish-note"
+              type="text"
+              value={note}
+              onChange={(e) => onNoteChange(e.target.value)}
+              disabled={publishing}
+              placeholder="e.g. Updated links and header"
+              className="w-full rounded-xl border border-border/20 bg-card px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary/50 disabled:opacity-60"
+            />
+            <p className="mt-1 text-xs text-foreground/50">Kept with this version's permanent history.</p>
+          </div>
+        )}
+        {/* First-version note passthrough (read-only, if one was set in the editor) */}
+        {note && (!nextVersion || nextVersion < 2) && (
+          <div className="mb-3 rounded-xl bg-card p-3 text-sm">
+            <Row label="Note" value={note} />
+          </div>
+        )}
 
         {/* Cost */}
         <div className="mb-4 rounded-xl border border-border/20 bg-card p-4">
