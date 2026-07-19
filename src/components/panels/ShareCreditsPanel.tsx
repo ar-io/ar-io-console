@@ -160,8 +160,8 @@ export default function ShareCreditsPanel() {
   if (!address) {
     return (
       <div className="text-center py-12">
-        <h3 className="text-xl font-heading font-bold mb-4">Connect Wallet Required</h3>
-        <p className="text-foreground/80">Connect your wallet to share credits</p>
+        <h3 className="text-xl font-heading font-bold mb-4">Sign In Required</h3>
+        <p className="text-foreground/80">Sign in to share credits</p>
       </div>
     );
   }

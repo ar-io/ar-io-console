@@ -68,7 +68,7 @@ const LandingPage = () => {
       benefits: ['Credit cards accepted', 'Pay in ETH, SOL, USDC, ARIO and more', 'Instant credits'],
       action: 'topup',
       loginText: 'Buy Credits',
-      connectText: 'Connect Wallet to Top Up'
+      connectText: 'Sign in to Top Up'
     },
     {
       name: 'Upload',
@@ -78,7 +78,7 @@ const LandingPage = () => {
       benefits: ['Drag & drop interface', 'Batch uploads', 'x402 instant payments', 'Instant receipts'],
       action: 'upload',
       loginText: 'Upload Files',
-      connectText: 'Connect Wallet to Upload'
+      connectText: 'Sign in to Upload'
     },
     {
       name: 'Deploy',
@@ -88,7 +88,7 @@ const LandingPage = () => {
       benefits: ['Permanent hosting', 'Automatic manifests', 'Custom fallback pages', 'Domain name assignment'],
       action: 'deploy',
       loginText: 'Deploy Site',
-      connectText: 'Connect Wallet to Deploy'
+      connectText: 'Sign in to Deploy'
     },
     {
       name: 'Pages',
@@ -98,7 +98,7 @@ const LandingPage = () => {
       benefits: ['16 designer templates', 'Live preview editor', 'Free & permanent', 'ArNS name + versions'],
       action: 'pages',
       loginText: 'Create a Page',
-      connectText: 'Connect Wallet to Create'
+      connectText: 'Sign in to Create'
     },
     {
       name: 'Capture',
@@ -108,7 +108,7 @@ const LandingPage = () => {
       benefits: ['Full-page screenshots', 'Web page archival', 'Smart domain assignment'],
       action: 'capture',
       loginText: 'Capture Webpage',
-      connectText: 'Connect Wallet to Capture'
+      connectText: 'Sign in to Capture'
     },
     {
       name: 'Browse',
@@ -128,7 +128,7 @@ const LandingPage = () => {
       benefits: ['Wallet-to-wallet sharing', 'Time-based expiration', 'Revoke anytime'],
       action: 'share',
       loginText: 'Share Credits',
-      connectText: 'Connect Wallet to Share'
+      connectText: 'Sign in to Share'
     },
     // DEPRECATED: Gifting feature disabled
     // {

@@ -255,7 +255,7 @@ export default function TopUpPanel() {
       const targetToken = paymentTargetType || walletType;
 
       if (!targetAddress) {
-        setErrorMessage('Please connect your wallet or enter a recipient address');
+        setErrorMessage('Please sign in or enter a recipient address');
         return;
       }
 

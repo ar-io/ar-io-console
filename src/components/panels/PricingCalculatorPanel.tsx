@@ -730,7 +730,7 @@ export default function PricingCalculatorPanel() {
             // Not logged in - show connect wallet CTA
             <>
               <h4 className="text-lg font-bold font-heading text-foreground mb-3">Ready to store your data permanently?</h4>
-              <p className="text-foreground/80 mb-4">Connect your wallet to top up credits and start uploading.</p>
+              <p className="text-foreground/80 mb-4">Sign in to top up credits and start uploading.</p>
               <button
                 onClick={() => setShowWalletModal(true)}
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
