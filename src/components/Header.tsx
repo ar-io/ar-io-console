@@ -232,8 +232,10 @@ const Header = () => {
                 {filteredAccountServices.map((service) => {
                   const isActive = location.pathname === `/${service.page}`;
 
-                  // Buy Credits (topup) is always accessible without login
-                  const requiresLogin = service.page !== 'topup';
+                  // Buy Credits (topup) and Create Page (pages) are accessible
+                  // without login: the Pages editor works locally and only
+                  // publishing needs a wallet, matching the "Try Pages" banner.
+                  const requiresLogin = service.page !== 'topup' && service.page !== 'pages';
 
                   // If not logged in and service requires login, show locked button
                   if (!address && requiresLogin) {
