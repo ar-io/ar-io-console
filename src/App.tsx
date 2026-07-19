@@ -21,6 +21,7 @@ import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
 import AccountPage from './pages/AccountPage';
 import TryItNowPage from './pages/TryItNowPage';
 import VerifyPage from './pages/VerifyPage';
+import PagesPage from './pages/PagesPage';
 
 // Lazy-load BrowsePage to isolate wayfinder dependencies and avoid circular dependency issues
 const BrowsePage = lazy(() => import('./pages/BrowsePage'));
@@ -105,6 +106,7 @@ function AppRoutes() {
           <Route path="capture" element={<CapturePage />} />
           <Route path="deploy" element={<DeploySitePage />} />
           <Route path="deployments" element={<RecentDeploymentsPage />} />
+          <Route path="pages" element={<PagesPage />} />
           <Route path="share" element={<ShareCreditsPage />} />
           {/* DEPRECATED: Gifting feature disabled */}
           {/* <Route path="gift" element={<GiftPage />} /> */}

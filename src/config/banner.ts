@@ -15,15 +15,15 @@ export interface BannerConfig {
 }
 
 export const BANNER_CONFIG: BannerConfig = {
-  enabled: false,
-  id: 'solana-migration-apr-2026',
-  message: 'Ar.io has migrated to Solana! Manage your migrated assets with connected Solana wallets.',
+  enabled: true,
+  id: 'pages-launch-2026',
+  message: 'New — build a permanent link-in-bio page, live at your ArNS name in seconds.',
   link: {
-    text: 'Learn More',
-    href: 'https://ar.io/solana-migration/',
-    external: true,
+    text: 'Try Pages',
+    href: '/pages',
+    external: false,
   },
-  variant: 'prominent',
+  variant: 'subtle',
 };
 
 // LocalStorage key for tracking dismissed banners

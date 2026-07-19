@@ -11,7 +11,7 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, BookOpen, Calculator, Compass
+  Camera, BookOpen, Calculator, Compass, LayoutTemplate
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 
@@ -89,6 +89,16 @@ const LandingPage = () => {
       action: 'deploy',
       loginText: 'Deploy Site',
       connectText: 'Connect Wallet to Deploy'
+    },
+    {
+      name: 'Pages',
+      icon: LayoutTemplate,
+      title: 'Build a Permanent Link-in-Bio Page',
+      description: 'Create a link-in-bio page in seconds and publish it permanently to Arweave — no code, no files. Pick from 16 designer templates, edit with a live preview, and point your ArNS name at it.',
+      benefits: ['16 designer templates', 'Live preview editor', 'Free & permanent', 'ArNS name + versions'],
+      action: 'pages',
+      loginText: 'Create a Page',
+      connectText: 'Connect Wallet to Create'
     },
     {
       name: 'Capture',

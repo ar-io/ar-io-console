@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck, X } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, X } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -22,6 +22,7 @@ const accountServices = [
   { name: 'Upload Files', page: 'upload' as const, icon: Upload },
   { name: 'Capture Page', page: 'capture' as const, icon: Camera },
   { name: 'Deploy Site', page: 'deploy' as const, icon: Zap },
+  { name: 'Create Page', page: 'pages' as const, icon: LayoutTemplate },
   { name: 'Share Credits', page: 'share' as const, icon: Share2 },
   // DEPRECATED: Gifting feature disabled
   // { name: 'Redeem Gift', page: 'redeem' as const, icon: Ticket },
