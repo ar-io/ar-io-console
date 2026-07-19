@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Archive,
+  DownloadCloud,
   LayoutTemplate,
   Plus,
   RefreshCw,
@@ -28,6 +29,7 @@ import PageCard from './PageCard';
 export interface PagesDashboardProps {
   arioGatewayUrl?: string;
   onCreate: () => void;
+  onImport: () => void;
   onEdit: (page: ConsolePage) => void;
   onDuplicate: (page: ConsolePage) => void;
   onVersionHistory: (page: ConsolePage) => void;
@@ -36,6 +38,7 @@ export interface PagesDashboardProps {
 export default function PagesDashboard({
   arioGatewayUrl,
   onCreate,
+  onImport,
   onEdit,
   onDuplicate,
   onVersionHistory,
@@ -127,14 +130,27 @@ export default function PagesDashboard({
             Build a permanent link-in-bio page from a template, point your name at it, and it's live
             on the permaweb in seconds — usually for free.
           </p>
-          <button
-            type="button"
-            onClick={onCreate}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
-          >
-            <LayoutTemplate className="h-4 w-4" />
-            Browse templates
-          </button>
+          <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={onCreate}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            >
+              <LayoutTemplate className="h-4 w-4" />
+              Browse templates
+            </button>
+            <button
+              type="button"
+              onClick={onImport}
+              className="inline-flex items-center gap-2 rounded-full border border-border/20 bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/40"
+            >
+              <DownloadCloud className="h-4 w-4" />
+              Edit an existing page
+            </button>
+          </div>
+          <p className="mt-4 text-xs text-foreground/50">
+            Already made one on another device? Load it with its ArNS name or transaction id.
+          </p>
         </div>
       </div>
     );
@@ -171,6 +187,15 @@ export default function PagesDashboard({
           >
             <Archive className="h-3 w-3" />
             <span className="hidden sm:inline">Export CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={onImport}
+            className="inline-flex items-center gap-1 rounded-full border border-border/20 bg-card px-3 py-2 text-xs text-foreground transition-colors hover:border-primary/40"
+            title="Load a page you published elsewhere to edit it"
+          >
+            <DownloadCloud className="h-3 w-3" />
+            <span className="hidden sm:inline">Edit existing</span>
           </button>
           <button
             type="button"

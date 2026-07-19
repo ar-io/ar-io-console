@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, ExternalLink, LayoutGrid, PenLine, PlusCircle, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, Globe, LayoutGrid, PenLine, PlusCircle, ShieldCheck } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import type { PublishResult } from '../hooks/usePagePublish';
 
@@ -13,6 +13,8 @@ interface PublishSuccessProps {
   onCreateAnother: () => void;
   /** Return to the Pages dashboard (the list of all pages). */
   onViewAllPages?: () => void;
+  /** Open the assign-domain flow for this page (shown only when no domain yet). */
+  onAssignDomain?: () => void;
 }
 
 export default function PublishSuccess({
@@ -22,6 +24,7 @@ export default function PublishSuccess({
   onEdit,
   onCreateAnother,
   onViewAllPages,
+  onAssignDomain,
 }: PublishSuccessProps) {
   const navigate = useNavigate();
   const txId = result.txId ?? '';
@@ -78,6 +81,32 @@ export default function PublishSuccess({
           <CopyButton textToCopy={liveUrl} />
         </div>
       </div>
+
+      {/* Nudge to attach a memorable ArNS name (no domain yet) */}
+      {!isArns && onAssignDomain && txId && (
+        <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/15">
+              <Globe className="h-4.5 w-4.5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Give it a memorable link</p>
+              <p className="mt-0.5 text-xs text-foreground/70">
+                Your page lives at the permanent gateway URL above. Point an ArNS name at it for a
+                short, human link like <span className="font-mono text-foreground/80">yourname.ar.io</span> —
+                now or later.
+              </p>
+              <button
+                type="button"
+                onClick={onAssignDomain}
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+              >
+                <Globe className="h-3.5 w-3.5" /> Assign a domain
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TX id */}
       {txId && (

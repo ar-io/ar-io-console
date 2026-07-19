@@ -23,6 +23,8 @@ interface PublishModalProps {
   onConfirm: (opts: { jitEnabled: boolean; selectedJitToken: SupportedTokenType }) => void;
   // pricing inputs
   freeUploadLimitBytes: number;
+  /** Lifetime free-tier quota in bytes (0 = uncapped). Free is quota-limited, not guaranteed. */
+  lifetimeFreeBytes?: number;
   wincForOneGiB?: string;
   perDataItemFeeWinc?: string;
   creditBalance: number;
@@ -66,6 +68,7 @@ export default function PublishModal({
   onClose,
   onConfirm,
   freeUploadLimitBytes,
+  lifetimeFreeBytes = 0,
   wincForOneGiB,
   perDataItemFeeWinc,
   creditBalance,
@@ -147,7 +150,14 @@ export default function PublishModal({
 
           {free && (
             <p className="mt-1.5 text-xs text-foreground/50">
-              Under the {formatFreeLimit(freeUploadLimitBytes)} free tier — no credits needed.
+              {lifetimeFreeBytes > 0 ? (
+                <>
+                  Free within your {formatFreeLimit(lifetimeFreeBytes)} lifetime free tier. Once
+                  that&rsquo;s used up, pages are paid by size plus a small per-item fee.
+                </>
+              ) : (
+                <>Under the {formatFreeLimit(freeUploadLimitBytes)} free tier — no credits needed.</>
+              )}
             </p>
           )}
 

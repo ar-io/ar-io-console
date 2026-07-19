@@ -19,6 +19,9 @@ import PublishModal from './components/PublishModal';
 import PublishSuccess from './components/PublishSuccess';
 import PagesDashboard from './components/PagesDashboard';
 import VersionHistory from './components/VersionHistory';
+import ImportPageModal from './components/ImportPageModal';
+import type { ImportedPage } from './publish/importPage';
+import AssignDomainModal from '@/components/modals/AssignDomainModal';
 
 type View = 'dashboard' | 'gallery' | 'editor' | 'success' | 'versions';
 
@@ -33,6 +36,8 @@ export default function PagesPanel() {
   const upsertPageDraft = useStore((s) => s.upsertPageDraft);
   const setPageLabels = useStore((s) => s.setPageLabels);
   const duplicatePage = useStore((s) => s.duplicatePage);
+  const savePage = useStore((s) => s.savePage);
+  const updatePageArNS = useStore((s) => s.updatePageArNS);
   const getPage = useStore((s) => s.getPage);
   const pages = useStore((s) => s.pages);
   const address = useStore((s) => s.address);
@@ -42,7 +47,7 @@ export default function PagesPanel() {
   const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
   const configMode = useStore((s) => s.configMode);
 
-  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
   const wincForOneGiB = useWincForOneGiB();
   const perDataItemFeeWinc = usePerDataItemFee();
   const { publish, repointArNS, reset: resetPublish, publishing, stage, error } = usePagePublish();
@@ -74,6 +79,13 @@ export default function PagesPanel() {
   const [showPublish, setShowPublish] = useState(false);
   const [publishNotice, setPublishNotice] = useState<string | null>(null);
   const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
+
+  // Import / recover an existing page (cross-device / cleared cache)
+  const [showImport, setShowImport] = useState(false);
+
+  // Assign a domain from the success screen (page published without one).
+  const [showSuccessAssign, setShowSuccessAssign] = useState(false);
+  const [successArns, setSuccessArns] = useState<{ name: string; undername?: string } | null>(null);
 
   const update = useCallback((updater: (d: PageDef) => PageDef) => {
     setDef((prev) => (prev ? { ...updater(prev), updatedAt: Date.now() } : prev));
@@ -192,6 +204,8 @@ export default function PagesPanel() {
     setLabels([]);
     setNote('');
     setSaved(true);
+    setSuccessArns(null);
+    setShowSuccessAssign(false);
   }, []);
 
   // Fresh create — clean slate seeded from a template or blank. The draft is NOT
@@ -249,6 +263,53 @@ export default function PagesPanel() {
     setEditorOrigin('dashboard');
     setView('editor');
   }, []);
+
+  // Import / recover a page published elsewhere. If the page already exists in
+  // this browser we open the local copy (it holds the full version history and
+  // any unpublished edits); otherwise we anchor a fresh record from the fetched
+  // version — preserving the page id so re-publishing continues the same lineage.
+  const importExisting = useCallback(
+    (imported: ImportedPage) => {
+      setShowImport(false);
+      const existing = getPage(imported.def.id);
+      if (existing) {
+        editExisting(existing);
+        return;
+      }
+      const now = Date.now();
+      // Normalise to exactly the form editExisting() will hydrate, so the anchored
+      // version hash matches the editor's baseline (no false "unpublished changes").
+      const def = withBlockIds(migratePageDef(imported.def));
+      const page: ConsolePage = {
+        id: def.id,
+        title: def.title || def.profile.displayName || 'Imported page',
+        template: def.template,
+        currentVersion: imported.txId ? 1 : 0,
+        latestTxId: imported.txId ?? '',
+        arns: imported.arnsName
+          ? { name: imported.arnsName, undername: imported.undername, targetTxId: imported.txId ?? '' }
+          : undefined,
+        versions: imported.txId
+          ? [
+              {
+                version: 1,
+                txId: imported.txId,
+                size: imported.sizeBytes,
+                defHash: computeDefHash(def),
+                timestamp: now,
+              },
+            ]
+          : [],
+        def,
+        labels: [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      savePage(page);
+      editExisting(page);
+    },
+    [getPage, savePage, editExisting],
+  );
 
   const handleSelectTemplate = useCallback(
     (id: TemplateId) => startEditing(seedFromTemplate(id)),
@@ -333,6 +394,7 @@ export default function PagesPanel() {
         }
         if (result.ok) {
           setPublishResult(result);
+          setSuccessArns(null);
           setShowPublish(false);
           setView('success');
         }
@@ -347,14 +409,21 @@ export default function PagesPanel() {
 
   const successLiveUrl = useMemo(() => {
     if (!publishResult) return '';
-    if (publishResult.arnsUpdated && arnsName) {
-      const label = arnsUndername ? `${arnsUndername}_${arnsName}` : arnsName;
+    // A domain assigned from the success screen wins; then a repoint done at
+    // publish time; otherwise the permanent gateway URL for the tx.
+    const arns =
+      successArns ??
+      (publishResult.arnsUpdated && arnsName
+        ? { name: arnsName, undername: arnsUndername || undefined }
+        : null);
+    if (arns) {
+      const label = arns.undername ? `${arns.undername}_${arns.name}` : arns.name;
       return `https://${label}.${previewCtx.arnsHost || 'ar.io'}`;
     }
     return getArweaveUrl(publishResult.txId ?? '');
-  }, [publishResult, arnsName, arnsUndername, previewCtx.arnsHost]);
+  }, [publishResult, successArns, arnsName, arnsUndername, previewCtx.arnsHost]);
 
-  const successIsArns = Boolean(publishResult?.arnsUpdated && arnsName);
+  const successIsArns = Boolean(successArns || (publishResult?.arnsUpdated && arnsName));
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -375,6 +444,7 @@ export default function PagesPanel() {
         <PagesDashboard
           arioGatewayUrl={arioGatewayUrl}
           onCreate={goToGallery}
+          onImport={() => setShowImport(true)}
           onEdit={editExisting}
           onDuplicate={handleDuplicate}
           onVersionHistory={handleOpenVersionHistory}
@@ -434,6 +504,26 @@ export default function PagesPanel() {
           onEdit={() => setView('editor')}
           onCreateAnother={goToGallery}
           onViewAllPages={goToDashboard}
+          onAssignDomain={publishResult.txId ? () => setShowSuccessAssign(true) : undefined}
+        />
+      )}
+
+      {view === 'success' && showSuccessAssign && publishResult?.txId && (
+        <AssignDomainModal
+          onClose={() => setShowSuccessAssign(false)}
+          manifestId={publishResult.txId}
+          existingArnsName={successArns?.name ?? (arnsEnabled ? arnsName : undefined)}
+          existingUndername={successArns?.undername ?? (arnsEnabled ? arnsUndername || undefined : undefined)}
+          onSuccess={(name, undername, transactionId) => {
+            updatePageArNS(publishResult.pageId, {
+              name,
+              undername,
+              targetTxId: publishResult.txId!,
+              arnsTxId: transactionId,
+            });
+            setSuccessArns({ name, undername });
+            setShowSuccessAssign(false);
+          }}
         />
       )}
 
@@ -446,6 +536,7 @@ export default function PagesPanel() {
         <PagesDashboard
           arioGatewayUrl={arioGatewayUrl}
           onCreate={goToGallery}
+          onImport={() => setShowImport(true)}
           onEdit={editExisting}
           onDuplicate={handleDuplicate}
           onVersionHistory={handleOpenVersionHistory}
@@ -469,11 +560,20 @@ export default function PagesPanel() {
           }}
           onConfirm={handleConfirmPublish}
           freeUploadLimitBytes={freeUploadLimitBytes}
+          lifetimeFreeBytes={freeTier.lifetimeBytes}
           wincForOneGiB={wincForOneGiB}
           perDataItemFeeWinc={perDataItemFeeWinc}
           creditBalance={creditBalance}
           walletType={walletType}
           jitPaymentEnabled={jitPaymentEnabled}
+        />
+      )}
+
+      {showImport && (
+        <ImportPageModal
+          ctx={previewCtx}
+          onClose={() => setShowImport(false)}
+          onImported={importExisting}
         />
       )}
     </div>
