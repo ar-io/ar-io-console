@@ -129,8 +129,8 @@ export default function PagesDashboard({
           </div>
           <h3 className="mb-1 font-heading text-xl font-bold text-foreground">Create your first page</h3>
           <p className="mx-auto mb-5 max-w-md text-sm text-foreground/70">
-            Build a permanent link-in-bio page from a template, point your name at it, and it's live
-            on the permaweb in seconds — usually for free.
+            Build a permanent link-in-bio page from a template, point your ArNS name at it, and it's
+            live on the permaweb in seconds — usually for free.
           </p>
           <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
             <button

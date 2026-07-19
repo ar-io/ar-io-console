@@ -1,4 +1,4 @@
-import { Info } from 'lucide-react';
+import { ExternalLink, Info } from 'lucide-react';
 import ArNSAssociationPanel from '@/components/ArNSAssociationPanel';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 
@@ -35,10 +35,21 @@ export default function DomainControls({
     <div className="space-y-3">
       <div className="flex items-start gap-2 rounded-lg bg-primary/5 px-3 py-2 text-xs text-foreground/70">
         <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-        <span>
-          {needsLinking
-            ? 'You can publish now and attach a name later — assigning an ArNS domain needs a linked Solana wallet.'
-            : 'Point an ArNS name (or undername) at your page. Optional — you can always add one later.'}
+        <span className="space-y-1">
+          <span className="block">
+            {needsLinking
+              ? 'You can publish now and attach a name later — assigning an ArNS name needs a linked Solana wallet.'
+              : 'Point an ArNS name (or undername) at your page. Optional — you can always add one later.'}
+          </span>
+          <a
+            href="https://docs.ar.io/learn/arns"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+          >
+            How ArNS names work
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </span>
       </div>
       <ArNSAssociationPanel

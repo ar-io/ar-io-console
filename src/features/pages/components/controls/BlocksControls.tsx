@@ -224,7 +224,7 @@ function BlockBody({
         <div className="space-y-3">
           <TextField label="Label" value={block.label} onChange={(v) => onChange({ ...block, label: v })} placeholder="Permanent on Arweave" />
           <UrlField label="Verify URL (optional)" value={block.url} onChange={(v) => onChange({ ...block, url: v })} placeholder="Auto-links to your domain when published" ctx={ctx} />
-          <p className="text-xs text-foreground/50">Left blank, this links to your ArNS domain (or is hidden if you have none).</p>
+          <p className="text-xs text-foreground/50">Left blank, this links to your page&rsquo;s ArNS name (or is hidden if you have none).</p>
         </div>
       );
   }

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { AlertTriangle, Info, Loader2, Rocket, Sparkles } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Info, Loader2, Rocket, Sparkles } from 'lucide-react';
 import BaseModal from '@/components/modals/BaseModal';
 import { tokenLabels, type SupportedTokenType } from '@/constants';
 import { isFileFree, formatFreeLimit } from '@/hooks/useFreeUploadLimit';
@@ -191,6 +191,15 @@ export default function PublishModal({
                 <span className="text-xs text-foreground/70">Your balance</span>
                 <span className="text-sm text-foreground">{creditBalance.toFixed(6)} Credits</span>
               </div>
+              <a
+                href="https://docs.ar.io/build/upload/turbo-credits"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs text-foreground/45 transition-colors hover:text-foreground/70"
+              >
+                What are credits?
+                <ExternalLink className="h-3 w-3" />
+              </a>
               {!hasCredits && !canJit && (
                 <div className="mt-3 flex items-start gap-2 rounded-lg border border-error/20 bg-error/10 p-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-error" />

@@ -121,7 +121,7 @@ export default function ProfileControls({ def, update, ctx }: ControlProps) {
       />
       <div>
         <TextField
-          label="ArNS handle (shown on the page)"
+          label="Handle (shown on the page)"
           value={profile.handle ?? ''}
           onChange={(v) => setProfile({ handle: v })}
           placeholder="myname.ar.io"
@@ -129,7 +129,7 @@ export default function ProfileControls({ def, update, ctx }: ControlProps) {
         />
         <p className="mt-1 flex items-center gap-1 text-xs text-foreground/50">
           <User className="h-3 w-3" />
-          Displayed as your canonical identity. Set a real domain in the Domain section to link it.
+          Just the text shown on your page. To actually point a name at it, use the Domain section.
         </p>
       </div>
     </div>
