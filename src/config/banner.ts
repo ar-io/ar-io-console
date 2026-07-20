@@ -10,6 +10,8 @@ export interface BannerConfig {
     text: string;
     href: string;
     external?: boolean;
+    /** React Router navigation state for internal links (external links ignore it). */
+    state?: Record<string, unknown>;
   };
   variant: 'subtle' | 'prominent'; // subtle = lavender, prominent = purple
 }
@@ -20,7 +22,8 @@ export const BANNER_CONFIG: BannerConfig = {
   message: 'New — build a permanent link-in-bio page, live in seconds.',
   link: {
     text: 'Try Pages',
-    href: '/pages?new',
+    href: '/pages',
+    state: { create: true },
     external: false,
   },
   variant: 'subtle',

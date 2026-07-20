@@ -65,6 +65,7 @@ export default function Banner() {
               ) : (
                 <Link
                   to={BANNER_CONFIG.link.href}
+                  state={BANNER_CONFIG.link.state}
                   className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 transition-opacity ${
                     isSubtle ? 'text-primary' : 'text-white'
                   }`}

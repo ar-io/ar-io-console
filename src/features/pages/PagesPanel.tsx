@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LayoutTemplate } from 'lucide-react';
 import { useStore, type ConsolePage } from '@/store/useStore';
 import type { SupportedTokenType } from '@/constants';
@@ -54,12 +54,14 @@ export default function PagesPanel() {
   const perDataItemFeeWinc = usePerDataItemFee();
   const { publish, repointArNS, reset: resetPublish, publishing, stage, error } = usePagePublish();
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   // Open straight into the template picker when arriving via a "create" entry
-  // point (/pages?new). Presence-only flag — the value is irrelevant. Lazy init
-  // avoids a dashboard→gallery flash.
+  // point (homepage CTA / launch banner) — those navigate here with { create: true }
+  // in the router state, so nothing shows in the address bar (it stays /pages).
+  // Lazy init avoids a dashboard→gallery flash.
   const [view, setView] = useState<View>(() =>
-    searchParams.has('new') ? 'gallery' : 'dashboard',
+    (location.state as { create?: boolean } | null)?.create ? 'gallery' : 'dashboard',
   );
   const [editorOrigin, setEditorOrigin] = useState<EditorOrigin>('gallery');
   const [def, setDef] = useState<PageDef | null>(null);
@@ -129,17 +131,14 @@ export default function PagesPanel() {
     defRef.current = def;
   });
 
-  // The ?new=1 trigger (consumed by the lazy `view` init above) is one-shot:
-  // clear it once here so a refresh or Back doesn't re-force the gallery over
-  // wherever the user has since navigated — unlike a persistent deep-link such as
-  // Verify's ?tx=. Clearing also tidies the shared/bookmarked URL to /pages.
+  // Consume the one-shot "create" navigation state (read by the lazy `view` init
+  // above) so a refresh or Back doesn't re-force the picker over wherever the user
+  // has since navigated. Replacing the history state leaves the /pages URL intact.
   useEffect(() => {
-    if (searchParams.has('new')) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('new');
-      setSearchParams(next, { replace: true });
+    if ((location.state as { create?: boolean } | null)?.create) {
+      navigate(location.pathname, { replace: true, state: null });
     }
-  }, [searchParams, setSearchParams]);
+  }, [location, navigate]);
 
   useEffect(() => {
     if (!def || view !== 'editor') return;

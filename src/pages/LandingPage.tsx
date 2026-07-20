@@ -440,7 +440,11 @@ const LandingPage = () => {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     // Pages: jump straight to the template picker, not the dashboard.
-                    navigate(feature.action === 'pages' ? '/pages?new' : `/${feature.action}`);
+                    if (feature.action === 'pages') {
+                      navigate('/pages', { state: { create: true } });
+                    } else {
+                      navigate(`/${feature.action}`);
+                    }
                   } else {
                     setShowWalletModal(true);
                   }
@@ -525,7 +529,11 @@ const LandingPage = () => {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
                     // Pages: jump straight to the template picker, not the dashboard.
-                    navigate(feature.action === 'pages' ? '/pages?new' : `/${feature.action}`);
+                    if (feature.action === 'pages') {
+                      navigate('/pages', { state: { create: true } });
+                    } else {
+                      navigate(`/${feature.action}`);
+                    }
                   } else {
                     setShowWalletModal(true);
                   }
