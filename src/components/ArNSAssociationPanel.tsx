@@ -17,6 +17,9 @@ interface ArNSAssociationPanelProps {
   onShowUndernameChange?: (show: boolean) => void;
   customTTL?: number;
   onCustomTTLChange?: (ttl: number | undefined) => void;
+  /** Render without the gradient card wrapper + icon/subtitle — for hosts (e.g.
+   *  the Pages editor) that already provide a section card + heading. */
+  bare?: boolean;
 }
 
 export default function ArNSAssociationPanel({
@@ -29,7 +32,8 @@ export default function ArNSAssociationPanel({
   showUndername: externalShowUndername,
   onShowUndernameChange,
   customTTL: _customTTL, // eslint-disable-line @typescript-eslint/no-unused-vars
-  onCustomTTLChange
+  onCustomTTLChange,
+  bare = false,
 }: ArNSAssociationPanelProps) {
   const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, promptReconnect, showLinkModal, setShowLinkModal } = useLinkedSolanaWallet();
@@ -128,30 +132,46 @@ export default function ArNSAssociationPanel({
   const canUseArNS = isSolanaConnected && !needsLinking;
 
   return (
-    <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-6 mb-6">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-          <Globe className="w-5 h-5 text-primary" />
+    <div className={bare ? '' : 'bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-6 mb-6'}>
+      {bare ? (
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            type="checkbox"
+            id="arns-enabled"
+            checked={enabled}
+            onChange={(e) => onEnabledChange(e.target.checked)}
+            disabled={!canUseArNS}
+            className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+          />
+          <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
+            Add a domain name
+          </label>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <input
-              type="checkbox"
-              id="arns-enabled"
-              checked={enabled}
-              onChange={(e) => onEnabledChange(e.target.checked)}
-              disabled={!canUseArNS}
-              className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
-            />
-            <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
-              Add domain name
-            </label>
+      ) : (
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+            <Globe className="w-5 h-5 text-primary" />
           </div>
-          <p className="text-sm text-foreground/80">
-            Give your site a friendly, smart domain name
-          </p>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <input
+                type="checkbox"
+                id="arns-enabled"
+                checked={enabled}
+                onChange={(e) => onEnabledChange(e.target.checked)}
+                disabled={!canUseArNS}
+                className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+              />
+              <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
+                Add a domain name
+              </label>
+            </div>
+            <p className="text-sm text-foreground/80">
+              Give it a memorable domain name
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Solana wallet status: needs linking or reconnection — shown when checkbox is disabled */}
       {needsLinking && (

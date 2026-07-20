@@ -355,7 +355,10 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
         <Menu.Button className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <Plus className="h-4 w-4" /> Add block
         </Menu.Button>
-        <Menu.Items className="absolute bottom-full z-20 mb-2 max-h-72 w-full overflow-auto rounded-xl border border-border/20 bg-card p-1 shadow-lg focus:outline-none">
+        <Menu.Items
+          anchor="bottom start"
+          className="z-30 max-h-72 w-[var(--button-width)] overflow-auto rounded-xl border border-border/20 bg-card p-1 shadow-lg focus:outline-none [--anchor-gap:6px]"
+        >
           {BLOCK_MENU.map((m) => {
             const Icon = m.icon;
             return (

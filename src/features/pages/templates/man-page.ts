@@ -357,7 +357,7 @@ function renderFooter(def: PageDef, permalink: LinkBlock | undefined, ctx: Rende
   const parts: string[] = [
     `<div class="man-foot">` +
       `<span class="mf-l">ar.io Console</span>` +
-      `<span class="mf-mid">permanent record</span>` +
+      `<span class="mf-mid">record</span>` +
       `<span class="mf-r">${escapeHtml(upper)}(1)</span>` +
       `</div>`,
   ];

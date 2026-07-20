@@ -49,7 +49,7 @@ export default function ImportPageModal({ ctx, onClose, onImported }: ImportPage
         </div>
 
         <label htmlFor="import-page-input" className="mb-1.5 block text-xs font-medium text-foreground/70">
-          ArNS name or transaction id
+          Domain name or transaction id
         </label>
         <input
           id="import-page-input"

@@ -38,8 +38,8 @@ export default function DomainControls({
         <span className="space-y-1">
           <span className="block">
             {needsLinking
-              ? 'You can publish now and attach a name later — assigning an ArNS name needs a linked Solana wallet.'
-              : 'Point an ArNS name (or undername) at your page. Optional — you can always add one later.'}
+              ? 'Optional — add a domain now or later. Assigning one needs a linked Solana wallet.'
+              : 'Optional — add a domain now, or anytime after you publish.'}
           </span>
           <a
             href="https://docs.ar.io/learn/arns"
@@ -53,6 +53,7 @@ export default function DomainControls({
         </span>
       </div>
       <ArNSAssociationPanel
+        bare
         enabled={enabled}
         onEnabledChange={onEnabledChange}
         selectedName={selectedName}

@@ -215,7 +215,7 @@ function renderColophon(def: PageDef, block: VerifyBlock, ctx: RenderCtx): strin
     `<footer class="pg-colophon">` +
     `<span>${escapeHtml(def.profile.displayName)}</span>` +
     link +
-    `<span>permanent record</span>` +
+    `<span>record</span>` +
     `</footer>`
   );
 }

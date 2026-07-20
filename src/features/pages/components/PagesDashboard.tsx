@@ -129,8 +129,8 @@ export default function PagesDashboard({
           </div>
           <h3 className="mb-1 font-heading text-xl font-bold text-foreground">Create your first page</h3>
           <p className="mx-auto mb-5 max-w-md text-sm text-foreground/70">
-            Build a permanent link-in-bio page from a template, point your ArNS name at it, and it's
-            live on the permaweb in seconds — usually for free.
+            Build a permanent link-in-bio page from a template, assign a domain name, and it&rsquo;s
+            live in seconds.
           </p>
           <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
             <button
@@ -151,7 +151,7 @@ export default function PagesDashboard({
             </button>
           </div>
           <p className="mt-4 text-xs text-foreground/50">
-            Already made one on another device? Load it with its ArNS name or transaction id.
+            Already made one on another device? Load it with its domain name or transaction id.
           </p>
         </div>
       </div>
