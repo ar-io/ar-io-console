@@ -30,9 +30,19 @@ export type TemplateId =
   | 'side-a'
   | 'xerox-riot'
   | 't-minus'
-  | 'the-arcana';
+  | 'the-arcana'
+  // v3.1 expansion — modern
+  | 'sunset-gradient'
+  | 'mesh-noir'
+  | 'spotlight'
+  | 'pastel-pop'
+  | 'neo-brutalist'
+  // v3.1 expansion — creator
+  | 'link-classic'
+  | 'creator-hub'
+  | 'music-drop';
 
-/** All 16 launch template ids (matches docs/pages-templates/registry.json). */
+/** All template ids (16 launch + v3.1 expansion). */
 export const TEMPLATE_IDS: readonly TemplateId[] = [
   'dial-up-homestead',
   'midnight-tower-bbs',
@@ -50,6 +60,16 @@ export const TEMPLATE_IDS: readonly TemplateId[] = [
   'xerox-riot',
   't-minus',
   'the-arcana',
+  // v3.1 expansion — modern
+  'sunset-gradient',
+  'mesh-noir',
+  'spotlight',
+  'pastel-pop',
+  'neo-brutalist',
+  // v3.1 expansion — creator
+  'link-classic',
+  'creator-hub',
+  'music-drop',
 ];
 
 /** Fallback template used when a def arrives without a usable template id. */

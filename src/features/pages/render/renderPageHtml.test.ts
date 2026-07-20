@@ -116,8 +116,8 @@ describe('renderPageHtml — deterministic', () => {
 });
 
 describe('template registry accessors', () => {
-  it('lists all 16 launch templates and looks them up by id', () => {
-    expect(listTemplates().length).toBe(16);
+  it('lists all 24 templates and looks them up by id', () => {
+    expect(listTemplates().length).toBe(24);
     expect(getTemplate('grid-system').id).toBe('grid-system');
     expect(getTemplate('dial-up-homestead').id).toBe('dial-up-homestead');
     expect(getTemplate('the-arcana').id).toBe('the-arcana');

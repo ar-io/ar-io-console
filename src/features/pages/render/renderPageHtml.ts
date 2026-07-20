@@ -11,7 +11,7 @@ import { escapeAttr, escapeHtml } from './escape';
 import { resolveArUrl, type ResolveCtx } from './arResolve';
 import { templates } from '../templates';
 
-export type TemplateFamily = 'classic' | 'modern' | 'developer' | 'wildcard';
+export type TemplateFamily = 'classic' | 'modern' | 'creator' | 'pro' | 'developer' | 'wildcard';
 
 export interface TemplateMeta {
   name: string;

@@ -30,6 +30,16 @@ import { sideATemplate } from './side-a';
 import { xeroxRiotTemplate } from './xerox-riot';
 import { tMinusTemplate } from './t-minus';
 import { theArcanaTemplate } from './the-arcana';
+// v3.1 expansion — modern
+import { sunsetGradientTemplate } from './sunset-gradient';
+import { meshNoirTemplate } from './mesh-noir';
+import { spotlightTemplate } from './spotlight';
+import { pastelPopTemplate } from './pastel-pop';
+import { neoBrutalistTemplate } from './neo-brutalist';
+// v3.1 expansion — creator
+import { linkClassicTemplate } from './link-classic';
+import { creatorHubTemplate } from './creator-hub';
+import { musicDropTemplate } from './music-drop';
 
 /** Every implemented template module, in gallery (family) order. */
 const MODULES: PagesTemplate[] = [
@@ -49,6 +59,16 @@ const MODULES: PagesTemplate[] = [
   xeroxRiotTemplate,
   tMinusTemplate,
   theArcanaTemplate,
+  // v3.1 expansion — modern
+  sunsetGradientTemplate,
+  meshNoirTemplate,
+  spotlightTemplate,
+  pastelPopTemplate,
+  neoBrutalistTemplate,
+  // v3.1 expansion — creator
+  linkClassicTemplate,
+  creatorHubTemplate,
+  musicDropTemplate,
 ];
 
 /** Templates indexed by id (all 16 launch templates implemented). */
@@ -73,4 +93,12 @@ export {
   xeroxRiotTemplate,
   tMinusTemplate,
   theArcanaTemplate,
+  sunsetGradientTemplate,
+  meshNoirTemplate,
+  spotlightTemplate,
+  pastelPopTemplate,
+  neoBrutalistTemplate,
+  linkClassicTemplate,
+  creatorHubTemplate,
+  musicDropTemplate,
 };

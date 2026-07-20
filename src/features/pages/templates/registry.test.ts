@@ -8,8 +8,8 @@ const ctx: RenderCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io'
 const all = listTemplates();
 
 describe('template registry', () => {
-  it('registers all 16 launch templates', () => {
-    expect(all.length).toBe(16);
+  it('registers all 24 templates', () => {
+    expect(all.length).toBe(24);
     const ids = all.map((t) => t.id);
     expect(ids).toContain('grid-system');
     expect(ids).toContain('dial-up-homestead');
@@ -53,7 +53,7 @@ describe('template registry', () => {
   it('exposes template metadata (name, family, description)', () => {
     for (const tpl of all) {
       expect(tpl.meta.name).toBeTruthy();
-      expect(['classic', 'modern', 'developer', 'wildcard']).toContain(tpl.meta.family);
+      expect(['classic', 'modern', 'creator', 'pro', 'developer', 'wildcard']).toContain(tpl.meta.family);
       expect(tpl.meta.description).toBeTruthy();
     }
   });

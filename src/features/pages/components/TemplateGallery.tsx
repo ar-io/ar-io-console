@@ -12,10 +12,12 @@ interface TemplateGalleryProps {
   onStartBlank: () => void;
 }
 
-const FAMILY_ORDER: TemplateFamily[] = ['classic', 'modern', 'developer', 'wildcard'];
+const FAMILY_ORDER: TemplateFamily[] = ['modern', 'creator', 'pro', 'classic', 'developer', 'wildcard'];
 const FAMILY_LABELS: Record<TemplateFamily, string> = {
   classic: 'Classic-era internet',
   modern: 'Modern web',
+  creator: 'Creator',
+  pro: 'Professional',
   developer: 'Developer',
   wildcard: 'Wildcards',
 };
@@ -118,6 +120,8 @@ export default function TemplateGallery({
     const groups: Record<TemplateFamily, PagesTemplate[]> = {
       classic: [],
       modern: [],
+      creator: [],
+      pro: [],
       developer: [],
       wildcard: [],
     };
