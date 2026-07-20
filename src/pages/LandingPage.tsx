@@ -725,42 +725,28 @@ const LandingPage = () => {
       {/* For AI agents & LLMs */}
       <AgentDocsSection />
 
-      {/* ArDrive Section - For Non-Developers */}
-      <section className="text-center bg-card rounded-2xl border border-border/20 p-4 sm:p-8">
-        <div className="max-w-3xl mx-auto">
-          <h3 className="font-heading font-bold text-xl text-foreground mb-3">Looking for a no-code solution?</h3>
-          <p className="text-foreground/80 mb-6">
-            ArDrive is a user-friendly permanent dropbox app. Preserve and share your most important files with a simple drag-and-drop interface. Manage smart domain names, create permanent websites, and organize your files—all without writing code.
+      {/* ArDrive — sibling consumer app for permanent file storage. A compact
+          horizontal strip so it reads as a footer cross-link, not a second
+          feature card stacked under the dark agents section above. */}
+      <section className="flex flex-col gap-4 rounded-2xl border border-border/20 bg-gradient-to-r from-primary/[0.06] to-card p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+        <img src="/ardrive-logo.png" alt="ArDrive" className="h-14 w-14 flex-shrink-0" />
+        <div className="flex-1 text-center sm:text-left">
+          <h3 className="font-heading text-lg font-bold text-foreground">Just want to store files?</h3>
+          <p className="mt-1 text-sm leading-relaxed text-foreground/70">
+            ArDrive is a permanent file drive — drag, drop, organize, and share files and
+            folders that last forever. All the permanence of the permaweb, in a friendly app
+            anyone can use.
           </p>
-          <a
-            href="https://ardrive.net/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 bg-card hover:bg-card border border-border/20 rounded-2xl px-6 py-3 group transition-all hover:border-primary/50"
-          >
-            <img src="/ardrive-logo.png" alt="ArDrive" className="w-8 h-8" />
-            <div className="text-left">
-              <div className="font-bold text-foreground group-hover:text-primary transition-colors">Try ArDrive</div>
-              <div className="text-xs text-foreground/80">A permanent dropbox</div>
-            </div>
-            <ArrowRight className="w-5 h-5 text-foreground/80 group-hover:translate-x-1 transition-transform" />
-          </a>
         </div>
-      </section>
-
-      {/* Final CTA Section */}
-      <section className="bg-card rounded-2xl border border-border/20 p-8 sm:p-12 text-center">
-        <h2 className="font-heading font-bold text-3xl mb-4 text-foreground">Ready to build on ar.io?</h2>
-        <p className="text-lg text-foreground/80 max-w-2xl mx-auto mb-8">
-          Start uploading files to the permaweb in seconds. No account required for small files.
-        </p>
-        <button
-          onClick={() => navigate('/try')}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl text-lg cursor-pointer"
+        <a
+          href="https://ardrive.net/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group inline-flex flex-shrink-0 items-center justify-center gap-2 self-center rounded-full border border-border/30 bg-background px-5 py-2.5 font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
         >
-          <Upload className="w-5 h-5" />
-          <span>Try it Out</span>
-        </button>
+          Try ArDrive
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </a>
       </section>
 
     </div>
@@ -812,31 +798,45 @@ function AgentDocsSection() {
           </a>
         </div>
 
-        {/* Terminal */}
-        <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30 font-mono text-[13px]">
-          <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-2.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <span className="ml-2 text-[11px] text-white/35">agent ~ ar.io</span>
-          </div>
-          <div className="space-y-2.5 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <code className="break-all text-white/90">
-                <span className="text-white/35">$ </span>
-                {cmd}
-              </code>
-              <button
-                type="button"
-                onClick={copy}
-                title={copied ? 'Copied!' : 'Copy'}
-                aria-label="Copy command"
-                className="flex-shrink-0 text-white/50 transition-colors hover:text-white"
-              >
-                {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
-              </button>
+        {/* Terminal — mirrors the hero "Quick Start" snippet chrome (traffic
+            lights, bash label, $ prompt + cursor). Uses a black-tinted surface
+            rather than bg-code-surface, which is #23232D — identical to this
+            section's bg-foreground and would render invisible here. */}
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30 font-mono shadow-2xl">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+            <div className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-full bg-error/80" />
+              <span className="h-3 w-3 rounded-full bg-warning/80" />
+              <span className="h-3 w-3 rounded-full bg-success/80" />
             </div>
-            <div className="text-[12px] leading-relaxed text-white/40">
+            <div className="flex-1 text-center">
+              <span className="text-[10px] uppercase tracking-wider text-white/50">bash</span>
+            </div>
+            <button
+              type="button"
+              onClick={copy}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition-all hover:bg-white/10"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-white" />
+                  <span className="text-white">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-white/50" />
+                  <span className="text-white/50">Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="px-4 py-3.5 text-sm">
+            <div className="flex items-center">
+              <span className="select-none text-white/70">$</span>
+              <span className="ml-2 break-all text-white">{cmd}</span>
+              <span className="ml-1 animate-[blink_1s_infinite] text-white/50">|</span>
+            </div>
+            <div className="mt-2.5 text-[12px] leading-relaxed text-white/40">
               <span className="text-success">200 OK</span> — the complete docs, in plain text,
               ready to drop into a prompt.
             </div>
