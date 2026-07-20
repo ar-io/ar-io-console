@@ -438,7 +438,7 @@ export default function PagesPanel() {
           <div>
             <h3 className="mb-1 font-heading text-2xl font-extrabold text-foreground">Pages</h3>
             <p className="text-sm text-foreground/80">
-              Build a permanent link-in-bio page — live at your own domain in seconds.
+              Build a permanent link-in-bio page — live in seconds.
             </p>
           </div>
         </div>
