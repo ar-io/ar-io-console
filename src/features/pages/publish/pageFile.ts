@@ -39,9 +39,14 @@ export function computeDefHash(def: PageDef): string {
   // Hash only the meaningful content — exclude volatile timestamps so the
   // "no changes since last version" dedup compares what the page actually is,
   // not when it was last touched (edit-then-revert must hash back to the same).
+  // Also exclude arnsName: it's a domain binding, not rendered page content, and
+  // is applied to the current version's tx by a repoint (no re-upload). Including
+  // it would make assigning a domain look like an unpublished content change (a
+  // false "unpublished changes" badge) and force a redundant paid re-upload.
   const content: Partial<PageDef> = { ...def };
   delete content.createdAt;
   delete content.updatedAt;
+  delete content.arnsName;
   const json = canonicalJson(content);
   let h1 = 0x811c9dc5;
   let h2 = 0xcbf29ce4;
@@ -62,9 +67,12 @@ export function computeDefHash(def: PageDef): string {
  * by the caller.
  */
 export function isPageDirty(page: ConsolePage): boolean {
-  const currentHash = page.versions.find((v) => v.version === page.currentVersion)?.defHash;
-  if (!currentHash) return false;
   try {
+    // `page.versions` is inside the try (optional-chained) so a corrupt persisted
+    // page (non-array versions) degrades to "not dirty" instead of throwing during
+    // a dashboard/card render.
+    const currentHash = page.versions?.find((v) => v.version === page.currentVersion)?.defHash;
+    if (!currentHash) return false;
     return computeDefHash(page.def) !== currentHash;
   } catch {
     return false;

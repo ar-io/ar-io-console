@@ -27,10 +27,20 @@ function newId(prefix = 'pg'): string {
 /** Ensure every block has a stable `id` (used as the React list key). */
 export function withBlockIds(def: PageDef): PageDef {
   let changed = false;
+  const seen = new Set<string>();
   const blocks: Block[] = def.blocks.map((b) => {
-    if (b.id) return b;
+    if (b.id && !seen.has(b.id)) {
+      seen.add(b.id);
+      return b;
+    }
+    // Missing id, or a duplicate of one already used (e.g. from an imported/
+    // hand-crafted def). Mint a fresh unique id — the editor keys and mutates
+    // blocks by id, so colliding ids would make edit/delete hit the wrong twin.
     changed = true;
-    return { ...b, id: newId('blk') };
+    let id = newId('blk');
+    while (seen.has(id)) id = newId('blk');
+    seen.add(id);
+    return { ...b, id };
   });
   return changed ? { ...def, blocks } : def;
 }

@@ -968,7 +968,14 @@ export const useStore = create<StoreState>()(
         try {
           state.pages = state.pages.map((p) => {
             try {
-              return { ...p, def: migratePageDef(p.def) };
+              return {
+                ...p,
+                def: migratePageDef(p.def),
+                // Defend downstream renders (PageCard, VersionHistory) against a
+                // corrupt persisted shape — coerce the fields they iterate.
+                versions: Array.isArray(p.versions) ? p.versions : [],
+                currentVersion: typeof p.currentVersion === 'number' ? p.currentVersion : 0,
+              };
             } catch {
               return p; // never drop a page over a bad def
             }

@@ -76,16 +76,18 @@ export function resolvePageSource(input: string, ctx: ResolveCtx): PageSource {
     if (!txId) {
       // Host-aware, matching the bare-name branch below: only treat the leading
       // label as ArNS when the hostname actually ends with the configured
-      // `.<arnsHost>` (which may be more than two labels), and split any undername.
+      // `.<arnsHost>` (which may be more than two labels), split any undername,
+      // and validate with NAME_RE so a dotted/multi-label subdomain (e.g.
+      // `sub.name.ar.io` or `evil.com.ar.io`) is rejected rather than stored.
       const suffix = '.' + host.toLowerCase();
       if (u.hostname.toLowerCase().endsWith(suffix)) {
         const label = u.hostname.slice(0, -suffix.length);
         const us = label.indexOf('_');
-        if (us > 0 && us < label.length - 1) {
-          undername = label.slice(0, us);
-          arnsName = label.slice(us + 1);
-        } else {
-          arnsName = label;
+        const candUnder = us > 0 && us < label.length - 1 ? label.slice(0, us) : undefined;
+        const candName = candUnder !== undefined ? label.slice(us + 1) : label;
+        if (NAME_RE.test(candName) && (candUnder === undefined || NAME_RE.test(candUnder))) {
+          arnsName = candName;
+          undername = candUnder;
         }
       }
     }
@@ -121,45 +123,74 @@ const RESOLVED_ID_HEADERS = ['x-arns-resolved-id', 'x-ar-io-resolved-id', 'x-arn
 export async function importPageFromSource(input: string, ctx: ResolveCtx): Promise<ImportedPage> {
   const src = resolvePageSource(input, ctx);
 
-  let res: Response;
+  // Real Pages are a few KB; cap the body so a hostile/huge response can't OOM.
+  const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+  // Bound the request so a slow/hung gateway can't strand the import modal forever.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
   try {
-    res = await fetch(src.url, { redirect: 'follow' });
-  } catch {
-    throw new Error('Could not reach the gateway. Check your connection and try again.');
-  }
-  if (!res.ok) {
-    throw new Error(
-      res.status === 404
-        ? 'Nothing found at that address. Double-check the name or transaction id.'
-        : `The gateway returned ${res.status}. Try again in a moment.`,
-    );
-  }
+    let res: Response;
+    try {
+      res = await fetch(src.url, { redirect: 'follow', signal: controller.signal });
+    } catch {
+      throw new Error(
+        controller.signal.aborted
+          ? 'The gateway took too long to respond. Try again in a moment.'
+          : 'Could not reach the gateway. Check your connection and try again.',
+      );
+    }
+    if (!res.ok) {
+      throw new Error(
+        res.status === 404
+          ? 'Nothing found at that address. Double-check the name or transaction id.'
+          : `The gateway returned ${res.status}. Try again in a moment.`,
+      );
+    }
+    if (Number(res.headers.get('content-length') || 0) > MAX_IMPORT_BYTES) {
+      throw new Error("That page is too large to import — it doesn't look like an ar.io page.");
+    }
 
-  const html = await res.text();
-  const def = parsePageHtml(html);
-  if (!def) {
-    throw new Error("That page isn't an editable ar.io page — no embedded page data was found.");
-  }
+    let html: string;
+    try {
+      html = await res.text();
+    } catch {
+      throw new Error(
+        controller.signal.aborted
+          ? 'The gateway took too long to respond. Try again in a moment.'
+          : 'Could not read the page from the gateway. Try again in a moment.',
+      );
+    }
+    if (new Blob([html]).size > MAX_IMPORT_BYTES) {
+      throw new Error("That page is too large to import — it doesn't look like an ar.io page.");
+    }
 
-  // Best-effort: when imported by name, capture the resolved data tx id so the
-  // recovered page anchors its version lineage. Header exposure is
-  // gateway-dependent; a missing id is fine — the page is still fully editable.
-  let txId = src.txId;
-  if (!txId) {
-    for (const h of RESOLVED_ID_HEADERS) {
-      const v = res.headers.get(h);
-      if (v && TX_RE.test(v.trim())) {
-        txId = v.trim();
-        break;
+    const def = parsePageHtml(html);
+    if (!def) {
+      throw new Error("That page isn't an editable ar.io page — no embedded page data was found.");
+    }
+
+    // Best-effort: when imported by name, capture the resolved data tx id so the
+    // recovered page anchors its version lineage. Header exposure is
+    // gateway-dependent; a missing id is fine — the page is still fully editable.
+    let txId = src.txId;
+    if (!txId) {
+      for (const h of RESOLVED_ID_HEADERS) {
+        const v = res.headers.get(h);
+        if (v && TX_RE.test(v.trim())) {
+          txId = v.trim();
+          break;
+        }
       }
     }
-  }
 
-  return {
-    def,
-    txId,
-    arnsName: src.arnsName,
-    undername: src.undername,
-    sizeBytes: new Blob([html]).size,
-  };
+    return {
+      def,
+      txId,
+      arnsName: src.arnsName,
+      undername: src.undername,
+      sizeBytes: new Blob([html]).size,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }

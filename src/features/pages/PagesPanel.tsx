@@ -131,11 +131,15 @@ export default function PagesPanel() {
     defRef.current = def;
   });
 
-  // Consume the one-shot "create" navigation state (read by the lazy `view` init
-  // above) so a refresh or Back doesn't re-force the picker over wherever the user
-  // has since navigated. Replacing the history state leaves the /pages URL intact.
+  // Open the picker in response to the "create" navigation state, then consume it.
+  // Keyed on location.state (not just the mount-time lazy init) so it also fires
+  // when a create entry point (banner / CTA) is clicked while already on /pages —
+  // same-route navigation doesn't remount, so the initializer alone would miss it.
+  // Clearing the state (replace) leaves the /pages URL intact and stops a refresh
+  // or Back from re-forcing the picker over wherever the user has since navigated.
   useEffect(() => {
     if ((location.state as { create?: boolean } | null)?.create) {
+      setView('gallery');
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [location, navigate]);
@@ -407,6 +411,15 @@ export default function PagesPanel() {
           arns,
           note: note.trim() || undefined,
         });
+        // A failed ArNS (re)assignment on the unchanged-content path comes back as
+        // { ok:false, noChanges:true, arnsError }. Surface that failure first —
+        // otherwise it reads as a benign "nothing to publish" while the domain the
+        // user asked for was never (re)pointed. (Full-publish partial success is
+        // ok:true + arnsError and is handled by PublishSuccess below.)
+        if (result.arnsError && !result.ok) {
+          setPublishNotice(result.arnsError);
+          return;
+        }
         if (result.noChanges) {
           setPublishNotice('No changes since your last version — nothing to publish.');
           return;
@@ -527,7 +540,15 @@ export default function PagesPanel() {
           result={publishResult}
           liveUrl={successLiveUrl}
           isArns={successIsArns}
-          onEdit={() => setView('editor')}
+          onEdit={() => {
+            // Re-hydrate from the store so the editor reflects anything changed on
+            // the success screen (e.g. a domain assigned via "Assign a domain").
+            // Without this the editor keeps stale local ArNS state and a republish
+            // would send arns=undefined and never re-point the domain.
+            const p = getPage(publishResult.pageId);
+            if (p) editExisting(p);
+            else setView('editor');
+          }}
           onCreateAnother={goToGallery}
           onViewAllPages={goToDashboard}
           onAssignDomain={publishResult.txId ? () => setShowSuccessAssign(true) : undefined}

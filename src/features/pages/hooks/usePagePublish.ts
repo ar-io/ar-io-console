@@ -21,6 +21,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import type { SupportedTokenType } from '@/constants';
+import { getTokenConverter, supportsJitPayment } from '@/utils/jitPayment';
 import { validatePageDef, type PageDef } from '../schema';
 import { renderPageHtml } from '../render/renderPageHtml';
 import { buildPageTags, type Tag } from '../publish/tags';
@@ -67,6 +68,8 @@ export function usePagePublish() {
   const getPage = useStore((s) => s.getPage);
   const addPageVersion = useStore((s) => s.addPageVersion);
   const updatePageArNS = useStore((s) => s.updatePageArNS);
+  const jitMaxTokenAmount = useStore((s) => s.jitMaxTokenAmount);
+  const jitBufferMultiplier = useStore((s) => s.jitBufferMultiplier);
   const { uploadFile } = useFileUpload();
   const { updateArNSRecord } = useOwnedArNSNames();
   const { hasArNSAccess } = useLinkedSolanaWallet();
@@ -194,10 +197,22 @@ export function usePagePublish() {
 
         setStage('uploading');
         const tags = buildPageTags(validated, nextVersion, options.customTags ?? []);
+        // JIT auto-pay cap: convert the user's configured per-token max to smallest
+        // units for the selected token. Without this the upload hook falls back to
+        // maxTokenAmount:0, which the SDK treats as a HARD zero cap (so every JIT
+        // top-up fails), not "unlimited".
+        const jitToken = options.selectedJitToken;
+        const jitMaxSmallest =
+          options.jitEnabled && jitToken && supportsJitPayment(jitToken)
+            ? getTokenConverter(jitToken)?.(jitMaxTokenAmount[jitToken] ?? 0) ?? undefined
+            : undefined;
+
         const result = await uploadFile(file, {
           customTags: tags,
           jitEnabled: options.jitEnabled,
           selectedJitToken: options.selectedJitToken,
+          jitMaxTokenAmount: jitMaxSmallest,
+          jitBufferMultiplier,
           // Once bytes are fully sent the bundler still needs to finalize — surface
           // that so the modal doesn't sit on "Uploading…" looking stuck.
           onProgress: (pct) => {
@@ -278,7 +293,7 @@ export function usePagePublish() {
         inFlightRef.current = false;
       }
     },
-    [getCurrentConfig, configMode, getPage, addPageVersion, updatePageArNS, uploadFile, updateArNSRecord, hasArNSAccess],
+    [getCurrentConfig, configMode, getPage, addPageVersion, updatePageArNS, uploadFile, updateArNSRecord, hasArNSAccess, jitMaxTokenAmount, jitBufferMultiplier],
   );
 
   /**
