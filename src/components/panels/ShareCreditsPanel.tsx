@@ -7,7 +7,8 @@ import {
 import { useStore } from '../../store/useStore';
 import { wincPerCredit } from '../../constants';
 import { useTurboConfig } from '../../hooks/useTurboConfig';
-import { ExternalLink, Shield, ArrowRight, Share2, Book, Lightbulb, Code, CheckCircle } from 'lucide-react';
+import { ExternalLink, Shield, ArrowRight, Share2, Book, Lightbulb, Code, CheckCircle, Wallet } from 'lucide-react';
+import { promptSignIn } from '../../utils';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
@@ -160,8 +161,14 @@ export default function ShareCreditsPanel() {
   if (!address) {
     return (
       <div className="text-center py-12">
-        <h3 className="text-xl font-heading font-bold mb-4">Sign In Required</h3>
-        <p className="text-foreground/80">Sign in to share credits</p>
+        <h3 className="text-xl font-heading font-bold mb-3">Sign in required</h3>
+        <p className="text-foreground/80 mb-5">Sign in to share credits with another wallet.</p>
+        <button
+          onClick={promptSignIn}
+          className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
+        >
+          <Wallet className="w-4 h-4" /> Sign in to share credits
+        </button>
       </div>
     );
   }

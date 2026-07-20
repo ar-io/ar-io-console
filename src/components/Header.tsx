@@ -15,6 +15,7 @@ import { usePrivyWallet } from '../hooks/usePrivyWallet';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { clearEthereumTurboClientCache } from '../hooks/useEthereumTurboClient';
+import { clearX402SignerCache } from '../hooks/useX402Upload';
 
 // Services for logged-in users
 const accountServices = [
@@ -145,7 +146,11 @@ const Header = () => {
     };
     // Any CTA anywhere can open the sign-in (wallet) modal by dispatching
     // `open-signin` (see promptSignIn in utils). The Header owns the one modal.
-    const handleOpenSignIn = () => setShowWalletModal(true);
+    // Guard on address so a stray event can't stack the connect modal over a
+    // live session.
+    const handleOpenSignIn = () => {
+      if (!useStore.getState().address) setShowWalletModal(true);
+    };
 
     window.addEventListener('refresh-balance', handleRefreshBalance);
     window.addEventListener('open-signin', handleOpenSignIn);
@@ -510,8 +515,9 @@ const Header = () => {
                       } catch {
                         // Wagmi disconnect failed, continue anyway
                       }
-                      // Clear cached Turbo clients
+                      // Clear cached Turbo + X402 signers (gotcha #2)
                       clearEthereumTurboClientCache();
+                      clearX402SignerCache();
                     } else if (walletType === 'solana') {
                       // Disconnect via wallet adapter (handles all Solana wallets)
                       try {

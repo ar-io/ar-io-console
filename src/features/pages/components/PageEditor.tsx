@@ -55,7 +55,6 @@ export interface PageEditorProps {
   onNoteChange: (note: string) => void;
   // Pricing (for the live size meter)
   freeUploadLimitBytes: number;
-  lifetimeFreeBytes?: number;
   wincForOneGiB?: string;
   perDataItemFeeWinc?: string;
   // Actions
@@ -73,7 +72,6 @@ export default function PageEditor(props: PageEditorProps) {
     <SizeMeter
       sizeBytes={sizeBytes}
       freeUploadLimitBytes={props.freeUploadLimitBytes}
-      lifetimeFreeBytes={props.lifetimeFreeBytes}
       wincForOneGiB={props.wincForOneGiB}
       perDataItemFeeWinc={props.perDataItemFeeWinc}
     />

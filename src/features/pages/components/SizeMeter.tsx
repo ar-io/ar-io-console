@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { AlertTriangle, Sparkles } from 'lucide-react';
-import { isFileFree, formatFreeLimit } from '@/hooks/useFreeUploadLimit';
+import { isFileFree } from '@/hooks/useFreeUploadLimit';
 import { MAX_PAGE_BYTES, estimatePageCredits } from '../publish/cost';
 
 interface SizeMeterProps {
   sizeBytes: number;
   freeUploadLimitBytes: number;
-  lifetimeFreeBytes?: number;
   wincForOneGiB?: string;
   perDataItemFeeWinc?: string;
   className?: string;
@@ -26,7 +25,6 @@ function formatBytes(n: number): string {
 export default function SizeMeter({
   sizeBytes,
   freeUploadLimitBytes,
-  lifetimeFreeBytes = 0,
   wincForOneGiB,
   perDataItemFeeWinc,
   className,
@@ -60,7 +58,6 @@ export default function SizeMeter({
           <span className="inline-flex items-center gap-1 font-medium text-success">
             <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
             Free to publish
-            {lifetimeFreeBytes > 0 ? ` · within your ${formatFreeLimit(lifetimeFreeBytes)} lifetime tier` : ''}
           </span>
         ) : creditsKnown ? (
           <span className="text-foreground/70">≈ {credits.toFixed(6)} credits to publish</span>

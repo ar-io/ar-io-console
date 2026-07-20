@@ -1730,7 +1730,7 @@ export default function TopUpPanel() {
               ) : !walletType ? (
                 <>
                   <Wallet className="w-5 h-5" />
-                  Connect Wallet for Crypto Payment
+                  Sign in for Crypto Payment
                 </>
               ) : !isTokenCompatibleWithWallet(selectedTokenType) ? (
                 <>

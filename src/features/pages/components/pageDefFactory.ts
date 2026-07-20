@@ -43,26 +43,68 @@ function deepClone<T>(value: T): T {
 }
 
 /**
- * Seed a fresh working page from a template: deep copy the seed, mint a new id,
- * stamp timestamps, give blocks ids, and clear the template's showcase identity
- * (its own ArNS name / handle) so the new page starts as a clean slate.
+ * Blank a template's showcase CONTENT while keeping its design (theme, layout,
+ * meta) and block STRUCTURE. A picked template should open as a clean "fill in
+ * the blanks" page — the sample text lives on as field placeholders — so users
+ * don't accidentally publish the demo. The gallery still renders the full
+ * `template.seed`, so previews stay populated. Structural blocks (divider) and
+ * the functional verify block are kept as-is.
+ *
+ * NB: this deliberately does NOT re-run validatePageDef — that would coerce the
+ * blanks back (empty url -> '#', missing displayName -> 'Untitled', src-less
+ * image dropped). The seed is already a valid PageDef, so blanking its strings
+ * keeps the shape valid.
+ */
+function blankContent(def: PageDef): PageDef {
+  const profile = { ...def.profile };
+  profile.displayName = '';
+  delete profile.tagline;
+  delete profile.bio;
+  delete profile.avatar;
+  delete profile.handle;
+
+  const blocks: Block[] = def.blocks.map((b) => {
+    switch (b.type) {
+      case 'link':
+        return { ...b, label: '', url: '' };
+      case 'social':
+        return { ...b, items: b.items.map((it) => ({ ...it, url: '' })) };
+      case 'heading':
+        return { ...b, text: '' };
+      case 'text':
+        return { ...b, text: '' };
+      case 'image':
+        return { ...b, src: '', ...(b.alt !== undefined ? { alt: '' } : {}) };
+      case 'embed':
+        return { ...b, arweave: '' };
+      case 'divider':
+      case 'verify':
+      default:
+        return b;
+    }
+  });
+  return { ...def, title: '', profile, blocks };
+}
+
+/**
+ * Seed a fresh working page from a template: deep copy the seed, blank its
+ * showcase content (keeping the design + structure), mint a new id, stamp
+ * timestamps, give blocks ids, and clear the template's showcase ArNS identity
+ * so the new page starts as a clean slate the user fills in.
  */
 export function seedFromTemplate(templateId: TemplateId): PageDef {
   const template = getTemplate(templateId);
   const now = Date.now();
   const clone = deepClone(template.seed);
   const def: PageDef = {
-    ...clone,
+    ...blankContent(clone),
     id: newId(),
     createdAt: now,
     updatedAt: now,
   };
-  // A new page must not inherit the template's demo domain/handle.
+  // A new page must not inherit the template's demo domain.
   delete def.arnsName;
-  const profile = { ...def.profile };
-  delete profile.handle;
-  def.profile = profile;
-  return withBlockIds(validatePageDef(def));
+  return withBlockIds(def);
 }
 
 /**

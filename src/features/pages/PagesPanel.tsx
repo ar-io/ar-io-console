@@ -44,6 +44,7 @@ export default function PagesPanel() {
   const walletType = useStore((s) => s.walletType);
   const creditBalance = useStore((s) => s.creditBalance);
   const jitPaymentEnabled = useStore((s) => s.jitPaymentEnabled);
+  const x402OnlyMode = useStore((s) => s.x402OnlyMode);
   const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
   const configMode = useStore((s) => s.configMode);
 
@@ -427,18 +428,21 @@ export default function PagesPanel() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      {/* Service panel header */}
-      <div className="mb-6 flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
-          <LayoutTemplate className="h-5 w-5 text-foreground" />
+      {/* Service panel header — only on the dashboard; sub-views (gallery, editor,
+          success, versions) lead with their own back link so it sits consistently. */}
+      {view === 'dashboard' && (
+        <div className="mb-6 flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
+            <LayoutTemplate className="h-5 w-5 text-foreground" />
+          </div>
+          <div>
+            <h3 className="mb-1 font-heading text-2xl font-extrabold text-foreground">Pages</h3>
+            <p className="text-sm text-foreground/80">
+              Build a permanent link-in-bio page — live at your ArNS name in seconds.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="mb-1 font-heading text-2xl font-extrabold text-foreground">Pages</h3>
-          <p className="text-sm text-foreground/80">
-            Build a permanent link-in-bio page — live at your ArNS name in seconds.
-          </p>
-        </div>
-      </div>
+      )}
 
       {view === 'dashboard' && (
         <PagesDashboard
@@ -493,7 +497,6 @@ export default function PagesPanel() {
           note={note}
           onNoteChange={setNote}
           freeUploadLimitBytes={freeUploadLimitBytes}
-          lifetimeFreeBytes={freeTier.lifetimeBytes}
           wincForOneGiB={wincForOneGiB}
           perDataItemFeeWinc={perDataItemFeeWinc}
           onBack={editorOrigin === 'dashboard' ? goToDashboard : goToGallery}
@@ -573,6 +576,7 @@ export default function PagesPanel() {
           creditBalance={creditBalance}
           walletType={walletType}
           jitPaymentEnabled={jitPaymentEnabled}
+          x402OnlyMode={x402OnlyMode}
         />
       )}
 

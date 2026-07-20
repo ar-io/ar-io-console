@@ -35,6 +35,8 @@ interface PublishModalProps {
   creditBalance: number;
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
   jitPaymentEnabled: boolean;
+  /** x402-only bundler mode — Ethereum wallets pay per-upload in base-usdc. */
+  x402OnlyMode: boolean;
 }
 
 function defaultJitToken(walletType: PublishModalProps['walletType']): SupportedTokenType {
@@ -72,6 +74,7 @@ export default function PublishModal({
   creditBalance,
   walletType,
   jitPaymentEnabled,
+  x402OnlyMode,
 }: PublishModalProps) {
   const html = useMemo(() => {
     try {
@@ -93,10 +96,32 @@ export default function PublishModal({
   const billable = !free;
   const creditsKnown = Number.isFinite(credits);
   const hasCredits = free || (creditsKnown && creditBalance >= credits);
-  const jitToken = defaultJitToken(walletType);
-  const canJit = billable && jitPaymentEnabled && supportsJitPayment(jitToken);
+  // In x402-only mode an Ethereum wallet pays per-upload in base-usdc via the
+  // x402 path (not base-eth JIT) — mirror Upload/Deploy/Capture so Pages can bill.
+  const jitToken =
+    x402OnlyMode && walletType === 'ethereum' ? 'base-usdc' : defaultJitToken(walletType);
+  const canJit =
+    billable &&
+    supportsJitPayment(jitToken) &&
+    (jitPaymentEnabled || (x402OnlyMode && walletType === 'ethereum'));
   const overSizeCeiling = size > MAX_PAGE_BYTES;
-  const canPublish = !overSizeCeiling && (free || hasCredits || canJit);
+
+  // Content gate: a page must have a name and somewhere to link before it can be
+  // published — this is what stops empty / still-default template pages going out.
+  const contentIssues = useMemo(() => {
+    const issues: string[] = [];
+    if (!def.profile.displayName.trim()) issues.push('a display name');
+    const hasRealLink = def.blocks.some(
+      (b) =>
+        (b.type === 'link' && !!b.url.trim() && b.url.trim() !== '#') ||
+        (b.type === 'social' && b.items.some((i) => !!i.url.trim() && i.url.trim() !== '#')),
+    );
+    if (!hasRealLink) issues.push('at least one link');
+    return issues;
+  }, [def]);
+  const contentValid = contentIssues.length === 0;
+
+  const canPublish = !overSizeCeiling && contentValid && (free || hasCredits || canJit);
 
   const domainLabel = arns ? `${arnsLabel(arns)}.${ctx.arnsHost || 'ar.io'}` : '';
 
@@ -221,6 +246,16 @@ export default function PublishModal({
             </>
           )}
         </div>
+
+        {!contentValid && !overSizeCeiling && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+            <div className="text-xs text-warning">
+              Add {contentIssues.join(' and ')} before publishing — a page needs a name and somewhere
+              to link.
+            </div>
+          </div>
+        )}
 
         {overSizeCeiling && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-error/20 bg-error/10 p-3">
