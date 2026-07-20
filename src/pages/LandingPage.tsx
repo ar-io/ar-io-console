@@ -11,7 +11,7 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, BookOpen, Calculator, Compass, LayoutTemplate
+  Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 
@@ -722,6 +722,9 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* For AI agents & LLMs */}
+      <AgentDocsSection />
+
       {/* ArDrive Section - For Non-Developers */}
       <section className="text-center bg-card rounded-2xl border border-border/20 p-4 sm:p-8">
         <div className="max-w-3xl mx-auto">
@@ -763,5 +766,85 @@ const LandingPage = () => {
     </div>
   );
 };
+
+/**
+ * A distinct, terminal-styled call-out for AI agents / LLM builders: the ar.io
+ * docs are published as one plain-text file (llms-full.txt) sized for context
+ * windows, and an agent can claim a permanent name/dataset/API at an ArNS name.
+ */
+function AgentDocsSection() {
+  const [copied, setCopied] = useState(false);
+  const cmd = 'curl https://docs.ar.io/llms-full.txt';
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-foreground/20 bg-foreground text-white shadow-lg">
+      <div className="grid items-center gap-8 p-6 sm:p-10 lg:grid-cols-2">
+        {/* Pitch */}
+        <div>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1">
+            <Terminal className="h-3.5 w-3.5 text-lavender" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/60">
+              For AI agents &amp; LLMs
+            </span>
+          </div>
+          <h2 className="mb-3 font-heading text-2xl font-bold sm:text-3xl">Point your agent at ar.io</h2>
+          <p className="mb-5 max-w-md text-sm leading-relaxed text-white/70 sm:text-base">
+            The entire ar.io documentation as one plain-text file — sized for LLM context
+            windows and autonomous agents. Then give your agent a permanent home it owns:
+            a name, dataset, and API, all under one ArNS name.
+          </p>
+          <a
+            href="https://docs.ar.io/llms-full.txt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-80"
+          >
+            Read llms-full.txt <ArrowRight className="h-3.5 w-3.5" />
+          </a>
+        </div>
+
+        {/* Terminal */}
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30 font-mono text-[13px]">
+          <div className="flex items-center gap-1.5 border-b border-white/10 px-4 py-2.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="ml-2 text-[11px] text-white/35">agent ~ ar.io</span>
+          </div>
+          <div className="space-y-2.5 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <code className="break-all text-white/90">
+                <span className="text-white/35">$ </span>
+                {cmd}
+              </code>
+              <button
+                type="button"
+                onClick={copy}
+                title={copied ? 'Copied!' : 'Copy'}
+                aria-label="Copy command"
+                className="flex-shrink-0 text-white/50 transition-colors hover:text-white"
+              >
+                {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className="text-[12px] leading-relaxed text-white/40">
+              <span className="text-success">200 OK</span> — the complete docs, in plain text,
+              ready to drop into a prompt.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default LandingPage;
