@@ -48,10 +48,10 @@ const seed: PageDef = {
   },
   blocks: [
     { type: 'heading', text: 'Contact' },
-    { type: 'link', label: 'daniel@meridian.studio', url: 'mailto:daniel@meridian.studio', icon: 'email' },
-    { type: 'link', label: '+1 (415) 555-0148', url: 'tel:+14155550148', icon: 'phone' },
-    { type: 'link', label: 'meridian.studio', url: 'https://meridian.studio', icon: 'website' },
-    { type: 'link', label: 'Portfolio — on the permaweb', url: 'ar://danielokafor', icon: 'portfolio' },
+    { type: 'link', label: 'daniel@meridian.studio', url: 'mailto:daniel@meridian.studio', icon: '@' },
+    { type: 'link', label: '+1 (415) 555-0148', url: 'tel:+14155550148', icon: 'tel' },
+    { type: 'link', label: 'meridian.studio', url: 'https://meridian.studio', icon: 'web' },
+    { type: 'link', label: 'Portfolio — on the permaweb', url: 'ar://danielokafor', icon: 'pf' },
     { type: 'divider' },
     { type: 'heading', text: 'Elsewhere' },
     {
