@@ -8,8 +8,8 @@ const ctx: RenderCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io'
 const all = listTemplates();
 
 describe('template registry', () => {
-  it('registers all 24 templates', () => {
-    expect(all.length).toBe(24);
+  it('registers all 32 templates', () => {
+    expect(all.length).toBe(32);
     const ids = all.map((t) => t.id);
     expect(ids).toContain('grid-system');
     expect(ids).toContain('dial-up-homestead');

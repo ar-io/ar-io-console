@@ -40,6 +40,17 @@ import { neoBrutalistTemplate } from './neo-brutalist';
 import { linkClassicTemplate } from './link-classic';
 import { creatorHubTemplate } from './creator-hub';
 import { musicDropTemplate } from './music-drop';
+import { reelTemplate } from './reel';
+// v3.1 expansion — pro
+import { businessCardTemplate } from './business-card';
+import { resumeTemplate } from './resume';
+import { portfolioGridTemplate } from './portfolio-grid';
+// v3.1 expansion — classic (wave 2)
+import { desktop95Template } from './desktop-95';
+import { teletextTemplate } from './teletext';
+// v3.1 expansion — wildcard (wave 2)
+import { boardingPassTemplate } from './boarding-pass';
+import { tradingCardTemplate } from './trading-card';
 
 /** Every implemented template module, in gallery (family) order. */
 const MODULES: PagesTemplate[] = [
@@ -69,6 +80,17 @@ const MODULES: PagesTemplate[] = [
   linkClassicTemplate,
   creatorHubTemplate,
   musicDropTemplate,
+  reelTemplate,
+  // v3.1 expansion — pro
+  businessCardTemplate,
+  resumeTemplate,
+  portfolioGridTemplate,
+  // v3.1 expansion — classic (wave 2)
+  desktop95Template,
+  teletextTemplate,
+  // v3.1 expansion — wildcard (wave 2)
+  boardingPassTemplate,
+  tradingCardTemplate,
 ];
 
 /** Templates indexed by id (all 16 launch templates implemented). */
@@ -101,4 +123,12 @@ export {
   linkClassicTemplate,
   creatorHubTemplate,
   musicDropTemplate,
+  reelTemplate,
+  businessCardTemplate,
+  resumeTemplate,
+  portfolioGridTemplate,
+  desktop95Template,
+  teletextTemplate,
+  boardingPassTemplate,
+  tradingCardTemplate,
 };

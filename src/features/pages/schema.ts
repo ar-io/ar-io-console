@@ -40,7 +40,18 @@ export type TemplateId =
   // v3.1 expansion — creator
   | 'link-classic'
   | 'creator-hub'
-  | 'music-drop';
+  | 'music-drop'
+  | 'reel'
+  // v3.1 expansion — pro
+  | 'business-card'
+  | 'resume'
+  | 'portfolio-grid'
+  // v3.1 expansion — classic
+  | 'desktop-95'
+  | 'teletext'
+  // v3.1 expansion — wildcard
+  | 'boarding-pass'
+  | 'trading-card';
 
 /** All template ids (16 launch + v3.1 expansion). */
 export const TEMPLATE_IDS: readonly TemplateId[] = [
@@ -70,6 +81,17 @@ export const TEMPLATE_IDS: readonly TemplateId[] = [
   'link-classic',
   'creator-hub',
   'music-drop',
+  'reel',
+  // v3.1 expansion — pro
+  'business-card',
+  'resume',
+  'portfolio-grid',
+  // v3.1 expansion — classic
+  'desktop-95',
+  'teletext',
+  // v3.1 expansion — wildcard
+  'boarding-pass',
+  'trading-card',
 ];
 
 /** Fallback template used when a def arrives without a usable template id. */
