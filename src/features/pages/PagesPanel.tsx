@@ -54,7 +54,7 @@ export default function PagesPanel() {
   const perDataItemFeeWinc = usePerDataItemFee();
   const { publish, repointArNS, reset: resetPublish, publishing, stage, error } = usePagePublish();
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [view, setView] = useState<View>('dashboard');
   const [editorOrigin, setEditorOrigin] = useState<EditorOrigin>('gallery');
   const [def, setDef] = useState<PageDef | null>(null);
@@ -124,18 +124,16 @@ export default function PagesPanel() {
     defRef.current = def;
   });
 
-  // Deep-link: the homepage "Create a Page" CTA lands on /pages?new=1 and opens
-  // the template picker directly, skipping the dashboard. Runs once on mount; the
-  // param is then cleared so a refresh/back doesn't force the gallery again.
+  // Deep link — open the template picker once if ?new=1 is present (the homepage
+  // "Create a Page" CTA lands on /pages?new=1). Mirrors the ?tx= handling in
+  // VerifyPanel: a run-once ref guard keyed on the params, URL left untouched.
+  const deepLinkRan = useRef(false);
   useEffect(() => {
-    if (searchParams.get('new') === '1') {
+    if (!deepLinkRan.current && searchParams.get('new') === '1') {
+      deepLinkRan.current = true;
       setView('gallery');
-      const next = new URLSearchParams(searchParams);
-      next.delete('new');
-      setSearchParams(next, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!def || view !== 'editor') return;
