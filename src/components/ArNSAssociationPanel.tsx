@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Globe, ExternalLink, AlertCircle, Loader2, RefreshCw, ChevronDown, Check, ChevronRight, Link as LinkIcon } from 'lucide-react';
+import { Globe, ExternalLink, AlertCircle, Loader2, RefreshCw, ChevronDown, Check, ChevronRight, Link as LinkIcon, Wallet } from 'lucide-react';
 import { Combobox } from '@headlessui/react';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from './modals/LinkSolanaWalletModal';
 import { sanitizeUndername, hasInvalidCharacters } from '../utils/undernames';
+import { useStore } from '../store/useStore';
+import { promptSignIn } from '../utils';
 
 interface ArNSAssociationPanelProps {
   enabled: boolean;
@@ -37,6 +39,7 @@ export default function ArNSAssociationPanel({
 }: ArNSAssociationPanelProps) {
   const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, promptReconnect, showLinkModal, setShowLinkModal } = useLinkedSolanaWallet();
+  const address = useStore((s) => s.address);
   const [internalShowUndername, setInternalShowUndername] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [ttlMode, setTTLMode] = useState<'existing' | 'custom'>('existing');
@@ -173,8 +176,26 @@ export default function ArNSAssociationPanel({
         </div>
       )}
 
-      {/* Solana wallet status: needs linking or reconnection — shown when checkbox is disabled */}
-      {needsLinking && (
+      {/* Wallet status, shown while the domain checkbox is disabled: sign in first,
+          then link / reconnect a Solana wallet (ArNS updates are Solana-signed).
+          A fully logged-out user must NOT be told to link a *secondary* wallet — it
+          contradicts the "Sign in" gate — so that case wins. */}
+      {!address ? (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-foreground/80">
+              <Wallet className="w-4 h-4 text-primary" />
+              Sign in to add a domain
+            </div>
+            <button
+              onClick={promptSignIn}
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
+      ) : needsLinking ? (
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-foreground/80">
@@ -189,8 +210,7 @@ export default function ArNSAssociationPanel({
             </button>
           </div>
         </div>
-      )}
-      {!needsLinking && !isSolanaConnected && (
+      ) : !isSolanaConnected ? (
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
           <div className="flex items-center justify-between">
             <div className="text-sm text-foreground/80">
@@ -204,7 +224,7 @@ export default function ArNSAssociationPanel({
             </button>
           </div>
         </div>
-      )}
+      ) : null}
       {showLinkModal && (
         <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} isReconnect={!needsLinking} />
       )}
