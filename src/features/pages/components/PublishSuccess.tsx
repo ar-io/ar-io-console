@@ -101,7 +101,7 @@ export default function PublishSuccess({
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">Give it a memorable link</p>
               <p className="mt-0.5 text-xs text-foreground/70">
-                Your page lives at the permanent gateway URL above. Point an ArNS name at it for a
+                Your page lives at the permanent gateway URL above. Point a domain at it for a
                 short, human link like <span className="font-mono text-foreground/80">yourname.ar.io</span> —
                 now or later.
               </p>

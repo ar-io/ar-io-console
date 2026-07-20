@@ -1,6 +1,5 @@
 import { ExternalLink, Info } from 'lucide-react';
 import ArNSAssociationPanel from '@/components/ArNSAssociationPanel';
-import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 
 interface DomainControlsProps {
   enabled: boolean;
@@ -29,17 +28,13 @@ export default function DomainControls({
   showUndername,
   onShowUndernameChange,
 }: DomainControlsProps) {
-  const { needsLinking } = useLinkedSolanaWallet();
-
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-2 rounded-lg bg-primary/5 px-3 py-2 text-xs text-foreground/70">
         <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
         <span className="space-y-1">
           <span className="block">
-            {needsLinking
-              ? 'Optional — add a domain now or later. Assigning one needs a linked Solana wallet.'
-              : 'Optional — add a domain now, or anytime after you publish.'}
+            Optional — add a domain now, or anytime after you publish.
           </span>
           <a
             href="https://docs.ar.io/learn/arns"

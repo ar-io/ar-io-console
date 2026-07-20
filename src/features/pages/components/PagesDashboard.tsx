@@ -317,7 +317,7 @@ function RemoveDomainConfirm({
         <div className="mb-5 flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
           <span>
-            The ArNS name itself keeps resolving to the last version until you point it somewhere else
+            The domain itself keeps resolving to the last version until you point it somewhere else
             from the Domains page.
           </span>
         </div>

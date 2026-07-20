@@ -179,7 +179,7 @@ export default function ArNSAssociationPanel({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-foreground/80">
               <LinkIcon className="w-4 h-4 text-primary" />
-              Link a Solana wallet to assign ArNS domains
+              Link a Solana wallet to assign a domain
             </div>
             <button
               onClick={() => setShowLinkModal(true)}

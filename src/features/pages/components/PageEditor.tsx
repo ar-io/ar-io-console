@@ -147,7 +147,7 @@ export default function PageEditor(props: PageEditorProps) {
             <ThemeControls def={def} update={update} ctx={ctx} />
           </Section>
 
-          <Section icon={<Globe className="h-4 w-4" />} title="Domain (ArNS)" subtitle="Point an ArNS name at your page">
+          <Section icon={<Globe className="h-4 w-4" />} title="Domain (ArNS)" subtitle="Point a domain at your page">
             <DomainControls
               enabled={props.arnsEnabled}
               onEnabledChange={props.onArnsEnabledChange}
