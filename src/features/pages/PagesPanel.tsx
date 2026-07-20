@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ArrowLeft, LayoutTemplate } from 'lucide-react';
 import { useStore, type ConsolePage } from '@/store/useStore';
 import type { SupportedTokenType } from '@/constants';
@@ -53,6 +54,7 @@ export default function PagesPanel() {
   const perDataItemFeeWinc = usePerDataItemFee();
   const { publish, repointArNS, reset: resetPublish, publishing, stage, error } = usePagePublish();
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<View>('dashboard');
   const [editorOrigin, setEditorOrigin] = useState<EditorOrigin>('gallery');
   const [def, setDef] = useState<PageDef | null>(null);
@@ -121,6 +123,19 @@ export default function PagesPanel() {
   useEffect(() => {
     defRef.current = def;
   });
+
+  // Deep-link: the homepage "Create a Page" CTA lands on /pages?new=1 and opens
+  // the template picker directly, skipping the dashboard. Runs once on mount; the
+  // param is then cleared so a refresh/back doesn't force the gallery again.
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setView('gallery');
+      const next = new URLSearchParams(searchParams);
+      next.delete('new');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!def || view !== 'editor') return;

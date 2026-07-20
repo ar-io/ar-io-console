@@ -94,8 +94,8 @@ const LandingPage = () => {
       name: 'Pages',
       icon: LayoutTemplate,
       title: 'Build a Permanent Link-in-Bio Page',
-      description: 'Create a link-in-bio page in seconds and publish it permanently to Arweave — no code, no files. Pick from 16 designer templates, edit with a live preview, and give it your own domain name.',
-      benefits: ['16 designer templates', 'Live preview editor', 'Permanent & versioned', 'Your own domain name'],
+      description: 'Create a link-in-bio page in seconds and publish it permanently to Arweave — no code, no files. Pick from 16 designer templates, edit with a live preview, and give it a domain name.',
+      benefits: ['16 designer templates', 'Live preview editor', 'Permanent & versioned', 'Memorable domain name'],
       action: 'pages',
       loginText: 'Create a Page',
       connectText: 'Sign in to Create'
@@ -439,7 +439,8 @@ const LandingPage = () => {
                   if (feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
-                    navigate(`/${feature.action}`);
+                    // Pages: jump straight to the template picker, not the dashboard.
+                    navigate(feature.action === 'pages' ? '/pages?new=1' : `/${feature.action}`);
                   } else {
                     setShowWalletModal(true);
                   }
@@ -523,7 +524,8 @@ const LandingPage = () => {
                   if (feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
-                    navigate(`/${feature.action}`);
+                    // Pages: jump straight to the template picker, not the dashboard.
+                    navigate(feature.action === 'pages' ? '/pages?new=1' : `/${feature.action}`);
                   } else {
                     setShowWalletModal(true);
                   }
