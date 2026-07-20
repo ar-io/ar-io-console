@@ -54,8 +54,12 @@ export default function PagesPanel() {
   const perDataItemFeeWinc = usePerDataItemFee();
   const { publish, repointArNS, reset: resetPublish, publishing, stage, error } = usePagePublish();
 
-  const [searchParams] = useSearchParams();
-  const [view, setView] = useState<View>('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Open straight into the template picker when arriving via the homepage
+  // "Create a Page" CTA (/pages?new=1). Lazy init avoids a dashboard→gallery flash.
+  const [view, setView] = useState<View>(() =>
+    searchParams.get('new') === '1' ? 'gallery' : 'dashboard',
+  );
   const [editorOrigin, setEditorOrigin] = useState<EditorOrigin>('gallery');
   const [def, setDef] = useState<PageDef | null>(null);
   const [saved, setSaved] = useState(true);
@@ -124,16 +128,17 @@ export default function PagesPanel() {
     defRef.current = def;
   });
 
-  // Deep link — open the template picker once if ?new=1 is present (the homepage
-  // "Create a Page" CTA lands on /pages?new=1). Mirrors the ?tx= handling in
-  // VerifyPanel: a run-once ref guard keyed on the params, URL left untouched.
-  const deepLinkRan = useRef(false);
+  // The ?new=1 trigger (consumed by the lazy `view` init above) is one-shot:
+  // clear it once here so a refresh or Back doesn't re-force the gallery over
+  // wherever the user has since navigated — unlike a persistent deep-link such as
+  // Verify's ?tx=. Clearing also tidies the shared/bookmarked URL to /pages.
   useEffect(() => {
-    if (!deepLinkRan.current && searchParams.get('new') === '1') {
-      deepLinkRan.current = true;
-      setView('gallery');
+    if (searchParams.get('new') === '1') {
+      const next = new URLSearchParams(searchParams);
+      next.delete('new');
+      setSearchParams(next, { replace: true });
     }
-  }, [searchParams]);
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!def || view !== 'editor') return;
