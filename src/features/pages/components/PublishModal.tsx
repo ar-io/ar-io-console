@@ -49,6 +49,7 @@ const STAGE_TEXT: Record<PublishStage, string> = {
   idle: '',
   rendering: 'Generating page…',
   uploading: 'Uploading to the permaweb…',
+  finalizing: 'Finalizing on the network…',
   'updating-arns': 'Updating your domain…',
   complete: 'Done',
   error: '',

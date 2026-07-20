@@ -17,6 +17,8 @@ export interface ActiveUpload {
   name: string;
   progress: number;
   size: number;
+  /** True once bytes are fully sent and the bundler is finalizing the upload. */
+  finalizing?: boolean;
 }
 
 export interface RecentFile {
@@ -235,9 +237,11 @@ export default function UploadProgressSummary({
                     </div>
                     <div className="flex justify-between text-xs text-foreground/80">
                       <span>
-                        {activeUploads.length > 1
-                          ? `Processing batch (${activeUploads.length} concurrent)`
-                          : `${displayFile.progress || 0}% complete`
+                        {displayFile.finalizing
+                          ? 'Finalizing…'
+                          : activeUploads.length > 1
+                            ? `Processing batch (${activeUploads.length} concurrent)`
+                            : `${displayFile.progress || 0}% complete`
                         }
                       </span>
                       <span>{uploadedCount} of {totalCount} complete</span>

@@ -32,6 +32,7 @@ export type PublishStage =
   | 'idle'
   | 'rendering'
   | 'uploading'
+  | 'finalizing'
   | 'updating-arns'
   | 'complete'
   | 'error';
@@ -132,6 +133,11 @@ export function usePagePublish() {
           customTags: tags,
           jitEnabled: options.jitEnabled,
           selectedJitToken: options.selectedJitToken,
+          // Once bytes are fully sent the bundler still needs to finalize — surface
+          // that so the modal doesn't sit on "Uploading…" looking stuck.
+          onProgress: (pct) => {
+            if (pct >= 100) setStage('finalizing');
+          },
         });
 
         const version: PageVersion = {
