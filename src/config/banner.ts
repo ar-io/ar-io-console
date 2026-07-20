@@ -20,7 +20,7 @@ export const BANNER_CONFIG: BannerConfig = {
   message: 'New — build a permanent link-in-bio page, live in seconds.',
   link: {
     text: 'Try Pages',
-    href: '/pages',
+    href: '/pages?new',
     external: false,
   },
   variant: 'subtle',

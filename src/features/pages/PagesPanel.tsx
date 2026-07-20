@@ -55,10 +55,11 @@ export default function PagesPanel() {
   const { publish, repointArNS, reset: resetPublish, publishing, stage, error } = usePagePublish();
 
   const [searchParams, setSearchParams] = useSearchParams();
-  // Open straight into the template picker when arriving via the homepage
-  // "Create a Page" CTA (/pages?new=1). Lazy init avoids a dashboard→gallery flash.
+  // Open straight into the template picker when arriving via a "create" entry
+  // point (/pages?new). Presence-only flag — the value is irrelevant. Lazy init
+  // avoids a dashboard→gallery flash.
   const [view, setView] = useState<View>(() =>
-    searchParams.get('new') === '1' ? 'gallery' : 'dashboard',
+    searchParams.has('new') ? 'gallery' : 'dashboard',
   );
   const [editorOrigin, setEditorOrigin] = useState<EditorOrigin>('gallery');
   const [def, setDef] = useState<PageDef | null>(null);
@@ -133,7 +134,7 @@ export default function PagesPanel() {
   // wherever the user has since navigated — unlike a persistent deep-link such as
   // Verify's ?tx=. Clearing also tidies the shared/bookmarked URL to /pages.
   useEffect(() => {
-    if (searchParams.get('new') === '1') {
+    if (searchParams.has('new')) {
       const next = new URLSearchParams(searchParams);
       next.delete('new');
       setSearchParams(next, { replace: true });
