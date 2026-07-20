@@ -190,7 +190,10 @@ function BlockBody({
         <div className="space-y-3">
           <TextField label="Label" value={block.label} onChange={(v) => onChange({ ...block, label: v })} placeholder="My website" />
           <UrlField label="URL" value={block.url} onChange={(v) => onChange({ ...block, url: v })} ctx={ctx} />
-          <TextField label="Icon (optional)" value={block.icon ?? ''} onChange={(v) => onChange({ ...block, icon: v || undefined })} placeholder="globe, star, square…" />
+          <div>
+            <TextField label="Icon (emoji)" value={block.icon ?? ''} onChange={(v) => onChange({ ...block, icon: v || undefined })} placeholder="e.g. 🔗" />
+            <p className="mt-1 text-xs text-foreground/50">Optional — an emoji shown with the link.</p>
+          </div>
         </div>
       );
     case 'social':
