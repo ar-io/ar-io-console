@@ -32,17 +32,15 @@ export default function DomainControls({
     <div className="space-y-3">
       <div className="flex items-start gap-2 rounded-lg bg-primary/5 px-3 py-2 text-xs text-foreground/70">
         <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-        <span className="space-y-1">
-          <span className="block">
-            Optional — add a domain now, or anytime after you publish.
-          </span>
+        <span>
+          Optional — add a domain now, or anytime after you publish.{' '}
           <a
             href="https://docs.ar.io/learn/arns"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+            className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary transition-colors hover:text-primary/80"
           >
-            How ArNS names work
+            How ArNS works
             <ExternalLink className="h-3 w-3" />
           </a>
         </span>

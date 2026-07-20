@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ImageUp, Loader2, Trash2, User } from 'lucide-react';
+import { ImageUp, Loader2, Trash2 } from 'lucide-react';
 import type { ControlProps } from './types';
 import { TextAreaField, TextField } from './primitives';
 import { downscaleImageToDataUrl, estimateDataUrlBytes } from '../imageResize';
@@ -119,19 +119,6 @@ export default function ProfileControls({ def, update, ctx }: ControlProps) {
         maxLength={400}
         rows={3}
       />
-      <div>
-        <TextField
-          label="Handle (shown on the page)"
-          value={profile.handle ?? ''}
-          onChange={(v) => setProfile({ handle: v })}
-          placeholder="myname.ar.io"
-          maxLength={120}
-        />
-        <p className="mt-1 flex items-center gap-1 text-xs text-foreground/50">
-          <User className="h-3 w-3" />
-          Just the text shown on your page. To actually point a name at it, use the Domain section.
-        </p>
-      </div>
     </div>
   );
 }
