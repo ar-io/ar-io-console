@@ -21,7 +21,7 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is intentionally narrow — pure logic only (currently just `src/utils/topupDeepLink.test.ts`). Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is intentionally narrow — pure logic only: `src/utils/topupDeepLink.test.ts` plus the Pages suites under `src/features/pages/` (`schema.test.ts`, `render/renderPageHtml.test.ts`, `publish/*.test.ts`, and `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts`, which auto-run over every template). Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)

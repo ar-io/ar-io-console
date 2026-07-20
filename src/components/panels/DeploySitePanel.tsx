@@ -2206,7 +2206,7 @@ export default function DeploySitePanel() {
         <button
           onClick={address ? () => setShowConfirmModal(true) : promptSignIn}
           disabled={!!address && (deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
-          className="w-full mt-4 py-4 px-6 rounded-lg bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {!address ? (
             <>

@@ -6,9 +6,9 @@
  */
 
 import { beforeEach, describe, it, expect } from 'vitest';
-import { useStore, type ConsolePage, type PageVersion } from '@/store/useStore';
+import { useStore, type PageVersion } from '@/store/useStore';
 import { validatePageDef, type PageDef } from '../schema';
-import { computeDefHash } from './pageFile';
+import { computeDefHash, isPageDirty } from './pageFile';
 
 const state = () => useStore.getState();
 
@@ -35,13 +35,6 @@ function publishVersion(pageId: string, n: number, def: PageDef): PageVersion {
   return version;
 }
 
-/** The exact predicate PageCard uses to decide the "Unpublished changes" badge. */
-function isDirty(page: ConsolePage): boolean {
-  const currentHash = page.versions.find((v) => v.version === page.currentVersion)?.defHash;
-  if (!currentHash) return false;
-  return computeDefHash(page.def) !== currentHash;
-}
-
 beforeEach(() => {
   useStore.setState({ pages: [] });
 });
@@ -50,7 +43,7 @@ describe('unpublished-changes / no-op detection', () => {
   it('a freshly-published page is not dirty (working def hash === current version hash)', () => {
     const def = makeDef('p1', 'Live');
     publishVersion('p1', 1, def);
-    expect(isDirty(state().getPage('p1')!)).toBe(false);
+    expect(isPageDirty(state().getPage('p1')!)).toBe(false);
   });
 
   it('editing a published page marks it dirty', () => {
@@ -63,7 +56,7 @@ describe('unpublished-changes / no-op detection', () => {
 
     const page = state().getPage('p1')!;
     expect(page.currentVersion).toBe(1); // still on v1 — no republish
-    expect(isDirty(page)).toBe(true);
+    expect(isPageDirty(page)).toBe(true);
   });
 
   it('re-publishing the edited def clears the dirty flag', () => {
@@ -71,10 +64,10 @@ describe('unpublished-changes / no-op detection', () => {
     publishVersion('p1', 1, def);
     const edited: PageDef = { ...def, title: 'Live (edited)' };
     state().upsertPageDraft('p1', edited);
-    expect(isDirty(state().getPage('p1')!)).toBe(true);
+    expect(isPageDirty(state().getPage('p1')!)).toBe(true);
 
     publishVersion('p1', 2, edited);
-    expect(isDirty(state().getPage('p1')!)).toBe(false);
+    expect(isPageDirty(state().getPage('p1')!)).toBe(false);
   });
 
   it('a no-op save (identical content, only timestamps differ) is not dirty', () => {
@@ -85,12 +78,12 @@ describe('unpublished-changes / no-op detection', () => {
     const touched: PageDef = { ...def, updatedAt: def.updatedAt! + 5000 };
     state().upsertPageDraft('p1', touched);
 
-    expect(isDirty(state().getPage('p1')!)).toBe(false);
+    expect(isPageDirty(state().getPage('p1')!)).toBe(false);
     expect(computeDefHash(touched)).toBe(computeDefHash(def));
   });
 
   it('an unpublished draft (no versions) is never dirty', () => {
     state().upsertPageDraft('p1', makeDef('p1'));
-    expect(isDirty(state().getPage('p1')!)).toBe(false);
+    expect(isPageDirty(state().getPage('p1')!)).toBe(false);
   });
 });

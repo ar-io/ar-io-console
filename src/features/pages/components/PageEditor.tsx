@@ -5,6 +5,7 @@ import {
   ChevronDown,
   Globe,
   Layers,
+  Loader2,
   Palette,
   Rocket,
   Settings,
@@ -90,7 +91,11 @@ export default function PageEditor(props: PageEditorProps) {
         </button>
         <div className="flex items-center gap-3">
           <span className="hidden items-center gap-1 text-xs text-foreground/50 sm:inline-flex">
-            <Check className="h-3.5 w-3.5 text-success" />
+            {saved ? (
+              <Check className="h-3.5 w-3.5 text-success" />
+            ) : (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            )}
             {saved ? 'All changes saved' : 'Saving…'}
           </span>
           <button

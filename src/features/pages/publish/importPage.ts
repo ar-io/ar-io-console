@@ -72,11 +72,24 @@ export function resolvePageSource(input: string, ctx: ResolveCtx): PageSource {
     const last = segs[segs.length - 1];
     const txId = last && TX_RE.test(last) ? last : undefined;
     let arnsName: string | undefined;
+    let undername: string | undefined;
     if (!txId) {
-      const parts = u.hostname.split('.');
-      if (parts.length > 2) arnsName = parts[0]; // <name>.<gateway-host>
+      // Host-aware, matching the bare-name branch below: only treat the leading
+      // label as ArNS when the hostname actually ends with the configured
+      // `.<arnsHost>` (which may be more than two labels), and split any undername.
+      const suffix = '.' + host.toLowerCase();
+      if (u.hostname.toLowerCase().endsWith(suffix)) {
+        const label = u.hostname.slice(0, -suffix.length);
+        const us = label.indexOf('_');
+        if (us > 0 && us < label.length - 1) {
+          undername = label.slice(0, us);
+          arnsName = label.slice(us + 1);
+        } else {
+          arnsName = label;
+        }
+      }
     }
-    return { url: raw, txId, arnsName };
+    return { url: raw, txId, arnsName, undername };
   }
 
   // bare ArNS name (optionally undername_name and/or a trailing .<arnsHost>)

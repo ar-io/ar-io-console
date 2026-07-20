@@ -9,6 +9,7 @@
  */
 
 import type { PageDef } from '../schema';
+import type { ConsolePage } from '@/store/useStore';
 
 /** Recursively sort object keys so logically-equal values serialise identically. */
 function canonicalize(value: unknown): unknown {
@@ -51,6 +52,23 @@ export function computeDefHash(def: PageDef): string {
   }
   const hex = (n: number) => (n >>> 0).toString(16).padStart(8, '0');
   return hex(h1) + hex(h2);
+}
+
+/**
+ * True when a page has unpublished edits: the working (last-edited) def hashes
+ * differently from the def captured at its current published version. Shared by
+ * PageCard's "Unpublished changes" badge and pageDirtyState.test so the badge and
+ * its test can never silently diverge. Draft pages (no live version) are handled
+ * by the caller.
+ */
+export function isPageDirty(page: ConsolePage): boolean {
+  const currentHash = page.versions.find((v) => v.version === page.currentVersion)?.defHash;
+  if (!currentHash) return false;
+  try {
+    return computeDefHash(page.def) !== currentHash;
+  } catch {
+    return false;
+  }
 }
 
 /** URL-safe slug derived from a page title (ascii, lowercase, dash-separated). */

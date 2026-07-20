@@ -34,7 +34,7 @@ import { useStore, type ConsolePage } from '@/store/useStore';
 import type { UploadStatus } from '@/hooks/useUploadStatus';
 import { renderPageHtml, type RenderCtx } from '../render/renderPageHtml';
 import { renderCtxFor } from '../publish/renderCtx';
-import { computeDefHash } from '../publish/pageFile';
+import { isPageDirty } from '../publish/pageFile';
 import { templates } from '../templates';
 import { useElementWidth } from './useElementWidth';
 
@@ -134,16 +134,7 @@ export default function PageCard({
   // def hash captured at the current published version. Without this, editing a
   // published page autosaves into `page.def` and the card renders the draft as if
   // it were live, with no indication (#5).
-  const hasUnpublishedChanges = useMemo(() => {
-    if (isDraft) return false;
-    const currentHash = page.versions.find((v) => v.version === page.currentVersion)?.defHash;
-    if (!currentHash) return false;
-    try {
-      return computeDefHash(page.def) !== currentHash;
-    } catch {
-      return false;
-    }
-  }, [isDraft, page.versions, page.currentVersion, page.def]);
+  const hasUnpublishedChanges = useMemo(() => !isDraft && isPageDirty(page), [isDraft, page]);
 
   const arnsLabel = page.arns
     ? page.arns.undername

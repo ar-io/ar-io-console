@@ -100,6 +100,71 @@ export function usePagePublish() {
           existing?.versions.find((v) => v.version === existing.currentVersion)?.defHash ??
           existing?.versions[0]?.defHash;
         if (currentHash && currentHash === defHash) {
+          const currentVer =
+            existing?.versions.find((v) => v.version === existing.currentVersion) ??
+            existing?.versions[0];
+          // Content is unchanged. If the user is (re)assigning a domain, skip the
+          // redundant re-upload but still apply the ArNS change against the current
+          // version's tx — otherwise toggling a domain here would silently no-op.
+          if (options.arns && existing && currentVer) {
+            if (!hasArNSAccess) {
+              setStage('idle');
+              setPublishing(false);
+              return {
+                ok: false,
+                noChanges: true,
+                pageId,
+                arnsError: 'Link a Solana wallet to assign a domain.',
+              };
+            }
+            setStage('updating-arns');
+            try {
+              const res = await updateArNSRecord(
+                options.arns.name,
+                currentVer.txId,
+                options.arns.undername,
+              );
+              if (res.success) {
+                updatePageArNS(pageId, {
+                  name: options.arns.name,
+                  undername: options.arns.undername,
+                  targetTxId: currentVer.txId,
+                  arnsTxId: res.transactionId,
+                });
+                addPageVersion(
+                  pageId,
+                  { ...currentVer, arnsRepointTxId: res.transactionId },
+                  existing.def,
+                );
+                setStage('complete');
+                setPublishing(false);
+                return {
+                  ok: true,
+                  pageId,
+                  version: currentVer.version,
+                  txId: currentVer.txId,
+                  arnsUpdated: true,
+                };
+              }
+              setStage('idle');
+              setPublishing(false);
+              return {
+                ok: false,
+                noChanges: true,
+                pageId,
+                arnsError: res.error || 'Failed to update ArNS record.',
+              };
+            } catch (e) {
+              setStage('idle');
+              setPublishing(false);
+              return {
+                ok: false,
+                noChanges: true,
+                pageId,
+                arnsError: e instanceof Error ? e.message : 'Failed to update ArNS record.',
+              };
+            }
+          }
           setStage('idle');
           setPublishing(false);
           return { ok: false, noChanges: true, pageId };
@@ -229,6 +294,13 @@ export function usePagePublish() {
       if (!ver) return { success: false, error: 'Version not found.' };
       if (!hasArNSAccess) return { success: false, error: 'Link a Solana wallet to update your domain.' };
 
+      // Single-flight guard (mirrors publish): a double-click must not fire two
+      // concurrent ArNS updates. Shares inFlightRef with publish, so the two can't
+      // run at once either.
+      if (inFlightRef.current) {
+        return { success: false, error: 'An update is already in progress.' };
+      }
+      inFlightRef.current = true;
       setError(null);
       setPublishing(true);
       setStage('updating-arns');
@@ -257,6 +329,8 @@ export function usePagePublish() {
         setStage('error');
         setPublishing(false);
         return { success: false, error: message };
+      } finally {
+        inFlightRef.current = false;
       }
     },
     [getPage, updateArNSRecord, updatePageArNS, addPageVersion, hasArNSAccess],

@@ -493,7 +493,10 @@ function renderSocials(block: SocialBlock, ctx: RenderCtx): string {
 const AR_TOKEN_RE = /(ar:\/\/[A-Za-z0-9_-]+|https?:\/\/\S+)/i;
 
 function isFooterText(text: string): boolean {
-  return AR_TOKEN_RE.test(text) || /verify permalink|permanent on arweave/i.test(text);
+  // Anchor to the footer's own phrasing, not a bare URL — otherwise an ordinary
+  // prose block that merely mentions a link would be pulled out of the body (and,
+  // with "last one wins", earlier such blocks would vanish entirely).
+  return /verify permalink|permanent on arweave/i.test(text);
 }
 
 function renderFooter(footText: string | undefined, ctx: RenderCtx): string {
