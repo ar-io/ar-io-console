@@ -11,6 +11,7 @@ import {
 } from '@ar.io/sdk/solana';
 import { SupportedTokenType } from '../constants';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
+import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
 
 // Preset configurations
 const PRESET_CONFIGS = {
@@ -125,6 +126,34 @@ interface DeployedAppEntry {
   lastDeployed: number; // timestamp
 }
 
+// --- Pages feature (link-in-bio permaweb pages, PRD §7.7 / §10) -----------------
+
+/** One immutable published version of a page (each Publish = a new HTML data item). */
+export interface PageVersion {
+  version: number;
+  txId: string; // HTML data item id
+  size: number; // bytes of the published HTML
+  defHash: string; // hash of the PageDef (dedup / change detection)
+  note?: string; // changelog note
+  timestamp: number;
+  arnsRepointTxId?: string; // ANT tx if this version was made live at the domain
+}
+
+/** A page the user created, grouped by a stable id across versions. */
+export interface ConsolePage {
+  id: string; // stable across versions (Page-Id tag)
+  title: string;
+  template: TemplateId; // origin marker only
+  currentVersion: number; // 0 when a draft has never been published
+  latestTxId: string; // newest HTML data item ('' for an unpublished draft)
+  arns?: { name: string; undername?: string; targetTxId: string; arnsTxId?: string };
+  versions: PageVersion[]; // newest-first
+  def: PageDef; // last-edited source of truth (local cache)
+  labels: string[]; // organizational, local only
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface PaymentInformation {
   paymentMethodId: string;
   email?: string;
@@ -187,6 +216,9 @@ interface StoreState {
 
   // Deploy history state
   deployHistory: DeployResult[];
+
+  // Pages feature state (persisted, grouped by stable page id)
+  pages: ConsolePage[];
 
   // Upload status cache (persisted) - stores full API response
   uploadStatusCache: Record<
@@ -284,6 +316,16 @@ interface StoreState {
   clearUploadHistory: () => void;
   addDeployResults: (results: DeployResult[]) => void;
   clearDeployHistory: () => void;
+
+  // Pages actions
+  savePage: (page: ConsolePage) => void;
+  upsertPageDraft: (id: string, def: PageDef) => void;
+  addPageVersion: (pageId: string, version: PageVersion, def: PageDef) => void;
+  updatePageArNS: (pageId: string, arns: ConsolePage['arns']) => void;
+  setPageLabels: (pageId: string, labels: string[]) => void;
+  duplicatePage: (pageId: string) => string;
+  deletePage: (pageId: string) => void;
+  getPage: (pageId: string) => ConsolePage | undefined;
   setUploadStatus: (
     txId: string,
     status: {
@@ -385,6 +427,7 @@ export const useStore = create<StoreState>()(
       ownedArnsCache: {},
       uploadHistory: [],
       deployHistory: [],
+      pages: [],
       uploadStatusCache: {},
 
       // Theme state
@@ -524,6 +567,148 @@ export const useStore = create<StoreState>()(
         set({ deployHistory: [...results, ...currentHistory] });
       },
       clearDeployHistory: () => set({ deployHistory: [], fileHashCache: {} }), // Also clear file hash cache
+
+      // Pages actions — grouped by stable page id, newest-first like deployHistory
+      savePage: (page) => {
+        const pages = get().pages;
+        const idx = pages.findIndex((p) => p.id === page.id);
+        if (idx === -1) {
+          set({ pages: [page, ...pages] });
+        } else {
+          const next = pages.slice();
+          next[idx] = { ...page, updatedAt: Date.now() };
+          set({ pages: next });
+        }
+      },
+      upsertPageDraft: (id, def) => {
+        const pages = get().pages;
+        const idx = pages.findIndex((p) => p.id === id);
+        const now = Date.now();
+        if (idx === -1) {
+          // A local draft with no published version yet.
+          const page: ConsolePage = {
+            id,
+            title: def.title,
+            template: def.template,
+            currentVersion: 0,
+            latestTxId: '',
+            versions: [],
+            def,
+            labels: [],
+            createdAt: now,
+            updatedAt: now,
+          };
+          set({ pages: [page, ...pages] });
+        } else {
+          const next = pages.slice();
+          next[idx] = { ...next[idx], def, title: def.title, template: def.template, updatedAt: now };
+          set({ pages: next });
+        }
+      },
+      addPageVersion: (pageId, version, def) => {
+        const pages = get().pages;
+        const idx = pages.findIndex((p) => p.id === pageId);
+        const now = Date.now();
+        if (idx === -1) {
+          // No draft yet — create the page from this first version.
+          const page: ConsolePage = {
+            id: pageId,
+            title: def.title,
+            template: def.template,
+            currentVersion: version.version,
+            latestTxId: version.txId,
+            versions: [version],
+            def,
+            labels: [],
+            createdAt: now,
+            updatedAt: now,
+          };
+          set({ pages: [page, ...pages] });
+          return;
+        }
+        const page = pages[idx];
+        // Idempotent by version number: replace a version in place (so a follow-up
+        // call can stamp arnsRepointTxId), otherwise prepend it (newest-first).
+        const verIdx = page.versions.findIndex((v) => v.version === version.version);
+        const versions =
+          verIdx >= 0
+            ? page.versions.map((v, i) => (i === verIdx ? version : v))
+            : [version, ...page.versions];
+        // currentVersion / latestTxId track the highest version number.
+        const top = versions.reduce((a, b) => (b.version > a.version ? b : a), versions[0]);
+        const next = pages.slice();
+        next[idx] = {
+          ...page,
+          versions,
+          def,
+          title: def.title,
+          template: def.template,
+          currentVersion: top.version,
+          latestTxId: top.txId,
+          updatedAt: now,
+        };
+        set({ pages: next });
+      },
+      updatePageArNS: (pageId, arns) => {
+        const pages = get().pages;
+        const idx = pages.findIndex((p) => p.id === pageId);
+        if (idx === -1) return;
+        const next = pages.slice();
+        const current = next[idx];
+        // Keep def.arnsName in sync with the assigned label so every consumer
+        // (editor hydration, publish permalink, re-export) sees one source of truth.
+        const label = arns ? (arns.undername ? `${arns.undername}_${arns.name}` : arns.name) : undefined;
+        next[idx] = {
+          ...current,
+          arns,
+          def: { ...current.def, arnsName: label },
+          updatedAt: Date.now(),
+        };
+        set({ pages: next });
+      },
+      setPageLabels: (pageId, labels) => {
+        const pages = get().pages;
+        const idx = pages.findIndex((p) => p.id === pageId);
+        if (idx === -1) return;
+        const next = pages.slice();
+        next[idx] = { ...next[idx], labels, updatedAt: Date.now() };
+        set({ pages: next });
+      },
+      duplicatePage: (pageId) => {
+        const pages = get().pages;
+        const source = pages.find((p) => p.id === pageId);
+        const g = globalThis as { crypto?: { randomUUID?: () => string } };
+        const newId =
+          g.crypto && typeof g.crypto.randomUUID === 'function'
+            ? g.crypto.randomUUID()
+            : `pg-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+        if (!source) return newId;
+        const now = Date.now();
+        // A duplicate is a fresh, unpublished branch: new id, no versions/domain.
+        const title = `${source.title} (copy)`;
+        const copy: ConsolePage = {
+          id: newId,
+          title,
+          template: source.template,
+          currentVersion: 0,
+          latestTxId: '',
+          versions: [],
+          // Deep-clone so the duplicate never shares nested blocks/profile/theme
+          // references with the source — editing one page (e.g. reordering blocks
+          // in place) must never mutate the other.
+          def: { ...structuredClone(source.def), id: newId, title },
+          labels: [...source.labels],
+          createdAt: now,
+          updatedAt: now,
+        };
+        set({ pages: [copy, ...pages] });
+        return newId;
+      },
+      deletePage: (pageId) => {
+        // Removes the local record only — on-chain versions are permanent (PRD §14).
+        set({ pages: get().pages.filter((p) => p.id !== pageId) });
+      },
+      getPage: (pageId) => get().pages.find((p) => p.id === pageId),
       setUploadStatus: (txId, status) => {
         const cache = get().uploadStatusCache;
         set({
@@ -756,6 +941,7 @@ export const useStore = create<StoreState>()(
         ownedArnsCache: state.ownedArnsCache,
         uploadHistory: state.uploadHistory,
         deployHistory: state.deployHistory,
+        pages: state.pages,
         uploadStatusCache: state.uploadStatusCache,
         theme: state.theme,
         configMode: state.configMode,
@@ -774,6 +960,30 @@ export const useStore = create<StoreState>()(
         // Browse Data feature state
         browseConfig: state.browseConfig,
       }),
+      // Defensively migrate/normalize persisted Pages defs on load so a corrupt or
+      // older stored def can never throw the editor/renderer. validate/migrate is
+      // idempotent (see schema.test.ts), so this is a no-op for already-valid defs.
+      onRehydrateStorage: () => (state) => {
+        if (!state || !Array.isArray(state.pages) || state.pages.length === 0) return;
+        try {
+          state.pages = state.pages.map((p) => {
+            try {
+              return {
+                ...p,
+                def: migratePageDef(p.def),
+                // Defend downstream renders (PageCard, VersionHistory) against a
+                // corrupt persisted shape — coerce the fields they iterate.
+                versions: Array.isArray(p.versions) ? p.versions : [],
+                currentVersion: typeof p.currentVersion === 'number' ? p.currentVersion : 0,
+              };
+            } catch {
+              return p; // never drop a page over a bad def
+            }
+          });
+        } catch {
+          /* never block rehydration */
+        }
+      },
     }
   )
 );

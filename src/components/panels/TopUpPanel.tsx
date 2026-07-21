@@ -255,7 +255,7 @@ export default function TopUpPanel() {
       const targetToken = paymentTargetType || walletType;
 
       if (!targetAddress) {
-        setErrorMessage('Please connect your wallet or enter a recipient address');
+        setErrorMessage('Please sign in or enter a recipient address');
         return;
       }
 
@@ -1730,7 +1730,7 @@ export default function TopUpPanel() {
               ) : !walletType ? (
                 <>
                   <Wallet className="w-5 h-5" />
-                  Connect Wallet for Crypto Payment
+                  Sign in for Crypto Payment
                 </>
               ) : !isTokenCompatibleWithWallet(selectedTokenType) ? (
                 <>

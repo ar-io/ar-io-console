@@ -1,16 +1,15 @@
 import { useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
-import { Calculator, HardDrive, DollarSign, ArrowRight, Zap, Upload, Globe, CreditCard, Database, Rss, ChevronDown, Check } from 'lucide-react';
+import { Calculator, HardDrive, DollarSign, Zap, Upload, Globe, CreditCard, Database, Rss, ChevronDown, Check, Wallet } from 'lucide-react';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import { useArNSPricing } from '../../hooks/useArNSPricing';
 import { useStore } from '../../store/useStore';
-import WalletSelectionModal from '../modals/WalletSelectionModal';
+import { promptSignIn } from '../../utils';
 
 export default function ServicesCalculatorPanel() {
   const { address, creditBalance } = useStore();
-  const [showWalletModal, setShowWalletModal] = useState(false);
   const [inputType, setInputType] = useState<'storage' | 'dollars'>('dollars'); // Default to dollars for services
   const [storageAmount, setStorageAmount] = useState(1);
   const [storageAmountInput, setStorageAmountInput] = useState('1'); // String for display
@@ -482,12 +481,12 @@ export default function ServicesCalculatorPanel() {
             // Not logged in - show connect wallet CTA
             <>
               <h4 className="text-lg font-bold font-heading text-foreground mb-3">Ready to use services?</h4>
-              <p className="text-foreground/80 mb-4">Connect your wallet to top up credits and access storage + domains.</p>
+              <p className="text-foreground/80 mb-4">Sign in to top up credits and access storage + domains.</p>
               <button
-                onClick={() => setShowWalletModal(true)}
+                onClick={promptSignIn}
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
               >
-                Connect Wallet <ArrowRight className="w-4 h-4" />
+                <Wallet className="w-4 h-4" /> Sign in
               </button>
             </>
           ) : creditBalance > 0 ? (
@@ -551,11 +550,6 @@ export default function ServicesCalculatorPanel() {
         </div>
       </div>
 
-      {showWalletModal && (
-        <WalletSelectionModal
-          onClose={() => setShowWalletModal(false)}
-        />
-      )}
     </div>
   );
 }

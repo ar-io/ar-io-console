@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Lock, Key, Settings, Server, Compass, PencilLine, ShieldCheck, X } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, X } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -15,6 +15,7 @@ import { usePrivyWallet } from '../hooks/usePrivyWallet';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { clearEthereumTurboClientCache } from '../hooks/useEthereumTurboClient';
+import { clearX402SignerCache } from '../hooks/useX402Upload';
 
 // Services for logged-in users
 const accountServices = [
@@ -22,6 +23,7 @@ const accountServices = [
   { name: 'Upload Files', page: 'upload' as const, icon: Upload },
   { name: 'Capture Page', page: 'capture' as const, icon: Camera },
   { name: 'Deploy Site', page: 'deploy' as const, icon: Zap },
+  { name: 'Create Page', page: 'pages' as const, icon: LayoutTemplate },
   { name: 'Share Credits', page: 'share' as const, icon: Share2 },
   // DEPRECATED: Gifting feature disabled
   // { name: 'Redeem Gift', page: 'redeem' as const, icon: Ticket },
@@ -142,9 +144,20 @@ const Header = () => {
     const handleRefreshBalance = () => {
       fetchBalance();
     };
+    // Any CTA anywhere can open the sign-in (wallet) modal by dispatching
+    // `open-signin` (see promptSignIn in utils). The Header owns the one modal.
+    // Guard on address so a stray event can't stack the connect modal over a
+    // live session.
+    const handleOpenSignIn = () => {
+      if (!useStore.getState().address) setShowWalletModal(true);
+    };
 
     window.addEventListener('refresh-balance', handleRefreshBalance);
-    return () => window.removeEventListener('refresh-balance', handleRefreshBalance);
+    window.addEventListener('open-signin', handleOpenSignIn);
+    return () => {
+      window.removeEventListener('refresh-balance', handleRefreshBalance);
+      window.removeEventListener('open-signin', handleOpenSignIn);
+    };
   }, [fetchBalance]);
 
   const handleRefresh = () => {
@@ -218,41 +231,17 @@ const Header = () => {
           <PopoverPanel className="absolute right-1 sm:right-0 mt-2 w-56 sm:w-64 overflow-auto rounded-2xl bg-background border border-border/20 shadow-lg z-50 py-1">
             {({ close }) => (
               <>
-                {/* Services - Always show, but require login */}
-                <div className="px-4 py-2 flex items-center justify-between">
+                {/* Services — reachable without login; each flow prompts to connect a wallet at the action */}
+                <div className="px-4 py-2">
                   <span className="text-xs font-semibold text-foreground/60 uppercase tracking-wider">Services</span>
-                  {!address && (
-                    <span className="text-xs text-foreground/40 flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Login Required
-                    </span>
-                  )}
                 </div>
                 {filteredAccountServices.map((service) => {
                   const isActive = location.pathname === `/${service.page}`;
 
-                  // Buy Credits (topup) is always accessible without login
-                  const requiresLogin = service.page !== 'topup';
-
-                  // If not logged in and service requires login, show locked button
-                  if (!address && requiresLogin) {
-                    return (
-                      <button
-                        key={service.page}
-                        onClick={() => {
-                          close();
-                          setShowWalletModal(true);
-                        }}
-                        className="w-full flex items-center gap-3 py-2 px-4 text-sm text-foreground/40 hover:bg-primary/10 hover:text-foreground transition-colors group"
-                      >
-                        <service.icon className="w-4 h-4 text-foreground/40 group-hover:text-foreground/60" />
-                        <span className="flex-1 text-left">{service.name}</span>
-                        <Lock className="w-3 h-3 text-foreground/30" />
-                      </button>
-                    );
-                  }
-
-                  // Normal link for accessible services (logged-in users or topup)
+                  // Every service is reachable without login: the panels render and
+                  // preview locally, and each flow prompts to connect a wallet at the
+                  // action (pay / upload / deploy / sign). Navigation only — this never
+                  // triggers signing. Sign-in stays on the header button + wallet modal.
                   return (
                     <Link
                       key={service.page}
@@ -526,8 +515,9 @@ const Header = () => {
                       } catch {
                         // Wagmi disconnect failed, continue anyway
                       }
-                      // Clear cached Turbo clients
+                      // Clear cached Turbo + X402 signers (gotcha #2)
                       clearEthereumTurboClientCache();
+                      clearX402SignerCache();
                     } else if (walletType === 'solana') {
                       // Disconnect via wallet adapter (handles all Solana wallets)
                       try {

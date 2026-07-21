@@ -11,7 +11,7 @@ import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit
 import {
   ArrowRight, Zap, Github,
   CreditCard, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, BookOpen, Calculator, Compass
+  Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 
@@ -68,7 +68,7 @@ const LandingPage = () => {
       benefits: ['Credit cards accepted', 'Pay in ETH, SOL, USDC, ARIO and more', 'Instant credits'],
       action: 'topup',
       loginText: 'Buy Credits',
-      connectText: 'Connect Wallet to Top Up'
+      connectText: 'Sign in to Top Up'
     },
     {
       name: 'Upload',
@@ -78,7 +78,7 @@ const LandingPage = () => {
       benefits: ['Drag & drop interface', 'Batch uploads', 'x402 instant payments', 'Instant receipts'],
       action: 'upload',
       loginText: 'Upload Files',
-      connectText: 'Connect Wallet to Upload'
+      connectText: 'Sign in to Upload'
     },
     {
       name: 'Deploy',
@@ -88,7 +88,17 @@ const LandingPage = () => {
       benefits: ['Permanent hosting', 'Automatic manifests', 'Custom fallback pages', 'Domain name assignment'],
       action: 'deploy',
       loginText: 'Deploy Site',
-      connectText: 'Connect Wallet to Deploy'
+      connectText: 'Sign in to Deploy'
+    },
+    {
+      name: 'Pages',
+      icon: LayoutTemplate,
+      title: 'Build a Permanent Link-in-Bio Page',
+      description: 'Create a link-in-bio page in seconds and publish it permanently to Arweave — no code, no files. Pick from 16 designer templates, edit with a live preview, and give it a domain name.',
+      benefits: ['16 designer templates', 'Live preview editor', 'Permanent & versioned', 'Memorable domain name'],
+      action: 'pages',
+      loginText: 'Create a Page',
+      connectText: 'Sign in to Create'
     },
     {
       name: 'Capture',
@@ -98,7 +108,7 @@ const LandingPage = () => {
       benefits: ['Full-page screenshots', 'Web page archival', 'Smart domain assignment'],
       action: 'capture',
       loginText: 'Capture Webpage',
-      connectText: 'Connect Wallet to Capture'
+      connectText: 'Sign in to Capture'
     },
     {
       name: 'Browse',
@@ -118,7 +128,7 @@ const LandingPage = () => {
       benefits: ['Wallet-to-wallet sharing', 'Time-based expiration', 'Revoke anytime'],
       action: 'share',
       loginText: 'Share Credits',
-      connectText: 'Connect Wallet to Share'
+      connectText: 'Sign in to Share'
     },
     // DEPRECATED: Gifting feature disabled
     // {
@@ -429,7 +439,12 @@ const LandingPage = () => {
                   if (feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
-                    navigate(`/${feature.action}`);
+                    // Pages: jump straight to the template picker, not the dashboard.
+                    if (feature.action === 'pages') {
+                      navigate('/pages', { state: { create: true } });
+                    } else {
+                      navigate(`/${feature.action}`);
+                    }
                   } else {
                     setShowWalletModal(true);
                   }
@@ -513,7 +528,12 @@ const LandingPage = () => {
                   if (feature.action === 'balances' || feature.action === 'settings' || feature.action === 'browse' || feature.action === 'domains') {
                     navigate(`/${feature.action}`);
                   } else if (loggedIn) {
-                    navigate(`/${feature.action}`);
+                    // Pages: jump straight to the template picker, not the dashboard.
+                    if (feature.action === 'pages') {
+                      navigate('/pages', { state: { create: true } });
+                    } else {
+                      navigate(`/${feature.action}`);
+                    }
                   } else {
                     setShowWalletModal(true);
                   }
@@ -712,46 +732,129 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ArDrive Section - For Non-Developers */}
-      <section className="text-center bg-card rounded-2xl border border-border/20 p-4 sm:p-8">
-        <div className="max-w-3xl mx-auto">
-          <h3 className="font-heading font-bold text-xl text-foreground mb-3">Looking for a no-code solution?</h3>
-          <p className="text-foreground/80 mb-6">
-            ArDrive is a user-friendly permanent dropbox app. Preserve and share your most important files with a simple drag-and-drop interface. Manage smart domain names, create permanent websites, and organize your files—all without writing code.
-          </p>
-          <a
-            href="https://ardrive.net/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 bg-card hover:bg-card border border-border/20 rounded-2xl px-6 py-3 group transition-all hover:border-primary/50"
-          >
-            <img src="/ardrive-logo.png" alt="ArDrive" className="w-8 h-8" />
-            <div className="text-left">
-              <div className="font-bold text-foreground group-hover:text-primary transition-colors">Try ArDrive</div>
-              <div className="text-xs text-foreground/80">A permanent dropbox</div>
-            </div>
-            <ArrowRight className="w-5 h-5 text-foreground/80 group-hover:translate-x-1 transition-transform" />
-          </a>
-        </div>
-      </section>
+      {/* For AI agents & LLMs */}
+      <AgentDocsSection />
 
-      {/* Final CTA Section */}
-      <section className="bg-card rounded-2xl border border-border/20 p-8 sm:p-12 text-center">
-        <h2 className="font-heading font-bold text-3xl mb-4 text-foreground">Ready to build on ar.io?</h2>
-        <p className="text-lg text-foreground/80 max-w-2xl mx-auto mb-8">
-          Start uploading files to the permaweb in seconds. No account required for small files.
-        </p>
-        <button
-          onClick={() => navigate('/try')}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl text-lg cursor-pointer"
+      {/* ArDrive — sibling consumer app for permanent file storage. A compact
+          horizontal strip so it reads as a footer cross-link, not a second
+          feature card stacked under the dark agents section above. */}
+      <section className="flex flex-col gap-4 rounded-2xl border border-border/20 bg-gradient-to-r from-primary/[0.06] to-card p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+        <img src="/ardrive-logo.png" alt="ArDrive" className="h-14 w-14 flex-shrink-0" />
+        <div className="flex-1 text-center sm:text-left">
+          <h3 className="font-heading text-lg font-bold text-foreground">Just want to store files?</h3>
+          <p className="mt-1 text-sm leading-relaxed text-foreground/70">
+            ArDrive is a permanent file drive — drag, drop, organize, and share files and
+            folders that last forever. All the permanence of the permaweb, in a friendly app
+            anyone can use.
+          </p>
+        </div>
+        <a
+          href="https://ardrive.net/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group inline-flex flex-shrink-0 items-center justify-center gap-2 self-center rounded-full border border-border/30 bg-background px-5 py-2.5 font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
         >
-          <Upload className="w-5 h-5" />
-          <span>Try it Out</span>
-        </button>
+          Try ArDrive
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </a>
       </section>
 
     </div>
   );
 };
+
+/**
+ * A distinct, terminal-styled call-out for AI agents / LLM builders: the ar.io
+ * docs are published as one plain-text file (llms-full.txt) sized for context
+ * windows, and an agent can claim a permanent name/dataset/API at an ArNS name.
+ */
+function AgentDocsSection() {
+  const [copied, setCopied] = useState(false);
+  const cmd = 'curl https://docs.ar.io/llms-full.txt';
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-foreground/20 bg-foreground text-white shadow-lg">
+      <div className="grid items-center gap-8 p-6 sm:p-10 lg:grid-cols-2">
+        {/* Pitch */}
+        <div>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1">
+            <Terminal className="h-3.5 w-3.5 text-lavender" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/60">
+              For AI agents &amp; LLMs
+            </span>
+          </div>
+          <h2 className="mb-3 font-heading text-2xl font-bold sm:text-3xl">Point your agent at ar.io</h2>
+          <p className="mb-5 max-w-md text-sm leading-relaxed text-white/70 sm:text-base">
+            The entire ar.io documentation as one plain-text file — sized for LLM context
+            windows and autonomous agents. Then give your agent a permanent home it owns:
+            a name, dataset, and API, all under one ArNS name.
+          </p>
+          <a
+            href="https://docs.ar.io/llms-full.txt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-80"
+          >
+            Read llms-full.txt <ArrowRight className="h-3.5 w-3.5" />
+          </a>
+        </div>
+
+        {/* Terminal — mirrors the hero "Quick Start" snippet chrome (traffic
+            lights, bash label, $ prompt + cursor). Uses a black-tinted surface
+            rather than bg-code-surface, which is #23232D — identical to this
+            section's bg-foreground and would render invisible here. */}
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30 font-mono shadow-2xl">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+            <div className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-full bg-error/80" />
+              <span className="h-3 w-3 rounded-full bg-warning/80" />
+              <span className="h-3 w-3 rounded-full bg-success/80" />
+            </div>
+            <div className="flex-1 text-center">
+              <span className="text-[10px] uppercase tracking-wider text-white/50">bash</span>
+            </div>
+            <button
+              type="button"
+              onClick={copy}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition-all hover:bg-white/10"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-white" />
+                  <span className="text-white">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-white/50" />
+                  <span className="text-white/50">Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="px-4 py-3.5 text-sm">
+            <div className="flex items-center">
+              <span className="select-none text-white/70">$</span>
+              <span className="ml-2 break-all text-white">{cmd}</span>
+              <span className="ml-1 animate-[blink_1s_infinite] text-white/50">|</span>
+            </div>
+            <div className="mt-2.5 text-[12px] leading-relaxed text-white/40">
+              <span className="text-success">200 OK</span> — the complete docs, in plain text,
+              ready to drop into a prompt.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default LandingPage;

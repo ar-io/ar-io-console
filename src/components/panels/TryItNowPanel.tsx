@@ -528,7 +528,7 @@ export default function TryItNowPanel() {
           </div>
           <h4 className="text-lg font-semibold font-heading text-foreground mb-2">Free Uploads Not Available</h4>
           <p className="text-sm text-foreground/80 max-w-md mx-auto">
-            The current bundler doesn't support free uploads. Connect a wallet to purchase credits,
+            The current bundler doesn't support free uploads. Sign in to purchase credits,
             or try a different gateway that offers free uploads.
           </p>
         </div>

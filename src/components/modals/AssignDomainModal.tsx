@@ -187,15 +187,15 @@ export default function AssignDomainModal({
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-foreground/60 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-sm font-medium text-foreground mb-1">No ArNS names found</div>
+                    <div className="text-sm font-medium text-foreground mb-1">No domains yet</div>
                     <div className="text-sm text-foreground/80 mb-3">
-                      You need to own an ArNS name first. You can purchase names from the AR.IO Network.
+                      Register a domain at arns.ar.io, then assign it here.
                     </div>
                     <button
-                      onClick={() => window.open('https://ar.io/arns', '_blank')}
+                      onClick={() => window.open('https://arns.ar.io', '_blank')}
                       className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
                     >
-                      Learn More About ArNS
+                      Register a domain
                     </button>
                   </div>
                 </div>

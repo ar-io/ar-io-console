@@ -8,9 +8,11 @@ export function Layout() {
     <div
       className="min-h-screen text-foreground flex flex-col"
       style={{
-        // Page background: white fading to lavender (matches ar.io public site)
-        // 4-stop gradient: white solid (0-33%), transition (33-66%), lavender solid (66-100%)
+        // Page background: white fading to lavender (matches ar.io public site).
+        // Anchored to the viewport (fixed) so growing/expanding content doesn't
+        // restretch the gradient — the white band and lavender stay put.
         background: 'linear-gradient(to bottom, rgb(255 255 255) 0%, rgb(255 255 255) 33%, rgb(223 214 247) 66%, rgb(223 214 247) 100%)',
+        backgroundAttachment: 'fixed',
       }}
     >
       {/* Announcement Banner */}

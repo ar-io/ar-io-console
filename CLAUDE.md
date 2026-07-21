@@ -21,12 +21,13 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- No test framework configured
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is intentionally narrow — pure logic only: `src/utils/topupDeepLink.test.ts` plus the Pages suites under `src/features/pages/` (`schema.test.ts`, `render/renderPageHtml.test.ts`, `publish/*.test.ts`, and `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts`, which auto-run over every template). Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
 - BrowsePage is lazy-loaded (`React.lazy`) to isolate wayfinder dependencies
 - `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
+- `vite-plugin-pwa` (`VitePWA` in `vite.config.ts`) is configured in `injectManifest` mode purely to compile the Browse service worker (`src/features/browse/service-worker/service-worker.ts`) — `manifest: false`, no offline app caching. It is the build mechanism for the Browse verification SW, not a general PWA setup.
 
 ## Critical Gotchas
 
@@ -52,6 +53,10 @@ Before diving in, these are the most common issues:
 7. **TypeScript strict mode**: The codebase uses `strict: true`. Handle nullable types explicitly; avoid `!` assertions unless certain.
 
 8. **Async wallet operations may fail**: Always wrap `createEthereumTurboClient()`, `fundAndUpload()`, and similar async wallet operations in try/catch blocks with user-friendly error handling.
+
+9. **Per-data-item fee in cost math**: Turbo's newer pricing adds a fixed per-item fee on top of storage. Every cost calculation (Upload, Deploy, Capture) must add `Number(usePerDataItemFee())` in winc **per billable data item** — folder uploads incur it per file. The hook returns `string | undefined`; guard before adding.
+
+10. **Free tier has two axes**: `useFreeUploadLimit()` returns `{ freeUploadLimitBytes, freeTier }`. `freeUploadLimitBytes` (== `freeTier.maxItemBytes`) is the per-item size cap used by `isFileFree()`. `freeTier.lifetimeBytes` / `freeTier.ipBytes` are separate lifetime/IP quotas (0 = uncapped) shown in UI messaging — don't conflate them with the per-item limit.
 
 ## Architecture Overview
 
@@ -151,9 +156,9 @@ The Verify tool (`/verify`) lets users verify permaweb transaction authenticity 
 
 ### Configuration System
 
-Three modes via `configMode` in store:
+Three modes via `configMode` in store (`ConfigMode = 'production' | 'development' | 'custom'`):
 - **production**: Mainnet endpoints, production Stripe key
-- **development**: Testnet/devnet endpoints, test Stripe key
+- **development**: Testnet/devnet endpoints, test Stripe key. Note: the store value is still `'development'`, but the UI labels it **"Testnet"** (Header shows `TESTNET MODE`, GatewayInfoPanel shows a testnet faucet link). Don't rename the enum expecting the label to follow.
 - **custom**: User-defined for testing
 
 Config includes: `paymentServiceUrl`, `uploadServiceUrl`, `captureServiceUrl`, `verifyApiUrl`, `arioGatewayUrl`, `stripeKey`, `processId`, `tokenMap`.
@@ -399,16 +404,21 @@ if (privyWallet) {
 - `zustand`: State management
 - `@tanstack/react-query`: Server state
 - `@stripe/react-stripe-js`: Fiat payments
+- `hash-wasm`: Content hashing for Smart Deploy dedup (`fileHashCache`)
+- `vite-plugin-pwa`: Compiles the Browse verification service worker (see Quick Start note)
+- `vitest`: Unit test runner (pure-logic tests only)
 
 ## Routes
 
 ```typescript
-'/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share', '/gift',
-'/account', '/domains', '/calculator', '/services-calculator', '/balances', '/redeem',
+'/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share',
+'/account', '/domains', '/calculator', '/services-calculator', '/balances',
 '/settings', '/try', '/browse', '/verify'
 ```
 
 Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unknown routes redirect to home.
+
+**Deprecated/disabled routes:** `/gift` and `/redeem` are commented out in `App.tsx` (gifting was deprecated in favor of manual TX recovery on the top-up page). `GiftPage.tsx`/`RedeemPage.tsx` still exist but are not routed — don't wire them back up without checking why they were removed.
 
 URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx), `?tx=<txId>` (deep link for Verify page)
 
@@ -430,11 +440,12 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 - `useFileUpload()` - Multi-chain file upload logic
 - `useFolderUpload()` - Folder upload with manifest generation
 - `useX402Upload()` - X402 protocol uploads
-- `useFreeUploadLimit()` - Fetch bundler's free upload limit
+- `useFreeUploadLimit()` - Fetch bundler's free tier; returns `{ freeUploadLimitBytes, freeTier }` (see Gotcha #10)
 - `useUploadStatus()` - Track upload confirmation/finalization status
 
 **Pricing Hooks:**
 - `useWincForOneGiB()` - Storage pricing (returns `string | undefined`!)
+- `usePerDataItemFee()` - Fixed per-data-item fee in winc from `/v1/rates` (returns `string | undefined`!); add to every cost calc — see Gotcha #9
 - `useCreditsForFiat(usdAmount, address)` - USD → credits conversion
 - `useCreditsForCrypto(tokenType, amount, address)` - Crypto → credits conversion
 - `useX402Pricing(bytes)` - Calculate USDC cost for X402

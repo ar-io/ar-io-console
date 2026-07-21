@@ -29,6 +29,8 @@ export interface ActiveUpload {
   name: string;
   progress: number;
   size: number;
+  /** True once bytes are fully sent and we're waiting on the bundler to finalize. */
+  finalizing?: boolean;
 }
 
 export interface RecentFile {
@@ -268,6 +270,8 @@ export function useFileUpload() {
       jitBufferMultiplier?: number;
       customTags?: Array<{ name: string; value: string }>;
       selectedJitToken?: SupportedTokenType; // Selected JIT payment token
+      /** Byte-transfer progress (0-100). Reaches 100 while the bundler finalizes. */
+      onProgress?: (percentage: number) => void;
     }
   ) => {
     if (!address) {
@@ -396,10 +400,15 @@ export function useFileUpload() {
             onProgress: (progressData: { totalBytes: number; processedBytes: number; step?: string }) => {
               const { totalBytes, processedBytes } = progressData;
               const percentage = Math.round((processedBytes / totalBytes) * 100);
+              // Bytes are all sent at 100%, but the promise doesn't resolve until the
+              // bundler finalizes the data item — flag it so the UI can say "Finalizing…"
+              // instead of sitting on a frozen 100% (see Turbo SDK chunked finalize poll).
+              const finalizing = percentage >= 100;
               setUploadProgress(prev => ({ ...prev, [fileName]: percentage }));
               setActiveUploads(prev => prev.map(upload =>
-                upload.name === fileName ? { ...upload, progress: percentage } : upload
+                upload.name === fileName ? { ...upload, progress: percentage, finalizing } : upload
               ));
+              options?.onProgress?.(percentage);
             },
             onError: (error: any) => {
               console.error('[useFileUpload] onError callback:', error);
@@ -436,7 +445,13 @@ export function useFileUpload() {
             events: {
               onProgress: (progressData: { totalBytes: number; processedBytes: number }) => {
                 const percentage = Math.round((progressData.processedBytes / progressData.totalBytes) * 100);
-                setUploadProgress(prev => ({ ...prev, [fileName]: 20 + percentage * 0.8 }));
+                const scaled = Math.round(20 + percentage * 0.8);
+                const finalizing = percentage >= 100;
+                setUploadProgress(prev => ({ ...prev, [fileName]: scaled }));
+                setActiveUploads(prev => prev.map(upload =>
+                  upload.name === fileName ? { ...upload, progress: scaled, finalizing } : upload
+                ));
+                options?.onProgress?.(percentage);
               },
               onError: (error: any) => {
                 console.error('[useFileUpload] Mobile upload error:', error);

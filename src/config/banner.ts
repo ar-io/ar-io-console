@@ -10,20 +10,23 @@ export interface BannerConfig {
     text: string;
     href: string;
     external?: boolean;
+    /** React Router navigation state for internal links (external links ignore it). */
+    state?: Record<string, unknown>;
   };
   variant: 'subtle' | 'prominent'; // subtle = lavender, prominent = purple
 }
 
 export const BANNER_CONFIG: BannerConfig = {
-  enabled: false,
-  id: 'solana-migration-apr-2026',
-  message: 'Ar.io has migrated to Solana! Manage your migrated assets with connected Solana wallets.',
+  enabled: true,
+  id: 'pages-launch-2026',
+  message: 'New — build a permanent link-in-bio page, live in seconds.',
   link: {
-    text: 'Learn More',
-    href: 'https://ar.io/solana-migration/',
-    external: true,
+    text: 'Try Pages',
+    href: '/pages',
+    state: { create: true },
+    external: false,
   },
-  variant: 'prominent',
+  variant: 'subtle',
 };
 
 // LocalStorage key for tracking dismissed banners

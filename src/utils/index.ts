@@ -169,6 +169,15 @@ export const getGatewayBaseUrl = (): string => {
   return baseUrl;
 };
 
+/**
+ * Open the sign-in (wallet selection) modal from anywhere. The Header listens for
+ * the `open-signin` event and shows the one wallet modal, so any CTA ("Sign in
+ * to …") can trigger sign-in without owning its own modal.
+ */
+export const promptSignIn = (): void => {
+  window.dispatchEvent(new CustomEvent('open-signin'));
+};
+
 export const getArweaveUrl = (txId: string, dataCaches?: string[]): string => {
   // If dataCaches is provided and has entries, use the first one as the gateway
   // This ensures users browse to a gateway that actually has the bundled data

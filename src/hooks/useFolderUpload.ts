@@ -46,6 +46,8 @@ export interface ActiveUpload {
   name: string;
   progress: number;
   size: number;
+  /** True once bytes are fully sent and the bundler is finalizing the upload. */
+  finalizing?: boolean;
 }
 
 export interface RecentFile {
@@ -433,10 +435,11 @@ export function useFolderUpload() {
             // Track progress for individual files
             onProgress: ({ totalBytes, processedBytes }: { totalBytes: number; processedBytes: number }) => {
               const percentage = Math.round((processedBytes / totalBytes) * 100);
+              const finalizing = percentage >= 100;
               setFileProgress(prev => ({ ...prev, [file.name]: percentage }));
               // Update active upload progress
               setActiveUploads(prev => prev.map(u =>
-                u.name === file.name ? { ...u, progress: percentage } : u
+                u.name === file.name ? { ...u, progress: percentage, finalizing } : u
               ));
             },
             onError: (error: any) => {
@@ -444,8 +447,9 @@ export function useFolderUpload() {
             },
             onSuccess: () => {
               // Progress is already tracked by onProgress, just ensure it's at 100%
+              // and clear the finalizing flag now that the bundler has confirmed.
               setActiveUploads(prev => prev.map(u =>
-                u.name === file.name ? { ...u, progress: 100 } : u
+                u.name === file.name ? { ...u, progress: 100, finalizing: false } : u
               ));
             }
           }
@@ -696,7 +700,7 @@ export function useFolderUpload() {
 
             // Mark file as complete in active uploads (keep at 100%)
             setActiveUploads(prev => prev.map(u =>
-              u.name === file.name ? { ...u, progress: 100 } : u
+              u.name === file.name ? { ...u, progress: 100, finalizing: false } : u
             ));
 
             // Don't remove completed files - they'll be cleared when next batch starts
@@ -739,7 +743,7 @@ export function useFolderUpload() {
 
             // Mark as failed in active uploads (set to -1 to indicate error)
             setActiveUploads(prev => prev.map(u =>
-              u.name === file.name ? { ...u, progress: -1 } : u
+              u.name === file.name ? { ...u, progress: -1, finalizing: false } : u
             ));
 
             // Don't remove failed files - they'll be cleared when next batch starts
