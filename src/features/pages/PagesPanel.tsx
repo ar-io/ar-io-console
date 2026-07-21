@@ -49,7 +49,7 @@ export default function PagesPanel() {
   const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
   const configMode = useStore((s) => s.configMode);
 
-  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
   const wincForOneGiB = useWincForOneGiB();
   const perDataItemFeeWinc = usePerDataItemFee();
   const { publish, repointArNS, reset: resetPublish, publishing, stage, error } = usePagePublish();
@@ -609,7 +609,6 @@ export default function PagesPanel() {
           }}
           onConfirm={handleConfirmPublish}
           freeUploadLimitBytes={freeUploadLimitBytes}
-          lifetimeFreeBytes={freeTier.lifetimeBytes}
           wincForOneGiB={wincForOneGiB}
           perDataItemFeeWinc={perDataItemFeeWinc}
           creditBalance={creditBalance}

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { AlertTriangle, ExternalLink, Info, Loader2, Rocket, Sparkles } from 'lucide-react';
 import BaseModal from '@/components/modals/BaseModal';
 import { tokenLabels, type SupportedTokenType } from '@/constants';
-import { isFileFree, formatFreeLimit } from '@/hooks/useFreeUploadLimit';
+import { isFileFree } from '@/hooks/useFreeUploadLimit';
 import { supportsJitPayment } from '@/utils/jitPayment';
 import type { PageDef } from '../schema';
 import type { RenderCtx } from '../render/renderPageHtml';
@@ -28,8 +28,6 @@ interface PublishModalProps {
   onConfirm: (opts: { jitEnabled: boolean; selectedJitToken: SupportedTokenType }) => void;
   // pricing inputs
   freeUploadLimitBytes: number;
-  /** Lifetime free-tier quota in bytes (0 = uncapped). Free is quota-limited, not guaranteed. */
-  lifetimeFreeBytes?: number;
   wincForOneGiB?: string;
   perDataItemFeeWinc?: string;
   creditBalance: number;
@@ -69,7 +67,6 @@ export default function PublishModal({
   onClose,
   onConfirm,
   freeUploadLimitBytes,
-  lifetimeFreeBytes = 0,
   wincForOneGiB,
   perDataItemFeeWinc,
   creditBalance,
@@ -189,7 +186,7 @@ export default function PublishModal({
             <span className="text-xs text-foreground/70">Cost</span>
             {free ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success">
-                <Sparkles className="h-3.5 w-3.5" /> Free · Permanent
+                <Sparkles className="h-3.5 w-3.5" /> Permanent
               </span>
             ) : creditsKnown ? (
               <span className="text-sm font-medium text-foreground">{credits.toFixed(6)} Credits</span>
@@ -197,19 +194,6 @@ export default function PublishModal({
               <span className="text-sm text-foreground/70">Calculating…</span>
             )}
           </div>
-
-          {free && (
-            <p className="mt-1.5 text-xs text-foreground/50">
-              {lifetimeFreeBytes > 0 ? (
-                <>
-                  Free within your {formatFreeLimit(lifetimeFreeBytes)} lifetime free tier. Once
-                  that&rsquo;s used up, pages are paid by size plus a small per-item fee.
-                </>
-              ) : (
-                <>Under the {formatFreeLimit(freeUploadLimitBytes)} free tier — no credits needed.</>
-              )}
-            </p>
-          )}
 
           {billable && creditsKnown && (
             <>

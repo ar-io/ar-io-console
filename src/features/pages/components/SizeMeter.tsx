@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { AlertTriangle, Sparkles } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { isFileFree } from '@/hooks/useFreeUploadLimit';
 import { MAX_PAGE_BYTES, estimatePageCredits } from '../publish/cost';
 
@@ -19,8 +19,10 @@ function formatBytes(n: number): string {
 
 /**
  * Live page-size feedback in the editor: how big the page is against the hard
- * 2 MB single-item ceiling, and whether publishing it is free or costs credits —
- * so the user learns the cost while editing, not only at the publish modal.
+ * 2 MB single-item ceiling, and — only when it actually costs credits — the
+ * estimated cost, so the user learns the cost while editing, not only at the
+ * publish modal. We deliberately don't claim "free": the client can't see the
+ * lifetime free-tier balance, so a "free" label could be wrong once it's spent.
  */
 export default function SizeMeter({
   sizeBytes,
@@ -37,7 +39,7 @@ export default function SizeMeter({
   );
   const creditsKnown = Number.isFinite(credits);
   const pct = Math.min(100, Math.max(1, (sizeBytes / MAX_PAGE_BYTES) * 100));
-  const barColor = overCeiling ? 'bg-error' : free ? 'bg-success' : 'bg-primary';
+  const barColor = overCeiling ? 'bg-error' : 'bg-primary';
 
   return (
     <div className={`rounded-2xl border border-border/20 bg-card p-3 ${className ?? ''}`}>
@@ -48,23 +50,20 @@ export default function SizeMeter({
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
         <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="mt-1.5 text-xs">
-        {overCeiling ? (
-          <span className="inline-flex items-center gap-1 font-medium text-error">
-            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-            Over the {MAX_PAGE_BYTES / (1024 * 1024)} MB limit — shrink images to publish
-          </span>
-        ) : free ? (
-          <span className="inline-flex items-center gap-1 font-medium text-success">
-            <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
-            Free to publish
-          </span>
-        ) : creditsKnown ? (
-          <span className="text-foreground/70">≈ {credits.toFixed(6)} credits to publish</span>
-        ) : (
-          <span className="text-foreground/50">Calculating cost…</span>
-        )}
-      </div>
+      {(overCeiling || !free) && (
+        <div className="mt-1.5 text-xs">
+          {overCeiling ? (
+            <span className="inline-flex items-center gap-1 font-medium text-error">
+              <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+              Over the {MAX_PAGE_BYTES / (1024 * 1024)} MB limit — shrink images to publish
+            </span>
+          ) : creditsKnown ? (
+            <span className="text-foreground/70">≈ {credits.toFixed(6)} credits to publish</span>
+          ) : (
+            <span className="text-foreground/50">Calculating cost…</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
