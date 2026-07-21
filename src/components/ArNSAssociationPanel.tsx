@@ -308,7 +308,7 @@ export default function ArNSAssociationPanel({
                         )}
                       </Combobox.Button>
                     </div>
-                    <Combobox.Options className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-2xl bg-card border border-border/20 shadow-lg focus:outline-none">
+                    <Combobox.Options anchor="bottom" className="z-50 max-h-60 w-[var(--input-width)] overflow-auto rounded-2xl bg-card border border-border/20 shadow-lg focus:outline-none [--anchor-gap:4px]">
                       {filteredNames.length === 0 && nameQuery !== '' ? (
                         <div className="relative cursor-default select-none py-3 px-4 text-foreground/80">
                           No names found matching "{nameQuery}"
