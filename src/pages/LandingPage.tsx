@@ -94,8 +94,8 @@ const LandingPage = () => {
       name: 'Pages',
       icon: LayoutTemplate,
       title: 'Build a Permanent Link-in-Bio Page',
-      description: 'Create a link-in-bio page in seconds and publish it permanently to Arweave — no code, no files. Pick from 16 designer templates, edit with a live preview, and give it a domain name.',
-      benefits: ['16 designer templates', 'Live preview editor', 'Permanent & versioned', 'Memorable domain name'],
+      description: 'Create a link-in-bio page in seconds and publish it permanently to Arweave — no code, no files. Pick from dozens of designer templates, edit with a live preview, and give it a domain name.',
+      benefits: ['30+ designer templates', 'Live preview editor', 'Permanent & versioned', 'Memorable domain name'],
       action: 'pages',
       loginText: 'Create a Page',
       connectText: 'Sign in to Create'

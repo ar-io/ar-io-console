@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ButtonShape, HeaderAlign, LinkStyle, PageWidth, Theme } from '../../schema';
 import type { ControlProps } from './types';
 import { FieldLabel, SegmentedControl } from './primitives';
 import { BUTTON_SHAPES, FONT_OPTIONS, matchPresetId, THEME_PRESETS } from '../themePresets';
+import { getThemeSupport, type ThemeAxis } from '../../render/themeSupport';
 
 export default function ThemeControls({ def, update }: ControlProps) {
   const theme = def.theme;
@@ -10,13 +11,22 @@ export default function ThemeControls({ def, update }: ControlProps) {
   const activePreset = matchPresetId(theme);
   const activeFont = FONT_OPTIONS.find((f) => f.value === theme.font)?.id ?? '';
 
+  // Show only the controls this template actually responds to — several "designed"
+  // templates bake parts of their palette/layout, so their sliders would be dead.
+  // Support is detected empirically from the template (see themeSupport), so it can
+  // never drift from the template code, and auto-appears if a template gains an axis.
+  const support = useMemo(() => getThemeSupport(def.template), [def.template]);
+  const has = (axis: ThemeAxis) => support.has(axis);
+  const showColors = has('accent') || has('bg') || has('surface') || has('text');
+  const showLayout = has('headerAlign') || has('linkStyle') || has('width');
+
   const setTheme = (patch: Partial<Theme>) => update((d) => ({ ...d, theme: { ...d.theme, ...patch } }));
   const setColors = (patch: Partial<Theme['colors']>) =>
     update((d) => ({ ...d, theme: { ...d.theme, colors: { ...d.theme.colors, ...patch } } }));
 
   return (
     <div className="space-y-5">
-      {/* Presets */}
+      {/* Presets — always available (the quick "pick a look" path) */}
       <div>
         <FieldLabel>Preset</FieldLabel>
         <div className="grid grid-cols-3 gap-2">
@@ -44,79 +54,112 @@ export default function ThemeControls({ def, update }: ControlProps) {
         </div>
       </div>
 
-      {/* Colors */}
-      <div className="grid grid-cols-2 gap-3">
-        <ColorField label="Accent" value={theme.colors.accent} onChange={(v) => setColors({ accent: v })} />
-        <ColorField label="Background" value={theme.colors.bg} onChange={(v) => setColors({ bg: v })} />
-        <ColorField label="Surface" value={theme.colors.surface} onChange={(v) => setColors({ surface: v })} />
-        <ColorField label="Text" value={theme.colors.text} onChange={(v) => setColors({ text: v })} />
-      </div>
+      {/* Colors — only the axes this template honors */}
+      {showColors && (
+        <div>
+          <div className="grid grid-cols-2 gap-3">
+            {has('accent') && (
+              <ColorField label="Accent" value={theme.colors.accent} onChange={(v) => setColors({ accent: v })} />
+            )}
+            {has('bg') && (
+              <ColorField label="Background" value={theme.colors.bg} onChange={(v) => setColors({ bg: v })} />
+            )}
+            {has('surface') && (
+              <ColorField label="Surface" value={theme.colors.surface} onChange={(v) => setColors({ surface: v })} />
+            )}
+            {has('text') && (
+              <ColorField label="Text" value={theme.colors.text} onChange={(v) => setColors({ text: v })} />
+            )}
+          </div>
+          {!has('bg') && !has('surface') && !has('text') && (
+            <p className="mt-2 text-[11px] text-foreground/50">
+              This template&rsquo;s background, surface and text are baked into its design
+              {has('font') ? ' — accent and font stay adjustable.' : ' — the accent stays adjustable.'}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Font */}
-      <div>
-        <FieldLabel>Font</FieldLabel>
-        <SegmentedControl
-          value={activeFont}
-          options={FONT_OPTIONS.map((f) => ({ value: f.id, label: f.label }))}
-          onChange={(id) => {
-            const font = FONT_OPTIONS.find((f) => f.id === id);
-            if (font) setTheme({ font: font.value });
-          }}
-        />
-      </div>
-
-      {/* Button shape */}
-      <SegmentedControl<ButtonShape>
-        label="Button shape"
-        value={theme.buttonShape}
-        options={BUTTON_SHAPES.map((s) => ({ value: s.id, label: s.label }))}
-        onChange={(v) => setTheme({ buttonShape: v })}
-      />
-
-      {/* Background style */}
-      <SegmentedControl
-        label="Background"
-        value={theme.background === 'gradient' ? 'gradient' : 'solid'}
-        options={[
-          { value: 'solid', label: 'Solid' },
-          { value: 'gradient', label: 'Gradient' },
-        ]}
-        onChange={(v) => setTheme({ background: v })}
-      />
-
-      <div className="border-t border-border/20 pt-4">
-        <FieldLabel>Layout</FieldLabel>
-        <div className="space-y-3">
-          <SegmentedControl<HeaderAlign>
-            label="Header align"
-            value={layout.headerAlign}
-            options={[
-              { value: 'center', label: 'Center' },
-              { value: 'left', label: 'Left' },
-            ]}
-            onChange={(v) => update((d) => ({ ...d, layout: { ...d.layout, headerAlign: v } }))}
-          />
-          <SegmentedControl<LinkStyle>
-            label="Link style"
-            value={layout.linkStyle}
-            options={[
-              { value: 'button', label: 'Button' },
-              { value: 'card', label: 'Card' },
-              { value: 'grid', label: 'Grid' },
-            ]}
-            onChange={(v) => update((d) => ({ ...d, layout: { ...d.layout, linkStyle: v } }))}
-          />
-          <SegmentedControl<PageWidth>
-            label="Width"
-            value={layout.width}
-            options={[
-              { value: 'standard', label: 'Standard' },
-              { value: 'wide', label: 'Wide' },
-            ]}
-            onChange={(v) => update((d) => ({ ...d, layout: { ...d.layout, width: v } }))}
+      {has('font') && (
+        <div>
+          <FieldLabel>Font</FieldLabel>
+          <SegmentedControl
+            value={activeFont}
+            options={FONT_OPTIONS.map((f) => ({ value: f.id, label: f.label }))}
+            onChange={(id) => {
+              const font = FONT_OPTIONS.find((f) => f.id === id);
+              if (font) setTheme({ font: font.value });
+            }}
           />
         </div>
-      </div>
+      )}
+
+      {/* Button shape */}
+      {has('buttonShape') && (
+        <SegmentedControl<ButtonShape>
+          label="Button shape"
+          value={theme.buttonShape}
+          options={BUTTON_SHAPES.map((s) => ({ value: s.id, label: s.label }))}
+          onChange={(v) => setTheme({ buttonShape: v })}
+        />
+      )}
+
+      {/* Background style */}
+      {has('background') && (
+        <SegmentedControl
+          label="Background"
+          value={theme.background === 'gradient' ? 'gradient' : 'solid'}
+          options={[
+            { value: 'solid', label: 'Solid' },
+            { value: 'gradient', label: 'Gradient' },
+          ]}
+          onChange={(v) => setTheme({ background: v })}
+        />
+      )}
+
+      {/* Layout */}
+      {showLayout && (
+        <div className="border-t border-border/20 pt-4">
+          <FieldLabel>Layout</FieldLabel>
+          <div className="space-y-3">
+            {has('headerAlign') && (
+              <SegmentedControl<HeaderAlign>
+                label="Header align"
+                value={layout.headerAlign}
+                options={[
+                  { value: 'center', label: 'Center' },
+                  { value: 'left', label: 'Left' },
+                ]}
+                onChange={(v) => update((d) => ({ ...d, layout: { ...d.layout, headerAlign: v } }))}
+              />
+            )}
+            {has('linkStyle') && (
+              <SegmentedControl<LinkStyle>
+                label="Link style"
+                value={layout.linkStyle}
+                options={[
+                  { value: 'button', label: 'Button' },
+                  { value: 'card', label: 'Card' },
+                  { value: 'grid', label: 'Grid' },
+                ]}
+                onChange={(v) => update((d) => ({ ...d, layout: { ...d.layout, linkStyle: v } }))}
+              />
+            )}
+            {has('width') && (
+              <SegmentedControl<PageWidth>
+                label="Width"
+                value={layout.width}
+                options={[
+                  { value: 'standard', label: 'Standard' },
+                  { value: 'wide', label: 'Wide' },
+                ]}
+                onChange={(v) => update((d) => ({ ...d, layout: { ...d.layout, width: v } }))}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

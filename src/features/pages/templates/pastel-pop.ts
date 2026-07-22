@@ -4,8 +4,10 @@
  * chips, and buttons with a gentle bouncy lift (translateY + scale) on hover.
  * Link `icon`s render as big emoji accents. Approachable and fun.
  *
- * Fully self-contained: a fixed, baked palette (no theme reads), CSS-gradient
- * backdrop only, system fonts, deterministic output.
+ * Fully self-contained: CSS-gradient backdrop only, deterministic output. The
+ * primary accent (`--purple`) is driven by `theme.colors.accent` and the type by
+ * `theme.font`, so the brand color + font are tunable while the playful pastel
+ * backdrop and pink secondary stay fixed.
  */
 
 import type {
@@ -20,9 +22,12 @@ import type { PagesTemplate, RenderCtx, RenderOutput } from '../render/renderPag
 import { safeHref } from '../render/escape';
 import {
   avatarInitials,
+  cssColor,
+  cssFontFamily,
   dataArAttr,
   escapeAttr,
   escapeHtml,
+  hexToRgba,
   linkTarget,
   multiline,
   resolveHandle,
@@ -92,12 +97,20 @@ function socialInitials(platform: string): string {
   return first ? escapeHtml(first) : '·';
 }
 
-const STYLE = `
+function buildStyle(def: PageDef): string {
+  const accent = cssColor(def.theme?.colors?.accent ?? '', '#b98cff');
+  const font = cssFontFamily(def.theme?.font ?? '', FONT);
+  // hexToRgba only parses #rgb/#rrggbb; cssColor also allows rgb()/named/8-digit,
+  // for which hexToRgba would yield rgba(0,0,0,α) and turn the shadows black. Fall
+  // back to the template's purple for any non-simple-hex accent.
+  const glowHex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(accent) ? accent : '#b98cff';
+  const glow = (a: number) => hexToRgba(glowHex, a);
+  return `
 .pg-${ID} {
   --ink: #4a3b63; --ink-soft: #7c6f92; --card: #ffffff;
-  --pink: #ff8fb1; --purple: #b98cff;
+  --pink: #ff8fb1; --purple: ${accent};
   position: relative; min-height: 100vh; color: var(--ink); background: #f3ecff;
-  font-family: ${FONT}; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  font-family: ${font}; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   overflow-x: hidden; isolation: isolate; color-scheme: light;
 }
 .pg-${ID} * { box-sizing: border-box; }
@@ -117,9 +130,9 @@ const STYLE = `
 .pg-${ID} .pg-avatar {
   width: 120px; height: 120px; margin: 0 auto 1.25rem; border-radius: 50%;
   display: grid; place-items: center; overflow: hidden;
-  background: linear-gradient(140deg, #ff8fb1, #b98cff);
+  background: linear-gradient(140deg, #ff8fb1, var(--purple));
   color: #fff; font-size: 2.6rem; font-weight: 800; text-transform: uppercase;
-  border: 5px solid #fff; box-shadow: 0 14px 30px -10px rgba(185,140,255,0.6);
+  border: 5px solid #fff; box-shadow: 0 14px 30px -10px ${glow(0.6)};
 }
 .pg-${ID} .pg-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 .pg-${ID} .pg-name {
@@ -144,7 +157,7 @@ const STYLE = `
   transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.28s ease, border-color 0.28s ease;
 }
 .pg-${ID} .pg-btn:hover {
-  transform: translateY(-4px) scale(1.02); border-color: var(--purple); box-shadow: 0 18px 30px -14px rgba(185,140,255,0.6);
+  transform: translateY(-4px) scale(1.02); border-color: var(--purple); box-shadow: 0 18px 30px -14px ${glow(0.6)};
 }
 .pg-${ID} .pg-btn-ico {
   flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 16px;
@@ -198,6 +211,7 @@ const STYLE = `
   .pg-${ID} .pg-btn:hover .pg-btn-arrow { transform: none; }
 }
 `.trim();
+}
 
 function renderHeader(def: PageDef, ctx: RenderCtx): string {
   const p = def.profile;
@@ -352,7 +366,7 @@ export const pastelPopTemplate: PagesTemplate = {
   },
   seed,
   render(def: PageDef, ctx: RenderCtx): RenderOutput {
-    return { body: renderBody(def, ctx), style: STYLE };
+    return { body: renderBody(def, ctx), style: buildStyle(def) };
   },
 };
 

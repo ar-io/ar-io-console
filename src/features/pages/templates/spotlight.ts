@@ -4,8 +4,9 @@
  * name and a tight one-line bio sit above clean full-width buttons whose fill
  * slides in from the left on hover. Generous whitespace, refined typography.
  *
- * Fully self-contained: a fixed, baked palette (no theme reads), CSS-gradient
- * lighting only, system fonts, deterministic output.
+ * Fully self-contained: CSS-gradient lighting only, deterministic output. The
+ * warm accent glow is driven by `theme.colors.accent` and the type by `theme.font`,
+ * so the brand color + font are tunable while the rest of the look stays fixed.
  */
 
 import type {
@@ -20,9 +21,12 @@ import type { PagesTemplate, RenderCtx, RenderOutput } from '../render/renderPag
 import { safeHref } from '../render/escape';
 import {
   avatarInitials,
+  cssColor,
+  cssFontFamily,
   dataArAttr,
   escapeAttr,
   escapeHtml,
+  hexToRgba,
   linkTarget,
   multiline,
   resolveHandle,
@@ -100,12 +104,21 @@ function socialInitials(platform: string): string {
   return first ? escapeHtml(first) : '·';
 }
 
-const STYLE = `
+function buildStyle(def: PageDef): string {
+  const accent = cssColor(def.theme?.colors?.accent ?? '', '#ffe9c9');
+  const font = cssFontFamily(def.theme?.font ?? '', FONT);
+  // hexToRgba only parses #rgb/#rrggbb; cssColor also allows rgb()/named/8-digit,
+  // for which hexToRgba would yield rgba(0,0,0,α) and turn the glows black. Fall
+  // back to the template's warm tone for any non-simple-hex accent.
+  const glowHex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(accent) ? accent : '#ffe9c9';
+  const glow = (a: number) => hexToRgba(glowHex, a);
+  return `
 .pg-${ID} {
   --bg: #0d0d11; --text: #f4f4f6; --muted: #9a9aa6;
-  --line: rgba(255,255,255,0.12); --btn: rgba(255,255,255,0.045); --spot: rgba(255,241,224,0.9);
+  --line: rgba(255,255,255,0.12); --btn: rgba(255,255,255,0.045);
+  --accent: ${accent}; --spot: ${glow(0.9)};
   position: relative; min-height: 100vh; color: var(--text); background: var(--bg);
-  font-family: ${FONT}; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  font-family: ${font}; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   overflow-x: hidden; isolation: isolate; color-scheme: dark;
 }
 .pg-${ID} * { box-sizing: border-box; }
@@ -121,7 +134,7 @@ const STYLE = `
 .pg-${ID} .pg-hero::before {
   content: ""; position: absolute; top: -14%; left: 50%; transform: translateX(-50%);
   width: min(30rem, 130%); aspect-ratio: 1 / 1; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,241,224,0.22), rgba(255,241,224,0.05) 40%, transparent 68%);
+  background: radial-gradient(circle, ${glow(0.22)}, ${glow(0.05)} 40%, transparent 68%);
   filter: blur(4px); z-index: -1; pointer-events: none;
 }
 .pg-${ID} .pg-avatar {
@@ -130,7 +143,7 @@ const STYLE = `
   background: linear-gradient(160deg, #26262e, #131318);
   color: #fff; font-size: 2.7rem; font-weight: 700; letter-spacing: 0.01em; text-transform: uppercase;
   border: 1px solid rgba(255,255,255,0.16);
-  box-shadow: 0 0 0 6px rgba(255,255,255,0.02), 0 20px 50px -18px rgba(0,0,0,0.9), 0 0 64px -14px rgba(255,241,224,0.28);
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.02), 0 20px 50px -18px rgba(0,0,0,0.9), 0 0 64px -14px ${glow(0.28)};
 }
 .pg-${ID} .pg-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 .pg-${ID} .pg-name {
@@ -145,9 +158,9 @@ const STYLE = `
   border: 1px solid var(--line); transition: border-color 0.3s ease, transform 0.3s ease;
 }
 .pg-${ID} .pg-handle .pg-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: #ffe9c9; box-shadow: 0 0 8px #ffd8a0; flex: 0 0 auto;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px ${glow(0.75)}; flex: 0 0 auto;
 }
-.pg-${ID} .pg-handle:hover { border-color: rgba(255,233,201,0.5); transform: translateY(-1px); }
+.pg-${ID} .pg-handle:hover { border-color: ${glow(0.5)}; transform: translateY(-1px); }
 .pg-${ID} .pg-bio {
   margin: 1.15rem auto 0; max-width: 28rem; color: var(--muted); font-size: 0.95rem; line-height: 1.6; text-align: center;
 }
@@ -195,7 +208,7 @@ const STYLE = `
   transition: border-color 0.3s ease, transform 0.3s ease, background 0.3s ease, color 0.3s ease;
 }
 .pg-${ID} .pg-social a:hover {
-  transform: translateY(-2px); border-color: rgba(255,233,201,0.5); background: rgba(255,241,224,0.1);
+  transform: translateY(-2px); border-color: ${glow(0.5)}; background: ${glow(0.1)};
 }
 .pg-${ID} .pg-figure { margin: 1.75rem 0 0; }
 .pg-${ID} .pg-img { display: block; width: 100%; height: auto; border-radius: 16px; border: 1px solid var(--line); }
@@ -210,7 +223,7 @@ const STYLE = `
 .pg-${ID} .pg-made {
   display: block; margin-top: 0.7rem; font-size: 0.72rem; color: rgba(255,255,255,0.28); letter-spacing: 0.04em;
 }
-.pg-${ID} a:focus-visible { outline: 2px solid #ffe9c9; outline-offset: 3px; border-radius: 12px; }
+.pg-${ID} a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 12px; }
 .pg-${ID} .pg-social a:focus-visible,
 .pg-${ID} .pg-handle:focus-visible,
 .pg-${ID} .pg-verify:focus-visible { border-radius: 999px; }
@@ -227,6 +240,7 @@ const STYLE = `
   .pg-${ID} .pg-btn:hover .pg-btn-arrow { transform: none; }
 }
 `.trim();
+}
 
 function renderHeader(def: PageDef, ctx: RenderCtx): string {
   const p = def.profile;
@@ -381,7 +395,7 @@ export const spotlightTemplate: PagesTemplate = {
   },
   seed,
   render(def: PageDef, ctx: RenderCtx): RenderOutput {
-    return { body: renderBody(def, ctx), style: STYLE };
+    return { body: renderBody(def, ctx), style: buildStyle(def) };
   },
 };
 

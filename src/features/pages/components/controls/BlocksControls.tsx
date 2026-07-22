@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Menu } from '@headlessui/react';
 import {
   AlignLeft,
@@ -18,6 +18,7 @@ import {
 import type { Block, BlockType, SocialBlock } from '../../schema';
 import type { ControlProps } from './types';
 import { TextAreaField, TextField } from './primitives';
+import { rendersLinkIcon } from '../../render/themeSupport';
 import { useListKeys } from './useListKeys';
 import { isArUrl, resolveArUrl } from '../../render/arResolve';
 import type { RenderCtx } from '../../render/renderPageHtml';
@@ -179,10 +180,12 @@ function BlockBody({
   block,
   onChange,
   ctx,
+  showLinkIcon,
 }: {
   block: Block;
   onChange: (next: Block) => void;
   ctx: RenderCtx;
+  showLinkIcon: boolean;
 }) {
   switch (block.type) {
     case 'link':
@@ -190,10 +193,12 @@ function BlockBody({
         <div className="space-y-3">
           <TextField label="Label" value={block.label} onChange={(v) => onChange({ ...block, label: v })} placeholder="My website" />
           <UrlField label="URL" value={block.url} onChange={(v) => onChange({ ...block, url: v })} ctx={ctx} />
-          <div>
-            <TextField label="Icon (emoji)" value={block.icon ?? ''} onChange={(v) => onChange({ ...block, icon: v || undefined })} placeholder="e.g. 🔗" />
-            <p className="mt-1 text-xs text-foreground/50">Optional — an emoji shown with the link.</p>
-          </div>
+          {showLinkIcon && (
+            <div>
+              <TextField label="Icon (emoji)" value={block.icon ?? ''} onChange={(v) => onChange({ ...block, icon: v || undefined })} placeholder="e.g. 🔗" />
+              <p className="mt-1 text-xs text-foreground/50">Optional — an emoji shown with the link.</p>
+            </div>
+          )}
         </div>
       );
     case 'social':
@@ -237,6 +242,8 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
   const blocks = def.blocks;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  // Some templates don't render a link's emoji icon — hide that field for them.
+  const showLinkIcon = useMemo(() => rendersLinkIcon(def.template), [def.template]);
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= blocks.length || from === to) return;
@@ -345,7 +352,7 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
 
               {expanded && (
                 <div className="border-t border-border/20 p-3">
-                  <BlockBody block={block} onChange={(next) => replace(id, next)} ctx={ctx} />
+                  <BlockBody block={block} onChange={(next) => replace(id, next)} ctx={ctx} showLinkIcon={showLinkIcon} />
                 </div>
               )}
             </li>

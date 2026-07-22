@@ -20,11 +20,21 @@ import { useStore, type PageVersion } from '@/store/useStore';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
+import { useFreeUploadLimit, isFileFree } from '@/hooks/useFreeUploadLimit';
 import type { SupportedTokenType } from '@/constants';
 import { getTokenConverter, supportsJitPayment } from '@/utils/jitPayment';
 import { validatePageDef, type PageDef } from '../schema';
 import { renderPageHtml } from '../render/renderPageHtml';
-import { buildPageTags, type Tag } from '../publish/tags';
+import { buildOgCardSvg } from '../render/ogCard';
+import { rasterizeSvgToPng } from '../publish/rasterizeOgCard';
+import { buildPageTags, buildOgImageTags, type Tag } from '../publish/tags';
+import {
+  buildPagesManifest,
+  buildManifestFile,
+  buildManifestTags,
+  ogImageUrlFor,
+  OG_IMAGE_PATH,
+} from '../publish/manifest';
 import { buildPageFile, computeDefHash, slugify } from '../publish/pageFile';
 import { renderCtxFor } from '../publish/renderCtx';
 import { arnsLabel, prepareDefForPublish, type ArnsTarget } from '../publish/permalink';
@@ -70,6 +80,8 @@ export function usePagePublish() {
   const updatePageArNS = useStore((s) => s.updatePageArNS);
   const jitMaxTokenAmount = useStore((s) => s.jitMaxTokenAmount);
   const jitBufferMultiplier = useStore((s) => s.jitBufferMultiplier);
+  const x402OnlyMode = useStore((s) => s.x402OnlyMode);
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { uploadFile } = useFileUpload();
   const { updateArNSRecord } = useOwnedArNSNames();
   const { hasArNSAccess } = useLinkedSolanaWallet();
@@ -191,9 +203,56 @@ export function usePagePublish() {
         // selfTxId intentionally omitted — unknown before upload (see module doc).
         const ctx = renderCtxFor(validated, { ...config, configMode }, { arnsName: permalinkLabel });
 
-        const publishDef = prepareDefForPublish(validated, permalinkLabel);
+        let publishDef = prepareDefForPublish(validated, permalinkLabel);
+
+        // Auto-generate a social-preview (OG) card so a shared page link renders a
+        // real preview image. Strictly best-effort and zero-cost: we only upload it
+        // when it fits the free tier (and never in x402-only mode, where every item
+        // is a separate paid upload). Runs first so its tx can go in the manifest
+        // and its URL can be baked into the page <head>. Note we build a fresh copy
+        // of publishDef — prepareDefForPublish may return the stored def by reference.
+        let socialTxId: string | undefined;
+        if (!x402OnlyMode && freeUploadLimitBytes > 0) {
+          try {
+            const ogPng = await rasterizeSvgToPng(buildOgCardSvg(publishDef));
+            if (ogPng && isFileFree(ogPng.size, freeUploadLimitBytes)) {
+              const ogFile = new File([ogPng], OG_IMAGE_PATH, { type: 'image/png' });
+              const ogResult = await Promise.race([
+                // .catch so a rejection AFTER the timeout wins isn't left unhandled.
+                uploadFile(ogFile, { customTags: buildOgImageTags(validated, nextVersion) }).catch(() => null),
+                new Promise<null>((r) => setTimeout(() => r(null), 20000)),
+              ]);
+              if (ogResult?.id) socialTxId = ogResult.id;
+            }
+          } catch {
+            // Publish without an OG preview image.
+          }
+        }
+
+        // Bake the preview URL into the page. A named page uses its own manifest
+        // path (`<name>.<host>/social.png`) — future-proof for gateways that may
+        // serve only ArNS names + manifest paths, not raw tx ids; an unnamed page
+        // falls back to the raw data-item URL. Set on the render copy only, never
+        // on the stored/hashed source def, so dedup is unaffected.
+        if (socialTxId) {
+          const ogImage = ogImageUrlFor({
+            socialTxId,
+            arnsLabel: permalinkLabel,
+            arnsHost: ctx.arnsHost,
+            gateway: ctx.gateway,
+          });
+          publishDef = { ...publishDef, meta: { ...(publishDef.meta ?? {}), ogImage } };
+        } else if (publishDef.meta?.ogImage) {
+          // No preview asset this publish (OG skipped/failed) → we deploy a bare index
+          // tx with no manifest. Drop any ogImage inherited from an imported def, or it
+          // would point at a /social.png path this deploy doesn't serve (a 404 preview).
+          const meta = { ...publishDef.meta };
+          delete meta.ogImage;
+          publishDef = { ...publishDef, meta };
+        }
+
         const html = renderPageHtml(publishDef, ctx);
-        const file = buildPageFile(html, slugify(validated.title));
+        const indexFile = buildPageFile(html, slugify(validated.title));
 
         setStage('uploading');
         const tags = buildPageTags(validated, nextVersion, options.customTags ?? []);
@@ -207,7 +266,7 @@ export function usePagePublish() {
             ? getTokenConverter(jitToken)?.(jitMaxTokenAmount[jitToken] ?? 0) ?? undefined
             : undefined;
 
-        const result = await uploadFile(file, {
+        const indexResult = await uploadFile(indexFile, {
           customTags: tags,
           jitEnabled: options.jitEnabled,
           selectedJitToken: options.selectedJitToken,
@@ -220,10 +279,28 @@ export function usePagePublish() {
           },
         });
 
+        // Deploy as an arweave/paths manifest when there's a preview asset, so the
+        // page and its social image share one tx and resolve by clean paths
+        // (`<name>.ar.io/` and `<name>.ar.io/social.png`). The manifest is tiny and
+        // free. It is NOT wrapped in a fallback: for a named page the baked
+        // og:image points at the manifest path, so a failed manifest would 404 the
+        // preview — better to fail the publish (old version stays live) and retry.
+        // With no preview asset we deploy the bare page tx (single file, no manifest).
+        let deployTxId = indexResult.id;
+        if (socialTxId) {
+          const manifestFile = buildManifestFile(
+            buildPagesManifest({ indexTxId: indexResult.id, socialTxId }),
+          );
+          const manifestResult = await uploadFile(manifestFile, {
+            customTags: buildManifestTags(validated, nextVersion),
+          });
+          deployTxId = manifestResult.id;
+        }
+
         const version: PageVersion = {
           version: nextVersion,
-          txId: result.id,
-          size: file.size,
+          txId: deployTxId,
+          size: indexFile.size,
           defHash,
           timestamp: Date.now(),
           ...(options.note ? { note: options.note } : {}),
@@ -245,7 +322,7 @@ export function usePagePublish() {
             try {
               const res = await updateArNSRecord(
                 options.arns.name,
-                result.id,
+                deployTxId,
                 options.arns.undername,
               );
               if (res.success) {
@@ -253,7 +330,7 @@ export function usePagePublish() {
                 updatePageArNS(pageId, {
                   name: options.arns.name,
                   undername: options.arns.undername,
-                  targetTxId: result.id,
+                  targetTxId: deployTxId,
                   arnsTxId: res.transactionId,
                 });
                 // Stamp the just-added version with the repoint tx (idempotent).
@@ -278,8 +355,8 @@ export function usePagePublish() {
           ok: true,
           pageId,
           version: nextVersion,
-          txId: result.id,
-          size: file.size,
+          txId: deployTxId,
+          size: indexFile.size,
           arnsUpdated,
           arnsError,
         };
@@ -293,7 +370,7 @@ export function usePagePublish() {
         inFlightRef.current = false;
       }
     },
-    [getCurrentConfig, configMode, getPage, addPageVersion, updatePageArNS, uploadFile, updateArNSRecord, hasArNSAccess, jitMaxTokenAmount, jitBufferMultiplier],
+    [getCurrentConfig, configMode, getPage, addPageVersion, updatePageArNS, uploadFile, updateArNSRecord, hasArNSAccess, jitMaxTokenAmount, jitBufferMultiplier, x402OnlyMode, freeUploadLimitBytes],
   );
 
   /**
