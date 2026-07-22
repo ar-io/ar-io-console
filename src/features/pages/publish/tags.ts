@@ -23,6 +23,19 @@ export function mergePageTags(defaultTags: Tag[], customTags: Tag[]): Tag[] {
   return [...customTags, ...nonOverridden];
 }
 
+/** Tags for the auto-generated social-preview (OG) image upload for a page. */
+export function buildOgImageTags(def: PageDef, version: number): Tag[] {
+  return [
+    { name: 'Deployed-By', value: APP_NAME },
+    { name: 'Deployed-By-Version', value: APP_VERSION },
+    { name: 'App-Feature', value: 'Pages' },
+    { name: 'Content-Type', value: 'image/png' },
+    { name: 'Type', value: 'page-preview' },
+    { name: 'Page-Id', value: def.id },
+    { name: 'Page-Version', value: String(version) },
+  ];
+}
+
 /** Standardized Pages tags (+ merged custom tags) for an HTML page upload. */
 export function buildPageTags(def: PageDef, version: number, customTags: Tag[] = []): Tag[] {
   const defaults: Tag[] = [
