@@ -104,6 +104,7 @@ function socialInitials(platform: string): string {
   return first ? escapeHtml(first) : '·';
 }
 
+/** Build spotlight's scoped CSS, driving the accent glow + font from the theme. */
 function buildStyle(def: PageDef): string {
   const accent = cssColor(def.theme?.colors?.accent ?? '', '#ffe9c9');
   const font = cssFontFamily(def.theme?.font ?? '', FONT);

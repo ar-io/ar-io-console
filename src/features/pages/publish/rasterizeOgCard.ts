@@ -12,6 +12,7 @@
  */
 import { OG_WIDTH, OG_HEIGHT } from '../render/ogCard';
 
+/** Rasterise an OG-card SVG string to a PNG Blob, or null on any failure. */
 export async function rasterizeSvgToPng(
   svg: string,
   width = OG_WIDTH,

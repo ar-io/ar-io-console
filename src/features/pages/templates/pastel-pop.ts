@@ -97,6 +97,7 @@ function socialInitials(platform: string): string {
   return first ? escapeHtml(first) : '·';
 }
 
+/** Build pastel-pop's scoped CSS, driving the purple accent + font from the theme. */
 function buildStyle(def: PageDef): string {
   const accent = cssColor(def.theme?.colors?.accent ?? '', '#b98cff');
   const font = cssFontFamily(def.theme?.font ?? '', FONT);

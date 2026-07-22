@@ -55,8 +55,10 @@ const ENUM_VALUES: Record<'buttonShape' | 'background' | 'headerAlign' | 'linkSt
   width: ['standard', 'wide'],
 };
 
+/** Deep-clone a PageDef so probe variants never mutate the seed. */
 const clone = (d: PageDef): PageDef => JSON.parse(JSON.stringify(d));
 
+/** Return a copy of the seed with a single theme/layout axis set to `value`. */
 function withAxis(seed: PageDef, axis: ThemeAxis, value: string): PageDef {
   const d = clone(seed);
   switch (axis) {
@@ -88,13 +90,17 @@ function withAxis(seed: PageDef, axis: ThemeAxis, value: string): PageDef {
   return d;
 }
 
-// The embedded PageDef JSON island echoes theme/layout verbatim, so it always
-// "changes" when we poison an axis. Strip it so we compare only rendered output.
+/**
+ * Strip the embedded PageDef JSON island — it echoes theme/layout verbatim, so it
+ * always "changes" when we poison an axis. Removing it leaves only rendered output.
+ */
 const stripIsland = (html: string): string =>
   html.replace(/<script id="ario-pagedef"[^>]*>[\s\S]*?<\/script>/i, '');
 
+/** Render a def and strip the JSON island, leaving only the CSS/markup to diff. */
 const renderStructural = (d: PageDef): string => stripIsland(renderPageHtml(d, PROBE_CTX));
 
+/** Whether changing a single theme axis alters the template's rendered output. */
 function axisHonored(seed: PageDef, axis: ThemeAxis): boolean {
   if (axis === 'bg' || axis === 'surface' || axis === 'text' || axis === 'accent') {
     return renderStructural(seed) !== renderStructural(withAxis(seed, axis, COLOR_POISON[axis]));
