@@ -164,8 +164,10 @@ export default function ThemeControls({ def, update }: ControlProps) {
   );
 }
 
+/** True for a 6-digit hex color string. */
 const isHexColor = (v: string) => /^#[0-9a-fA-F]{6}$/.test(v);
 
+/** A hex color input (swatch + text) that commits only valid values. */
 function ColorField({
   label,
   value,

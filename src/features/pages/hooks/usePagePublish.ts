@@ -72,6 +72,7 @@ export interface PublishResult {
   error?: string;
 }
 
+/** Hook exposing publish + ArNS repoint for the Pages editor (see module doc). */
 export function usePagePublish() {
   const getCurrentConfig = useStore((s) => s.getCurrentConfig);
   const configMode = useStore((s) => s.configMode);

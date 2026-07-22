@@ -80,6 +80,7 @@ function embedPageDef(def: PageDef): string {
   return JSON.stringify(def).replace(/</g, '\\u003c');
 }
 
+/** Render a PageDef to a complete, self-contained HTML document string. */
 export function renderPageHtml(def: PageDef, ctx: RenderCtx): string {
   const template = getTemplate(def.template);
   const { body, style } = template.render(def, ctx);

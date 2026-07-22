@@ -243,6 +243,7 @@ function buildStyle(def: PageDef): string {
 `.trim();
 }
 
+/** Render the profile header: avatar, name, tagline, handle, and bio. */
 function renderHeader(def: PageDef, ctx: RenderCtx): string {
   const p = def.profile;
   const handle = resolveHandle(def, ctx);
@@ -266,6 +267,7 @@ function renderHeader(def: PageDef, ctx: RenderCtx): string {
   return `<header class="pg-hero">${parts.join('')}</header>`;
 }
 
+/** Render a single link block as a button. */
 function renderButton(link: LinkBlock, ctx: RenderCtx): string {
   const t = linkTarget(link.url, ctx);
   const ico = link.icon
@@ -281,10 +283,12 @@ function renderButton(link: LinkBlock, ctx: RenderCtx): string {
   );
 }
 
+/** Render a run of consecutive link blocks as one button group. */
 function renderLinks(group: LinkBlock[], ctx: RenderCtx): string {
   return `<nav class="pg-links" aria-label="Links">${group.map((l) => renderButton(l, ctx)).join('')}</nav>`;
 }
 
+/** Render a social block as a row of platform links. */
 function renderSocial(block: SocialBlock, ctx: RenderCtx): string {
   const items = block.items
     .map((item) => {
@@ -299,6 +303,7 @@ function renderSocial(block: SocialBlock, ctx: RenderCtx): string {
   return `<ul class="pg-social" aria-label="Social links">${items}</ul>`;
 }
 
+/** Render an ar:// embed block as an inline permaweb link. */
 function renderEmbed(arweave: string, ctx: RenderCtx): string {
   const raw = arweave.trim();
   const url = raw.toLowerCase().startsWith('ar://') ? raw : `ar://${raw}`;
@@ -312,6 +317,7 @@ function renderEmbed(arweave: string, ctx: RenderCtx): string {
   );
 }
 
+/** Render the footer: the verify badge (when present) and the credit line. */
 function renderFooter(verifyBlock: VerifyBlock | undefined, ctx: RenderCtx): string {
   const v = verifyTarget(verifyBlock, ctx);
   const parts: string[] = [];
@@ -326,6 +332,7 @@ function renderFooter(verifyBlock: VerifyBlock | undefined, ctx: RenderCtx): str
   return `<footer class="pg-footer">${parts.join('')}</footer>`;
 }
 
+/** Assemble the page body from the header, blocks, and footer. */
 function renderBody(def: PageDef, ctx: RenderCtx): string {
   const blocks = def.blocks;
 

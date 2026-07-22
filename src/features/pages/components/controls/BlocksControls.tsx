@@ -23,6 +23,7 @@ import { useListKeys } from './useListKeys';
 import { isArUrl, resolveArUrl } from '../../render/arResolve';
 import type { RenderCtx } from '../../render/renderPageHtml';
 
+/** Generate a unique block id. */
 function newId(): string {
   const g = globalThis as { crypto?: { randomUUID?: () => string } };
   if (g.crypto && typeof g.crypto.randomUUID === 'function') return g.crypto.randomUUID();
@@ -40,10 +41,12 @@ const BLOCK_MENU: { type: BlockType; label: string; icon: typeof Link2; hint: st
   { type: 'verify', label: 'Verify badge', icon: BadgeCheck, hint: 'Permanent-on-Arweave link' },
 ];
 
+/** Look up the block-menu metadata (label/icon/hint) for a block type. */
 function metaFor(type: BlockType) {
   return BLOCK_MENU.find((m) => m.type === type) ?? BLOCK_MENU[0];
 }
 
+/** Create a new block of the given type with sensible defaults. */
 function newBlock(type: BlockType): Block {
   const id = newId();
   switch (type) {
@@ -66,6 +69,7 @@ function newBlock(type: BlockType): Block {
   }
 }
 
+/** A short human label for a block, shown in the editor list. */
 function blockTitle(block: Block): string {
   switch (block.type) {
     case 'link':
@@ -176,6 +180,7 @@ function SocialBlockFields({
   );
 }
 
+/** Editor fields for a single block, switched on its type. */
 function BlockBody({
   block,
   onChange,
