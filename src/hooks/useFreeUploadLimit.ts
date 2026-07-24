@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useStore } from '../store/useStore';
 
+/** The bundler's free-tier configuration (per-item size cap + lifetime/IP quotas). */
 export interface FreeTier {
   /** Max bytes per individual data item for free uploads */
   maxItemBytes: number;
@@ -87,6 +88,7 @@ export function useFreeUploadLimit() {
 // re-exported here so existing `../hooks/useFreeUploadLimit` import sites keep working.
 export { isFileFree } from '../utils/freeTier';
 
+/** The connected wallet's remaining free-tier allowance. */
 export interface FreeStatus {
   /**
    * The connected wallet's remaining free-tier bytes:

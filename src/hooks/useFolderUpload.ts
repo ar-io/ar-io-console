@@ -24,6 +24,7 @@ export interface DeduplicationStats {
   cachedSize: number;
   newSize: number;
   billableSize: number; // newSize minus files under free limit
+  billableFiles: number; // new files that are NOT free — the ones that incur the per-item fee
 }
 
 interface DeployResult {
@@ -187,6 +188,7 @@ export function useFolderUpload() {
       let newFilesCount = 0;
       let newSize = 0;
       let billableSize = 0;
+      let billableFilesCount = 0;
 
       files.forEach(file => {
         const path = file.webkitRelativePath || file.name;
@@ -202,6 +204,7 @@ export function useFolderUpload() {
           // Only add to billable if over free limit
           if (!isFileFree(file.size, freeUploadLimitBytes, bytesRemaining)) {
             billableSize += file.size;
+            billableFilesCount++;
           }
         }
       });
@@ -213,6 +216,7 @@ export function useFolderUpload() {
         cachedSize,
         newSize,
         billableSize,
+        billableFiles: billableFilesCount,
       });
       setHashingStage('complete');
     } catch (error) {
@@ -228,10 +232,12 @@ export function useFolderUpload() {
       // Calculate billable size for all files (fallback when hashing fails)
       let totalSizeCalc = 0;
       let billableSize = 0;
+      let billableFilesCount = 0;
       files.forEach(f => {
         totalSizeCalc += f.size;
         if (!isFileFree(f.size, freeUploadLimitBytes, bytesRemaining)) {
           billableSize += f.size;
+          billableFilesCount++;
         }
       });
       setDeduplicationStats({
@@ -241,6 +247,7 @@ export function useFolderUpload() {
         cachedSize: 0,
         newSize: totalSizeCalc,
         billableSize,
+        billableFiles: billableFilesCount,
       });
       setHashingStage('complete');
     }

@@ -1407,7 +1407,7 @@ export default function DeploySitePanel() {
     // This accounts for cached files being skipped
     if (smartDeployEnabled && deduplicationStats) {
       const gibSize = deduplicationStats.billableSize / (1024 ** 3);
-      const billableFileCount = deduplicationStats.newFiles ?? Array.from(selectedFolder).filter(f => !isFileFree(f.size, freeUploadLimitBytes, bytesRemaining)).length;
+      const billableFileCount = deduplicationStats.billableFiles ?? Array.from(selectedFolder).filter(f => !isFileFree(f.size, freeUploadLimitBytes, bytesRemaining)).length;
       const totalWinc = gibSize * Number(wincForOneGiB) + billableFileCount * itemFee;
       return totalWinc / wincPerCredit;
     }
@@ -3076,7 +3076,9 @@ export default function DeploySitePanel() {
                                     {/* Row 3: Cost + Deploy Timestamp */}
                                     <div className="flex items-center gap-2 text-sm text-foreground/80">
                                       <span>
-                                        {isFileFree(file.size, freeUploadLimitBytes, bytesRemaining) ? (
+                                        {/* Completed deploy: label from the fixed size cap, not the
+                                            current allowance (which mutates and would flip past records). */}
+                                        {isFileFree(file.size, freeUploadLimitBytes) ? (
                                           <span className="text-success">FREE</span>
                                         ) : wincForOneGiB ? (
                                           `${(((file.size / (1024 ** 3)) * Number(wincForOneGiB) + (perDataItemFeeWinc ? Number(perDataItemFeeWinc) : 0)) / wincPerCredit).toFixed(6)} Credits`

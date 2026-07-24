@@ -853,7 +853,9 @@ export default function CapturePanel() {
                         <div className="flex items-center gap-2 text-sm text-foreground/80">
                           <span>
                             {(() => {
-                              if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes, bytesRemaining)) {
+                              // Completed capture: label from the fixed size cap, not the
+                              // current allowance (which mutates and would flip past records).
+                              if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
                                 return <span className="text-success">FREE</span>;
                               } else if (wincForOneGiB && result.winc) {
                                 const credits = Number(result.winc) / wincPerCredit;
