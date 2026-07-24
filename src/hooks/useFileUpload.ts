@@ -147,7 +147,6 @@ export function useFileUpload() {
     const turboConfig = {
       paymentServiceConfig: { url: config.paymentServiceUrl },
       uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
     };
 
     // Get turbo config based on the token type (use override if provided, otherwise use wallet type)

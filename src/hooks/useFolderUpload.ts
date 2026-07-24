@@ -13,7 +13,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 // supportsJitPayment import removed - using pre-topup flow instead of per-file JIT
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
-import { useFreeUploadLimit, isFileFree } from './useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree } from './useFreeUploadLimit';
 import { hashFilesAsync } from '../utils/fileHash';
 
 // Deduplication stats for Smart Deploy
@@ -72,6 +72,7 @@ export function useFolderUpload() {
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient();
   const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
   const [deploying, setDeploying] = useState(false);
   const [deployProgress, setDeployProgress] = useState<number>(0);
   const [fileProgress, setFileProgress] = useState<Record<string, number>>({});
@@ -199,7 +200,7 @@ export function useFolderUpload() {
           newFilesCount++;
           newSize += file.size;
           // Only add to billable if over free limit
-          if (!isFileFree(file.size, freeUploadLimitBytes)) {
+          if (!isFileFree(file.size, freeUploadLimitBytes, bytesRemaining)) {
             billableSize += file.size;
           }
         }
@@ -229,7 +230,7 @@ export function useFolderUpload() {
       let billableSize = 0;
       files.forEach(f => {
         totalSizeCalc += f.size;
-        if (!isFileFree(f.size, freeUploadLimitBytes)) {
+        if (!isFileFree(f.size, freeUploadLimitBytes, bytesRemaining)) {
           billableSize += f.size;
         }
       });
@@ -243,7 +244,7 @@ export function useFolderUpload() {
       });
       setHashingStage('complete');
     }
-  }, [getFileHashEntry, freeUploadLimitBytes]);
+  }, [getFileHashEntry, freeUploadLimitBytes, bytesRemaining]);
 
   // Reset analysis state and cancel any ongoing hashing
   const resetAnalysis = useCallback(() => {
@@ -285,7 +286,6 @@ export function useFolderUpload() {
     const dynamicTurboConfig: TurboUnauthenticatedConfiguration = {
       paymentServiceConfig: { url: config.paymentServiceUrl },
       uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
       ...(effectiveTokenType && config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap]
         ? { gatewayUrl: config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap] }
         : {})

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { AlertTriangle, ExternalLink, Info, Loader2, Rocket, Sparkles } from 'lucide-react';
 import BaseModal from '@/components/modals/BaseModal';
 import { tokenLabels, type SupportedTokenType } from '@/constants';
-import { isFileFree } from '@/hooks/useFreeUploadLimit';
+import { isFileFree, useFreeStatus } from '@/hooks/useFreeUploadLimit';
 import { supportsJitPayment } from '@/utils/jitPayment';
 import type { PageDef } from '../schema';
 import type { RenderCtx } from '../render/renderPageHtml';
@@ -84,7 +84,8 @@ export default function PublishModal({
   }, [def, ctx]);
 
   const size = useMemo(() => new Blob([html]).size, [html]);
-  const free = isFileFree(size, freeUploadLimitBytes);
+  const { bytesRemaining } = useFreeStatus();
+  const free = isFileFree(size, freeUploadLimitBytes, bytesRemaining);
 
   const credits = useMemo(() => {
     if (free) return 0;

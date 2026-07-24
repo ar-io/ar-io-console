@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFolderUpload } from '../../hooks/useFolderUpload';
-import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { wincPerCredit, SupportedTokenType, tokenLabels } from '../../constants';
 import { useStore } from '../../store/useStore';
@@ -521,6 +521,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
 
   // Get free upload limit to count free files
   const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
 
   // Check if deployment is completely free (all files under free limit)
   const isFreeDeployment = totalCost === 0;
@@ -598,7 +599,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                 <span className="text-xs text-foreground">
                   {fileCount} file{fileCount !== 1 ? 's' : ''}
                   {(() => {
-                    const freeFilesCount = Array.from(files).filter(file => isFileFree(file.size, freeUploadLimitBytes)).length;
+                    const freeFilesCount = Array.from(files).filter(file => isFileFree(file.size, freeUploadLimitBytes, bytesRemaining)).length;
                     const parts: React.ReactNode[] = [];
                     if (smartDeployEnabled && cachedFilesCount > 0) {
                       parts.push(<span key="cached">{cachedFilesCount} cached</span>);
@@ -949,6 +950,7 @@ export default function DeploySitePanel() {
   const { hasArNSAccess } = useLinkedSolanaWallet();
   // Fetch and track the bundler's free upload limit
   const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
@@ -1405,7 +1407,7 @@ export default function DeploySitePanel() {
     // This accounts for cached files being skipped
     if (smartDeployEnabled && deduplicationStats) {
       const gibSize = deduplicationStats.billableSize / (1024 ** 3);
-      const billableFileCount = deduplicationStats.newFiles ?? Array.from(selectedFolder).filter(f => !isFileFree(f.size, freeUploadLimitBytes)).length;
+      const billableFileCount = deduplicationStats.newFiles ?? Array.from(selectedFolder).filter(f => !isFileFree(f.size, freeUploadLimitBytes, bytesRemaining)).length;
       const totalWinc = gibSize * Number(wincForOneGiB) + billableFileCount * itemFee;
       return totalWinc / wincPerCredit;
     }
@@ -1413,7 +1415,7 @@ export default function DeploySitePanel() {
     // Smart Deploy disabled OR no stats yet: charge for ALL files (minus free tier)
     let totalWinc = 0;
     Array.from(selectedFolder).forEach(file => {
-      if (isFileFree(file.size, freeUploadLimitBytes)) {
+      if (isFileFree(file.size, freeUploadLimitBytes, bytesRemaining)) {
         return; // FREE - under free limit
       }
       const gibSize = file.size / (1024 ** 3);
@@ -1427,7 +1429,7 @@ export default function DeploySitePanel() {
   const calculateBillableSizeWithoutSmartDeploy = (): number => {
     if (!selectedFolder) return 0;
     return Array.from(selectedFolder)
-      .filter(file => !isFileFree(file.size, freeUploadLimitBytes))
+      .filter(file => !isFileFree(file.size, freeUploadLimitBytes, bytesRemaining))
       .reduce((sum, file) => sum + file.size, 0);
   };
 
@@ -2129,7 +2131,7 @@ export default function DeploySitePanel() {
 
                                         <span className="text-foreground/60 text-xs">
                                           {fileSize}
-                                          {isFileFree(file.size, freeUploadLimitBytes) && <span className="ml-1 text-success">• FREE</span>}
+                                          {isFileFree(file.size, freeUploadLimitBytes, bytesRemaining) && <span className="ml-1 text-success">• FREE</span>}
                                         </span>
                                         
                                       </div>
@@ -3074,7 +3076,7 @@ export default function DeploySitePanel() {
                                     {/* Row 3: Cost + Deploy Timestamp */}
                                     <div className="flex items-center gap-2 text-sm text-foreground/80">
                                       <span>
-                                        {isFileFree(file.size, freeUploadLimitBytes) ? (
+                                        {isFileFree(file.size, freeUploadLimitBytes, bytesRemaining) ? (
                                           <span className="text-success">FREE</span>
                                         ) : wincForOneGiB ? (
                                           `${(((file.size / (1024 ** 3)) * Number(wincForOneGiB) + (perDataItemFeeWinc ? Number(perDataItemFeeWinc) : 0)) / wincPerCredit).toFixed(6)} Credits`
