@@ -86,7 +86,7 @@ export function useFreeUploadLimit() {
 
 // Pure free-tier logic lives in utils/freeTier (dependency-free + node-testable);
 // re-exported here so existing `../hooks/useFreeUploadLimit` import sites keep working.
-export { isFileFree } from '../utils/freeTier';
+export { isFileFree, computeFreeFlags } from '../utils/freeTier';
 
 /** The connected wallet's remaining free-tier allowance. */
 export interface FreeStatus {
@@ -119,6 +119,10 @@ export function useFreeStatus(): FreeStatus {
       setBytesRemaining(undefined);
       return;
     }
+    // Clear the previous wallet's allowance immediately so a wallet switch never
+    // prices against the old quota during the fetch (falls back to size-only until
+    // the new value lands).
+    setBytesRemaining(undefined);
     let cancelled = false;
     const fetchStatus = async () => {
       const seq = ++seqRef.current;

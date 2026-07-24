@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFolderUpload } from '../../hooks/useFolderUpload';
-import { useFreeUploadLimit, useFreeStatus, isFileFree } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { wincPerCredit, SupportedTokenType, tokenLabels } from '../../constants';
 import { useStore } from '../../store/useStore';
@@ -599,7 +599,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                 <span className="text-xs text-foreground">
                   {fileCount} file{fileCount !== 1 ? 's' : ''}
                   {(() => {
-                    const freeFilesCount = Array.from(files).filter(file => isFileFree(file.size, freeUploadLimitBytes, bytesRemaining)).length;
+                    const freeFilesCount = computeFreeFlags(Array.from(files).map(f => f.size), freeUploadLimitBytes, bytesRemaining).filter(Boolean).length;
                     const parts: React.ReactNode[] = [];
                     if (smartDeployEnabled && cachedFilesCount > 0) {
                       parts.push(<span key="cached">{cachedFilesCount} cached</span>);
@@ -1407,17 +1407,19 @@ export default function DeploySitePanel() {
     // This accounts for cached files being skipped
     if (smartDeployEnabled && deduplicationStats) {
       const gibSize = deduplicationStats.billableSize / (1024 ** 3);
-      const billableFileCount = deduplicationStats.billableFiles ?? Array.from(selectedFolder).filter(f => !isFileFree(f.size, freeUploadLimitBytes, bytesRemaining)).length;
+      const billableFileCount = deduplicationStats.billableFiles ?? computeFreeFlags(Array.from(selectedFolder).map(f => f.size), freeUploadLimitBytes, bytesRemaining).filter(f => !f).length;
       const totalWinc = gibSize * Number(wincForOneGiB) + billableFileCount * itemFee;
       return totalWinc / wincPerCredit;
     }
 
-    // Smart Deploy disabled OR no stats yet: charge for ALL files (minus free tier)
+    // Smart Deploy disabled OR no stats yet: charge for ALL files (minus free tier).
+    // Consume the shared allowance cumulatively so a partial tier can't free-ride
+    // every file.
     let totalWinc = 0;
-    Array.from(selectedFolder).forEach(file => {
-      if (isFileFree(file.size, freeUploadLimitBytes, bytesRemaining)) {
-        return; // FREE - under free limit
-      }
+    const files = Array.from(selectedFolder);
+    const freeFlags = computeFreeFlags(files.map(f => f.size), freeUploadLimitBytes, bytesRemaining);
+    files.forEach((file, i) => {
+      if (freeFlags[i]) return; // FREE
       const gibSize = file.size / (1024 ** 3);
       totalWinc += gibSize * Number(wincForOneGiB) + itemFee;
     });
@@ -1428,9 +1430,9 @@ export default function DeploySitePanel() {
   // Calculate billable size when Smart Deploy is OFF (all files minus free tier)
   const calculateBillableSizeWithoutSmartDeploy = (): number => {
     if (!selectedFolder) return 0;
-    return Array.from(selectedFolder)
-      .filter(file => !isFileFree(file.size, freeUploadLimitBytes, bytesRemaining))
-      .reduce((sum, file) => sum + file.size, 0);
+    const files = Array.from(selectedFolder);
+    const freeFlags = computeFreeFlags(files.map(f => f.size), freeUploadLimitBytes, bytesRemaining);
+    return files.reduce((sum, file, i) => (freeFlags[i] ? sum : sum + file.size), 0);
   };
 
   // Organize files into folder structure

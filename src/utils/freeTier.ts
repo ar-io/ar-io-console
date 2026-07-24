@@ -7,11 +7,10 @@
  * charged. When the remaining allowance is unknown, we fall back to the size-only
  * check (advisory) to preserve prior behavior.
  *
- * This is a per-file check against the FULL remaining allowance; it does not draw
- * down cumulatively across a multi-file batch. So the exhausted (`0`) and unlimited
- * (`null`) cases are exact, but a partial finite allowance straddled by a batch is
- * an approximation — acceptable because it's advisory and the bundler charges the
- * true amount at upload.
+ * `isFileFree` decides a SINGLE item against the full remaining allowance. For a
+ * multi-file batch, use `computeFreeFlags`, which consumes the shared allowance
+ * cumulatively across the batch — otherwise every file would independently pass a
+ * partial allowance and the cost would be undercounted.
  */
 
 /**
@@ -34,4 +33,24 @@ export function isFileFree(
   if (bytesRemaining === undefined || bytesRemaining === null) return true;
   // Finite allowance: the file must fit within what's left (0 => never free).
   return fileSize <= bytesRemaining;
+}
+
+/**
+ * Per-file free flags for a batch, consuming a finite free-tier allowance
+ * cumulatively (greedy, in list order): once the remaining allowance can't cover
+ * the next file, it and every later file is billable. Unlimited (`null`) or
+ * unknown (`undefined`) reduces to the per-item size check with no drawdown, so
+ * the exhausted (`0`) and unlimited cases stay exact.
+ */
+export function computeFreeFlags(
+  sizes: number[],
+  freeLimit: number,
+  bytesRemaining?: number | null,
+): boolean[] {
+  let remaining = bytesRemaining;
+  return sizes.map((size) => {
+    const free = isFileFree(size, freeLimit, remaining);
+    if (free && typeof remaining === 'number') remaining -= size;
+    return free;
+  });
 }
