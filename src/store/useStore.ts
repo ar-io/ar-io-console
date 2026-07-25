@@ -932,6 +932,15 @@ export const useStore = create<StoreState>()(
     {
       name: 'turbo-gateway-store',
       version: 1,
+      // Identity migration. Without a `migrate`, zustand DISCARDS all persisted
+      // state whenever the stored version != this version — silently wiping the
+      // user's upload/deploy history, Pages drafts, custom config and session on
+      // every version bump (and it already did so when v1 shipped). Every field
+      // below is defensively normalized on read (see onRehydrateStorage and the
+      // per-field getters), so passing the persisted state straight through is
+      // safe and preserves user data across future bumps. Add per-version
+      // transforms here as the shape evolves.
+      migrate: (persistedState) => persistedState as StoreState,
       partialize: (state) => ({
         address: state.address,
         walletType: state.walletType,

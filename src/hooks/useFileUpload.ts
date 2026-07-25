@@ -94,7 +94,14 @@ export function useFileUpload() {
   const [totalSize, setTotalSize] = useState<number>(0);
   const [uploadedSize, setUploadedSize] = useState<number>(0);
   const [failedFiles, setFailedFiles] = useState<File[]>([]);
-  const [isCancelled, setIsCancelled] = useState<boolean>(false);
+  // Points at the CURRENT batch's abort controller so cancelUploads can reach it.
+  // Each batch also captures its own controller in a local `const` (see
+  // uploadMultipleFiles), and the loop/catch check `controller.signal.aborted` —
+  // a synchronous signal a running loop can see (React state can't), and one that
+  // is scoped per batch so a newly-started upload can't reset a prior one that is
+  // still unwinding. Aborting also stops the in-flight turbo.uploadFile so Cancel
+  // actually halts the upload (and the charge), not just the progress UI.
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Validate wallet state to prevent cross-wallet conflicts
   const validateWalletState = useCallback((): void => {
@@ -271,6 +278,8 @@ export function useFileUpload() {
       selectedJitToken?: SupportedTokenType; // Selected JIT payment token
       /** Byte-transfer progress (0-100). Reaches 100 while the bundler finalizes. */
       onProgress?: (percentage: number) => void;
+      /** Aborts the in-flight upload when the user cancels. */
+      signal?: AbortSignal;
     }
   ) => {
     if (!address) {
@@ -393,6 +402,7 @@ export function useFileUpload() {
         console.log('[useFileUpload] Using streaming upload');
         uploadResult = await turbo.uploadFile({
           file: file,
+          ...(options?.signal ? { signal: options.signal } : {}),
           fundingMode,
           dataItemOpts: { tags: uploadTags },
           events: {
@@ -438,6 +448,7 @@ export function useFileUpload() {
             fileStreamFactory: () => new Uint8Array(arrayBuffer),
             fileSizeFactory: () => file.size,
             dataItemOpts: { tags: uploadTags },
+            ...(options?.signal ? { signal: options.signal } : {}),
             // Force chunked upload mode which may bypass streaming issues
             chunkingMode: 'force',
             ...(fundingMode ? { fundingMode } : {}),
@@ -517,7 +528,10 @@ export function useFileUpload() {
     setRecentFiles([]);
     setUploadErrors([]);
     setFailedFiles([]);
-    setIsCancelled(false);
+    // Per-batch abort controller, captured locally so a later batch replacing
+    // abortControllerRef can't affect this one.
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     // Calculate total size
     const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -588,9 +602,17 @@ export function useFileUpload() {
       }
     }
 
+    // A cancel during the (non-abortable) crypto pre-top-up can't undo the
+    // on-chain payment, but it must stop us from uploading afterwards.
+    if (controller.signal.aborted) {
+      setUploading(false);
+      setActiveUploads([]);
+      return { results, failedFiles: failedFileNames };
+    }
+
     for (const file of files) {
-      // Check if cancelled
-      if (isCancelled) {
+      // Check if cancelled (synchronously — this batch's controller).
+      if (controller.signal.aborted) {
         setUploading(false);
         setActiveUploads([]);
         return { results, failedFiles: failedFileNames };
@@ -602,10 +624,11 @@ export function useFileUpload() {
           { name: file.name, progress: 0, size: file.size }
         ]);
 
-        // If we did a crypto pre-topup, don't pass JIT options to avoid per-file JIT
+        // If we did a crypto pre-topup, don't pass JIT options to avoid per-file JIT.
+        // Always thread this batch's abort signal so Cancel stops the in-flight upload.
         const uploadOptions = (options?.cryptoPayment && selectedToken)
-          ? { customTags: options?.customTags }
-          : options;
+          ? { customTags: options?.customTags, signal: controller.signal }
+          : { ...options, signal: controller.signal };
         const result = await uploadFile(file, uploadOptions);
 
         setActiveUploads(prev => prev.filter(u => u.name !== file.name));
@@ -626,6 +649,14 @@ export function useFileUpload() {
 
       } catch (error) {
         setActiveUploads(prev => prev.filter(u => u.name !== file.name));
+        // If the user cancelled, the in-flight upload was aborted on purpose —
+        // don't record it as a failure; clear any transient error/progress the
+        // abort surfaced (e.g. via the SDK onError event) and stop the batch.
+        if (controller.signal.aborted) {
+          setErrors((prev) => { const next = { ...prev }; delete next[file.name]; return next; });
+          setUploadProgress((prev) => { const next = { ...prev }; delete next[file.name]; return next; });
+          break;
+        }
         // Preserve raw error for debugging, especially on mobile
         const rawError = error instanceof Error ? error.message : String(error);
         console.error(`[uploadMultipleFiles] Failed for ${file.name}:`, rawError, error);
@@ -668,7 +699,7 @@ export function useFileUpload() {
 
     setUploading(false);
     return { results, failedFiles: failedFileNames };
-  }, [uploadFile, validateWalletState, isCancelled, createTurboClient, getCurrentConfig]);
+  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig]);
 
   const reset = useCallback(() => {
     setUploadProgress({});
@@ -684,7 +715,6 @@ export function useFileUpload() {
     setTotalSize(0);
     setUploadedSize(0);
     setFailedFiles([]);
-    setIsCancelled(false);
   }, []);
 
   // Retry failed files
@@ -702,7 +732,10 @@ export function useFileUpload() {
 
   // Cancel ongoing uploads
   const cancelUploads = useCallback(() => {
-    setIsCancelled(true);
+    // Abort the current batch's controller. The running loop sees
+    // controller.signal.aborted synchronously and stops the in-flight upload
+    // (and the charge), not just the progress UI.
+    abortControllerRef.current?.abort();
     setUploading(false);
     setActiveUploads([]);
   }, []);

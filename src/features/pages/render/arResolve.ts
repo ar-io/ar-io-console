@@ -78,6 +78,53 @@ export function resolveArUrl(u: string, ctx: ResolveCtx): string {
   if (parsed.kind === 'tx') {
     return `${gateway}/${parsed.value}`;
   }
-  const label = parsed.undername ? `${parsed.undername}_${parsed.value}` : parsed.value;
+  // A name typed with its host suffix (e.g. ar://myname.ar.io) would otherwise
+  // double it (myname.ar.io.ar.io). Strip a trailing `.<host>` — mirrors
+  // resolveHandle's stripping in templates/shared.ts.
+  let name = parsed.value;
+  if (name.toLowerCase().endsWith('.' + host.toLowerCase())) {
+    name = name.slice(0, -(host.length + 1));
+  }
+  const label = parsed.undername ? `${parsed.undername}_${name}` : name;
   return `https://${label}.${host}`;
+}
+
+/**
+ * Canonicalise a user-entered link URL to a safe, resolvable form. Applied when
+ * a page is published so a permanent page never ships a dead or broken link.
+ * Never fabricates a link from an unknown/dangerous scheme (those become '').
+ *
+ *   ''  ·  'https://'  ·  'ar://'  ·  'mailto:'   -> ''      (untouched defaults)
+ *   'https://x.com/y'  ·  'ar://name'  ·  '#a'    -> unchanged
+ *   'example.com' · 'myname.ar.io'                -> 'https://…'  (dotted host)
+ *   'myname'  ·  'links_myname'                   -> 'ar://…'     (bare ArNS label)
+ *   'javascript:…' · 'data:…' · other            -> ''
+ */
+export function normalizeLinkUrl(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const t = raw.trim();
+  if (t === '') return '';
+  if (t.startsWith('#')) return t;
+  const lower = t.toLowerCase();
+  // Bare scheme with no authority/target — the untouched editor defaults.
+  if (lower === 'https://' || lower === 'http://' || lower === 'ar://' || lower === 'mailto:') return '';
+  // Recognised, already-usable schemes pass through unchanged.
+  if (
+    lower.startsWith('https://') ||
+    lower.startsWith('http://') ||
+    lower.startsWith('mailto:') ||
+    lower.startsWith('ar://')
+  ) {
+    return t;
+  }
+  // Any other explicit scheme (javascript:, data:, vbscript:, …) — never
+  // fabricate a link from it. (Scheme names contain no dots, so a host:port
+  // like example.com:8080 is not mistaken for a scheme here.)
+  if (/^[a-z][a-z0-9+-]*:/i.test(t)) return '';
+  // No scheme. A dotted host (example.com, myname.ar.io) is a web URL — note an
+  // ArNS name is itself served at https://<name>.<host>, so https:// is correct
+  // for both. A bare single label (myname / links_myname) is an ArNS name.
+  if (/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:[/?#].*)?$/i.test(t)) return `https://${t}`;
+  if (/^[a-z0-9][a-z0-9-]*(_[a-z0-9-]+)?$/i.test(t)) return `ar://${t}`;
+  return '';
 }

@@ -240,12 +240,12 @@ export function useArNSPricing(): UseArNSPricingReturn {
           const updatedTiers = cachedData.tiers.map((tier) => ({
             ...tier,
             pricesInCredits: {
-              year1: tier.pricesInUSD.year1 / creditsPerUSD, // USD / (credits per USD) = credits needed
-              year2: tier.pricesInUSD.year2 / creditsPerUSD,
-              year3: tier.pricesInUSD.year3 / creditsPerUSD,
-              year4: tier.pricesInUSD.year4 / creditsPerUSD,
-              year5: tier.pricesInUSD.year5 / creditsPerUSD,
-              permabuy: tier.pricesInUSD.permabuy / creditsPerUSD,
+              year1: tier.pricesInUSD.year1 * creditsPerUSD, // USD * (credits per USD) = credits needed
+              year2: tier.pricesInUSD.year2 * creditsPerUSD,
+              year3: tier.pricesInUSD.year3 * creditsPerUSD,
+              year4: tier.pricesInUSD.year4 * creditsPerUSD,
+              year5: tier.pricesInUSD.year5 * creditsPerUSD,
+              permabuy: tier.pricesInUSD.permabuy * creditsPerUSD,
             },
           }));
 
@@ -329,12 +329,12 @@ export function useArNSPricing(): UseArNSPricingReturn {
               permabuy: permabuyPrice.usd,
             },
             pricesInCredits: {
-              year1: year1.usd / creditsPerUSD, // USD / (credits per USD) = credits needed
-              year2: year2.usd / creditsPerUSD,
-              year3: year3.usd / creditsPerUSD,
-              year4: year4.usd / creditsPerUSD,
-              year5: year5.usd / creditsPerUSD,
-              permabuy: permabuyPrice.usd / creditsPerUSD,
+              year1: year1.usd * creditsPerUSD, // USD * (credits per USD) = credits needed
+              year2: year2.usd * creditsPerUSD,
+              year3: year3.usd * creditsPerUSD,
+              year4: year4.usd * creditsPerUSD,
+              year5: year5.usd * creditsPerUSD,
+              permabuy: permabuyPrice.usd * creditsPerUSD,
             },
             category,
             description: key > 12 ? 'Budget friendly (13+ chars)' : description,

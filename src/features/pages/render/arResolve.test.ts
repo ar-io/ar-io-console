@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isArUrl, parseArUrl, resolveArUrl, type ResolveCtx } from './arResolve';
+import { isArUrl, parseArUrl, resolveArUrl, normalizeLinkUrl, type ResolveCtx } from './arResolve';
 
 const ctx: ResolveCtx = { gateway: 'https://turbo-gateway.com', arnsHost: 'ar.io' };
 
@@ -63,5 +63,49 @@ describe('resolveArUrl', () => {
   });
   it('is deterministic', () => {
     expect(resolveArUrl('ar://jenny', ctx)).toBe(resolveArUrl('ar://jenny', ctx));
+  });
+  it('strips a name typed with its host suffix (no double suffix)', () => {
+    expect(resolveArUrl('ar://myname.ar.io', ctx)).toBe('https://myname.ar.io');
+    expect(resolveArUrl('ar://links_myname.ar.io', ctx)).toBe('https://links_myname.ar.io');
+  });
+});
+
+describe('normalizeLinkUrl', () => {
+  it('drops the untouched editor defaults', () => {
+    expect(normalizeLinkUrl('')).toBe('');
+    expect(normalizeLinkUrl('   ')).toBe('');
+    expect(normalizeLinkUrl('https://')).toBe('');
+    expect(normalizeLinkUrl('http://')).toBe('');
+    expect(normalizeLinkUrl('ar://')).toBe('');
+    expect(normalizeLinkUrl('mailto:')).toBe('');
+  });
+  it('passes through already-usable urls unchanged', () => {
+    expect(normalizeLinkUrl('https://x.com/foo')).toBe('https://x.com/foo');
+    expect(normalizeLinkUrl('http://x.com')).toBe('http://x.com');
+    expect(normalizeLinkUrl('ar://jenny')).toBe('ar://jenny');
+    expect(normalizeLinkUrl('ar://links_myname')).toBe('ar://links_myname');
+    expect(normalizeLinkUrl('mailto:hi@example.com')).toBe('mailto:hi@example.com');
+    expect(normalizeLinkUrl('#section')).toBe('#section');
+  });
+  it('prepends https:// to a dotted host', () => {
+    expect(normalizeLinkUrl('example.com')).toBe('https://example.com');
+    expect(normalizeLinkUrl('example.com/path')).toBe('https://example.com/path');
+    // An ArNS name typed with its host is a valid https host too.
+    expect(normalizeLinkUrl('myname.ar.io')).toBe('https://myname.ar.io');
+  });
+  it('preserves query strings and fragments on a bare host', () => {
+    expect(normalizeLinkUrl('example.com?ref=x')).toBe('https://example.com?ref=x');
+    expect(normalizeLinkUrl('example.com#pricing')).toBe('https://example.com#pricing');
+    expect(normalizeLinkUrl('example.com/p?q=1#frag')).toBe('https://example.com/p?q=1#frag');
+  });
+  it('treats a bare label as an ArNS name', () => {
+    expect(normalizeLinkUrl('myname')).toBe('ar://myname');
+    expect(normalizeLinkUrl('links_myname')).toBe('ar://links_myname');
+  });
+  it('never fabricates a link from a dangerous or unknown scheme', () => {
+    expect(normalizeLinkUrl('javascript:alert(1)')).toBe('');
+    expect(normalizeLinkUrl('data:text/html,x')).toBe('');
+    expect(normalizeLinkUrl('vbscript:x')).toBe('');
+    expect(normalizeLinkUrl(42 as unknown as string)).toBe('');
   });
 });

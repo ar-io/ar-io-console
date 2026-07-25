@@ -144,6 +144,12 @@ export default function TopUpPanel() {
     return inputType === 'storage' ? calculateStorageCost() : usdAmount;
   };
 
+  // The fiat flow charges whole cents (the payment intent is created from
+  // Math.round(usd*100)). Quote the detail/confirm panels off the same rounded
+  // dollar amount so displayed credits, promo validation, and the charge can't
+  // diverge for inputs like $10.555 or a storage-derived cost.
+  const getCheckoutUsdAmount = () => Math.round(getEffectiveUsdAmount() * 100) / 100;
+
   // Format number with commas
   const formatNumber = (num: number, decimals = 2) => {
     return new Intl.NumberFormat('en-US', {
@@ -274,14 +280,15 @@ export default function TopUpPanel() {
 
         // Create payment intent for inline flow
         // The Turbo SDK accepts ANY address here - no authentication required
+        const amountInCents = Math.round(effectiveAmount * 100); // whole cents — avoids 10.55*100 = 1055.0000000000001
         const paymentIntentResponse = await getPaymentIntent(
           targetAddress, // ✅ Uses target address (can be different from connected wallet)
-          effectiveAmount * 100, // Convert to cents
+          amountInCents,
           token as any,
         );
 
         // Store payment state
-        setPaymentAmount(effectiveAmount * 100);
+        setPaymentAmount(amountInCents);
         setPaymentIntent(paymentIntentResponse.paymentSession);
 
         // Move to payment details step
@@ -499,7 +506,7 @@ export default function TopUpPanel() {
       case 'details':
         return (
           <PaymentDetailsPanel
-            usdAmount={getEffectiveUsdAmount()}
+            usdAmount={getCheckoutUsdAmount()}
             onBack={handleFiatBackToAmount}
             onNext={handleFiatPaymentDetailsNext}
             targetAddress={targetAddress || ''}
@@ -509,7 +516,7 @@ export default function TopUpPanel() {
       case 'confirmation':
         return (
           <PaymentConfirmationPanel
-            usdAmount={getEffectiveUsdAmount()}
+            usdAmount={getCheckoutUsdAmount()}
             onBack={() => setFiatFlowStep('details')}
             onSuccess={handleFiatPaymentSuccess}
             targetAddress={targetAddress || ''}
@@ -858,21 +865,20 @@ export default function TopUpPanel() {
             ) : walletType === 'ethereum' ? (
               // Compact layout for Ethereum wallet with all token options
               <div className="space-y-3">
-                {/* Native Tokens Row - Base ARIO, ARIO (AO), ETH options, POL */}
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                  {(['base-ario', 'ario', 'ethereum', 'base-eth', 'pol'] as const).map((tokenType) => {
-                    const tokenName = tokenType === 'base-ario' ? 'ARIO'
-                      : tokenType === 'ario' ? 'ARIO'
-                      : tokenType === 'ethereum' ? 'ETH'
+                {/* Native Tokens Row - ETH options, POL. Base-ARIO and ARIO (AO)
+                    are intentionally not offered to Ethereum wallets: Base-ARIO
+                    top-ups are deprecated, and neither is selectable at checkout
+                    (getAvailableTokens omits both), so showing them was a promoted
+                    dead-end. */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['ethereum', 'base-eth', 'pol'] as const).map((tokenType) => {
+                    const tokenName = tokenType === 'ethereum' ? 'ETH'
                       : tokenType === 'base-eth' ? 'ETH'
                       : 'POL';
-                    const networkName = tokenType === 'base-ario' ? 'Base'
-                      : tokenType === 'ario' ? 'AO'
-                      : tokenType === 'ethereum' ? 'Ethereum'
+                    const networkName = tokenType === 'ethereum' ? 'Ethereum'
                       : tokenType === 'base-eth' ? 'Base'
                       : 'Polygon';
-                    const isFast = tokenType === 'base-ario' || tokenType === 'ario' || tokenType === 'base-eth' || tokenType === 'pol';
-                    const isNoFee = tokenType === 'base-ario' || tokenType === 'ario';
+                    const isFast = tokenType === 'base-eth' || tokenType === 'pol';
 
                     return (
                       <button
@@ -896,14 +902,9 @@ export default function TopUpPanel() {
                             <Check className="w-3.5 h-3.5 flex-shrink-0" />
                           )}
                         </div>
-                        {(isFast || isNoFee) && (
+                        {isFast && (
                           <div className="flex gap-1 mt-1">
-                            {isFast && (
-                              <span className="text-[9px] text-success font-medium">Fast</span>
-                            )}
-                            {isNoFee && (
-                              <span className="text-[9px] text-info font-medium">No Fee</span>
-                            )}
+                            <span className="text-[9px] text-success font-medium">Fast</span>
                           </div>
                         )}
                       </button>
