@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { getTurboBalance, wincToCredits } from '../../utils';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
-import { useFreeUploadLimit, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import Faq from '../Faq';
 
 export default function InfoPanel() {
   const { address, walletType } = useStore();
-  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  const freeSummary = freeTierSummary(freeUploadLimitBytes, bytesRemaining);
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const wincForOneGiB = useWincForOneGiB();
@@ -68,14 +70,14 @@ export default function InfoPanel() {
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl p-4">
-          <div className="text-sm text-foreground/80 mb-1">Free Tier</div>
-          <div className="font-semibold">
-            {freeUploadLimitBytes > 0
-              ? `Files under ${formatFreeLimit(freeUploadLimitBytes)}${freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime)` : ''}`
-              : 'No free tier'}
+        {freeSummary && (
+          <div className="bg-card rounded-2xl p-4">
+            <div className="text-sm text-foreground/80 mb-1">Free Tier</div>
+            <div className={`font-semibold ${bytesRemaining === 0 ? 'text-foreground/60' : ''}`}>
+              {freeSummary}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Resources */}

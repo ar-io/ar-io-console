@@ -56,3 +56,28 @@ export function computeFreeFlags(
     return free;
   });
 }
+
+/** Format a byte count for display (e.g. "105 KiB", "10 MiB", "No free tier"). */
+export function formatFreeLimit(limitBytes: number): string {
+  if (limitBytes === 0) return 'No free tier';
+  const kib = limitBytes / 1024;
+  if (kib < 1) return `${limitBytes} bytes`;
+  if (kib < 1024) return `${kib.toFixed(0)} KiB`;
+  const mib = kib / 1024;
+  return `${mib.toFixed(mib % 1 === 0 ? 0 : 2)} MiB`;
+}
+
+/**
+ * A short, wallet-aware free-tier message for banners/copy — or `null` when there is
+ * no free tier to advertise (`freeLimit <= 0`, e.g. no tier configured, or x402-only
+ * mode where callers pass 0), so the caller hides the claim entirely.
+ *  - `bytesRemaining === 0`       → "Free tier used up"
+ *  - `bytesRemaining` is a number → "<X> of free uploads left"
+ *  - `null` (unlimited) / `undefined` (no wallet / unknown) → "Files under <cap> upload free"
+ */
+export function freeTierSummary(freeLimit: number, bytesRemaining?: number | null): string | null {
+  if (freeLimit <= 0) return null;
+  if (bytesRemaining === 0) return 'Free tier used up';
+  if (typeof bytesRemaining === 'number') return `${formatFreeLimit(bytesRemaining)} of free uploads left`;
+  return `Files under ${formatFreeLimit(freeLimit)} upload free`;
+}

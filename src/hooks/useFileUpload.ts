@@ -660,6 +660,12 @@ export function useFileUpload() {
       }
     }
 
+    // Refresh balance + free-tier allowance after any successful upload (free,
+    // credits, or crypto) so the next upload prices against the up-to-date state.
+    if (results.length > 0) {
+      window.dispatchEvent(new CustomEvent('refresh-balance'));
+    }
+
     setUploading(false);
     return { results, failedFiles: failedFileNames };
   }, [uploadFile, validateWalletState, isCancelled, createTurboClient, getCurrentConfig]);

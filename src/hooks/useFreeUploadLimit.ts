@@ -86,7 +86,8 @@ export function useFreeUploadLimit() {
 
 // Pure free-tier logic lives in utils/freeTier (dependency-free + node-testable);
 // re-exported here so existing `../hooks/useFreeUploadLimit` import sites keep working.
-export { isFileFree, computeFreeFlags } from '../utils/freeTier';
+import { isFileFree, computeFreeFlags, formatFreeLimit, freeTierSummary } from '../utils/freeTier';
+export { isFileFree, computeFreeFlags, formatFreeLimit, freeTierSummary };
 
 /** The connected wallet's remaining free-tier allowance. */
 export interface FreeStatus {
@@ -154,24 +155,3 @@ export function useFreeStatus(): FreeStatus {
   return { bytesRemaining };
 }
 
-/**
- * Format a byte limit for display
- * @param limitBytes - Byte count to format
- * @returns Formatted string (e.g., "105 KiB", "10 MiB", "No free tier")
- */
-export function formatFreeLimit(limitBytes: number): string {
-  if (limitBytes === 0) {
-    return 'No free tier';
-  }
-
-  const kib = limitBytes / 1024;
-
-  if (kib < 1) {
-    return `${limitBytes} bytes`;
-  } else if (kib < 1024) {
-    return `${kib.toFixed(0)} KiB`;
-  } else {
-    const mib = kib / 1024;
-    return `${mib.toFixed(mib % 1 === 0 ? 0 : 2)} MiB`;
-  }
-}

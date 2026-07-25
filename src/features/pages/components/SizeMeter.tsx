@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { isFileFree, useFreeStatus } from '@/hooks/useFreeUploadLimit';
+import { useStore } from '@/store/useStore';
 import { MAX_PAGE_BYTES, estimatePageCredits } from '../publish/cost';
 
 interface SizeMeterProps {
@@ -32,8 +33,11 @@ export default function SizeMeter({
   perDataItemFeeWinc,
   className,
 }: SizeMeterProps) {
+  const x402OnlyMode = useStore((s) => s.x402OnlyMode);
   const { bytesRemaining } = useFreeStatus();
-  const free = isFileFree(sizeBytes, freeUploadLimitBytes, bytesRemaining);
+  // x402-only bundlers have no free tier — nothing is free in that mode.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const free = isFileFree(sizeBytes, effectiveFreeLimit, bytesRemaining);
   const overCeiling = sizeBytes > MAX_PAGE_BYTES;
   const credits = useMemo(
     () => (free ? 0 : estimatePageCredits(sizeBytes, wincForOneGiB, perDataItemFeeWinc)),

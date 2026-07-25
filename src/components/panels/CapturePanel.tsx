@@ -76,6 +76,7 @@ export default function CapturePanel() {
   // Fetch and track the bundler's free upload limit
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   // Capture state
   const [urlInput, setUrlInput] = useState('');
@@ -151,7 +152,7 @@ export default function CapturePanel() {
   } = useUploadStatus();
 
   // Calculate billable file size for x402 pricing (exclude free files)
-  const billableFileSize = captureFile && !isFileFree(captureFile.size, freeUploadLimitBytes, bytesRemaining)
+  const billableFileSize = captureFile && !isFileFree(captureFile.size, effectiveFreeLimit, bytesRemaining)
     ? captureFile.size
     : 0;
 
@@ -252,7 +253,7 @@ export default function CapturePanel() {
   };
 
   const calculateUploadCost = (bytes: number) => {
-    if (isFileFree(bytes, freeUploadLimitBytes, bytesRemaining)) return 0; // Free tier
+    if (isFileFree(bytes, effectiveFreeLimit, bytesRemaining)) return 0; // Free tier
     if (!wincForOneGiB) return null;
 
     const gibSize = bytes / (1024 * 1024 * 1024);

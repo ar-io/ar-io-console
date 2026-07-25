@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFileFree, computeFreeFlags } from './freeTier';
+import { isFileFree, computeFreeFlags, freeTierSummary, formatFreeLimit } from './freeTier';
 
 describe('isFileFree (allowance-aware)', () => {
   it('is false when there is no free tier (limit 0)', () => {
@@ -64,5 +64,36 @@ describe('computeFreeFlags (cumulative drawdown across a batch)', () => {
 
   it('handles an empty batch', () => {
     expect(computeFreeFlags([], 1000, 500)).toEqual([]);
+  });
+});
+
+describe('freeTierSummary', () => {
+  it('returns null when there is no free tier (or x402-only mode passes 0)', () => {
+    expect(freeTierSummary(0)).toBeNull();
+    expect(freeTierSummary(0, 500)).toBeNull();
+    expect(freeTierSummary(-1, null)).toBeNull();
+  });
+
+  it('says the tier is used up when nothing remains', () => {
+    expect(freeTierSummary(100 * 1024, 0)).toBe('Free tier used up');
+  });
+
+  it('shows the remaining allowance when finite', () => {
+    expect(freeTierSummary(100 * 1024, 50 * 1024)).toBe('50 KiB of free uploads left');
+  });
+
+  it('falls back to the per-item cap for unlimited/unknown', () => {
+    expect(freeTierSummary(100 * 1024, null)).toBe('Files under 100 KiB upload free');
+    expect(freeTierSummary(100 * 1024, undefined)).toBe('Files under 100 KiB upload free');
+    expect(freeTierSummary(100 * 1024)).toBe('Files under 100 KiB upload free');
+  });
+});
+
+describe('formatFreeLimit', () => {
+  it('formats bytes / KiB / MiB and the no-tier case', () => {
+    expect(formatFreeLimit(0)).toBe('No free tier');
+    expect(formatFreeLimit(512)).toBe('512 bytes');
+    expect(formatFreeLimit(100 * 1024)).toBe('100 KiB');
+    expect(formatFreeLimit(10 * 1024 * 1024)).toBe('10 MiB');
   });
 });

@@ -522,6 +522,8 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
   // Get free upload limit to count free files
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — treat nothing as free so USDC quotes aren't undercharged
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   // Check if deployment is completely free (all files under free limit)
   const isFreeDeployment = totalCost === 0;
@@ -599,7 +601,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                 <span className="text-xs text-foreground">
                   {fileCount} file{fileCount !== 1 ? 's' : ''}
                   {(() => {
-                    const freeFilesCount = computeFreeFlags(Array.from(files).map(f => f.size), freeUploadLimitBytes, bytesRemaining).filter(Boolean).length;
+                    const freeFilesCount = computeFreeFlags(Array.from(files).map(f => f.size), effectiveFreeLimit, bytesRemaining).filter(Boolean).length;
                     const parts: React.ReactNode[] = [];
                     if (smartDeployEnabled && cachedFilesCount > 0) {
                       parts.push(<span key="cached">{cachedFilesCount} cached</span>);
@@ -951,6 +953,8 @@ export default function DeploySitePanel() {
   // Fetch and track the bundler's free upload limit
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — treat nothing as free so USDC quotes aren't undercharged
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
@@ -1407,7 +1411,7 @@ export default function DeploySitePanel() {
     // This accounts for cached files being skipped
     if (smartDeployEnabled && deduplicationStats) {
       const gibSize = deduplicationStats.billableSize / (1024 ** 3);
-      const billableFileCount = deduplicationStats.billableFiles ?? computeFreeFlags(Array.from(selectedFolder).map(f => f.size), freeUploadLimitBytes, bytesRemaining).filter(f => !f).length;
+      const billableFileCount = deduplicationStats.billableFiles ?? computeFreeFlags(Array.from(selectedFolder).map(f => f.size), effectiveFreeLimit, bytesRemaining).filter(f => !f).length;
       const totalWinc = gibSize * Number(wincForOneGiB) + billableFileCount * itemFee;
       return totalWinc / wincPerCredit;
     }
@@ -1417,7 +1421,7 @@ export default function DeploySitePanel() {
     // every file.
     let totalWinc = 0;
     const files = Array.from(selectedFolder);
-    const freeFlags = computeFreeFlags(files.map(f => f.size), freeUploadLimitBytes, bytesRemaining);
+    const freeFlags = computeFreeFlags(files.map(f => f.size), effectiveFreeLimit, bytesRemaining);
     files.forEach((file, i) => {
       if (freeFlags[i]) return; // FREE
       const gibSize = file.size / (1024 ** 3);
@@ -1431,7 +1435,7 @@ export default function DeploySitePanel() {
   const calculateBillableSizeWithoutSmartDeploy = (): number => {
     if (!selectedFolder) return 0;
     const files = Array.from(selectedFolder);
-    const freeFlags = computeFreeFlags(files.map(f => f.size), freeUploadLimitBytes, bytesRemaining);
+    const freeFlags = computeFreeFlags(files.map(f => f.size), effectiveFreeLimit, bytesRemaining);
     return files.reduce((sum, file, i) => (freeFlags[i] ? sum : sum + file.size), 0);
   };
 
@@ -2133,7 +2137,7 @@ export default function DeploySitePanel() {
 
                                         <span className="text-foreground/60 text-xs">
                                           {fileSize}
-                                          {isFileFree(file.size, freeUploadLimitBytes, bytesRemaining) && <span className="ml-1 text-success">• FREE</span>}
+                                          {isFileFree(file.size, effectiveFreeLimit, bytesRemaining) && <span className="ml-1 text-success">• FREE</span>}
                                         </span>
                                         
                                       </div>

@@ -1007,6 +1007,10 @@ export function useFolderUpload() {
       setCurrentFile('');
       abortControllerRef.current = null; // Clear the controller when done
 
+      // Refresh balance + free-tier allowance after a completed deploy (free or
+      // paid) so subsequent pricing reflects the consumed allowance/credits.
+      window.dispatchEvent(new CustomEvent('refresh-balance'));
+
       return {
         manifestId: uploadResult.manifestId,
         files: uploadResult.files,

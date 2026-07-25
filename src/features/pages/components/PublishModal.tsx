@@ -85,7 +85,9 @@ export default function PublishModal({
 
   const size = useMemo(() => new Blob([html]).size, [html]);
   const { bytesRemaining } = useFreeStatus();
-  const free = isFileFree(size, freeUploadLimitBytes, bytesRemaining);
+  // x402-only bundlers have no free tier — nothing is free in that mode.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const free = isFileFree(size, effectiveFreeLimit, bytesRemaining);
 
   const credits = useMemo(() => {
     if (free) return 0;
