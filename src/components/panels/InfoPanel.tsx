@@ -6,10 +6,12 @@ import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/
 import Faq from '../Faq';
 
 export default function InfoPanel() {
-  const { address, walletType } = useStore();
+  const { address, walletType, x402OnlyMode } = useStore();
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
-  const freeSummary = freeTierSummary(freeUploadLimitBytes, bytesRemaining);
+  // x402-only bundlers have no free tier — don't advertise one.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const freeSummary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const wincForOneGiB = useWincForOneGiB();

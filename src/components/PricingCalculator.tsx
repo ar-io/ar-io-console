@@ -3,11 +3,15 @@ import { Calculator, HardDrive, DollarSign, Info, Check } from 'lucide-react';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
 import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../hooks/useFreeUploadLimit';
+import { useStore } from '../store/useStore';
 
 export default function PricingCalculator() {
+  const x402OnlyMode = useStore((s) => s.x402OnlyMode);
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
-  const freeSummary = freeTierSummary(freeUploadLimitBytes, bytesRemaining);
+  // x402-only bundlers have no free tier — don't advertise one.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const freeSummary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
   const [inputType, setInputType] = useState<'storage' | 'dollars'>('storage');
   const [storageAmount, setStorageAmount] = useState(1);
   const [storageUnit, setStorageUnit] = useState<'MB' | 'GB' | 'TB'>('GB');

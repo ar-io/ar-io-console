@@ -15,7 +15,9 @@ export default function PricingCalculatorPanel() {
   const { address, creditBalance, x402OnlyMode } = useStore();
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
-  const freeSummary = freeTierSummary(freeUploadLimitBytes, bytesRemaining);
+  // x402-only bundlers have no free tier — don't advertise one.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const freeSummary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
   const [inputType, setInputType] = useState<'storage' | 'dollars'>('storage');
   const [storageAmount, setStorageAmount] = useState(1);
   const [storageAmountInput, setStorageAmountInput] = useState('1'); // String for display
