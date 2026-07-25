@@ -217,7 +217,16 @@ export function usePagePublish() {
         if (!x402OnlyMode && freeUploadLimitBytes > 0) {
           try {
             const ogPng = await rasterizeSvgToPng(buildOgCardSvg(publishDef));
-            if (ogPng && isFileFree(ogPng.size, freeUploadLimitBytes, bytesRemaining)) {
+            // Fail closed: only bundle the OG card when free status is *known* to
+            // cover it. `undefined` means the allowance is still loading or the
+            // fetch failed — treat that as "can't confirm free" and skip, so this
+            // silent best-effort extra never triggers an unexpected charge. `null`
+            // (unlimited/exempt tier) stays eligible via isFileFree.
+            if (
+              ogPng &&
+              bytesRemaining !== undefined &&
+              isFileFree(ogPng.size, freeUploadLimitBytes, bytesRemaining)
+            ) {
               const ogFile = new File([ogPng], OG_IMAGE_PATH, { type: 'image/png' });
               const ogResult = await Promise.race([
                 // .catch so a rejection AFTER the timeout wins isn't left unhandled.
