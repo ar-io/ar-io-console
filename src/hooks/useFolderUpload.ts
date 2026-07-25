@@ -13,7 +13,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 // supportsJitPayment import removed - using pre-topup flow instead of per-file JIT
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
-import { useFreeUploadLimit, isFileFree } from './useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree } from './useFreeUploadLimit';
 import { hashFilesAsync } from '../utils/fileHash';
 
 // Deduplication stats for Smart Deploy
@@ -24,6 +24,7 @@ export interface DeduplicationStats {
   cachedSize: number;
   newSize: number;
   billableSize: number; // newSize minus files under free limit
+  billableFiles: number; // new files that are NOT free — the ones that incur the per-item fee
 }
 
 interface DeployResult {
@@ -72,6 +73,7 @@ export function useFolderUpload() {
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient();
   const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
   const [deploying, setDeploying] = useState(false);
   const [deployProgress, setDeployProgress] = useState<number>(0);
   const [fileProgress, setFileProgress] = useState<Record<string, number>>({});
@@ -186,6 +188,10 @@ export function useFolderUpload() {
       let newFilesCount = 0;
       let newSize = 0;
       let billableSize = 0;
+      let billableFilesCount = 0;
+      // The free allowance is shared across the batch — consume it as we find free
+      // files so a partial allowance can't make every file look free.
+      let remaining = bytesRemaining;
 
       files.forEach(file => {
         const path = file.webkitRelativePath || file.name;
@@ -198,9 +204,11 @@ export function useFolderUpload() {
         } else {
           newFilesCount++;
           newSize += file.size;
-          // Only add to billable if over free limit
-          if (!isFileFree(file.size, freeUploadLimitBytes)) {
+          if (isFileFree(file.size, freeUploadLimitBytes, remaining)) {
+            if (typeof remaining === 'number') remaining -= file.size;
+          } else {
             billableSize += file.size;
+            billableFilesCount++;
           }
         }
       });
@@ -212,6 +220,7 @@ export function useFolderUpload() {
         cachedSize,
         newSize,
         billableSize,
+        billableFiles: billableFilesCount,
       });
       setHashingStage('complete');
     } catch (error) {
@@ -227,10 +236,15 @@ export function useFolderUpload() {
       // Calculate billable size for all files (fallback when hashing fails)
       let totalSizeCalc = 0;
       let billableSize = 0;
+      let billableFilesCount = 0;
+      let remaining = bytesRemaining; // shared allowance, consumed cumulatively
       files.forEach(f => {
         totalSizeCalc += f.size;
-        if (!isFileFree(f.size, freeUploadLimitBytes)) {
+        if (isFileFree(f.size, freeUploadLimitBytes, remaining)) {
+          if (typeof remaining === 'number') remaining -= f.size;
+        } else {
           billableSize += f.size;
+          billableFilesCount++;
         }
       });
       setDeduplicationStats({
@@ -240,10 +254,11 @@ export function useFolderUpload() {
         cachedSize: 0,
         newSize: totalSizeCalc,
         billableSize,
+        billableFiles: billableFilesCount,
       });
       setHashingStage('complete');
     }
-  }, [getFileHashEntry, freeUploadLimitBytes]);
+  }, [getFileHashEntry, freeUploadLimitBytes, bytesRemaining]);
 
   // Reset analysis state and cancel any ongoing hashing
   const resetAnalysis = useCallback(() => {
@@ -285,7 +300,6 @@ export function useFolderUpload() {
     const dynamicTurboConfig: TurboUnauthenticatedConfiguration = {
       paymentServiceConfig: { url: config.paymentServiceUrl },
       uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
       ...(effectiveTokenType && config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap]
         ? { gatewayUrl: config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap] }
         : {})
@@ -992,6 +1006,10 @@ export function useFolderUpload() {
       setDeployStage('complete');
       setCurrentFile('');
       abortControllerRef.current = null; // Clear the controller when done
+
+      // Refresh balance + free-tier allowance after a completed deploy (free or
+      // paid) so subsequent pricing reflects the consumed allowance/credits.
+      window.dispatchEvent(new CustomEvent('refresh-balance'));
 
       return {
         manifestId: uploadResult.manifestId,

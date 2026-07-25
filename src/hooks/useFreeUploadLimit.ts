@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useStore } from '../store/useStore';
 
+/** The bundler's free-tier configuration (per-item size cap + lifetime/IP quotas). */
 export interface FreeTier {
   /** Max bytes per individual data item for free uploads */
   maxItemBytes: number;
@@ -82,34 +84,74 @@ export function useFreeUploadLimit() {
   return { freeUploadLimitBytes, freeTier };
 }
 
-/**
- * Utility function to check if a file size is within the free upload limit
- * @param fileSize - File size in bytes
- * @param freeLimit - Free upload limit in bytes (per-item cap) from the bundler
- * @returns true if the file is within the per-item free size limit
- */
-export function isFileFree(fileSize: number, freeLimit: number): boolean {
-  return fileSize < freeLimit && freeLimit > 0;
+// Pure free-tier logic lives in utils/freeTier (dependency-free + node-testable);
+// re-exported here so existing `../hooks/useFreeUploadLimit` import sites keep working.
+import { isFileFree, computeFreeFlags, formatFreeLimit, freeTierSummary } from '../utils/freeTier';
+export { isFileFree, computeFreeFlags, formatFreeLimit, freeTierSummary };
+
+/** The connected wallet's remaining free-tier allowance. */
+export interface FreeStatus {
+  /**
+   * The connected wallet's remaining free-tier bytes:
+   * a number = bytes left (0 = none), `null` = unlimited (exempt/partner wallet),
+   * `undefined` = unknown (no wallet or the query failed).
+   */
+  bytesRemaining: number | null | undefined;
 }
 
 /**
- * Format a byte limit for display
- * @param limitBytes - Byte count to format
- * @returns Formatted string (e.g., "105 KiB", "10 MiB", "No free tier")
+ * Fetch the connected wallet's remaining free-tier allowance.
+ *
+ * Uses the payment service's `getFreeStatus` (open-by-address, no signing needed),
+ * so we can tell whether a wallet still has free uploads left before showing a
+ * "FREE" label. Refreshes on wallet change and after payments/uploads (the
+ * `refresh-balance` event). Returns `undefined` when there is no wallet or the
+ * query fails, so callers fall back to the advisory size-only check.
  */
-export function formatFreeLimit(limitBytes: number): string {
-  if (limitBytes === 0) {
-    return 'No free tier';
-  }
+export function useFreeStatus(): FreeStatus {
+  const address = useStore((s) => s.address);
+  const paymentServiceUrl = useStore((s) => s.getCurrentConfig().paymentServiceUrl);
+  const [bytesRemaining, setBytesRemaining] = useState<number | null | undefined>(undefined);
+  // Monotonic request counter so a slower earlier fetch can't overwrite a newer one.
+  const seqRef = useRef(0);
 
-  const kib = limitBytes / 1024;
+  useEffect(() => {
+    if (!address) {
+      setBytesRemaining(undefined);
+      return;
+    }
+    // Clear the previous wallet's allowance immediately so a wallet switch never
+    // prices against the old quota during the fetch (falls back to size-only until
+    // the new value lands).
+    setBytesRemaining(undefined);
+    let cancelled = false;
+    const fetchStatus = async () => {
+      const seq = ++seqRef.current;
+      const apply = (v: number | null | undefined) => {
+        // Only apply if still mounted AND this is the latest in-flight request
+        // (e.g. a post-payment `refresh-balance` fetch must win over the mount one).
+        if (!cancelled && seq === seqRef.current) setBytesRemaining(v);
+      };
+      try {
+        const turbo = TurboFactory.unauthenticated({
+          paymentServiceConfig: { url: paymentServiceUrl },
+        });
+        const { bytesRemaining: remaining } = await turbo.getFreeStatus(address);
+        apply(remaining);
+      } catch (err) {
+        console.warn('Failed to fetch free-tier status:', err);
+        apply(undefined);
+      }
+    };
+    fetchStatus();
+    const onRefresh = () => fetchStatus();
+    window.addEventListener('refresh-balance', onRefresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('refresh-balance', onRefresh);
+    };
+  }, [address, paymentServiceUrl]);
 
-  if (kib < 1) {
-    return `${limitBytes} bytes`;
-  } else if (kib < 1024) {
-    return `${kib.toFixed(0)} KiB`;
-  } else {
-    const mib = kib / 1024;
-    return `${mib.toFixed(mib % 1 === 0 ? 0 : 2)} MiB`;
-  }
+  return { bytesRemaining };
 }
+

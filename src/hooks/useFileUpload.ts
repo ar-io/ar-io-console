@@ -147,7 +147,6 @@ export function useFileUpload() {
     const turboConfig = {
       paymentServiceConfig: { url: config.paymentServiceUrl },
       uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
     };
 
     // Get turbo config based on the token type (use override if provided, otherwise use wallet type)
@@ -659,6 +658,12 @@ export function useFileUpload() {
         setFailedCount(prev => prev + 1);
         setUploadedCount(prev => prev + 1);
       }
+    }
+
+    // Refresh balance + free-tier allowance after any successful upload (free,
+    // credits, or crypto) so the next upload prices against the up-to-date state.
+    if (results.length > 0) {
+      window.dispatchEvent(new CustomEvent('refresh-balance'));
     }
 
     setUploading(false);

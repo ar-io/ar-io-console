@@ -23,15 +23,15 @@ export const getTurboConfig = (config?: {
     return {
       paymentServiceConfig: { url: config.paymentServiceUrl },
       uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
     };
   }
 
-  // Fallback to legacy behavior
+  // Fallback to legacy behavior. Note: `processId` (the ARIO AO process) was
+  // dropped from the Turbo config in SDK 1.42 — the SDK now manages it — and
+  // ARIO/base-ARIO top-ups are being deprecated, so it's no longer passed here.
   return {
     paymentServiceConfig: { url: defaultPaymentServiceUrl },
     uploadServiceConfig: { url: uploadServiceUrl },
-    processId: arioProcessId,
   };
 };
 

@@ -26,7 +26,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { usePrivy, useLogin, useWallets, useCreateWallet } from '@privy-io/react-auth';
 import { useStore } from '../../store/useStore';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { getArweaveUrl, resolveEthereumAddress, getTurboBalance } from '../../utils';
 import CopyButton from '../CopyButton';
@@ -79,6 +79,7 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
 export default function TryItNowPanel() {
   const { address, uploadHistory, addUploadResults, setAddress } = useStore();
   const { freeUploadLimitBytes: freeLimit, freeTier } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
   const { uploadFile } = useFileUpload();
   const { uploadStatuses, getStatusIcon, checkUploadStatus, statusChecking, formatFileSize } = useUploadStatus();
 
@@ -193,10 +194,18 @@ export default function TryItNowPanel() {
         setPreviewUrl(null);
       }
 
-      // Validate file size against free limit
-      if (!isFileFree(file.size, freeLimit)) {
+      // Validate the file size against the per-item free limit first…
+      if (!(file.size < freeLimit && freeLimit > 0)) {
         setError(
           `File too large. Free uploads are limited to ${formatFreeLimit(freeLimit)}. Try a smaller file.`
+        );
+        return;
+      }
+      // …then the wallet's remaining free allowance (a no-op for an anonymous
+      // visitor, whose IP-tier balance isn't queryable by address).
+      if (!isFileFree(file.size, freeLimit, bytesRemaining)) {
+        setError(
+          `You've used up your free uploads for now. Head to the Upload page to continue.`
         );
         return;
       }
@@ -208,7 +217,7 @@ export default function TryItNowPanel() {
         setPreviewUrl(URL.createObjectURL(file));
       }
     },
-    [freeLimit, previewUrl]
+    [freeLimit, previewUrl, bytesRemaining]
   );
 
   const handleDrop = useCallback(

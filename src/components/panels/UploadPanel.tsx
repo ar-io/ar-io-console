@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { useImagePreviews } from '../../hooks/useImagePreviews';
@@ -345,7 +345,10 @@ export default function UploadPanel() {
   } = useStore();
 
   // Fetch and track the bundler's free upload limit
-  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — everything is billed per-item in USDC.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -389,7 +392,9 @@ export default function UploadPanel() {
 
   // Calculate total file size and billable size (excluding free files)
   const totalFileSize = files.reduce((acc, file) => acc + file.size, 0);
-  const billableFiles = files.filter(file => !isFileFree(file.size, freeUploadLimitBytes));
+  // Per-file free flags, consuming the shared allowance cumulatively across the batch.
+  const freeFlags = computeFreeFlags(files.map(f => f.size), effectiveFreeLimit, bytesRemaining);
+  const billableFiles = files.filter((_, i) => !freeFlags[i]);
   const billableFileSize = billableFiles.reduce((acc, file) => acc + file.size, 0);
 
   // Get x402 pricing ONLY when user has opened the "Pay with Crypto" section
@@ -754,9 +759,12 @@ export default function UploadPanel() {
                   Drop files here or click to browse
                 </p>
                 <p className="text-sm text-foreground/80">
-                  {freeUploadLimitBytes > 0 ? (
-                    <>Files under {formatFreeLimit(freeUploadLimitBytes)} are <span className="text-success font-semibold">FREE</span>{freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit)` : ''} • </>
-                  ) : null}
+                  {(() => {
+                    const summary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
+                    if (!summary) return null;
+                    const usedUp = bytesRemaining === 0;
+                    return <><span className={usedUp ? 'text-foreground/60' : 'text-success font-semibold'}>{summary}</span> • </>;
+                  })()}
                   Max 10GiB per file
                 </p>
               </div>
@@ -822,7 +830,7 @@ export default function UploadPanel() {
 
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {files.map((file, index) => {
-                  const isFree = isFileFree(file.size, freeUploadLimitBytes);
+                  const isFree = freeFlags[index];
                   const cost = calculateUploadCost(file.size, isFree);
                   const previewUrl = getPreviewUrl(index);
                   const isImage = isPreviewableImage(file);
@@ -1206,6 +1214,8 @@ export default function UploadPanel() {
                     <div className="flex items-center gap-2 text-sm text-foreground/80">
                       <span>
                         {(() => {
+                          // Completed upload: label from the fixed size cap, not the
+                          // current allowance (which mutates and would flip past records).
                           if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
                             return <span className="text-success">FREE</span>;
                           } else if (wincForOneGiB && result.winc) {
@@ -1308,7 +1318,7 @@ export default function UploadPanel() {
                     <span className="text-xs text-foreground">
                       {files.length} file{files.length !== 1 ? 's' : ''}
                       {(() => {
-                        const freeFilesCount = files.filter(file => isFileFree(file.size, freeUploadLimitBytes)).length;
+                        const freeFilesCount = freeFlags.filter(Boolean).length;
                         return freeFilesCount > 0 ? (
                           <span className="text-success"> ({freeFilesCount} free)</span>
                         ) : null;

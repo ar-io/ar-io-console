@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useTurboCapture } from '../../hooks/useTurboCapture';
-import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, isFileFree, useFreeStatus } from '../../hooks/useFreeUploadLimit';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { wincPerCredit, APP_NAME, APP_VERSION } from '../../constants';
 import { useStore } from '../../store/useStore';
@@ -75,6 +75,8 @@ export default function CapturePanel() {
 
   // Fetch and track the bundler's free upload limit
   const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   // Capture state
   const [urlInput, setUrlInput] = useState('');
@@ -150,7 +152,7 @@ export default function CapturePanel() {
   } = useUploadStatus();
 
   // Calculate billable file size for x402 pricing (exclude free files)
-  const billableFileSize = captureFile && !isFileFree(captureFile.size, freeUploadLimitBytes)
+  const billableFileSize = captureFile && !isFileFree(captureFile.size, effectiveFreeLimit, bytesRemaining)
     ? captureFile.size
     : 0;
 
@@ -251,7 +253,7 @@ export default function CapturePanel() {
   };
 
   const calculateUploadCost = (bytes: number) => {
-    if (isFileFree(bytes, freeUploadLimitBytes)) return 0; // Free tier
+    if (isFileFree(bytes, effectiveFreeLimit, bytesRemaining)) return 0; // Free tier
     if (!wincForOneGiB) return null;
 
     const gibSize = bytes / (1024 * 1024 * 1024);
@@ -852,6 +854,8 @@ export default function CapturePanel() {
                         <div className="flex items-center gap-2 text-sm text-foreground/80">
                           <span>
                             {(() => {
+                              // Completed capture: label from the fixed size cap, not the
+                              // current allowance (which mutates and would flip past records).
                               if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
                                 return <span className="text-success">FREE</span>;
                               } else if (wincForOneGiB && result.winc) {

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { isFileFree } from '@/hooks/useFreeUploadLimit';
+import { isFileFree, useFreeStatus } from '@/hooks/useFreeUploadLimit';
+import { useStore } from '@/store/useStore';
 import { MAX_PAGE_BYTES, estimatePageCredits } from '../publish/cost';
 
 interface SizeMeterProps {
@@ -21,8 +22,9 @@ function formatBytes(n: number): string {
  * Live page-size feedback in the editor: how big the page is against the hard
  * 2 MB single-item ceiling, and — only when it actually costs credits — the
  * estimated cost, so the user learns the cost while editing, not only at the
- * publish modal. We deliberately don't claim "free": the client can't see the
- * lifetime free-tier balance, so a "free" label could be wrong once it's spent.
+ * publish modal. "Free" is allowance-aware (via getFreeStatus): once the wallet's
+ * free tier is spent, the cost shows even for a small page rather than a stale
+ * "free".
  */
 export default function SizeMeter({
   sizeBytes,
@@ -31,7 +33,11 @@ export default function SizeMeter({
   perDataItemFeeWinc,
   className,
 }: SizeMeterProps) {
-  const free = isFileFree(sizeBytes, freeUploadLimitBytes);
+  const x402OnlyMode = useStore((s) => s.x402OnlyMode);
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — nothing is free in that mode.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const free = isFileFree(sizeBytes, effectiveFreeLimit, bytesRemaining);
   const overCeiling = sizeBytes > MAX_PAGE_BYTES;
   const credits = useMemo(
     () => (free ? 0 : estimatePageCredits(sizeBytes, wincForOneGiB, perDataItemFeeWinc)),

@@ -2,10 +2,16 @@ import { useState } from 'react';
 import { Calculator, HardDrive, DollarSign, Info, Check } from 'lucide-react';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
-import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../hooks/useFreeUploadLimit';
+import { useStore } from '../store/useStore';
 
 export default function PricingCalculator() {
-  const { freeUploadLimitBytes, freeTier } = useFreeUploadLimit();
+  const x402OnlyMode = useStore((s) => s.x402OnlyMode);
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — don't advertise one.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const freeSummary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
   const [inputType, setInputType] = useState<'storage' | 'dollars'>('storage');
   const [storageAmount, setStorageAmount] = useState(1);
   const [storageUnit, setStorageUnit] = useState<'MB' | 'GB' | 'TB'>('GB');
@@ -82,7 +88,7 @@ export default function PricingCalculator() {
         <h2 className="text-2xl font-bold text-foreground mb-2">Pricing Calculator</h2>
         <p className="text-foreground/80 text-sm max-w-2xl mx-auto">
           Calculate storage costs or see how much storage your budget gets you.
-          {freeUploadLimitBytes > 0 && ` Files under ${formatFreeLimit(freeUploadLimitBytes)} are FREE${freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit)` : ''}!`}
+          {freeSummary && ` ${freeSummary}.`}
         </p>
       </div>
 
@@ -281,10 +287,10 @@ export default function PricingCalculator() {
                   <strong className="text-foreground">Good to know:</strong>
                 </p>
                 <ul className="space-y-1">
-                  {freeUploadLimitBytes > 0 && (
+                  {freeSummary && (
                     <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      <span>Files under {formatFreeLimit(freeUploadLimitBytes)} are FREE{freeTier.lifetimeBytes > 0 ? ` (${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit)` : ''}</span>
+                      <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${bytesRemaining === 0 ? 'text-foreground/40' : 'text-primary'}`} />
+                      <span className={bytesRemaining === 0 ? 'text-foreground/60' : undefined}>{freeSummary}</span>
                     </li>
                   )}
                   <li className="flex items-start gap-2">
