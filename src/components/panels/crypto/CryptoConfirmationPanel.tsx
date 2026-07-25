@@ -407,8 +407,10 @@ export default function CryptoConfirmationPanel({
           if (tokenType === 'pol') {
             tokenAmount = POLToTokenAmount(cryptoAmount);
           } else if (tokenType === 'usdc' || tokenType === 'base-usdc' || tokenType === 'polygon-usdc') {
-            // USDC uses 6 decimals
-            tokenAmount = (cryptoAmount * 1e6).toString();
+            // USDC uses 6 decimals. Round to a whole smallest-unit — raw float
+            // math yields values like 10.1 * 1e6 = 10100000.000000002, which the
+            // SDK/on-chain call rejects or mis-rounds.
+            tokenAmount = Math.round(cryptoAmount * 1e6).toString();
           } else {
             tokenAmount = ETHToTokenAmount(cryptoAmount);
           }

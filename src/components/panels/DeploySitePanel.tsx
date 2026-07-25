@@ -449,6 +449,9 @@ interface DeployConfirmationModalProps {
   files: FileList;
   totalSize: number;
   totalCost: number;
+  // False while storage rates are still loading. totalCost is 0 until rates
+  // arrive, which would otherwise read as a genuine "FREE" deployment.
+  pricingReady: boolean;
   indexFile: string;
   fallbackFile: string;
   // ArNS specific props
@@ -514,6 +517,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
   billableSize,
   appName,
   appVersion,
+  pricingReady,
 }: DeployConfirmationModalProps) {
   const creditsNeeded = Math.max(0, totalCost - currentBalance);
   const hasSufficientCredits = creditsNeeded === 0;
@@ -702,12 +706,12 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-foreground/80">Cost:</span>
                         <span className="text-sm text-foreground font-medium">
-                          {totalCost === 0 ? (
-                            <span className="text-success font-medium">FREE</span>
-                          ) : typeof totalCost === 'number' ? (
-                            <>{totalCost.toFixed(6)} Credits</>
-                          ) : (
+                          {!pricingReady ? (
                             'Calculating...'
+                          ) : totalCost === 0 ? (
+                            <span className="text-success font-medium">FREE</span>
+                          ) : (
+                            <>{totalCost.toFixed(6)} Credits</>
                           )}
                         </span>
                       </div>
@@ -814,12 +818,12 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-foreground/80">Cost:</span>
                         <span className="text-sm text-foreground font-medium">
-                          {totalCost === 0 ? (
-                            <span className="text-success font-medium">FREE</span>
-                          ) : typeof totalCost === 'number' ? (
-                            <>{totalCost.toFixed(6)} Credits</>
-                          ) : (
+                          {!pricingReady ? (
                             'Calculating...'
+                          ) : totalCost === 0 ? (
+                            <span className="text-success font-medium">FREE</span>
+                          ) : (
+                            <>{totalCost.toFixed(6)} Credits</>
                           )}
                         </span>
                       </div>
@@ -912,6 +916,9 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
           <button
             onClick={onConfirm}
             disabled={
+              // Disable until storage rates load — otherwise totalCost is 0 and a
+              // billable deploy looks free and confirmable.
+              !pricingReady ||
               // Disable if on Credits tab and insufficient credits
               (paymentTab === 'credits' && creditsNeeded > 0) ||
               // Disable if on Crypto tab and insufficient crypto balance
@@ -921,7 +928,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
             }
             className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
           >
-            {paymentTab === 'crypto' && creditsNeeded > 0 ? 'Deploy & Auto-Pay' : 'Deploy Now'}
+            {!pricingReady ? 'Calculating...' : paymentTab === 'crypto' && creditsNeeded > 0 ? 'Deploy & Auto-Pay' : 'Deploy Now'}
           </button>
         </div>
       </div>
@@ -3155,6 +3162,7 @@ export default function DeploySitePanel() {
           files={selectedFolder}
           totalSize={totalFileSize}
           totalCost={totalCost}
+          pricingReady={!!wincForOneGiB}
           indexFile={indexFile}
           fallbackFile={fallbackFile}
           arnsEnabled={arnsEnabled}

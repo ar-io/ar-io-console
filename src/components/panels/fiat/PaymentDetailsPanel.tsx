@@ -5,7 +5,6 @@ import { FC, useCallback, useEffect, useState } from 'react';
 import { isEmail } from 'validator';
 import { CircleX, RefreshCw, CreditCard, Users } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
-import { useTheme } from '../../../hooks/useTheme';
 import useCountries from '../../../hooks/useCountries';
 import { useWincForOneGiB } from '../../../hooks/useWincForOneGiB';
 import { getPaymentIntent, getWincForFiat } from '../../../services/paymentService';
@@ -43,7 +42,6 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
   const countries = useCountries();
   const wincForOneGiB = useWincForOneGiB();
   const { address } = useStore();
-  const { isLight } = useTheme();
 
   const {
     setPaymentIntent,
@@ -124,11 +122,15 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
   const cardElementOptions: StripeCardElementOptions = {
     style: {
       base: {
-        color: isLight ? '#23232D' : '#ededed', // text-foreground (theme-aware)
+        // The app renders light-only (no dark CSS exists), but `theme` defaults
+        // to 'system', so on a dark-OS machine the old theme-aware values styled
+        // the card input near-white (#ededed) on the light card surface —
+        // effectively invisible. Pin to the light foreground colors.
+        color: '#23232D', // text-foreground
         fontSize: '16px',
         fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
         '::placeholder': {
-          color: isLight ? '#6C6C87' : '#A3A3AD', // text-foreground/80 (theme-aware)
+          color: '#6C6C87', // text-foreground/80
         },
       },
     },
@@ -337,7 +339,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
                         // Reset payment intent to one without promo code
                         const newPaymentIntent = await getPaymentIntent(
                           targetAddress,
-                          usdAmount * 100,
+                          Math.round(usdAmount * 100),
                           targetWalletType === 'ethereum' ? 'ethereum' :
                           targetWalletType === 'solana' ? 'solana' : 'arweave',
                         );
@@ -380,11 +382,11 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
                     e.preventDefault();
                     e.stopPropagation();
                     if (targetAddress && localPromoCode && localPromoCode.length > 0) {
-                      if (await isValidPromoCode(usdAmount * 100, localPromoCode, targetAddress)) {
+                      if (await isValidPromoCode(Math.round(usdAmount * 100), localPromoCode, targetAddress)) {
                         try {
                           const newPaymentIntent = await getPaymentIntent(
                             targetAddress,
-                            usdAmount * 100,
+                            Math.round(usdAmount * 100),
                             targetWalletType === 'ethereum' ? 'ethereum' :
                             targetWalletType === 'solana' ? 'solana' : 'arweave',
                             localPromoCode,

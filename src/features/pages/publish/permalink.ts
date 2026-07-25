@@ -14,6 +14,7 @@
  */
 
 import type { Block, PageDef } from '../schema';
+import { normalizeLinkUrl } from '../render/arResolve';
 
 export interface ArnsTarget {
   name: string;
@@ -35,14 +36,42 @@ export function arnsLabel(arns: ArnsTarget): string {
 export function prepareDefForPublish(def: PageDef, permalinkArns?: string): PageDef {
   let changed = false;
   const blocks: Block[] = def.blocks.map((b) => {
-    if (b.type !== 'verify') return b;
-    if (permalinkArns) {
-      changed = true;
-      return { ...b, url: `ar://${permalinkArns}` };
+    // Verify block: rewrite the permalink target (see module doc).
+    if (b.type === 'verify') {
+      if (permalinkArns) {
+        changed = true;
+        return { ...b, url: `ar://${permalinkArns}` };
+      }
+      if (AR_TX_URL_RE.test((b.url || '').trim())) {
+        changed = true;
+        return { ...b, url: '#' };
+      }
+      return b;
     }
-    if (AR_TX_URL_RE.test((b.url || '').trim())) {
-      changed = true;
-      return { ...b, url: '#' };
+    // Link block: canonicalise the user-entered URL so a permanent page never
+    // ships a dead ('example.com' → '#') or broken ('https://') link.
+    if (b.type === 'link') {
+      const url = normalizeLinkUrl(b.url);
+      if (url !== b.url) {
+        changed = true;
+        return { ...b, url };
+      }
+      return b;
+    }
+    // Social block: same normalisation, per item.
+    if (b.type === 'social') {
+      let itemsChanged = false;
+      const items = b.items.map((it) => {
+        const url = normalizeLinkUrl(it.url);
+        if (url === it.url) return it;
+        itemsChanged = true;
+        return { ...it, url };
+      });
+      if (itemsChanged) {
+        changed = true;
+        return { ...b, items };
+      }
+      return b;
     }
     return b;
   });

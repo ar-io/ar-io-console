@@ -37,6 +37,9 @@ export function safeHref(url: unknown): string {
   if (raw === '') return '#';
   if (raw.startsWith('#')) return raw;
   const lower = raw.toLowerCase();
+  // A scheme with no authority (e.g. the untouched `https://` link default) is
+  // not a real link — don't emit a broken href for it.
+  if (lower === 'https://' || lower === 'http://') return '#';
   if (lower.startsWith('https://')) return raw;
   if (lower.startsWith('http://')) return raw;
   if (lower.startsWith('mailto:')) return raw;

@@ -1,33 +1,36 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useFreeUploadLimit } from './hooks/useFreeUploadLimit';
 import { useTheme } from './hooks/useTheme';
-import LandingPage from './pages/LandingPage';
-import TopUpPage from './pages/TopUpPage';
-import UploadPage from './pages/UploadPage';
-import CapturePage from './pages/CapturePage';
-import ShareCreditsPage from './pages/ShareCreditsPage';
-// DEPRECATED: Gifting feature disabled — imports retained for potential future re-enablement
-// import GiftPage from './pages/GiftPage';
-import DomainsPage from './pages/DomainsPage';
-import CalculatorPage from './pages/CalculatorPage';
-import ServicesCalculatorPage from './pages/ServicesCalculatorPage';
-import BalanceCheckerPage from './pages/BalanceCheckerPage';
-// import RedeemPage from './pages/RedeemPage';
-import GatewayInfoPage from './pages/GatewayInfoPage';
-import DeploySitePage from './pages/DeploySitePage';
-import RecentDeploymentsPage from './pages/RecentDeploymentsPage';
-import AccountPage from './pages/AccountPage';
-import TryItNowPage from './pages/TryItNowPage';
-import VerifyPage from './pages/VerifyPage';
-import PagesPage from './pages/PagesPage';
-
-// Lazy-load BrowsePage to isolate wayfinder dependencies and avoid circular dependency issues
-const BrowsePage = lazy(() => import('./pages/BrowsePage'));
 import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
+
+// Route pages are lazy-loaded so each ships in its own chunk rather than the
+// entry bundle. Previously only BrowsePage was split, so a visitor landing on
+// any route downloaded every page (all 17 routes + the 32 Pages templates) up
+// front (~2.5 MB gzip main chunk). Layout wraps <Outlet> in <Suspense>, so the
+// header/nav stay mounted while a page chunk loads. BrowsePage stays split for
+// the additional reason of isolating its wayfinder dependencies.
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const TopUpPage = lazy(() => import('./pages/TopUpPage'));
+const UploadPage = lazy(() => import('./pages/UploadPage'));
+const CapturePage = lazy(() => import('./pages/CapturePage'));
+const ShareCreditsPage = lazy(() => import('./pages/ShareCreditsPage'));
+// DEPRECATED: Gifting/Redeem features disabled — routes below stay commented out.
+const DomainsPage = lazy(() => import('./pages/DomainsPage'));
+const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
+const ServicesCalculatorPage = lazy(() => import('./pages/ServicesCalculatorPage'));
+const BalanceCheckerPage = lazy(() => import('./pages/BalanceCheckerPage'));
+const GatewayInfoPage = lazy(() => import('./pages/GatewayInfoPage'));
+const DeploySitePage = lazy(() => import('./pages/DeploySitePage'));
+const RecentDeploymentsPage = lazy(() => import('./pages/RecentDeploymentsPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const TryItNowPage = lazy(() => import('./pages/TryItNowPage'));
+const VerifyPage = lazy(() => import('./pages/VerifyPage'));
+const PagesPage = lazy(() => import('./pages/PagesPage'));
+const BrowsePage = lazy(() => import('./pages/BrowsePage'));
 
 // Loading screen for Browse page while lazy-loading
 function BrowsePageLoader() {

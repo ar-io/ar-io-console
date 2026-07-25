@@ -7,6 +7,7 @@ import { supportsJitPayment } from '@/utils/jitPayment';
 import type { PageDef } from '../schema';
 import type { RenderCtx } from '../render/renderPageHtml';
 import { renderPageHtml } from '../render/renderPageHtml';
+import { normalizeLinkUrl } from '../render/arResolve';
 import { arnsLabel } from '../publish/permalink';
 import { MAX_PAGE_BYTES, estimatePageCredits } from '../publish/cost';
 import type { PublishStage } from '../hooks/usePagePublish';
@@ -112,10 +113,17 @@ export default function PublishModal({
   const contentIssues = useMemo(() => {
     const issues: string[] = [];
     if (!def.profile.displayName.trim()) issues.push('a display name');
+    // A URL counts as a real link only if it normalises to a usable target — this
+    // rejects the untouched `https://` link default (→ '') while accepting a bare
+    // domain like `example.com` (→ https://…), matching what actually gets published.
+    const isRealLink = (u: string) => {
+      const n = normalizeLinkUrl(u);
+      return n !== '' && n !== '#';
+    };
     const hasRealLink = def.blocks.some(
       (b) =>
-        (b.type === 'link' && !!b.url.trim() && b.url.trim() !== '#') ||
-        (b.type === 'social' && b.items.some((i) => !!i.url.trim() && i.url.trim() !== '#')),
+        (b.type === 'link' && isRealLink(b.url)) ||
+        (b.type === 'social' && b.items.some((i) => isRealLink(i.url))),
     );
     if (!hasRealLink) issues.push('at least one link');
     return issues;

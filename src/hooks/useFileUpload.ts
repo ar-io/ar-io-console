@@ -94,7 +94,13 @@ export function useFileUpload() {
   const [totalSize, setTotalSize] = useState<number>(0);
   const [uploadedSize, setUploadedSize] = useState<number>(0);
   const [failedFiles, setFailedFiles] = useState<File[]>([]);
-  const [isCancelled, setIsCancelled] = useState<boolean>(false);
+  // Synchronous cancellation source of truth. An already-running upload loop
+  // captured its closure and can never see a React state update, so cancellation
+  // is tracked in a ref the loop reads on each iteration.
+  const cancelledRef = useRef(false);
+  // Aborts the in-flight turbo.uploadFile so Cancel actually stops the upload
+  // (and stops charging) instead of just hiding the progress UI.
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Validate wallet state to prevent cross-wallet conflicts
   const validateWalletState = useCallback((): void => {
@@ -271,6 +277,8 @@ export function useFileUpload() {
       selectedJitToken?: SupportedTokenType; // Selected JIT payment token
       /** Byte-transfer progress (0-100). Reaches 100 while the bundler finalizes. */
       onProgress?: (percentage: number) => void;
+      /** Aborts the in-flight upload when the user cancels. */
+      signal?: AbortSignal;
     }
   ) => {
     if (!address) {
@@ -393,6 +401,7 @@ export function useFileUpload() {
         console.log('[useFileUpload] Using streaming upload');
         uploadResult = await turbo.uploadFile({
           file: file,
+          ...(options?.signal ? { signal: options.signal } : {}),
           fundingMode,
           dataItemOpts: { tags: uploadTags },
           events: {
@@ -438,6 +447,7 @@ export function useFileUpload() {
             fileStreamFactory: () => new Uint8Array(arrayBuffer),
             fileSizeFactory: () => file.size,
             dataItemOpts: { tags: uploadTags },
+            ...(options?.signal ? { signal: options.signal } : {}),
             // Force chunked upload mode which may bypass streaming issues
             chunkingMode: 'force',
             ...(fundingMode ? { fundingMode } : {}),
@@ -517,7 +527,8 @@ export function useFileUpload() {
     setRecentFiles([]);
     setUploadErrors([]);
     setFailedFiles([]);
-    setIsCancelled(false);
+    cancelledRef.current = false;
+    abortControllerRef.current = new AbortController();
 
     // Calculate total size
     const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -589,8 +600,8 @@ export function useFileUpload() {
     }
 
     for (const file of files) {
-      // Check if cancelled
-      if (isCancelled) {
+      // Check if cancelled (synchronously — see cancelledRef).
+      if (cancelledRef.current) {
         setUploading(false);
         setActiveUploads([]);
         return { results, failedFiles: failedFileNames };
@@ -602,10 +613,11 @@ export function useFileUpload() {
           { name: file.name, progress: 0, size: file.size }
         ]);
 
-        // If we did a crypto pre-topup, don't pass JIT options to avoid per-file JIT
+        // If we did a crypto pre-topup, don't pass JIT options to avoid per-file JIT.
+        // Always thread the abort signal so Cancel stops the in-flight upload.
         const uploadOptions = (options?.cryptoPayment && selectedToken)
-          ? { customTags: options?.customTags }
-          : options;
+          ? { customTags: options?.customTags, signal: abortControllerRef.current?.signal }
+          : { ...options, signal: abortControllerRef.current?.signal };
         const result = await uploadFile(file, uploadOptions);
 
         setActiveUploads(prev => prev.filter(u => u.name !== file.name));
@@ -626,6 +638,11 @@ export function useFileUpload() {
 
       } catch (error) {
         setActiveUploads(prev => prev.filter(u => u.name !== file.name));
+        // If the user cancelled, the in-flight upload was aborted on purpose —
+        // don't record it as a failure; just stop the batch.
+        if (cancelledRef.current) {
+          break;
+        }
         // Preserve raw error for debugging, especially on mobile
         const rawError = error instanceof Error ? error.message : String(error);
         console.error(`[uploadMultipleFiles] Failed for ${file.name}:`, rawError, error);
@@ -668,7 +685,7 @@ export function useFileUpload() {
 
     setUploading(false);
     return { results, failedFiles: failedFileNames };
-  }, [uploadFile, validateWalletState, isCancelled, createTurboClient, getCurrentConfig]);
+  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig]);
 
   const reset = useCallback(() => {
     setUploadProgress({});
@@ -684,7 +701,7 @@ export function useFileUpload() {
     setTotalSize(0);
     setUploadedSize(0);
     setFailedFiles([]);
-    setIsCancelled(false);
+    cancelledRef.current = false;
   }, []);
 
   // Retry failed files
@@ -702,7 +719,10 @@ export function useFileUpload() {
 
   // Cancel ongoing uploads
   const cancelUploads = useCallback(() => {
-    setIsCancelled(true);
+    // Flip the ref synchronously so the running loop sees it immediately, and
+    // abort the in-flight upload so it actually stops (and stops charging).
+    cancelledRef.current = true;
+    abortControllerRef.current?.abort();
     setUploading(false);
     setActiveUploads([]);
   }, []);

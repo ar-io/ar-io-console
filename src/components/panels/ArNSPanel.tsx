@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import useDebounce from '../../hooks/useDebounce';
 import { Globe, Search, CheckCircle, XCircle, Shield, Zap, ExternalLink } from 'lucide-react';
 import { getARIO } from '../../utils';
 
@@ -7,29 +6,43 @@ export default function ArNSPanel() {
   const [nameSearch, setNameSearch] = useState('');
   const [checking, setChecking] = useState(false);
   const [availability, setAvailability] = useState<boolean | null>(null);
-
-  const debouncedSearch = useDebounce(nameSearch);
+  // The name `availability` actually describes — captured at check time so the
+  // result banner can never be mislabeled by later keystrokes.
+  const [checkedName, setCheckedName] = useState('');
+  const [checkError, setCheckError] = useState<string | null>(null);
 
   const hasInvalidHyphens = /^-|-$/.test(nameSearch);
 
   const checkAvailability = async () => {
-    if (!debouncedSearch || hasInvalidHyphens) return;
+    // Read the current input directly (no debounce): the check is button-
+    // triggered, so a debounced value would just let a stale/empty name be
+    // checked and then mislabeled with the current text.
+    const name = nameSearch;
+    if (!name || hasInvalidHyphens) return;
 
     setChecking(true);
+    setAvailability(null);
+    setCheckError(null);
     try {
       const ario = getARIO();
 
-      // Try to resolve the name - if it exists, it's taken
-      const record = await ario.resolveArNSName({ name: debouncedSearch });
-
-      // If we get a record back, the domain is taken
-      if (record) {
-        setAvailability(false);
-      }
+      // A returned record means the name is registered → taken.
+      // getArNSRecord THROWS "ArNS record not found: <name>" when no record
+      // exists (i.e. available). Any *other* thrown error is a gateway/transport
+      // failure — we must not report that as "available" (the old behavior),
+      // which could send a user to register a name that's actually taken.
+      await ario.getArNSRecord({ name });
+      setCheckedName(name);
+      setAvailability(false);
     } catch (error) {
-      // If resolveArNSName throws an error, the domain is likely available
-      console.log('Domain appears to be available:', error);
-      setAvailability(true);
+      const message = error instanceof Error ? error.message : String(error);
+      if (/record not found/i.test(message)) {
+        setCheckedName(name);
+        setAvailability(true);
+      } else {
+        console.error('ArNS availability check failed:', error);
+        setCheckError('Could not check availability right now. Please try again.');
+      }
     } finally {
       setChecking(false);
     }
@@ -78,6 +91,7 @@ export default function ArNSPanel() {
                   const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
                   setNameSearch(cleaned);
                   setAvailability(null);
+                  setCheckError(null);
                 }}
                 className="flex-1 p-3 bg-transparent text-foreground font-mono focus:outline-none min-w-0"
                 placeholder="my-awesome-app"
@@ -103,8 +117,18 @@ export default function ArNSPanel() {
           </p>
         )}
 
+        {/* Transport/gateway error — distinct from a definitive availability result */}
+        {checkError && (
+          <div className="mt-4 p-4 rounded-2xl border border-error/20 bg-error/10 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <XCircle className="w-5 h-5 text-error" />
+              <span className="font-semibold text-error">{checkError}</span>
+            </div>
+          </div>
+        )}
+
         {/* Single consolidated availability display */}
-        {availability !== null && nameSearch && (
+        {availability !== null && checkedName && (
           <div className={`mt-4 p-4 rounded-2xl border text-center ${
             availability
               ? 'bg-card border-primary/30'
@@ -114,13 +138,13 @@ export default function ArNSPanel() {
               <>
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <CheckCircle className="w-5 h-5 text-primary" />
-                  <span className="font-semibold text-foreground">"{nameSearch}.ar.io" is available!</span>
+                  <span className="font-semibold text-foreground">"{checkedName}.ar.io" is available!</span>
                 </div>
                 <p className="text-sm text-foreground/80 mb-4">
                   Complete your registration on the official ArNS app
                 </p>
                 <a
-                  href={`https://arns.ar.io/#/register/${nameSearch}`}
+                  href={`https://arns.ar.io/#/register/${checkedName}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-full hover:bg-primary/90 transition-colors"
@@ -133,7 +157,7 @@ export default function ArNSPanel() {
               <>
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <XCircle className="w-5 h-5 text-error" />
-                  <span className="font-semibold text-error">"{nameSearch}.ar.io" is already taken</span>
+                  <span className="font-semibold text-error">"{checkedName}.ar.io" is already taken</span>
                 </div>
                 <p className="text-sm text-foreground/80">Try a different name</p>
               </>
