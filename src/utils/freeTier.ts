@@ -36,11 +36,13 @@ export function isFileFree(
 }
 
 /**
- * Per-file free flags for a batch, consuming a finite free-tier allowance
- * cumulatively (greedy, in list order): once the remaining allowance can't cover
- * the next file, it and every later file is billable. Unlimited (`null`) or
- * unknown (`undefined`) reduces to the per-item size check with no drawdown, so
- * the exhausted (`0`) and unlimited cases stay exact.
+ * Per-file free flags for a batch, consuming a finite free-tier allowance in list
+ * order. Each file is evaluated against the allowance remaining at that point and
+ * draws it down when free; a file that doesn't fit is billable but leaves the
+ * allowance intact, so a later smaller file can still be free
+ * (e.g. `[300, 500, 50]` with `400` → `[true, false, true]`). Unlimited (`null`)
+ * or unknown (`undefined`) reduces to the per-item size check with no drawdown;
+ * exhausted (`0`) and unlimited stay exact.
  */
 export function computeFreeFlags(
   sizes: number[],

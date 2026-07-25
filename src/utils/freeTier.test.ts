@@ -43,6 +43,11 @@ describe('computeFreeFlags (cumulative drawdown across a batch)', () => {
     expect(computeFreeFlags([75, 75], 1000, 100)).toEqual([true, false]);
   });
 
+  it('a later smaller file can still fit after a larger one is skipped', () => {
+    // 300 free (->100 left), 500 doesn't fit (100 intact), 50 fits (<=100)
+    expect(computeFreeFlags([300, 500, 50], 1000, 400)).toEqual([true, false, true]);
+  });
+
   it('never draws down for unlimited or unknown allowance', () => {
     expect(computeFreeFlags([300, 300, 300], 1000, null)).toEqual([true, true, true]);
     expect(computeFreeFlags([300, 300, 300], 1000, undefined)).toEqual([true, true, true]);
