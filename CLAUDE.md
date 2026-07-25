@@ -79,7 +79,8 @@ src/
 │   ├── verify/           # Verify sub-components (VerifyHero, ProvenanceChain, etc.)
 │   └── account/          # Account page components
 ├── features/
-│   └── browse/           # Browse feature with Wayfinder verification (see below)
+│   ├── browse/           # Browse feature with Wayfinder verification (see below)
+│   └── pages/            # Pages — permaweb link-in-bio builder (see below)
 ├── hooks/                # Custom React hooks (Turbo SDK wrappers, pricing, uploads)
 ├── pages/                # React Router page components
 ├── services/             # Backend service clients (paymentService, verificationService)
@@ -153,6 +154,23 @@ The Verify tool (`/verify`) lets users verify permaweb transaction authenticity 
 2. Calls `verifyApiUrl` from config (production: `vilenarios.com/local/verify`)
 3. Returns gateway attestation data, provenance chain, content hashes
 4. Optional: user can compare a local file hash against the on-chain hash
+
+### Pages Feature
+
+Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit profile/blocks/theme with a live preview, and publish a permanent, self-contained HTML page to Arweave with an optional ArNS domain. Pure-logic modules are node-tested (see the Vitest note in Quick Start).
+
+**Key files:**
+- `src/features/pages/schema.ts` - `PageDef` (source of truth) + `validatePageDef`
+- `src/features/pages/render/renderPageHtml.ts` - assembles the final HTML around the chosen template's output; injects a base `overflow-wrap:break-word` safety net so long content can't overflow
+- `src/features/pages/templates/` - 32 self-contained template modules + `index.ts` registry; `shared.ts` holds the escape/sanitize helpers
+- `src/features/pages/hooks/usePagePublish.ts` - publish orchestration (render → upload → manifest → ArNS)
+- `src/features/pages/components/PagesPanel.tsx` + `components/controls/` - editor UI
+
+**Template contract** (enforced by `templates/security.test.ts` + `robustness.test.ts` + `registry.test.ts`, which auto-run over every template): each template is `{ id, meta, seed, render(def,ctx) }`, pure + deterministic (no `Date`/`Math.random`), CSS scoped under `.pg-<id>`. Hard rules: escape ALL user content (`escapeHtml`/`escapeAttr`), sanitize theme values (`cssColor`/`cssFontFamily`/`hexToRgba`), 100% self-contained (**no external assets and NO `url(` at all**), render every block type, never throw.
+
+**Publish = manifest deploy:** a page ships as an `arweave/paths` v0.2.0 manifest bundling `index.html` + an auto-generated `social.png` OG card (`render/ogCard.ts` → `publish/rasterizeOgCard.ts` → `publish/manifest.ts`). ArNS points at the manifest tx, so the page is `name.ar.io/` and its preview is the future-proof manifest path `name.ar.io/social.png` (baked as `og:image`). The OG card + manifest are best-effort and zero-cost (only uploaded when they fit the free tier and not in x402-only mode); with no card it deploys the bare `index.html` tx. `meta.ogImage` is set only on the render copy, never the hashed source def, so dedup is unaffected.
+
+**Adaptive editor controls:** `render/themeSupport.ts` empirically probes which theme axes a template honors (render seed vs. poisoned-axis, diff the island-stripped output) and whether it renders link emoji icons; `ThemeControls`/`BlocksControls` show only live controls, no dead sliders. Results cache per template id and auto-appear if a template later gains support for an axis.
 
 ### Configuration System
 
@@ -413,7 +431,7 @@ if (privyWallet) {
 ```typescript
 '/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share',
 '/account', '/domains', '/calculator', '/services-calculator', '/balances',
-'/settings', '/try', '/browse', '/verify'
+'/settings', '/try', '/browse', '/verify', '/pages'
 ```
 
 Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unknown routes redirect to home.

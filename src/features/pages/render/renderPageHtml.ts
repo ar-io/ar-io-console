@@ -80,6 +80,7 @@ function embedPageDef(def: PageDef): string {
   return JSON.stringify(def).replace(/</g, '\\u003c');
 }
 
+/** Render a PageDef to a complete, self-contained HTML document string. */
 export function renderPageHtml(def: PageDef, ctx: RenderCtx): string {
   const template = getTemplate(def.template);
   const { body, style } = template.render(def, ctx);
@@ -109,7 +110,12 @@ export function renderPageHtml(def: PageDef, ctx: RenderCtx): string {
   if (ogImage) head.push(`<meta name="twitter:image" content="${escapeAttr(ogImage)}">`);
 
   head.push(`<link rel="icon" href="${escapeAttr(favicon)}">`);
-  head.push(`<style>${style}</style>`);
+  // Base safety net applied under every template: long single-word content (e.g. a
+  // one-word display name at a huge font size) must wrap instead of overflowing the
+  // viewport. `overflow-wrap` inherits, so this covers all descendants; a template
+  // can still override per-element. Kept minimal so it never fights template CSS.
+  const baseStyle = `.pg-${def.template}{overflow-wrap:break-word;}`;
+  head.push(`<style>${baseStyle}${style}</style>`);
   head.push(`<script id="ario-pagedef" type="application/json">${embedPageDef(def)}</script>`);
 
   return (
