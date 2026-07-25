@@ -124,7 +124,7 @@ export function normalizeLinkUrl(raw: unknown): string {
   // No scheme. A dotted host (example.com, myname.ar.io) is a web URL — note an
   // ArNS name is itself served at https://<name>.<host>, so https:// is correct
   // for both. A bare single label (myname / links_myname) is an ArNS name.
-  if (/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(\/.*)?$/i.test(t)) return `https://${t}`;
+  if (/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:[/?#].*)?$/i.test(t)) return `https://${t}`;
   if (/^[a-z0-9][a-z0-9-]*(_[a-z0-9-]+)?$/i.test(t)) return `ar://${t}`;
   return '';
 }

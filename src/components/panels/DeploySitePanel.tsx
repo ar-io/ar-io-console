@@ -1833,6 +1833,10 @@ export default function DeploySitePanel() {
 
   const totalFileSize = calculateTotalSize();
   const totalCost = calculateTotalCost();
+  // Storage rates are ready only when the rate is a finite, positive number
+  // (useWincForOneGiB returns string | undefined — see CLAUDE.md gotcha #1). Until
+  // then totalCost is 0, which must not read as a genuine "FREE" deployment.
+  const pricingReady = Number.isFinite(Number(wincForOneGiB)) && Number(wincForOneGiB) > 0;
   const folderName = selectedFolder?.[0]?.webkitRelativePath?.split('/')[0] || '';
 
   return (
@@ -2205,7 +2209,9 @@ export default function DeploySitePanel() {
             <div className="flex justify-between">
               <span className="text-xs text-foreground/80">Estimated Cost:</span>
               <span className="text-xs text-foreground">
-                {totalCost === 0 ? (
+                {!pricingReady ? (
+                  <span className="text-foreground/60">Calculating…</span>
+                ) : totalCost === 0 ? (
                   <span className="text-success font-medium">FREE</span>
                 ) : (
                   <span>{totalCost.toFixed(6)} Credits</span>
@@ -3162,7 +3168,7 @@ export default function DeploySitePanel() {
           files={selectedFolder}
           totalSize={totalFileSize}
           totalCost={totalCost}
-          pricingReady={!!wincForOneGiB}
+          pricingReady={pricingReady}
           indexFile={indexFile}
           fallbackFile={fallbackFile}
           arnsEnabled={arnsEnabled}

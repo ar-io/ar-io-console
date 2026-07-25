@@ -144,6 +144,12 @@ export default function TopUpPanel() {
     return inputType === 'storage' ? calculateStorageCost() : usdAmount;
   };
 
+  // The fiat flow charges whole cents (the payment intent is created from
+  // Math.round(usd*100)). Quote the detail/confirm panels off the same rounded
+  // dollar amount so displayed credits, promo validation, and the charge can't
+  // diverge for inputs like $10.555 or a storage-derived cost.
+  const getCheckoutUsdAmount = () => Math.round(getEffectiveUsdAmount() * 100) / 100;
+
   // Format number with commas
   const formatNumber = (num: number, decimals = 2) => {
     return new Intl.NumberFormat('en-US', {
@@ -500,7 +506,7 @@ export default function TopUpPanel() {
       case 'details':
         return (
           <PaymentDetailsPanel
-            usdAmount={getEffectiveUsdAmount()}
+            usdAmount={getCheckoutUsdAmount()}
             onBack={handleFiatBackToAmount}
             onNext={handleFiatPaymentDetailsNext}
             targetAddress={targetAddress || ''}
@@ -510,7 +516,7 @@ export default function TopUpPanel() {
       case 'confirmation':
         return (
           <PaymentConfirmationPanel
-            usdAmount={getEffectiveUsdAmount()}
+            usdAmount={getCheckoutUsdAmount()}
             onBack={() => setFiatFlowStep('details')}
             onSuccess={handleFiatPaymentSuccess}
             targetAddress={targetAddress || ''}

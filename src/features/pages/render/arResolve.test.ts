@@ -93,6 +93,11 @@ describe('normalizeLinkUrl', () => {
     // An ArNS name typed with its host is a valid https host too.
     expect(normalizeLinkUrl('myname.ar.io')).toBe('https://myname.ar.io');
   });
+  it('preserves query strings and fragments on a bare host', () => {
+    expect(normalizeLinkUrl('example.com?ref=x')).toBe('https://example.com?ref=x');
+    expect(normalizeLinkUrl('example.com#pricing')).toBe('https://example.com#pricing');
+    expect(normalizeLinkUrl('example.com/p?q=1#frag')).toBe('https://example.com/p?q=1#frag');
+  });
   it('treats a bare label as an ArNS name', () => {
     expect(normalizeLinkUrl('myname')).toBe('ar://myname');
     expect(normalizeLinkUrl('links_myname')).toBe('ar://links_myname');
