@@ -578,9 +578,11 @@ export default function UploadPanel() {
   })();
 
   // Auto-switch to crypto tab when user has insufficient credits
-  // This guides users to the crypto payment option when credits won't cover the upload
+  // This guides users to the crypto payment option when credits won't cover the upload.
+  // Arweave wallets have no JIT/crypto upload path, so never switch them into a crypto
+  // tab that can only fail — they stay on Credits and are prompted to buy credits.
   useEffect(() => {
-    if (showConfirmModal && totalCost !== null) {
+    if (showConfirmModal && totalCost !== null && walletType !== 'arweave') {
       const creditsNeeded = Math.max(0, totalCost - creditBalance);
       if (creditsNeeded > 0) {
         setLocalJitEnabled(true); // Enable JIT payment option
@@ -588,7 +590,7 @@ export default function UploadPanel() {
         setJitSectionExpanded(true); // Expand the JIT section
       }
     }
-  }, [showConfirmModal, totalCost, creditBalance, setPaymentTab, setJitSectionExpanded, setLocalJitEnabled]);
+  }, [showConfirmModal, totalCost, creditBalance, walletType, setPaymentTab, setJitSectionExpanded, setLocalJitEnabled]);
 
   const handleUpload = () => {
     if (!address) {
@@ -1214,16 +1216,19 @@ export default function UploadPanel() {
                     <div className="flex items-center gap-2 text-sm text-foreground/80">
                       <span>
                         {(() => {
-                          // Completed upload: label from the fixed size cap, not the
-                          // current allowance (which mutates and would flip past records).
-                          if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
-                            return <span className="text-success">FREE</span>;
-                          } else if (wincForOneGiB && result.winc) {
-                            const credits = Number(result.winc) / wincPerCredit;
-                            return `${credits.toFixed(6)} Credits`;
-                          } else {
-                            return 'Unknown Cost';
+                          // The receipt's winc is the immutable ground truth for a
+                          // completed upload: a small file that used up the free
+                          // allowance was billed (winc > 0) and must not read FREE.
+                          // Fall back to the fixed size cap only for legacy records
+                          // that predate winc capture (never the mutable allowance).
+                          const winc = result.winc ? Number(result.winc) : NaN;
+                          if (Number.isFinite(winc) && winc > 0) {
+                            return wincForOneGiB ? `${(winc / wincPerCredit).toFixed(6)} Credits` : 'Unknown Cost';
                           }
+                          if ((Number.isFinite(winc) && winc === 0) || (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes))) {
+                            return <span className="text-success">FREE</span>;
+                          }
+                          return 'Unknown Cost';
                         })()}
                       </span>
                       <span>•</span>
@@ -1339,7 +1344,9 @@ export default function UploadPanel() {
             {(() => {
               const creditsNeeded = typeof totalCost === 'number' ? Math.max(0, totalCost - creditBalance) : 0;
               const hasSufficientCredits = creditsNeeded === 0;
-              const canUseJit = selectedJitToken && supportsJitPayment(selectedJitToken);
+              // Arweave wallets can't pay JIT/crypto (no supported token), so never
+              // offer the crypto tab for them — it would only fail at signing.
+              const canUseJit = walletType !== 'arweave' && selectedJitToken && supportsJitPayment(selectedJitToken);
 
               // Check if upload is completely free (all files under free limit)
               const isFreeUpload = typeof totalCost === 'number' && totalCost === 0;

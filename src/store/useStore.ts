@@ -100,6 +100,9 @@ interface DeployResult {
   }>;
   timestamp?: number;
   receipt?: any; // Store receipt for manifest
+  // Paths of files that failed to upload while the deploy still proceeded (under
+  // the failure threshold) — so a partial deploy isn't recorded as fully clean.
+  failedFiles?: string[];
   // ArNS-specific fields
   arnsName?: string; // ArNS name updated
   undername?: string; // Undername if used
@@ -844,8 +847,14 @@ export const useStore = create<StoreState>()(
         const newEntries: Record<string, FileHashEntry> = {};
         const MAX_CACHE_ENTRIES = 5000; // Limit to prevent localStorage overflow
 
+        // Namespace entries by the active upload service (network). A file hashed
+        // and uploaded on testnet must NOT be treated as already-uploaded on
+        // mainnet — its txId doesn't exist there. Keying by the bundler URL keeps
+        // prod/testnet/custom caches separate so Smart Deploy can never bake a
+        // wrong-network txId into a manifest. (See getFileHashEntry.)
+        const scope = get().getCurrentConfig().uploadServiceUrl;
         entries.forEach(({ hash, txId, size, contentType }) => {
-          newEntries[hash] = {
+          newEntries[`${scope}::${hash}`] = {
             txId,
             hash,
             size,
@@ -880,8 +889,12 @@ export const useStore = create<StoreState>()(
         set({ fileHashCache: mergedCache });
       },
       getFileHashEntry: (hash) => {
-        const entry = get().fileHashCache[hash];
-        return entry || null; // No expiry - cache is permanent until cleared
+        // Look up within the active upload service's namespace only, so a testnet
+        // txId is never returned for a mainnet deploy (and vice versa). A miss just
+        // means the file re-uploads on this network. No expiry otherwise.
+        const scope = get().getCurrentConfig().uploadServiceUrl;
+        const entry = get().fileHashCache[`${scope}::${hash}`];
+        return entry || null;
       },
       clearFileHashCache: () => set({ fileHashCache: {} }),
       setSmartDeployEnabled: (enabled) => set({ smartDeployEnabled: enabled }),

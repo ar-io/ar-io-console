@@ -41,6 +41,7 @@ interface DeployResult {
   receipt?: any; // Store receipt for manifest
   appName?: string; // User's app/site name
   appVersion?: string; // User's app/site version
+  failedFiles?: string[]; // Paths of files that failed to upload on a partial deploy
 }
 
 export interface ActiveUpload {
@@ -414,6 +415,17 @@ export function useFolderUpload() {
         throw new Error('Upload cancelled');
       }
 
+      // Per-attempt abort controller: a timeout aborts THIS attempt's in-flight
+      // upload before we retry — otherwise the abandoned upload keeps running
+      // server-side and the file can be uploaded (and charged) twice. Chained to
+      // the deployment signal so a global cancel aborts it too. Declared outside
+      // the try so the finally can clean up its timer and listener.
+      const attemptController = new AbortController();
+      const onDeployAbort = () => attemptController.abort();
+      if (signal.aborted) attemptController.abort();
+      else signal.addEventListener('abort', onDeployAbort);
+      let attemptTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
       try {
         // Build tags array
         const tags = [
@@ -440,7 +452,7 @@ export function useFolderUpload() {
         // Add timeout wrapper for upload
         const uploadPromise = turbo.uploadFile({
           file: file,
-          signal: signal, // Pass the abort signal to the SDK
+          signal: attemptController.signal, // per-attempt signal (abortable on timeout)
           fundingMode, // Pass JIT funding mode (TypeScript types don't include this yet, but runtime supports it)
           dataItemOpts: {
             tags
@@ -469,9 +481,13 @@ export function useFolderUpload() {
           }
         } as any); // Type assertion needed until SDK types are updated
 
-        // 5 minute timeout per file
+        // 5 minute timeout per file. On fire, abort THIS attempt so the in-flight
+        // upload actually stops before the retry starts (prevents a double-upload).
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Upload timeout after 5 minutes')), 5 * 60 * 1000);
+          attemptTimeoutId = setTimeout(() => {
+            attemptController.abort();
+            reject(new Error('Upload timeout after 5 minutes'));
+          }, 5 * 60 * 1000);
         });
 
         const result = await Promise.race([uploadPromise, timeoutPromise]);
@@ -485,6 +501,11 @@ export function useFolderUpload() {
           // Exponential backoff: 2s, 4s, 8s
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         }
+      } finally {
+        // Stop the per-file timeout and detach the deploy-abort listener so they
+        // don't leak across attempts/files.
+        if (attemptTimeoutId) clearTimeout(attemptTimeoutId);
+        signal.removeEventListener('abort', onDeployAbort);
       }
     }
 
@@ -979,6 +1000,11 @@ export function useFolderUpload() {
       // Create results structure
       const results: DeployResult[] = [];
 
+      // Files that failed to upload while the deploy still proceeded (under the
+      // 10% threshold). Surfaced so the UI can't report a clean success for a site
+      // that is actually missing assets.
+      const failedFilePaths = failedUploads.map(f => f.file.webkitRelativePath || f.file.name);
+
       // Add manifest result
       results.push({
         type: 'manifest',
@@ -988,6 +1014,7 @@ export function useFolderUpload() {
         receipt: manifestResult, // Store manifest upload result
         appName: manifestOptions?.appName,
         appVersion: manifestOptions?.appVersion,
+        failedFiles: failedFilePaths.length > 0 ? failedFilePaths : undefined,
       });
 
       // Add individual files
@@ -1014,7 +1041,8 @@ export function useFolderUpload() {
       return {
         manifestId: uploadResult.manifestId,
         files: uploadResult.files,
-        results
+        results,
+        failedFiles: failedFilePaths,
       };
     } catch (error) {
       // Deployment failed
