@@ -1223,7 +1223,9 @@ export default function UploadPanel() {
                           // that predate winc capture (never the mutable allowance).
                           const winc = result.winc ? Number(result.winc) : NaN;
                           if (Number.isFinite(winc) && winc > 0) {
-                            return wincForOneGiB ? `${(winc / wincPerCredit).toFixed(6)} Credits` : 'Unknown Cost';
+                            // Converting a recorded winc to credits needs only the
+                            // wincPerCredit constant — not the live storage rate.
+                            return `${(winc / wincPerCredit).toFixed(6)} Credits`;
                           }
                           if ((Number.isFinite(winc) && winc === 0) || (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes))) {
                             return <span className="text-success">FREE</span>;

@@ -1878,7 +1878,10 @@ export default function DeploySitePanel() {
                     {deployPartialFailures.length} file{deployPartialFailures.length === 1 ? '' : 's'} didn&apos;t upload
                   </p>
                   <p className="text-foreground/80">
-                    Your site was deployed without {deployPartialFailures.length === 1 ? 'this asset' : 'these assets'}, so it may be incomplete. Re-deploy the folder to upload the missing {deployPartialFailures.length === 1 ? 'file' : 'files'} — already-uploaded files are skipped, so it&apos;s fast and low-cost.
+                    Your site was deployed without {deployPartialFailures.length === 1 ? 'this asset' : 'these assets'}, so it may be incomplete. Re-deploy the folder to upload the missing {deployPartialFailures.length === 1 ? 'file' : 'files'}.
+                    {smartDeployEnabled
+                      ? ' Smart Deploy skips the files that already uploaded, so it’s fast and low-cost.'
+                      : ' Enable Smart Deploy first to skip the files that already uploaded on the retry.'}
                   </p>
                   <ul className="mt-2 max-h-32 list-disc overflow-auto pl-5 text-foreground/70">
                     {deployPartialFailures.slice(0, 10).map((p) => (
