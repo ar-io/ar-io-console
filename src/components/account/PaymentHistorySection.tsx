@@ -28,7 +28,14 @@ function formatDateTime(iso: string): string {
 
 function formatCredits(wincCredited: string): string {
   const c = Number(wincCredited) / wincPerCredit;
-  if (!Number.isFinite(c)) return '0.00';
+  // Top-ups are always positive credits, and PaymentRow renders a fixed "+" prefix,
+  // so treat non-positive/invalid as "0.00" (avoids malformed output like "+-0.01").
+  if (!Number.isFinite(c) || c <= 0) return '0.00';
+  // A small top-up (< 0.01 credit) would round to a misleading "0.00" at two
+  // decimals — widen the precision so the real amount still shows.
+  if (c < 0.01) {
+    return c.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  }
   return c.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -232,12 +239,15 @@ export default function PaymentHistorySection() {
         </div>
       )}
 
-      {/* List */}
+      {/* List — bounded height so a long history scrolls inside the card rather
+          than growing the whole page. */}
       {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
         <div className="px-4 pb-4 sm:px-6">
-          {payments.map((item, i) => (
-            <PaymentRow key={`${item.type}-${item.date}-${i}`} item={item} />
-          ))}
+          <div className="max-h-[28rem] overflow-y-auto">
+            {payments.map((item, i) => (
+              <PaymentRow key={`${item.type}-${item.date}-${i}`} item={item} />
+            ))}
+          </div>
 
           {error && <p className="pt-3 text-center text-xs text-error">{error}</p>}
 
@@ -246,7 +256,7 @@ export default function PaymentHistorySection() {
               <button
                 onClick={loadMore}
                 disabled={status === 'loadingMore'}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/20 bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/20 bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {status === 'loadingMore' ? (
                   <>
