@@ -28,7 +28,9 @@ function formatDateTime(iso: string): string {
 
 function formatCredits(wincCredited: string): string {
   const c = Number(wincCredited) / wincPerCredit;
-  if (!Number.isFinite(c) || c === 0) return '0.00';
+  // Top-ups are always positive credits, and PaymentRow renders a fixed "+" prefix,
+  // so treat non-positive/invalid as "0.00" (avoids malformed output like "+-0.01").
+  if (!Number.isFinite(c) || c <= 0) return '0.00';
   // A small top-up (< 0.01 credit) would round to a misleading "0.00" at two
   // decimals — widen the precision so the real amount still shows.
   if (c < 0.01) {
