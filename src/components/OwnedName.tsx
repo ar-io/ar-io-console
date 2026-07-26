@@ -16,7 +16,7 @@ const OwnedName = ({ domain }: { domain: ArNSName }) => {
   });
 
   return (
-    <div className="bg-card rounded-2xl border border-primary/20 p-4">
+    <div className="bg-card rounded-2xl border border-border/20 p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         {/* Domain Info */}
         <div className="flex-1">
@@ -61,7 +61,7 @@ const OwnedName = ({ domain }: { domain: ArNSName }) => {
           </button>
           <button
             onClick={() => window.open(`https://arns.ar.io/#/manage/names/${domain.name}`, '_blank')}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-card border border-primary/30 rounded-full text-foreground hover:bg-primary/10 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-background border border-border/20 rounded-full text-foreground hover:bg-card transition-colors"
           >
             <Globe className="w-4 h-4" />
             Manage
