@@ -1,7 +1,15 @@
-import { Upload, Zap, ArrowRight, ExternalLink } from 'lucide-react';
+import { Upload, Rocket, ArrowRight, ExternalLink } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { getArweaveUrl } from '../../utils';
 import { useNavigate } from 'react-router-dom';
+
+/** Compact date for activity rows, e.g. "Jul 23". */
+function shortDate(ts?: number): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 export default function ActivityOverview() {
   const { uploadHistory, deployHistory } = useStore();
@@ -9,16 +17,15 @@ export default function ActivityOverview() {
 
   // Helper to find ArNS association for a manifest
   const getArNSAssociation = (manifestId: string) => {
-    return deployHistory.find(record =>
-      record.type === 'arns-update' &&
-      record.manifestId === manifestId
+    return deployHistory.find(
+      (record) => record.type === 'arns-update' && record.manifestId === manifestId,
     );
   };
 
   // Group deploy results by manifest ID (same as DeploySitePanel)
-  const deploymentGroups: { [manifestId: string]: { manifest?: any, files?: any } } = {};
+  const deploymentGroups: { [manifestId: string]: { manifest?: any; files?: any } } = {};
 
-  deployHistory.forEach(result => {
+  deployHistory.forEach((result) => {
     const manifestId = result.manifestId || result.id;
     if (!manifestId) return;
 
@@ -38,171 +45,145 @@ export default function ActivityOverview() {
   const recentDeployments = deployments.slice(0, 5);
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      {/* Recent Uploads Summary */}
-      <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-primary/20">
-        <div className="p-4 border-b border-primary/20">
-          <h3 className="font-medium text-foreground flex items-center gap-2">
-            <Upload className="w-4 h-4 text-primary" />
-            Recent Uploads
-          </h3>
+    <div className="grid gap-4 md:grid-cols-2">
+      {/* Recent Uploads */}
+      <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
+            <Upload className="h-5 w-5 text-foreground" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground">Recent Uploads</h3>
+            <p className="text-sm text-foreground/80">Your latest files</p>
+          </div>
         </div>
 
         {uploadHistory.length === 0 ? (
-          <div className="p-4 text-center">
-            <Upload className="w-8 h-8 text-foreground/80 mx-auto mb-2" />
+          <div className="py-6 text-center">
+            <Upload className="mx-auto mb-2 h-8 w-8 text-foreground/30" />
             <p className="text-sm text-foreground/80">No uploads yet</p>
           </div>
         ) : (
-          <div className="p-4 space-y-2">
-            {recentUploads.map((upload, index) => (
-              <div key={index} className="bg-card rounded p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="font-mono text-xs text-foreground/80">
-                      {upload.id.substring(0, 6)}...
-                    </div>
-                    {upload.fileName && (
-                      <span className="text-xs text-foreground truncate">
-                        {upload.fileName}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <a
-                      href={getArweaveUrl(upload.id, upload.dataCaches)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 text-foreground/80 hover:text-foreground transition-colors"
-                      title="View File"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
+          <>
+            <div>
+              {recentUploads.map((upload, index) => (
+                <div
+                  key={`${upload.id}-${index}`}
+                  className="flex items-center gap-3 border-t border-border/20 py-3 text-sm first:border-t-0"
+                >
+                  <Upload className="h-4 w-4 flex-shrink-0 text-foreground/60" />
+                  <span className="min-w-0 flex-1 truncate text-foreground" title={upload.fileName}>
+                    {upload.fileName || `${upload.id.substring(0, 8)}…`}
+                  </span>
+                  <span className="flex-shrink-0 text-xs text-foreground/60">
+                    {shortDate(upload.timestamp)}
+                  </span>
+                  <a
+                    href={getArweaveUrl(upload.id, upload.dataCaches)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 text-foreground/60 transition-colors hover:text-foreground"
+                    title="View file"
+                    aria-label={`View ${upload.fileName || 'file'}`}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
                 </div>
-
-                {/* Upload timestamp */}
-                {upload.timestamp && (
-                  <div className="text-xs text-foreground/80">
-                    {new Date(upload.timestamp).toLocaleString()}
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
             {uploadHistory.length > 5 && (
-              <div className="text-xs text-foreground/80 text-center pt-2">
-                +{uploadHistory.length - 5} more files
-              </div>
+              <button
+                onClick={() => {
+                  navigate('/upload');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-2 border-t border-border/20 pt-3 text-sm font-medium text-primary transition-colors hover:underline"
+              >
+                View all uploads <ArrowRight className="h-4 w-4" />
+              </button>
             )}
-          </div>
-        )}
-
-        {/* View All Button at Bottom */}
-        {uploadHistory.length > 0 && (
-          <div className="px-4 py-3 border-t border-primary/20">
-            <button
-              onClick={() => navigate('/upload')}
-              className="w-full flex items-center justify-center gap-2 py-2 text-sm text-foreground hover:text-primary/80 transition-colors font-medium"
-            >
-              View All Uploads <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          </>
         )}
       </div>
 
-      {/* Recent Deployments Summary */}
-      <div className="bg-gradient-to-br from-primary/5 to-primary/3 rounded-2xl border border-primary/20">
-        <div className="p-4 border-b border-primary/20">
-          <h3 className="font-medium text-foreground flex items-center gap-2">
-            <Zap className="w-4 h-4 text-primary" />
-            Recent Deployments
-          </h3>
+      {/* Recent Deployments */}
+      <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
+            <Rocket className="h-5 w-5 text-foreground" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground">Recent Deployments</h3>
+            <p className="text-sm text-foreground/80">Your latest sites</p>
+          </div>
         </div>
 
         {deployments.length === 0 ? (
-          <div className="p-4 text-center">
-            <Zap className="w-8 h-8 text-foreground/80 mx-auto mb-2" />
+          <div className="py-6 text-center">
+            <Rocket className="mx-auto mb-2 h-8 w-8 text-foreground/30" />
             <p className="text-sm text-foreground/80">No deployments yet</p>
           </div>
         ) : (
-          <div className="p-4 space-y-2">
-            {recentDeployments.map(([manifestId, group]) => {
-              const arnsAssociation = getArNSAssociation(manifestId);
+          <>
+            <div>
+              {recentDeployments.map(([manifestId, group]) => {
+                const arnsAssociation = getArNSAssociation(manifestId);
+                const arnsName = arnsAssociation?.arnsName;
+                const prefix = arnsAssociation?.undername ? `${arnsAssociation.undername}_` : '';
+                const displayName = arnsName ? `${prefix}${arnsName}` : `${manifestId.substring(0, 8)}…`;
+                const visitUrl = arnsName
+                  ? `https://${prefix}${arnsName}.ar.io`
+                  : getArweaveUrl(manifestId, group.manifest?.receipt?.dataCaches);
 
-              return (
-                <div key={manifestId} className="bg-card rounded p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {/* ArNS Name or TXID */}
-                      {arnsAssociation && arnsAssociation.arnsName ? (
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={`https://${arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}${arnsAssociation.arnsName}.ar.io`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-mono text-xs text-foreground hover:text-success hover:underline transition-colors"
-                          >
-                            {arnsAssociation.undername ? arnsAssociation.undername + '_' : ''}{arnsAssociation.arnsName}
-                          </a>
-                          {arnsAssociation.arnsStatus === 'failed' && (
-                            <span className="text-xs text-error">(failed)</span>
-                          )}
-                          {arnsAssociation.arnsStatus === 'pending' && (
-                            <span className="text-xs text-warning">(updating...)</span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="font-mono text-xs text-foreground/80">
-                          {manifestId.substring(0, 6)}...
-                        </div>
-                      )}
-                      <span className="text-xs text-foreground/80">
-                        {group.files?.files?.length || 0} files
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <a
-                        href={getArweaveUrl(manifestId, group.manifest?.receipt?.dataCaches)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1 text-foreground/80 hover:text-foreground transition-colors"
-                        title="Visit Site"
+                return (
+                  <div
+                    key={manifestId}
+                    className="flex items-center gap-3 border-t border-border/20 py-3 text-sm first:border-t-0"
+                  >
+                    <Rocket className="h-4 w-4 flex-shrink-0 text-foreground/60" />
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span
+                        className={`truncate ${arnsName ? 'font-medium text-foreground' : 'font-mono text-foreground/80'}`}
+                        title={displayName}
                       >
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
+                        {displayName}
+                      </span>
+                      {arnsAssociation?.arnsStatus === 'failed' && (
+                        <span className="flex-shrink-0 text-xs text-error">(failed)</span>
+                      )}
+                      {arnsAssociation?.arnsStatus === 'pending' && (
+                        <span className="flex-shrink-0 text-xs text-warning">(updating…)</span>
+                      )}
+                    </span>
+                    <span className="flex-shrink-0 text-xs text-foreground/60">
+                      {shortDate(group.manifest?.timestamp)}
+                    </span>
+                    <a
+                      href={visitUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 text-foreground/60 transition-colors hover:text-foreground"
+                      title="Visit site"
+                      aria-label={`Visit ${displayName}`}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
                   </div>
-
-                  {/* Deployment timestamp */}
-                  {group.manifest?.timestamp && (
-                    <div className="text-xs text-foreground/80">
-                      {new Date(group.manifest.timestamp).toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
             {deployments.length > 5 && (
-              <div className="text-xs text-foreground/80 text-center pt-2">
-                +{deployments.length - 5} more sites
-              </div>
+              <button
+                onClick={() => {
+                  navigate('/deployments');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-2 border-t border-border/20 pt-3 text-sm font-medium text-primary transition-colors hover:underline"
+              >
+                View all deployments <ArrowRight className="h-4 w-4" />
+              </button>
             )}
-          </div>
-        )}
-
-        {/* View All Button at Bottom */}
-        {deployments.length > 0 && (
-          <div className="px-4 py-3 border-t border-primary/20">
-            <button
-              onClick={() => {
-                navigate('/deployments');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2 text-sm text-foreground hover:text-primary/80 transition-colors font-medium"
-            >
-              View All Deployments <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          </>
         )}
       </div>
     </div>

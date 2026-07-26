@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { User, Globe, RefreshCw, ArrowRight, Link2, Unlink } from 'lucide-react';
+import { User, Globe, RefreshCw, ExternalLink, Link2, Unlink } from 'lucide-react';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
 import { makePossessive, formatWalletAddress } from '../utils';
-import BalanceCardsGrid from '../components/account/BalanceCardsGrid';
+import WalletIdentityCard from '../components/account/WalletIdentityCard';
+import BalanceCard from '../components/account/BalanceCard';
 import CreditSharingSection from '../components/account/CreditSharingSection';
 import PaymentHistorySection from '@/components/account/PaymentHistorySection';
 import ActivityOverview from '../components/account/ActivityOverview';
@@ -21,11 +22,12 @@ export default function MyAccountPage() {
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
   const [showLinkModal, setShowLinkModal] = useState(false);
 
-  // Redirect to home if not logged in
+  // Redirect to home if not logged in (declarative — never navigate during render)
   if (!address) {
-    navigate('/');
-    return null;
+    return <Navigate to="/" replace />;
   }
+
+  const paymentAvailable = isPaymentServiceAvailable();
 
   return (
     <div className="px-4 sm:px-6">
@@ -62,23 +64,45 @@ export default function MyAccountPage() {
         )}
 
         <div>
-          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground mb-1">
-            {loadingArNS ? 'Loading...' : arnsName ? `${makePossessive(arnsName)} Account` : 'My Account'}
+          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground mb-1 break-words">
+            {arnsName ? `${makePossessive(arnsName)} Account` : 'My Account'}
           </h1>
           <p className="text-sm text-foreground/80">
-            {walletType && 'View your account details, like credits and recent activity.'}
+            Your wallet, credits, domains and recent activity.
           </p>
         </div>
       </div>
 
-      {/* Wallet Overview Section - Hide balance/sharing in x402-only mode */}
-      {isPaymentServiceAvailable() && (
+      {/* Identity + Balance */}
+      <h2 className="sr-only">Account overview</h2>
+      {paymentAvailable ? (
+        <div className="grid gap-4 md:grid-cols-2 items-start mb-8">
+          <WalletIdentityCard
+            address={address}
+            walletType={walletType}
+            arnsName={arnsName}
+            loadingArNS={loadingArNS}
+          />
+          <BalanceCard />
+        </div>
+      ) : (
         <div className="mb-8">
-          <h2 className="font-heading font-bold text-xl text-foreground mb-4">Overview</h2>
-          <div className="space-y-4">
-            <BalanceCardsGrid />
-            <CreditSharingSection />
+          <WalletIdentityCard
+            address={address}
+            walletType={walletType}
+            arnsName={arnsName}
+            loadingArNS={loadingArNS}
+          />
+        </div>
+      )}
+
+      {/* Credits & Billing — hidden in x402-only mode */}
+      {paymentAvailable && (
+        <div className="mb-8">
+          <h2 className="font-heading font-bold text-xl text-foreground mb-4">Credits &amp; Billing</h2>
+          <div className="grid gap-4 md:grid-cols-2 items-start">
             <PaymentHistorySection />
+            <CreditSharingSection />
           </div>
         </div>
       )}
@@ -87,15 +111,15 @@ export default function MyAccountPage() {
       {!isPrimarySolana && (
         <div className="mb-8">
           <h2 className="font-heading font-bold text-xl text-foreground mb-4">Linked Wallets</h2>
-          <div className="rounded-2xl border border-border/20 bg-card p-6">
+          <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
             {linkedAddress ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Link2 className="w-4 h-4 text-purple-500" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="w-8 h-8 flex-shrink-0 bg-primary/20 rounded-lg flex items-center justify-center">
+                    <Link2 className="w-4 h-4 text-primary" />
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-foreground">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-foreground">
                       {linkedWalletName || 'Solana Wallet'} <span className="text-xs text-foreground/60">(ArNS)</span>
                     </div>
                     <div className="text-xs text-foreground/60 font-mono">
@@ -103,9 +127,9 @@ export default function MyAccountPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-shrink-0 items-center gap-4">
                   {isSolanaConnected ? (
-                    <span className="text-xs text-green-500">Connected</span>
+                    <span className="text-xs text-success">Connected</span>
                   ) : (
                     <button onClick={() => setShowLinkModal(true)} className="text-xs text-primary hover:underline">
                       Reconnect
@@ -114,7 +138,7 @@ export default function MyAccountPage() {
                   <button onClick={() => setShowLinkModal(true)} className="text-xs text-foreground/60 hover:text-foreground transition-colors">
                     Change
                   </button>
-                  <button onClick={unlinkWallet} className="p-1.5 text-foreground/40 hover:text-error transition-colors" title="Unlink wallet">
+                  <button onClick={unlinkWallet} className="p-1.5 text-foreground/40 hover:text-error transition-colors" title="Unlink wallet" aria-label="Unlink Solana wallet">
                     <Unlink className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -147,68 +171,65 @@ export default function MyAccountPage() {
               disabled={loadingDomains}
               className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground hover:text-foreground/80 transition-colors disabled:opacity-50"
               title="Refresh domain list"
+              aria-label="Refresh domain list"
             >
               <RefreshCw className={`w-4 h-4 ${loadingDomains ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
 
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-6">
-            {loadingDomains ? (
-              <div className="text-center py-8">
-                <RefreshCw className="w-6 h-6 text-primary mx-auto mb-3 animate-spin" />
-                <p className="text-sm text-foreground/80">Loading your domains...</p>
+          {loadingDomains ? (
+            <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6 text-center">
+              <RefreshCw className="w-6 h-6 text-primary mx-auto mb-3 animate-spin" />
+              <p className="text-sm text-foreground/80">Loading your domains…</p>
+            </div>
+          ) : ownedNames.length === 0 ? (
+            <div className="rounded-2xl border border-border/20 bg-card p-6 sm:p-8 text-center">
+              <Globe className="w-12 h-12 text-primary/50 mx-auto mb-4" />
+              <h3 className="font-heading font-bold text-foreground mb-2">No domains yet</h3>
+              <p className="text-sm text-foreground/80 mb-4">
+                Register an ArNS domain to give your apps and sites friendly names
+              </p>
+              <button
+                onClick={() => navigate('/domains')}
+                className="px-4 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
+              >
+                Search for your name
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4">
+                {ownedNames.slice(0, 5).map((domain) => (
+                  <OwnedName key={domain.name} domain={domain} />
+                ))}
               </div>
-            ) : ownedNames.length === 0 ? (
-              <div className="text-center py-8">
-                <Globe className="w-12 h-12 text-primary/50 mx-auto mb-4" />
-                <h3 className="font-heading font-bold text-foreground mb-2">No Domains Yet</h3>
-                <p className="text-sm text-foreground/80 mb-4">
-                  Register an ArNS domain to give your apps and sites friendly names
-                </p>
-                <button
-                  onClick={() => navigate('/domains')}
-                  className="px-4 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
-                >
-                  Search for Your Name
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="grid gap-4 mb-6">
-                  {ownedNames.slice(0, 5).map((domain) => (
-                    <OwnedName key={domain.name} domain={domain} />
-                  ))}
-                </div>
 
-                {ownedNames.length > 0 && (
-                  <div className="text-center pt-4 border-t border-primary/20">
-                    <button
-                      onClick={() => window.open('https://arns.ar.io/#/manage/names', '_blank')}
-                      className="flex items-center justify-center gap-2 px-6 py-3 text-foreground hover:text-foreground/80 transition-colors font-medium"
-                    >
-                      View All Domains
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+              <div className="text-center mt-4">
+                <a
+                  href="https://arns.ar.io/#/manage/names"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 py-2 text-primary hover:underline font-medium"
+                >
+                  View all domains
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            </>
+          )}
         </div>
       )}
+
+      {/* Activity */}
+      <div className="mb-8">
+        <h2 className="font-heading font-bold text-xl text-foreground mb-4">Activity</h2>
+        <ActivityOverview />
+      </div>
 
       {showLinkModal && (
         <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
       )}
-
-      {/* Activity & Management */}
-      <div className="space-y-6">
-        <h2 className="font-heading font-bold text-xl text-foreground">Activity</h2>
-
-        {/* Activity Overview */}
-        <ActivityOverview />
-      </div>
     </div>
   );
 }
