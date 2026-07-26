@@ -291,9 +291,10 @@ The app supports three upload modes with different payment strategies:
 Enables uploads without pre-purchased credits via Base network USDC. Used when connecting to ar.io bundlers that only support x402.
 
 **Key files:**
-- `useX402Upload.ts`: Protocol upload hook
 - `useX402Pricing.ts`: USDC cost calculation
 - `useEthereumTurboClient.ts`: Creates authenticated Turbo client for Ethereum wallets
+
+Note: the standalone x402-protocol upload hook (`useX402Upload`/`uploadFileWithX402`, SDK `X402Funding` mode) was never wired in and has been removed. In x402-only mode, billable base-usdc uploads run the JIT `topUpWithTokens` path in `useFileUpload`/`useFolderUpload`. `useX402Upload.ts` now only exports the no-op `clearX402SignerCache` used by wallet-switch cleanup.
 
 **Config** (`X402_CONFIG` in constants.ts):
 - Production: Base Mainnet (chainId 8453)
@@ -457,7 +458,6 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 **Upload Hooks:**
 - `useFileUpload()` - Multi-chain file upload logic
 - `useFolderUpload()` - Folder upload with manifest generation
-- `useX402Upload()` - X402 protocol uploads
 - `useFreeUploadLimit()` - Fetch bundler's free tier; returns `{ freeUploadLimitBytes, freeTier }` (see Gotcha #10)
 - `useUploadStatus()` - Track upload confirmation/finalization status
 
