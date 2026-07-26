@@ -10,7 +10,6 @@ import WalletIdentityCard from '../components/account/WalletIdentityCard';
 import BalanceCard from '../components/account/BalanceCard';
 import CreditSharingSection from '../components/account/CreditSharingSection';
 import PaymentHistorySection from '@/components/account/PaymentHistorySection';
-import ActivityOverview from '../components/account/ActivityOverview';
 import OwnedName from '@/components/OwnedName';
 import LinkSolanaWalletModal from '../components/modals/LinkSolanaWalletModal';
 
@@ -73,10 +72,10 @@ export default function MyAccountPage() {
         </div>
       </div>
 
-      {/* Identity + Balance */}
+      {/* Identity + Balance — cards stretch to equal height (grid default). */}
       <h2 className="sr-only">Account overview</h2>
       {paymentAvailable ? (
-        <div className="grid gap-4 md:grid-cols-2 items-start mb-8">
+        <div className="grid gap-4 md:grid-cols-2 mb-8">
           <WalletIdentityCard
             address={address}
             walletType={walletType}
@@ -96,14 +95,10 @@ export default function MyAccountPage() {
         </div>
       )}
 
-      {/* Credits & Billing — hidden in x402-only mode */}
+      {/* Top-up history (full width) — hidden in x402-only mode */}
       {paymentAvailable && (
         <div className="mb-8">
-          <h2 className="font-heading font-bold text-xl text-foreground mb-4">Credits &amp; Billing</h2>
-          <div className="grid gap-4 md:grid-cols-2 items-start">
-            <PaymentHistorySection />
-            <CreditSharingSection />
-          </div>
+          <PaymentHistorySection />
         </div>
       )}
 
@@ -221,11 +216,13 @@ export default function MyAccountPage() {
         </div>
       )}
 
-      {/* Activity */}
-      <div className="mb-8">
-        <h2 className="font-heading font-bold text-xl text-foreground mb-4">Activity</h2>
-        <ActivityOverview />
-      </div>
+      {/* Credit sharing — an advanced feature most users don't need, so it lives at
+          the bottom. Hidden in x402-only mode. */}
+      {paymentAvailable && (
+        <div className="mb-8">
+          <CreditSharingSection />
+        </div>
+      )}
 
       {showLinkModal && (
         <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
