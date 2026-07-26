@@ -576,6 +576,10 @@ export function useFolderUpload() {
     // prior cancel can't leak into this run).
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    // Only the deploy that currently owns the shared controller may clear it or
+    // reset the deploying/activeUploads UI. A cancelled deploy can still be
+    // unwinding after a newer deploy has started, and must not clobber it.
+    const isActiveDeploy = () => abortControllerRef.current === controller;
 
     // Calculate total size (only for files being uploaded)
     const totalSizeBytes = filesToUpload.reduce((sum, file) => sum + file.size, 0);
@@ -686,8 +690,10 @@ export function useFolderUpload() {
       for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
         // Check if cancelled (synchronously — this deploy's own controller)
         if (controller.signal.aborted) {
-          setDeploying(false);
-          setActiveUploads([]);
+          if (isActiveDeploy()) {
+            setDeploying(false);
+            setActiveUploads([]);
+          }
           return { results: fileUploadResults, failedFileNames: [] };
         }
 
@@ -826,9 +832,11 @@ export function useFolderUpload() {
 
         // Check again if cancelled after batch completes
         if (controller.signal.aborted) {
-          setDeploying(false);
-          setActiveUploads([]);
-          abortControllerRef.current = null;
+          if (isActiveDeploy()) {
+            setDeploying(false);
+            setActiveUploads([]);
+            abortControllerRef.current = null;
+          }
           return { results: fileUploadResults, failedFileNames: [] };
         }
 
@@ -852,9 +860,11 @@ export function useFolderUpload() {
 
       // Check if cancelled before manifest creation
       if (controller.signal.aborted) {
-        setDeploying(false);
-        setActiveUploads([]);
-        abortControllerRef.current = null;
+        if (isActiveDeploy()) {
+          setDeploying(false);
+          setActiveUploads([]);
+          abortControllerRef.current = null;
+        }
         return { results: fileUploadResults, failedFileNames: [] };
       }
 
@@ -1036,7 +1046,7 @@ export function useFolderUpload() {
       setDeployProgress(100);
       setDeployStage('complete');
       setCurrentFile('');
-      abortControllerRef.current = null; // Clear the controller when done
+      if (isActiveDeploy()) abortControllerRef.current = null; // Clear the controller when done
 
       // Refresh balance + free-tier allowance after a completed deploy (free or
       // paid) so subsequent pricing reflects the consumed allowance/credits.
@@ -1052,10 +1062,13 @@ export function useFolderUpload() {
       // Deployment failed
       const errorMessage = error instanceof Error ? error.message : 'Deployment failed';
       setErrors({ deployment: errorMessage });
-      abortControllerRef.current = null; // Clear the controller on error
+      if (isActiveDeploy()) abortControllerRef.current = null; // Clear the controller on error
       throw error;
     } finally {
-      setDeploying(false);
+      // Runs on every exit (incl. the cancelled-deploy early returns). Only turn
+      // off the deploying UI if we're still the active deploy — otherwise a
+      // cancelled deploy unwinding after a newer one started would blank its UI.
+      if (isActiveDeploy()) setDeploying(false);
     }
   }, [createTurboClient, validateWalletState, uploadFileWithRetry, walletType, getContentType, fileHashes, getFileHashEntry, updateFileHashCache, getCurrentConfig]);
 
