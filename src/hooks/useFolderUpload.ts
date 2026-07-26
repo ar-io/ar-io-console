@@ -91,7 +91,11 @@ export function useFolderUpload() {
   const [totalSize, setTotalSize] = useState<number>(0);
   const [uploadedSize, setUploadedSize] = useState<number>(0);
   const [failedFiles, setFailedFiles] = useState<File[]>([]);
-  const [isCancelled, setIsCancelled] = useState<boolean>(false);
+  // Per-deploy cancellation is tracked via the AbortController below
+  // (controller.signal.aborted) — a synchronous signal a running deploy loop can
+  // see. A React state flag can't: an already-executing deployFolder closure
+  // captured the old value, so after a cancel the *next* deploy would read a
+  // stale `true` and silently no-op. (Same fix as useFileUpload.)
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Smart Deploy state
@@ -567,9 +571,9 @@ export function useFolderUpload() {
     setRecentFiles([]);
     setUploadErrors([]);
     setFailedFiles([]);
-    setIsCancelled(false);
 
-    // Create a new AbortController for this deployment
+    // Create a new AbortController for this deployment (fresh = not aborted, so a
+    // prior cancel can't leak into this run).
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -680,8 +684,8 @@ export function useFolderUpload() {
       } else {
         // Process files in batches (only filesToUpload - Smart Deploy)
       for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
-        // Check if cancelled
-        if (isCancelled) {
+        // Check if cancelled (synchronously — this deploy's own controller)
+        if (controller.signal.aborted) {
           setDeploying(false);
           setActiveUploads([]);
           return { results: fileUploadResults, failedFileNames: [] };
@@ -821,7 +825,7 @@ export function useFolderUpload() {
         await Promise.allSettled(batchPromises);
 
         // Check again if cancelled after batch completes
-        if (isCancelled || controller.signal.aborted) {
+        if (controller.signal.aborted) {
           setDeploying(false);
           setActiveUploads([]);
           abortControllerRef.current = null;
@@ -847,7 +851,7 @@ export function useFolderUpload() {
       } // End of else block for non-cached files
 
       // Check if cancelled before manifest creation
-      if (isCancelled || controller.signal.aborted) {
+      if (controller.signal.aborted) {
         setDeploying(false);
         setActiveUploads([]);
         abortControllerRef.current = null;
@@ -1053,7 +1057,7 @@ export function useFolderUpload() {
     } finally {
       setDeploying(false);
     }
-  }, [createTurboClient, validateWalletState, isCancelled, uploadFileWithRetry, walletType, getContentType, fileHashes, getFileHashEntry, updateFileHashCache, getCurrentConfig]);
+  }, [createTurboClient, validateWalletState, uploadFileWithRetry, walletType, getContentType, fileHashes, getFileHashEntry, updateFileHashCache, getCurrentConfig]);
 
   const reset = useCallback(() => {
     setDeployProgress(0);
@@ -1071,7 +1075,6 @@ export function useFolderUpload() {
     setTotalSize(0);
     setUploadedSize(0);
     setFailedFiles([]);
-    setIsCancelled(false);
     abortControllerRef.current = null;
     // Don't clear results in reset - that's now separate
   }, []);
@@ -1106,8 +1109,8 @@ export function useFolderUpload() {
 
   // Cancel ongoing uploads
   const cancelUploads = useCallback(() => {
-    setIsCancelled(true);
-    // Abort all in-flight requests
+    // Abort the active deploy's controller — the loop sees signal.aborted
+    // synchronously and stops (and stops charging).
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
