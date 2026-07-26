@@ -12,41 +12,47 @@ interface BalanceData {
   gibStorage: number;
 }
 
-export default function BalanceCardsGrid() {
+export default function BalanceCard() {
   const { address, walletType } = useStore();
   const navigate = useNavigate();
   const wincForOneGiB = useWincForOneGiB();
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
   const [balanceData, setBalanceData] = useState<BalanceData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    const fetchBalanceData = async () => {
-      if (!address || !walletType) return;
+    if (!address || !walletType) return;
 
+    let cancelled = false;
+    const fetchBalanceData = async () => {
       setLoading(true);
+      setError(false);
       try {
         const balance = await getTurboBalance(address, walletType);
+        if (cancelled) return;
         const { winc } = balance;
-
         const credits = Number(winc) / wincPerCredit;
         const gibStorage = wincForOneGiB ? Number(winc) / Number(wincForOneGiB) : 0;
-
         setBalanceData({ credits, gibStorage });
-      } catch (error) {
-        console.error('Failed to fetch balance data:', error);
+      } catch (err) {
+        console.error('Failed to fetch balance data:', err);
+        if (!cancelled) setError(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchBalanceData();
+    // Refresh after any payment/upload so the balance stays current on the page.
+    const onRefresh = () => fetchBalanceData();
+    window.addEventListener('refresh-balance', onRefresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('refresh-balance', onRefresh);
+    };
   }, [address, walletType, wincForOneGiB]);
-
-  if (!balanceData && !loading) {
-    return null;
-  }
 
   const formatCredits = (credits: number): string => {
     if (credits >= 1) {
@@ -66,9 +72,12 @@ export default function BalanceCardsGrid() {
 
   const freeMsg = freeTierSummary(freeUploadLimitBytes, bytesRemaining);
   const freeExhausted = bytesRemaining === 0;
+  // Only show the storage estimate once pricing has resolved — otherwise it reads
+  // a misleading "≈ 0.00 GiB" while useWincForOneGiB is still loading.
+  const showStorage = !!balanceData && !!wincForOneGiB && balanceData.gibStorage > 0;
 
   return (
-    <div className="rounded-2xl border border-border/20 bg-card p-5 sm:p-6">
+    <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
@@ -80,8 +89,19 @@ export default function BalanceCardsGrid() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="py-8 text-center text-foreground/80">Loading account balance…</div>
+      {loading && !balanceData ? (
+        <div className="space-y-3">
+          <div className="h-9 w-40 animate-pulse rounded bg-foreground/10" />
+          <div className="h-4 w-52 animate-pulse rounded bg-foreground/10" />
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <div className="h-11 flex-1 animate-pulse rounded-full bg-foreground/10" />
+            <div className="h-11 flex-1 animate-pulse rounded-full bg-foreground/10" />
+          </div>
+        </div>
+      ) : error && !balanceData ? (
+        <div className="py-6 text-center text-sm text-foreground/80">
+          Couldn’t load your balance right now.
+        </div>
       ) : balanceData ? (
         <>
           {/* Primary balance */}
@@ -89,9 +109,11 @@ export default function BalanceCardsGrid() {
             {formatCredits(balanceData.credits)}{' '}
             <span className="text-base font-semibold text-foreground/60">Credits</span>
           </div>
-          <div className="mt-1 text-sm text-success">
-            ≈ {balanceData.gibStorage.toFixed(2)} GiB of permanent storage
-          </div>
+          {showStorage && (
+            <div className="mt-1 text-sm text-foreground/60">
+              ≈ {balanceData.gibStorage.toFixed(2)} GiB of permanent storage
+            </div>
+          )}
 
           {/* Free-tier awareness */}
           {freeMsg && (
@@ -109,7 +131,7 @@ export default function BalanceCardsGrid() {
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button
               onClick={() => navigate('/topup')}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-foreground px-4 py-3 font-medium text-card transition-colors hover:bg-foreground/90"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-foreground px-4 py-3 font-medium text-white transition-colors hover:bg-foreground/90"
             >
               <Plus className="h-4 w-4" />
               Top Up
@@ -123,9 +145,7 @@ export default function BalanceCardsGrid() {
             </button>
           </div>
         </>
-      ) : (
-        <div className="py-8 text-center text-foreground/80">Unable to load balance data</div>
-      )}
+      ) : null}
     </div>
   );
 }

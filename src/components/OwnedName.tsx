@@ -52,20 +52,24 @@ const OwnedName = ({ domain }: { domain: ArNSName }) => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2 sm:flex-shrink-0">
-          <button
-            onClick={() => window.open(`https://${domain.name}.ar.io`, '_blank')}
+          <a
+            href={`https://${domain.name}.ar.io`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
             Visit
-          </button>
-          <button
-            onClick={() => window.open(`https://arns.ar.io/#/manage/names/${domain.name}`, '_blank')}
+          </a>
+          <a
+            href={`https://arns.ar.io/#/manage/names/${domain.name}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 px-4 py-2 bg-background border border-border/20 rounded-full text-foreground hover:bg-card transition-colors"
           >
             <Globe className="w-4 h-4" />
             Manage
-          </button>
+          </a>
         </div>
       </div>
     </div>

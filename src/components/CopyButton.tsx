@@ -23,11 +23,12 @@ export default function CopyButton({ textToCopy }: CopyButtonProps) {
       onClick={handleCopy}
       className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
       title={copied ? 'Copied!' : 'Copy to clipboard'}
+      aria-label={copied ? 'Copied to clipboard' : 'Copy to clipboard'}
     >
       {copied ? (
-        <Check className="w-4 h-4 text-success" />
+        <Check className="w-4 h-4 text-success" aria-hidden="true" />
       ) : (
-        <Copy className="w-4 h-4" />
+        <Copy className="w-4 h-4" aria-hidden="true" />
       )}
     </button>
   );

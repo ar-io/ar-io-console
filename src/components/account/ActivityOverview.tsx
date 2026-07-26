@@ -47,8 +47,8 @@ export default function ActivityOverview() {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* Recent Uploads */}
-      <div className="rounded-2xl border border-border/20 bg-card p-5 sm:p-6">
-        <div className="mb-2 flex items-center gap-3">
+      <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
+        <div className="mb-4 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
             <Upload className="h-5 w-5 text-foreground" />
           </div>
@@ -84,6 +84,7 @@ export default function ActivityOverview() {
                     rel="noopener noreferrer"
                     className="flex-shrink-0 text-foreground/60 transition-colors hover:text-foreground"
                     title="View file"
+                    aria-label={`View ${upload.fileName || 'file'}`}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -92,7 +93,10 @@ export default function ActivityOverview() {
             </div>
             {uploadHistory.length > 5 && (
               <button
-                onClick={() => navigate('/upload')}
+                onClick={() => {
+                  navigate('/upload');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className="mt-3 flex w-full items-center justify-center gap-2 border-t border-border/20 pt-3 text-sm font-medium text-primary transition-colors hover:underline"
               >
                 View all uploads <ArrowRight className="h-4 w-4" />
@@ -103,8 +107,8 @@ export default function ActivityOverview() {
       </div>
 
       {/* Recent Deployments */}
-      <div className="rounded-2xl border border-border/20 bg-card p-5 sm:p-6">
-        <div className="mb-2 flex items-center gap-3">
+      <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
+        <div className="mb-4 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
             <Rocket className="h-5 w-5 text-foreground" />
           </div>
@@ -139,7 +143,7 @@ export default function ActivityOverview() {
                     <Rocket className="h-4 w-4 flex-shrink-0 text-foreground/60" />
                     <span className="flex min-w-0 flex-1 items-center gap-1.5">
                       <span
-                        className={`truncate ${arnsName ? 'font-mono text-foreground' : 'font-mono text-foreground/80'}`}
+                        className={`truncate ${arnsName ? 'font-medium text-foreground' : 'font-mono text-foreground/80'}`}
                         title={displayName}
                       >
                         {displayName}
@@ -160,6 +164,7 @@ export default function ActivityOverview() {
                       rel="noopener noreferrer"
                       className="flex-shrink-0 text-foreground/60 transition-colors hover:text-foreground"
                       title="Visit site"
+                      aria-label={`Visit ${displayName}`}
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
