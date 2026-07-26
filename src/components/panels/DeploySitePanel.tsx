@@ -983,6 +983,9 @@ export default function DeploySitePanel() {
   const [appVersion, setAppVersion] = useState('');
   const [showDeployResults, setShowDeployResults] = useState(true);
   const [deploySuccessInfo, setDeploySuccessInfo] = useState<{manifestId: string; arnsConfigured: boolean; arnsName?: string; undername?: string; arnsTransactionId?: string} | null>(null);
+  // Paths of files that failed to upload while the deploy still proceeded — so the
+  // success screen warns about a partial site instead of claiming a clean success.
+  const [deployPartialFailures, setDeployPartialFailures] = useState<string[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [currentDeployResult, setCurrentDeployResult] = useState<any>(null);
   const [postDeployArNSName, setPostDeployArNSName] = useState('');
@@ -1054,7 +1057,6 @@ export default function DeploySitePanel() {
     uploadErrors,
     totalSize,
     uploadedSize,
-    retryFailedFiles,
     cancelUploads,
     // Smart Deploy
     analyzeFolder,
@@ -1701,6 +1703,7 @@ export default function DeploySitePanel() {
     try {
       setDeployMessage(null);
       setDeploySuccessInfo(null); // Clear any previous success info
+      setDeployPartialFailures([]); // Clear any previous partial-failure state
       setArnsUpdateCancelled(false); // Reset cancel state for new deployment
       // Pre-topup flow for crypto payments (one payment for all files)
       const result = await deployFolder(Array.from(selectedFolder), {
@@ -1719,6 +1722,10 @@ export default function DeploySitePanel() {
       }
       
       if (result.manifestId) {
+        // Record any files that failed to upload so the success screen can warn
+        // that the deployed site is missing assets (rather than reporting clean).
+        setDeployPartialFailures((result as any)?.failedFiles ?? []);
+
         // Add results to store for persistence
         addDeployResults(result.results || []);
         
@@ -1843,22 +1850,52 @@ export default function DeploySitePanel() {
     <div className="px-4 sm:px-6">
       {/* Success-focused header when deployment is complete */}
       {deploySuccessInfo ? (
-        <div className="flex items-start gap-3 mb-6">
-          <div className="w-10 h-10 bg-success/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-            <CheckCircle className="w-5 h-5 text-success" />
+        <>
+          <div className="flex items-start gap-3 mb-6">
+            <div className="w-10 h-10 bg-success/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+              <CheckCircle className="w-5 h-5 text-success" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
+                {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
+                  'Site Deployed with Domain' :
+                  'Site Deployed'
+                }
+              </h3>
+              <p className="text-sm text-foreground/80">
+                {deployPartialFailures.length > 0
+                  ? 'Your site is live, but some files are missing.'
+                  : 'Success! Your site is live on the permanent cloud.'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
-              {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                'Site Deployed with Domain' :
-                'Site Deployed'
-              }
-            </h3>
-            <p className="text-sm text-foreground/80">
-              Success! Your site is live on the permanent cloud.
-            </p>
-          </div>
-        </div>
+          {deployPartialFailures.length > 0 && (
+            <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                <div className="text-sm min-w-0">
+                  <p className="font-semibold text-foreground mb-1">
+                    {deployPartialFailures.length} file{deployPartialFailures.length === 1 ? '' : 's'} didn&apos;t upload
+                  </p>
+                  <p className="text-foreground/80">
+                    Your site was deployed without {deployPartialFailures.length === 1 ? 'this asset' : 'these assets'}, so it may be incomplete. Re-deploy the folder to upload the missing {deployPartialFailures.length === 1 ? 'file' : 'files'}.
+                    {smartDeployEnabled
+                      ? ' Smart Deploy skips the files that already uploaded, so it’s fast and low-cost.'
+                      : ' Enable Smart Deploy first to skip the files that already uploaded on the retry.'}
+                  </p>
+                  <ul className="mt-2 max-h-32 list-disc overflow-auto pl-5 text-foreground/70">
+                    {deployPartialFailures.slice(0, 10).map((p) => (
+                      <li key={p} className="truncate">{p}</li>
+                    ))}
+                    {deployPartialFailures.length > 10 && (
+                      <li>…and {deployPartialFailures.length - 10} more</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         /* Normal deploy header when not showing success */
         <div className="flex items-start gap-3 mb-6">
@@ -2037,7 +2074,15 @@ export default function DeploySitePanel() {
                       {(() => {
                         const structure = organizeFolderStructure();
                         const sortedFolders = Object.keys(structure).sort();
-                        
+
+                        // Per-file FREE flags computed cumulatively over the whole
+                        // deploy (same basis as the cost totals). Using per-file
+                        // isFileFree against the full allowance would badge every
+                        // small file FREE while the totals bill most of them.
+                        const allFiles = selectedFolder ? Array.from(selectedFolder) : [];
+                        const freeFlags = computeFreeFlags(allFiles.map(f => f.size), effectiveFreeLimit, bytesRemaining);
+                        const freeByFile = new Map<File, boolean>(allFiles.map((f, i) => [f, freeFlags[i]]));
+
                         return sortedFolders.map(folderPath => (
                           <div key={folderPath}>
                             {/* Folder Header */}
@@ -2148,7 +2193,7 @@ export default function DeploySitePanel() {
 
                                         <span className="text-foreground/60 text-xs">
                                           {fileSize}
-                                          {isFileFree(file.size, effectiveFreeLimit, bytesRemaining) && <span className="ml-1 text-success">• FREE</span>}
+                                          {freeByFile.get(file) && <span className="ml-1 text-success">• FREE</span>}
                                         </span>
                                         
                                       </div>
@@ -2260,7 +2305,6 @@ export default function DeploySitePanel() {
             errors={uploadErrors}
             totalSize={totalSize}
             uploadedSize={uploadedSize}
-            onRetryFailed={retryFailedFiles}
             onCancel={cancelUploads}
           />
         </div>
