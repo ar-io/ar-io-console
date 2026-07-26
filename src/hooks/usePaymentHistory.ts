@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TurboFactory, TurboAuthenticatedClient, ArconnectSigner } from '@ardrive/turbo-sdk/web';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useStore } from '../store/useStore';
-import { useTurboConfig } from './useTurboConfig';
-import { useEthereumTurboClient } from './useEthereumTurboClient';
+import { useStore } from '@/store/useStore';
+import { useTurboConfig } from '@/hooks/useTurboConfig';
+import { useEthereumTurboClient } from '@/hooks/useEthereumTurboClient';
 
 /** One row from the SDK's payment history — a discriminated union on `type`. */
 export type PaymentHistoryItem = Awaited<
@@ -25,6 +25,11 @@ const PAGE_SIZE = 50;
  * the user explicitly calls `load()` — that click is what triggers the wallet
  * signature. The authenticated client is cached per session so paging reuses the
  * same signer.
+ *
+ * Note: the shared Ethereum signer/client cache is cleared centrally by
+ * `useWalletAccountListener` on wallet switch/disconnect (same as Credit
+ * Sharing), so this hook only manages its own per-session client + a session
+ * guard that discards results from a superseded wallet.
  */
 export function usePaymentHistory() {
   const { address, walletType } = useStore();
@@ -43,8 +48,12 @@ export function usePaymentHistory() {
   const [error, setError] = useState<string | null>(null);
 
   // Cache the authenticated client for the session (keyed by address) so paging
-  // doesn't rebuild the signer. A wallet switch invalidates it.
+  // doesn't rebuild the signer. A wallet switch invalidates it (see reset()).
   const clientRef = useRef<{ address: string; client: TurboAuthenticatedClient } | null>(null);
+  // Monotonic session id. Bumped on every reset (which runs on wallet change), so
+  // a request that resolves after a switch can be discarded instead of showing
+  // one wallet's history under another.
+  const sessionRef = useRef(0);
 
   const getClient = useCallback(async (): Promise<TurboAuthenticatedClient> => {
     if (!address || !walletType) throw new Error('Wallet not connected');
@@ -65,7 +74,7 @@ export function usePaymentHistory() {
         client = await createEthereumTurboClient('ethereum');
         break;
       case 'solana':
-        if (!solanaPublicKey || !solanaSignMessage) {
+        if (!solanaPublicKey || !solanaSignMessage || !solanaSignTransaction) {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         client = TurboFactory.authenticated({
@@ -73,7 +82,7 @@ export function usePaymentHistory() {
           walletAdapter: {
             publicKey: solanaPublicKey,
             signMessage: solanaSignMessage,
-            signTransaction: solanaSignTransaction!,
+            signTransaction: solanaSignTransaction,
           },
           ...turboConfig,
         });
@@ -104,16 +113,20 @@ export function usePaymentHistory() {
   /** First page. Triggers the wallet signature. */
   const load = useCallback(async () => {
     if (!address) return;
+    const session = sessionRef.current;
     setStatus('loading');
     setError(null);
     try {
       const turbo = await getClient();
+      if (session !== sessionRef.current) return; // wallet changed mid-flight
       const res = await turbo.getPaymentHistory({ limit: PAGE_SIZE });
+      if (session !== sessionRef.current) return;
       setPayments(res.payments);
       setCursor(res.cursor);
       setHasMore(res.hasMore);
       setStatus('loaded');
     } catch (e) {
+      if (session !== sessionRef.current) return;
       setError(toMessage(e));
       setStatus('error');
     }
@@ -122,22 +135,27 @@ export function usePaymentHistory() {
   /** Next page (keeps existing rows on failure). */
   const loadMore = useCallback(async () => {
     if (!cursor || status === 'loadingMore') return;
+    const session = sessionRef.current;
     setStatus('loadingMore');
     setError(null);
     try {
       const turbo = await getClient();
+      if (session !== sessionRef.current) return;
       const res = await turbo.getPaymentHistory({ limit: PAGE_SIZE, cursor });
+      if (session !== sessionRef.current) return;
       setPayments((prev) => [...prev, ...res.payments]);
       setCursor(res.cursor);
       setHasMore(res.hasMore);
       setStatus('loaded');
     } catch (e) {
+      if (session !== sessionRef.current) return;
       setError(toMessage(e));
       setStatus('loaded');
     }
   }, [cursor, status, getClient]);
 
   const reset = useCallback(() => {
+    sessionRef.current += 1; // invalidate any in-flight request
     clientRef.current = null;
     setPayments([]);
     setCursor(null);

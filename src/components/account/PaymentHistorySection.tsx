@@ -10,11 +10,11 @@ import {
   Inbox,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { usePaymentHistory, type PaymentHistoryItem } from '../../hooks/usePaymentHistory';
-import { wincPerCredit, tokenLabels, type SupportedTokenType } from '../../constants';
-import { fromSmallestUnit } from '../../utils/jitPayment';
-import { getExplorerTxUrl } from '../../utils/getExplorerTxUrl';
-import CopyButton from '../CopyButton';
+import { usePaymentHistory, type PaymentHistoryItem } from '@/hooks/usePaymentHistory';
+import { wincPerCredit, tokenLabels, type SupportedTokenType } from '@/constants';
+import { fromSmallestUnit } from '@/utils/jitPayment';
+import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
+import CopyButton from '@/components/CopyButton';
 
 // ---- formatting helpers ------------------------------------------------------
 
@@ -69,7 +69,7 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
       {/* what + when */}
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="inline-flex items-center gap-1 rounded-full border border-border/20 bg-foreground/5 px-2 py-0.5 text-xs font-medium text-foreground/80">
+          <span className="inline-flex items-center gap-1 rounded-full border border-border/20 bg-background px-2 py-0.5 text-xs font-medium text-foreground/80">
             {isCrypto ? (
               <Coins className="h-3 w-3 text-primary" />
             ) : (
@@ -102,7 +102,7 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
       {/* credits + reference */}
       <div className="flex-shrink-0 text-right">
         <div className="font-semibold tabular-nums text-success">+{credits}</div>
-        <div className="text-[10px] uppercase tracking-wide text-foreground/50">credits</div>
+        <div className="text-[10px] uppercase tracking-wider text-foreground/60">credits</div>
 
         <div className="mt-1.5 text-xs">
           {isCrypto ? (
@@ -171,7 +171,7 @@ export default function PaymentHistorySection() {
             <Receipt className="h-4 w-4" />
             View my top-up history
           </button>
-          <div className="mx-auto mt-4 flex max-w-md items-start gap-2 rounded-xl border border-border/20 bg-background/60 p-3 text-left text-xs text-foreground/80">
+          <div className="mx-auto mt-4 flex max-w-md items-start gap-2 rounded-xl border border-border/20 bg-background p-3 text-left text-xs text-foreground/80">
             <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
             <span>
               Requires a wallet signature so the service can confirm it’s you.{' '}
@@ -246,7 +246,7 @@ export default function PaymentHistorySection() {
               <button
                 onClick={loadMore}
                 disabled={status === 'loadingMore'}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/20 bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-foreground/30 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/20 bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card/80 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {status === 'loadingMore' ? (
                   <>

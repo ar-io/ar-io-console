@@ -8,7 +8,7 @@ import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
 import { makePossessive, formatWalletAddress } from '../utils';
 import BalanceCardsGrid from '../components/account/BalanceCardsGrid';
 import CreditSharingSection from '../components/account/CreditSharingSection';
-import PaymentHistorySection from '../components/account/PaymentHistorySection';
+import PaymentHistorySection from '@/components/account/PaymentHistorySection';
 import ActivityOverview from '../components/account/ActivityOverview';
 import OwnedName from '@/components/OwnedName';
 import LinkSolanaWalletModal from '../components/modals/LinkSolanaWalletModal';

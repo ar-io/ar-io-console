@@ -9,6 +9,7 @@ describe('getExplorerTxUrl', () => {
     expect(getExplorerTxUrl('0x1', 'usdc')).toBe('https://etherscan.io/tx/0x1');
     expect(getExplorerTxUrl('0x1', 'base-eth')).toBe('https://basescan.org/tx/0x1');
     expect(getExplorerTxUrl('0x1', 'base-usdc')).toBe('https://basescan.org/tx/0x1');
+    expect(getExplorerTxUrl('0x1', 'base-ario')).toBe('https://basescan.org/tx/0x1');
     expect(getExplorerTxUrl('0x1', 'pol')).toBe('https://polygonscan.com/tx/0x1');
     expect(getExplorerTxUrl('0x1', 'polygon-usdc')).toBe('https://polygonscan.com/tx/0x1');
     expect(getExplorerTxUrl('arTx', 'arweave')).toBe('https://viewblock.io/arweave/tx/arTx');
