@@ -68,7 +68,7 @@ export default function ActivityOverview() {
             <div>
               {recentUploads.map((upload, index) => (
                 <div
-                  key={index}
+                  key={`${upload.id}-${index}`}
                   className="flex items-center gap-3 border-t border-border/20 py-3 text-sm first:border-t-0"
                 >
                   <Upload className="h-4 w-4 flex-shrink-0 text-foreground/60" />
