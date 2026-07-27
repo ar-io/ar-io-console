@@ -234,10 +234,7 @@ export default function PaymentHistorySection() {
 
       {/* Opt-in */}
       {status === 'idle' && (
-        <div className="px-4 pb-6 text-center sm:px-6">
-          <p className="mx-auto mb-4 max-w-md text-sm text-foreground/80">
-            See every credit top-up on this wallet — crypto and card — in one place.
-          </p>
+        <div className="px-4 pb-6 pt-2 text-center sm:px-6">
           <button
             onClick={load}
             className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"

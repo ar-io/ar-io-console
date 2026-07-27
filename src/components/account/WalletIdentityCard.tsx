@@ -89,32 +89,28 @@ export default function WalletIdentityCard({
         <div className="border-t border-border/20 pt-3">
           <div className="mb-2 text-xs text-foreground/60">Linked wallet</div>
           {linkedAddress ? (
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              {/* Matches the header profile dropdown: name + address + copy + unlink */}
               <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary/20">
-                  <Link2 className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-foreground">
-                    {linkedWalletName || 'Solana Wallet'}{' '}
-                    <span className="text-xs text-foreground/60">(ArNS)</span>
-                  </div>
-                  <div className="font-mono text-xs text-foreground/60">
-                    {formatWalletAddress(linkedAddress, 6)}
-                  </div>
-                </div>
+                <span className="truncate text-sm font-medium text-foreground">
+                  {linkedWalletName || 'Solana'}
+                </span>
+                <span className="truncate font-mono text-xs text-foreground/60">
+                  {formatWalletAddress(linkedAddress, 6)}
+                </span>
+                <CopyButton textToCopy={linkedAddress} />
               </div>
-              <div className="flex flex-shrink-0 items-center gap-3">
+              <div className="flex flex-shrink-0 items-center gap-3 text-xs">
                 {isSolanaConnected ? (
-                  <span className="text-xs text-success">Connected</span>
+                  <span className="text-success">Connected</span>
                 ) : (
-                  <button onClick={onLink} className="text-xs text-primary hover:underline">
+                  <button onClick={onLink} className="text-primary hover:underline">
                     Reconnect
                   </button>
                 )}
                 <button
                   onClick={onLink}
-                  className="text-xs text-foreground/60 transition-colors hover:text-foreground"
+                  className="text-foreground/60 transition-colors hover:text-foreground"
                 >
                   Change
                 </button>

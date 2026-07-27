@@ -159,7 +159,7 @@ export default function MyAccountPage() {
                   </div>
                 </div>
                 <a
-                  href="https://arns.ar.io/#/manage/names"
+                  href={`https://arns.ar.io/#/manage/names/${expiringDomains[0].name}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
