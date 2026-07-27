@@ -34,4 +34,11 @@ describe('formatUnitsExact', () => {
     expect(formatUnitsExact('abc', 6)).toBeNull();
     expect(formatUnitsExact('', 6)).toBeNull();
   });
+
+  it('throws on invalid config (decimals / maxFractionDigits)', () => {
+    expect(() => formatUnitsExact('1', -1)).toThrow(RangeError);
+    expect(() => formatUnitsExact('1', 1.5)).toThrow(RangeError);
+    expect(() => formatUnitsExact('1', 6, -1)).toThrow(RangeError);
+    expect(() => formatUnitsExact('1', 6, 2.5)).toThrow(RangeError);
+  });
 });

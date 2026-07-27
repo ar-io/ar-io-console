@@ -18,6 +18,20 @@ export function formatUnitsExact(
   decimals: number,
   maxFractionDigits?: number,
 ): string | null {
+  // Caller-config errors (vs. bad data): fail loudly instead of via a cryptic
+  // BigInt RangeError (e.g. `10n ** BigInt(-1)`) deeper in the function.
+  if (!Number.isSafeInteger(decimals) || decimals < 0) {
+    throw new RangeError(`formatUnitsExact: decimals must be a non-negative safe integer, got ${decimals}`);
+  }
+  if (
+    maxFractionDigits !== undefined &&
+    (!Number.isSafeInteger(maxFractionDigits) || maxFractionDigits < 0)
+  ) {
+    throw new RangeError(
+      `formatUnitsExact: maxFractionDigits must be a non-negative safe integer, got ${maxFractionDigits}`,
+    );
+  }
+
   const s = quantity.trim();
   // Validate first: BigInt('') is 0n and BigInt(' ') throws — a regex is unambiguous.
   if (!/^-?\d+$/.test(s)) return null;
