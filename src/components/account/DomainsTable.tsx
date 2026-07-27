@@ -1,6 +1,6 @@
 import { Globe, ExternalLink, AlertTriangle } from 'lucide-react';
 import { ArNSName } from '@/types';
-import { daysUntil, EXPIRY_WARNING_DAYS } from '@/utils/domainExpiry';
+import { daysUntil, isExpiringSoon } from '@/utils/domainExpiry';
 
 const manageUrl = (name: string) => `https://arns.ar.io/#/manage/names/${name}`;
 const visitUrl = (name: string) => `https://${name}.ar.io`;
@@ -13,8 +13,7 @@ function StatusCell({ domain }: { domain: ArNSName }) {
     return <span className="text-foreground/60">Leased</span>;
   }
   const days = daysUntil(domain.endTimestamp, Date.now());
-  const soon = days <= EXPIRY_WARNING_DAYS;
-  if (!soon) {
+  if (!isExpiringSoon(domain, Date.now())) {
     return <span className="text-foreground/70">Expires in {days} days</span>;
   }
   return (
@@ -39,11 +38,7 @@ export default function DomainsTable({ domains }: { domains: ArNSName[] }) {
         </thead>
         <tbody>
           {domains.map((domain) => {
-            const days =
-              domain.type !== 'permabuy' && typeof domain.endTimestamp === 'number'
-                ? daysUntil(domain.endTimestamp, Date.now())
-                : null;
-            const expiringSoon = days !== null && days <= EXPIRY_WARNING_DAYS;
+            const expiringSoon = isExpiringSoon(domain, Date.now());
             return (
               <tr
                 key={domain.name}
