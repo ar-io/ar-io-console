@@ -72,11 +72,22 @@ function csvCell(value: string | number): string {
   return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
 
-/** Build a CSV from the loaded top-up rows. Exports what's loaded (see the button title). */
+/** Format a numeric field for the CSV, leaving invalid input blank rather than "NaN". */
+function csvNum(value: number, digits?: number): string {
+  if (!Number.isFinite(value)) return '';
+  return digits === undefined ? String(value) : value.toFixed(digits);
+}
+
+/**
+ * Build a CSV from the loaded top-up rows. Exports what's loaded (see the button title).
+ * Note: the token Amount uses the same `fromSmallestUnit` conversion as the on-screen
+ * display; the accounting columns (USD Value, Credits) are computed independently and
+ * blanked when a value isn't finite.
+ */
 function buildTopupCsv(payments: PaymentHistoryItem[]): string {
   const header = ['Date', 'Method', 'Amount', 'USD Value', 'Credits', 'Reference'];
   const rows = payments.map((p) => {
-    const credits = String(Number(p.wincCredited) / wincPerCredit);
+    const credits = csvNum(Number(p.wincCredited) / wincPerCredit);
     if (p.type === 'crypto') {
       const label = tokenLabels[p.tokenType as SupportedTokenType] ?? p.tokenType.toUpperCase();
       let amount = label;
@@ -86,13 +97,13 @@ function buildTopupCsv(payments: PaymentHistoryItem[]): string {
       } catch {
         /* unknown decimals — keep the label */
       }
-      return [p.date, 'Crypto', amount, Number(p.usdEquivalent).toFixed(2), credits, p.transactionId];
+      return [p.date, 'Crypto', amount, csvNum(Number(p.usdEquivalent), 2), credits, p.transactionId];
     }
     const currency = (p.currencyType || 'USD').toUpperCase();
-    const native = (Number(p.paymentAmount) / 100).toFixed(2);
+    const native = csvNum(Number(p.paymentAmount) / 100, 2);
     // usdEquivalent isn't provided for fiat, so only fill USD Value when the charge is USD.
     const usd = currency === 'USD' ? native : '';
-    return [p.date, 'Card', `${native} ${currency}`, usd, credits, p.receiptId];
+    return [p.date, 'Card', native ? `${native} ${currency}` : currency, usd, credits, p.receiptId];
   });
   return [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
 }
@@ -197,7 +208,7 @@ export default function PaymentHistorySection() {
   return (
     <div className="rounded-2xl border border-border/20 bg-card">
       {/* Header (matches CreditSharingSection) */}
-      <div className="flex items-center gap-3 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center gap-3 p-4 sm:p-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
           <Receipt className="h-5 w-5 text-foreground" />
         </div>

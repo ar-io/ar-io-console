@@ -356,6 +356,10 @@ export function useOwnedArNSNames() {
               undernames,
               ttl: ttl || 600,
               undernameTTLs,
+              // Preserve expiry metadata so a detail fetch doesn't wipe the
+              // expiry warnings on the next cache-backed render.
+              type: nameRecord.type,
+              endTimestamp: nameRecord.endTimestamp,
             };
           } else {
             // Add new cache entry
@@ -368,6 +372,8 @@ export function useOwnedArNSNames() {
                 undernames,
                 ttl: ttl || 600,
                 undernameTTLs,
+                type: nameRecord.type,
+                endTimestamp: nameRecord.endTimestamp,
               },
             ];
           }

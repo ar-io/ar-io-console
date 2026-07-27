@@ -25,9 +25,14 @@ export interface ExpiringDomain {
   daysRemaining: number;
 }
 
-/** Whole days from `now` until `endTimestamp` (negative if already past). */
+/**
+ * Whole days from `now` until `endTimestamp` (negative once past). Future durations
+ * round up ("in N days"); past durations round down, so a lease even 1ms past reads
+ * as expired (-1) rather than "today" (0).
+ */
 export function daysUntil(endTimestamp: number, now: number): number {
-  return Math.ceil((endTimestamp - now) / MS_PER_DAY);
+  const days = (endTimestamp - now) / MS_PER_DAY;
+  return days >= 0 ? Math.ceil(days) : Math.floor(days);
 }
 
 /** True for a lease that is within `thresholdDays` of expiring (or already past). */

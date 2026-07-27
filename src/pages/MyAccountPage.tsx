@@ -176,7 +176,8 @@ export default function MyAccountPage() {
             </button>
           </div>
 
-          {/* Expiry warning — covers ALL owned leases, even beyond the 5 shown below */}
+          {/* Expiry warning — spans the owned leases we've loaded (the 100 most recent
+              from the batch), so it surfaces at-risk names beyond the 5 shown below. */}
           {expiringDomains.length > 0 && (
             <div className="mb-4 rounded-2xl border border-warning/40 bg-warning/10 p-4">
               <div className="flex items-start gap-3">

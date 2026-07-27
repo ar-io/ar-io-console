@@ -21,6 +21,9 @@ describe('daysUntil', () => {
     expect(daysUntil(NOW + 5 * DAY, NOW)).toBe(5);
     expect(daysUntil(NOW + 0.2 * DAY, NOW)).toBe(1);
     expect(daysUntil(NOW - 3 * DAY, NOW)).toBe(-3);
+    // Even a fraction past is "expired" (-1), never rounded up to 0 / "today".
+    expect(daysUntil(NOW - 0.2 * DAY, NOW)).toBe(-1);
+    expect(daysUntil(NOW - 1, NOW)).toBe(-1);
   });
 });
 
