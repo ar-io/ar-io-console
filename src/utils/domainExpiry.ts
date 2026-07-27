@@ -66,6 +66,19 @@ export function getExpiringDomains(
     .sort((a, b) => a.daysRemaining - b.daysRemaining);
 }
 
+/**
+ * Sort key that floats expiring-soon leases to the front (soonest first) while
+ * leaving everything else in place — expiring names get their day count, all
+ * others get `Infinity`. Use as `names.sort((a,b) => expirySortKey(a,now) - expirySortKey(b,now))`.
+ */
+export function expirySortKey(
+  name: OwnedNameLike,
+  now: number,
+  thresholdDays: number = EXPIRY_WARNING_DAYS,
+): number {
+  return isExpiringSoon(name, now, thresholdDays) ? daysUntil(name.endTimestamp!, now) : Infinity;
+}
+
 /** Compact human label for a remaining-days count, e.g. "in 5 days" / "today" / "expired". */
 export function expiryLabel(daysRemaining: number): string {
   if (daysRemaining < 0) return 'expired';

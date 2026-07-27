@@ -43,12 +43,23 @@ function formatCredits(wincCredited: string): string {
 /** Fiat `paymentAmount` is in the currency's minor unit (e.g. USD cents). */
 function formatFiat(paymentAmount: string, currencyType: string): string {
   const major = Number(paymentAmount) / 100;
+  // Manually-granted / promotional credits come through with no real charge
+  // (e.g. 0.00 WINC via admin) — label them instead of showing a meaningless "0.00".
+  if (!Number.isFinite(major) || major <= 0) return 'Credit grant';
   const currency = currencyType?.toUpperCase() || 'USD';
   try {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(major);
   } catch {
     return `${major.toFixed(2)} ${currency}`;
   }
+}
+
+/** USD equivalent for a crypto top-up — never a misleading "≈ $0.00"; null = omit. */
+function formatUsdEquiv(usdEquivalent: string): string | null {
+  const n = Number(usdEquivalent);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n < 0.01) return '≈ <$0.01';
+  return `≈ $${n.toFixed(2)}`;
 }
 
 /** Crypto `tokenQuantity` is in smallest units; best-effort human amount. */
@@ -145,11 +156,13 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
               ? formatCryptoAmount(item.tokenQuantity, item.tokenType)
               : formatFiat(item.paymentAmount, item.currencyType)}
           </span>
-          <span className="text-xs text-foreground/60">
-            {isCrypto
-              ? `≈ $${Number(item.usdEquivalent).toFixed(2)}`
-              : `via ${item.paymentProvider || 'card'}`}
-          </span>
+          {isCrypto ? (
+            formatUsdEquiv(item.usdEquivalent) && (
+              <span className="text-xs text-foreground/60">{formatUsdEquiv(item.usdEquivalent)}</span>
+            )
+          ) : (
+            <span className="text-xs text-foreground/60">via {item.paymentProvider || 'card'}</span>
+          )}
         </div>
 
         {!isCrypto && item.giftMessage && (
@@ -218,7 +231,6 @@ export default function PaymentHistorySection() {
         </div>
         {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
           <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-xs text-foreground/60 sm:inline">Newest first</span>
             <button
               onClick={() => downloadTopupCsv(payments)}
               title="Export loaded top-up history as CSV"
@@ -309,7 +321,8 @@ export default function PaymentHistorySection() {
           than growing the whole page. */}
       {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
         <div className="px-4 pb-4 sm:px-6">
-          <div className="max-h-[28rem] overflow-y-auto">
+          {/* pr-2 keeps the scrollbar from crowding the credits/tx column */}
+          <div className="max-h-[28rem] overflow-y-auto pr-2">
             {payments.map((item, i) => (
               <PaymentRow key={`${item.type}-${item.date}-${i}`} item={item} />
             ))}

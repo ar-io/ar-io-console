@@ -3,6 +3,7 @@ import {
   daysUntil,
   isExpiringSoon,
   getExpiringDomains,
+  expirySortKey,
   expiryLabel,
   EXPIRY_WARNING_DAYS,
 } from './domainExpiry';
@@ -60,6 +61,26 @@ describe('getExpiringDomains', () => {
     const names = [nameAt('a', { type: 'lease', days: 10 })];
     expect(getExpiringDomains(names, NOW, 7)).toHaveLength(0);
     expect(getExpiringDomains(names, NOW, 14)).toHaveLength(1);
+  });
+});
+
+describe('expirySortKey', () => {
+  it('gives expiring-soon leases their day count and everything else Infinity', () => {
+    expect(expirySortKey(nameAt('soon', { type: 'lease', days: 3 }), NOW)).toBe(3);
+    expect(expirySortKey(nameAt('grace', { type: 'lease', days: -1 }), NOW)).toBe(-1);
+    expect(expirySortKey(nameAt('far', { type: 'lease', days: 200 }), NOW)).toBe(Infinity);
+    expect(expirySortKey(nameAt('perma', { type: 'permabuy' }), NOW)).toBe(Infinity);
+  });
+
+  it('sorts a mixed list soonest-expiring first, others stable', () => {
+    const names = [
+      nameAt('far', { type: 'lease', days: 200 }),
+      nameAt('soon', { type: 'lease', days: 3 }),
+      nameAt('perma', { type: 'permabuy' }),
+      nameAt('grace', { type: 'lease', days: -1 }),
+    ];
+    const sorted = [...names].sort((a, b) => expirySortKey(a, NOW) - expirySortKey(b, NOW));
+    expect(sorted.map((n) => n.name)).toEqual(['grace', 'soon', 'far', 'perma']);
   });
 });
 

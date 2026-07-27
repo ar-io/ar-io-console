@@ -3,23 +3,9 @@ import { useStore } from '../store/useStore';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getARIO, getANT, getWritableANT, WRITE_OPTIONS, createWalletAdapterTransactionSendingSigner } from '../utils';
 import { ArNSName } from '@/types';
-
-// Helper to decode punycode names for better display
-const decodePunycode = (name: string): string => {
-  try {
-    // Modern browsers have punycode built into URL/domain APIs
-    if (name.startsWith('xn--')) {
-      // Use the native browser API to decode punycode
-      const url = new URL(`https://${name}.example.com`);
-      const decoded = url.hostname.split('.')[0];
-      return decoded !== name ? decoded : name;
-    }
-    return name;
-  } catch {
-    // If decoding fails, return original name
-    return name;
-  }
-};
+// Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
+// URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
+import { toUnicodeName as decodePunycode } from '../utils/punycode';
 
 interface ArNSUpdateResult {
   success: boolean;

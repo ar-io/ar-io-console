@@ -1,5 +1,4 @@
-import { Wallet, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Wallet, ExternalLink, Link2, Unlink } from 'lucide-react';
 import { formatWalletAddress } from '../../utils';
 import { getExplorerAddressUrl } from '../../utils/getExplorerAddressUrl';
 import CopyButton from '../CopyButton';
@@ -13,21 +12,28 @@ const WALLET_LABELS: Record<string, string> = {
 interface WalletIdentityCardProps {
   address: string;
   walletType: string | null;
-  /** The primary ArNS name for this identity (already resolved by the page). */
-  arnsName?: string | null;
-  loadingArNS?: boolean;
+  /** Linked-wallet (Solana-for-ArNS) state, folded into this card. */
+  isPrimarySolana: boolean;
+  linkedAddress?: string | null;
+  linkedWalletName?: string | null;
+  isSolanaConnected: boolean;
+  onLink: () => void;
+  onUnlink: () => void;
 }
 
 /**
- * The wallet-identity card: who you're signed in as. Flat, tokenized card that
- * pairs with the balance card at the top of the account page. Replaces the unused
- * WalletOverviewCard.
+ * The wallet-identity card: who you're signed in as, plus the linked Solana wallet
+ * used for ArNS updates (shown only when the primary wallet isn't already Solana).
  */
 export default function WalletIdentityCard({
   address,
   walletType,
-  arnsName,
-  loadingArNS,
+  isPrimarySolana,
+  linkedAddress,
+  linkedWalletName,
+  isSolanaConnected,
+  onLink,
+  onUnlink,
 }: WalletIdentityCardProps) {
   if (!address || !walletType) return null;
 
@@ -78,26 +84,66 @@ export default function WalletIdentityCard({
         </span>
       </div>
 
-      {/* Primary ArNS name */}
-      <div className="flex items-center justify-between gap-3 border-t border-border/20 py-2.5 text-sm">
-        <span className="flex-shrink-0 text-foreground/60">Primary name</span>
-        {loadingArNS ? (
-          <span className="h-4 w-24 animate-pulse rounded bg-foreground/10" />
-        ) : arnsName ? (
-          <a
-            href={`https://${arnsName}.ar.io`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="min-w-0 truncate font-medium text-primary hover:underline"
-          >
-            {arnsName}
-          </a>
-        ) : (
-          <Link to="/domains" className="text-foreground/60 hover:text-primary hover:underline">
-            None — <span className="text-primary">get one</span>
-          </Link>
-        )}
-      </div>
+      {/* Linked Solana wallet (for ArNS) — only when the primary isn't Solana */}
+      {!isPrimarySolana && (
+        <div className="border-t border-border/20 pt-3">
+          <div className="mb-2 text-xs text-foreground/60">Linked wallet</div>
+          {linkedAddress ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary/20">
+                  <Link2 className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-foreground">
+                    {linkedWalletName || 'Solana Wallet'}{' '}
+                    <span className="text-xs text-foreground/60">(ArNS)</span>
+                  </div>
+                  <div className="font-mono text-xs text-foreground/60">
+                    {formatWalletAddress(linkedAddress, 6)}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-3">
+                {isSolanaConnected ? (
+                  <span className="text-xs text-success">Connected</span>
+                ) : (
+                  <button onClick={onLink} className="text-xs text-primary hover:underline">
+                    Reconnect
+                  </button>
+                )}
+                <button
+                  onClick={onLink}
+                  className="text-xs text-foreground/60 transition-colors hover:text-foreground"
+                >
+                  Change
+                </button>
+                <button
+                  onClick={onUnlink}
+                  className="p-1 text-foreground/40 transition-colors hover:text-error"
+                  title="Unlink wallet"
+                  aria-label="Unlink Solana wallet"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-sm text-foreground/80">
+                Link a Solana wallet to manage ArNS domains
+              </span>
+              <button
+                onClick={onLink}
+                className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                Link wallet
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
