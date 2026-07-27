@@ -8,6 +8,7 @@ import {
   Loader2,
   RefreshCw,
   Inbox,
+  Download,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaymentHistory, type PaymentHistoryItem } from '@/hooks/usePaymentHistory';
@@ -62,6 +63,50 @@ function formatCryptoAmount(tokenQuantity: string, tokenType: string): string {
   }
   if (human == null) return label;
   return `${human.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${label}`;
+}
+
+// ---- CSV export --------------------------------------------------------------
+
+/** Quote every cell (doubling internal quotes) so commas/quotes/newlines are safe. */
+function csvCell(value: string | number): string {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+/** Build a CSV from the loaded top-up rows. Exports what's loaded (see the button title). */
+function buildTopupCsv(payments: PaymentHistoryItem[]): string {
+  const header = ['Date', 'Method', 'Amount', 'USD Value', 'Credits', 'Reference'];
+  const rows = payments.map((p) => {
+    const credits = String(Number(p.wincCredited) / wincPerCredit);
+    if (p.type === 'crypto') {
+      const label = tokenLabels[p.tokenType as SupportedTokenType] ?? p.tokenType.toUpperCase();
+      let amount = label;
+      try {
+        const v = fromSmallestUnit(Number(p.tokenQuantity), p.tokenType as SupportedTokenType);
+        if (Number.isFinite(v)) amount = `${v} ${label}`;
+      } catch {
+        /* unknown decimals — keep the label */
+      }
+      return [p.date, 'Crypto', amount, Number(p.usdEquivalent).toFixed(2), credits, p.transactionId];
+    }
+    const currency = (p.currencyType || 'USD').toUpperCase();
+    const native = (Number(p.paymentAmount) / 100).toFixed(2);
+    // usdEquivalent isn't provided for fiat, so only fill USD Value when the charge is USD.
+    const usd = currency === 'USD' ? native : '';
+    return [p.date, 'Card', `${native} ${currency}`, usd, credits, p.receiptId];
+  });
+  return [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
+}
+
+function downloadTopupCsv(payments: PaymentHistoryItem[]): void {
+  const blob = new Blob([buildTopupCsv(payments)], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'turbo-topup-history.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // ---- row ---------------------------------------------------------------------
@@ -160,8 +205,18 @@ export default function PaymentHistorySection() {
           <h3 className="text-lg font-bold text-foreground">Top-up History</h3>
           <p className="text-sm text-foreground/80">Every credit purchase you’ve made</p>
         </div>
-        {status === 'loaded' && payments.length > 0 && (
-          <span className="ml-auto text-xs text-foreground/60">Newest first</span>
+        {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
+          <div className="ml-auto flex items-center gap-3">
+            <span className="hidden text-xs text-foreground/60 sm:inline">Newest first</span>
+            <button
+              onClick={() => downloadTopupCsv(payments)}
+              title="Export loaded top-up history as CSV"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/20 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-card"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </button>
+          </div>
         )}
       </div>
 

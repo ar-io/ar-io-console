@@ -209,6 +209,8 @@ interface StoreState {
         undernames?: string[];
         ttl?: number;
         undernameTTLs?: Record<string, number>;
+        type?: 'lease' | 'permabuy';
+        endTimestamp?: number;
       }>;
       timestamp: number;
     }
@@ -304,6 +306,8 @@ interface StoreState {
       undernames?: string[];
       ttl?: number;
       undernameTTLs?: Record<string, number>;
+      type?: 'lease' | 'permabuy';
+      endTimestamp?: number;
     }>
   ) => void;
   getOwnedArNSNames: (address: string) => Array<{
@@ -313,6 +317,8 @@ interface StoreState {
     undernames?: string[];
     ttl?: number;
     undernameTTLs?: Record<string, number>;
+    type?: 'lease' | 'permabuy';
+    endTimestamp?: number;
   }> | null;
   addUploadResults: (results: UploadResult[]) => void;
   updateUploadWithArNS: (uploadId: string, arnsName: string, undername?: string, arnsTransactionId?: string) => void;

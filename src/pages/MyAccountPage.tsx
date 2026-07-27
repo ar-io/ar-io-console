@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { User, Globe, RefreshCw, ExternalLink, Link2, Unlink } from 'lucide-react';
+import { User, Globe, RefreshCw, ExternalLink, Link2, Unlink, AlertTriangle } from 'lucide-react';
+import { getExpiringDomains, expiryLabel } from '../utils/domainExpiry';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
@@ -27,6 +28,8 @@ export default function MyAccountPage() {
   }
 
   const paymentAvailable = isPaymentServiceAvailable();
+  // Leases expiring within the warning window (soonest first) — powers the banner.
+  const expiringDomains = getExpiringDomains(ownedNames, Date.now());
 
   return (
     <div className="px-4 sm:px-6">
@@ -172,6 +175,46 @@ export default function MyAccountPage() {
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
+
+          {/* Expiry warning — covers ALL owned leases, even beyond the 5 shown below */}
+          {expiringDomains.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-warning/40 bg-warning/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 text-warning" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {expiringDomains.length === 1
+                      ? '1 domain is expiring soon'
+                      : `${expiringDomains.length} domains are expiring soon`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-foreground/80">
+                    Renew before the lease ends to keep {expiringDomains.length === 1 ? 'it' : 'them'} — an expired name can be registered by someone else.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    {expiringDomains.slice(0, 6).map((d) => (
+                      <span key={d.name} className="text-xs text-foreground/80">
+                        <span className="font-medium text-foreground">{d.displayName}</span>{' '}
+                        <span className={d.daysRemaining < 0 ? 'text-error' : 'text-warning'}>
+                          ({expiryLabel(d.daysRemaining)})
+                        </span>
+                      </span>
+                    ))}
+                    {expiringDomains.length > 6 && (
+                      <span className="text-xs text-foreground/60">+{expiringDomains.length - 6} more</span>
+                    )}
+                  </div>
+                </div>
+                <a
+                  href="https://arns.ar.io/#/manage/names"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  Renew
+                </a>
+              </div>
+            </div>
+          )}
 
           {loadingDomains ? (
             <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6 text-center">

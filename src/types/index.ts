@@ -7,4 +7,6 @@ export interface ArNSName {
   undernames?: string[];  // Available undernames (fetched on-demand)
   ttl?: number;           // TTL in seconds for base name (@)
   undernameTTLs?: Record<string, number>; // TTL for each undername
+  type?: 'lease' | 'permabuy'; // Registration type (permabuy never expires)
+  endTimestamp?: number;  // Lease end (ms epoch); absent for permabuy
 }

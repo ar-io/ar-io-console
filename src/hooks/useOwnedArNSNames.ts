@@ -53,6 +53,8 @@ export function useOwnedArNSNames() {
             currentTarget: cached.currentTarget,
             lastUpdated: undefined,
             undernames: cached.undernames || [],
+            type: cached.type,
+            endTimestamp: cached.endTimestamp,
           }));
           setNames(arnsNames);
           return arnsNames;
@@ -70,7 +72,9 @@ export function useOwnedArNSNames() {
           sortOrder: 'desc', // Most recent first
         });
 
-        // Process names WITHOUT fetching ANT details (lazy loading approach)
+        // Process names WITHOUT fetching ANT details (lazy loading approach).
+        // `type`/`endTimestamp` come free in this batch response (no per-name call),
+        // powering the expiry warnings on the account page.
         const processedNames: ArNSName[] = (records.items || []).map((record) => ({
           name: record.name,
           displayName: decodePunycode(record.name),
@@ -78,6 +82,8 @@ export function useOwnedArNSNames() {
           currentTarget: undefined, // Will be fetched on-demand
           lastUpdated: record.startTimestamp ? new Date(record.startTimestamp) : undefined,
           undernames: undefined, // Will be fetched on-demand
+          type: (record as any).type,
+          endTimestamp: (record as any).endTimestamp,
         }));
 
         // Check if we have cached ANT details for any of these names
@@ -99,6 +105,8 @@ export function useOwnedArNSNames() {
           processId: name.processId,
           currentTarget: name.currentTarget,
           undernames: name.undernames,
+          type: name.type,
+          endTimestamp: name.endTimestamp,
         }));
 
         // Cache the results
@@ -118,6 +126,8 @@ export function useOwnedArNSNames() {
             currentTarget: cached.currentTarget,
             lastUpdated: undefined,
             undernames: cached.undernames || [],
+            type: cached.type,
+            endTimestamp: cached.endTimestamp,
           }));
           setNames(fallbackNames);
           return fallbackNames;
