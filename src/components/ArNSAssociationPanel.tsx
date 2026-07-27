@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Globe, ExternalLink, Loader2, RefreshCw, ChevronDown, Check, ChevronRight, Link as LinkIcon, Wallet } from 'lucide-react';
 import { Combobox } from '@headlessui/react';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
@@ -102,13 +102,17 @@ export default function ArNSAssociationPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUndername]);
 
-  // Clear undername when ArNS name changes
+  // Clear the undername only when the user actually SWITCHES to a different name —
+  // never on mount. The Domain section mounts lazily (on expand), so clearing on
+  // mount would wipe a hydrated undername when editing an existing `blog_myname`
+  // page, silently republishing it to the bare `myname`.
+  const prevSelectedNameRef = useRef(selectedName);
   useEffect(() => {
-    if (selectedName) {
-      // Reset undername selection when switching names
+    if (prevSelectedNameRef.current !== selectedName) {
       onUndernameChange('');
       setShowUndername(false);
     }
+    prevSelectedNameRef.current = selectedName;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedName, onUndernameChange]);
 
@@ -133,6 +137,16 @@ export default function ArNSAssociationPanel({
     }
   }, [currentTTL]);
   const canUseArNS = isSolanaConnected && !needsLinking;
+
+  // While the "no names yet" nudge is showing, refetch when the user returns to the
+  // tab — a name they just registered on arns.ar.io then shows up without them
+  // having to find the manual refresh.
+  useEffect(() => {
+    if (!(enabled && canUseArNS && names.length === 0)) return;
+    const onFocus = () => fetchOwnedNames(true);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [enabled, canUseArNS, names.length, fetchOwnedNames]);
 
   return (
     <div className={bare ? '' : 'bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-6 mb-6'}>
@@ -197,16 +211,16 @@ export default function ArNSAssociationPanel({
         </div>
       ) : needsLinking ? (
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-foreground/80">
-              <LinkIcon className="w-4 h-4 text-primary" />
-              Link a Solana wallet to assign a domain
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2 text-sm text-foreground/80">
+              <LinkIcon className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <span>ArNS domains are secured on Solana, so pointing one at your work takes a quick Solana signature — link a wallet once.</span>
             </div>
             <button
               onClick={() => setShowLinkModal(true)}
-              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+              className="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
             >
-              Link Wallet
+              Link wallet
             </button>
           </div>
         </div>

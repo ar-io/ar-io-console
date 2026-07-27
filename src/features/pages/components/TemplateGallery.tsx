@@ -160,7 +160,7 @@ export default function TemplateGallery({
           <h3 className="font-heading text-base font-bold text-foreground">Start here</h3>
         </div>
         <p className="mb-4 text-sm text-foreground/70">
-          A great start for most — restyle, rewrite, and switch templates anytime without losing your content.
+          A great start for most — restyle, rewrite, and rearrange freely. Nothing is permanent until you publish.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {recommended.map((t) => (
