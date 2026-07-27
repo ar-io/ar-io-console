@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { FilePlus2, Sparkles } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { FilePlus2, Sparkles, ChevronDown } from 'lucide-react';
 import type { TemplateId } from '../schema';
 import { listTemplates, renderPageHtml, type PagesTemplate, type RenderCtx, type TemplateFamily } from '../render/renderPageHtml';
 import { renderCtxFor } from '../publish/renderCtx';
@@ -11,6 +11,17 @@ interface TemplateGalleryProps {
   onSelectTemplate: (id: TemplateId) => void;
   onStartBlank: () => void;
 }
+
+// A small, versatile "Start here" set — one strong pick per persona — so first-timers
+// aren't paralyzed by the full library. Purely a curation choice; easy to re-order or
+// swap. Ids not present in the registry are skipped, so this can never render empty-broken.
+const RECOMMENDED_IDS: TemplateId[] = [
+  'spotlight',
+  'link-classic',
+  'readme-md',
+  'business-card',
+  'creator-hub',
+];
 
 const FAMILY_ORDER: TemplateFamily[] = ['modern', 'creator', 'pro', 'classic', 'developer', 'wildcard'];
 const FAMILY_LABELS: Record<TemplateFamily, string> = {
@@ -95,6 +106,7 @@ export default function TemplateGallery({
 }: TemplateGalleryProps) {
   const templates = useMemo(() => listTemplates(), []);
   const configMode = useStore((s) => s.configMode);
+  const [showAll, setShowAll] = useState(false);
 
   // One shared render context for every thumbnail; seeds carry their own showcase
   // identity so no per-template ctx is needed.
@@ -129,57 +141,88 @@ export default function TemplateGallery({
     return groups;
   }, [templates]);
 
+  // The curated "Start here" set, in RECOMMENDED_IDS order, skipping any id that
+  // isn't in the registry (so a stale id can never leave the row broken/empty).
+  const recommended = useMemo(
+    () =>
+      RECOMMENDED_IDS.map((id) => templates.find((t) => t.id === id)).filter(
+        (t): t is PagesTemplate => !!t,
+      ),
+    [templates],
+  );
+
   return (
     <div className="space-y-8">
-      {/* Start options */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-5">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary/20">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <h4 className="font-heading text-base font-bold text-foreground">Pick a template</h4>
-            <p className="text-xs text-foreground/70">
-              Every template is a starting point — restyle, rewrite and reorder freely.
-            </p>
-          </div>
+      {/* Start here — a curated set + blank, so first-timers aren't paralyzed by all 32 */}
+      <section>
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h3 className="font-heading text-base font-bold text-foreground">Start here</h3>
         </div>
+        <p className="mb-4 text-sm text-foreground/70">
+          A great start for most — restyle, rewrite, and switch templates anytime without losing your content.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {recommended.map((t) => (
+            <TemplateCard
+              key={t.id}
+              template={t}
+              html={htmlById[t.id]}
+              onSelect={() => onSelectTemplate(t.id)}
+            />
+          ))}
+          {/* Start blank as a peer tile in the recommended row */}
+          <button
+            type="button"
+            onClick={onStartBlank}
+            className="group flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/40 bg-card p-6 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+              <FilePlus2 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h4 className="font-heading text-base font-bold text-foreground">Start blank</h4>
+              <p className="mt-1 text-xs text-foreground/70">A clean, minimal page.</p>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      {/* The full library — collapsed by default to keep the first choice light */}
+      <div>
         <button
           type="button"
-          onClick={onStartBlank}
-          className="flex items-center gap-4 rounded-2xl border border-border/20 bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-foreground transition-colors hover:text-primary"
         >
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-card">
-            <FilePlus2 className="h-5 w-5 text-foreground" />
-          </div>
-          <div className="min-w-0">
-            <h4 className="font-heading text-base font-bold text-foreground">Start blank</h4>
-            <p className="text-xs text-foreground/70">Begin from a clean, minimal page.</p>
-          </div>
+          {showAll ? 'Hide' : 'Browse'} all {templates.length} templates
+          <ChevronDown className={`h-4 w-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
-      {FAMILY_ORDER.map((family) => {
-        const group = byFamily[family];
-        if (group.length === 0) return null;
-        return (
-          <section key={family}>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground/60">
-              {FAMILY_LABELS[family]}
-            </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {group.map((t) => (
-                <TemplateCard
-                  key={t.id}
-                  template={t}
-                  html={htmlById[t.id]}
-                  onSelect={() => onSelectTemplate(t.id)}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {showAll &&
+        FAMILY_ORDER.map((family) => {
+          const group = byFamily[family];
+          if (group.length === 0) return null;
+          return (
+            <section key={family}>
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground/60">
+                {FAMILY_LABELS[family]}
+              </h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {group.map((t) => (
+                  <TemplateCard
+                    key={t.id}
+                    template={t}
+                    html={htmlById[t.id]}
+                    onSelect={() => onSelectTemplate(t.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
     </div>
   );
 }
