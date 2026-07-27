@@ -268,7 +268,7 @@ export default function ArNSAssociationPanel({
               </ul>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <button
-                  onClick={() => window.open('https://arns.ar.io', '_blank')}
+                  onClick={() => window.open('https://arns.ar.io', '_blank', 'noopener,noreferrer')}
                   className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
                 >
                   <Globe className="h-4 w-4" />

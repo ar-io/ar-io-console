@@ -2520,7 +2520,7 @@ export default function DeploySitePanel() {
                 Find a name
               </button>
               <button
-                onClick={() => window.open('https://docs.ar.io/learn/arns', '_blank')}
+                onClick={() => window.open('https://docs.ar.io/learn/arns', '_blank', 'noopener,noreferrer')}
                 className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card transition-colors"
               >
                 How ArNS works
