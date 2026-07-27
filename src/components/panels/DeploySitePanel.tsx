@@ -2467,62 +2467,63 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* ArNS Discovery Section - Show for non-Solana wallets or Solana users without ArNS names */}
+      {/* No name yet (or no ArNS access) after deploy — the same domain-first push as
+          pre-deploy: sell the smart domain and route to registration. Only shows when
+          a name wasn't already assigned, so a pre-deploy assigner never sees it. */}
       {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
        (!hasArNSAccess || userArnsNames.length === 0) && (
         <div className="mt-6">
-          <div className="bg-gradient-to-br from-primary/5 to-primary/5 rounded-xl border border-primary/20 p-6">
-            <div className="flex items-start gap-3 mb-4">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
+            <div className="flex items-start gap-3 mb-3">
               <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
                 <Globe className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-foreground mb-1">Want a Friendly Domain Name?</h4>
+                <h4 className="text-lg font-bold text-foreground mb-1">Give your site a name people remember</h4>
                 <p className="text-sm text-foreground/80">
-                  Your site is live, but you can make it even better with an ArNS domain name
+                  Your site is live at a permanent URL. Point an ArNS{' '}
+                  <span className="font-medium text-primary">smart domain</span> at it — a name you own
+                  on-chain, backed by a smart contract.
                 </p>
               </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-3 mb-4 text-xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Human-readable URLs</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Lease or Permanently own</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Global propagation across the AR.IO Network</span>
-              </div>
-            </div>
-            
-            <div className="bg-card/50 rounded-lg p-4 mb-4">
-              <div className="text-sm text-foreground/80 mb-2">Instead of:</div>
-              <div className="font-mono text-xs text-foreground/60 mb-3 break-all">
+            <div className="bg-card/50 rounded-lg p-4 mb-4 text-xs">
+              <div className="text-foreground/60 mb-1">Instead of</div>
+              <div className="font-mono text-foreground/60 mb-3 break-all">
                 {getArweaveUrl(deploySuccessInfo.manifestId)}
               </div>
-              
-              <div className="text-sm text-foreground/80 mb-2">Get something like:</div>
-              <div className="font-mono text-sm text-primary font-medium">
-                https://mysite.ar.io
-              </div>
+              <div className="text-foreground/60 mb-1">Get</div>
+              <div className="font-mono text-sm text-primary font-medium">https://yourname.ar.io</div>
             </div>
-            
+
+            <ul className="mb-4 space-y-2">
+              <li className="flex items-start gap-2 text-xs text-foreground/80">
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span><span className="font-medium text-foreground">You own it.</span> No registrar, no yearly renewal to a company.</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground/80">
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span><span className="font-medium text-foreground">Update forever.</span> Repoint it at new versions anytime; the link never changes.</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground/80">
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span><span className="font-medium text-foreground">Yours everywhere.</span> Resolves through any ar.io gateway, permanently.</span>
+              </li>
+            </ul>
+
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => navigate('/domains')}
                 className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
-                Search for Your Name
+                Find a name
               </button>
               <button
                 onClick={() => window.open('https://docs.ar.io/learn/arns', '_blank')}
                 className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card transition-colors"
               >
-                Learn More
+                How ArNS works
               </button>
             </div>
           </div>
