@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Globe, ExternalLink, AlertCircle, Loader2, RefreshCw, ChevronDown, Check, ChevronRight, Link as LinkIcon, Wallet } from 'lucide-react';
+import { Globe, ExternalLink, Loader2, RefreshCw, ChevronDown, Check, ChevronRight, Link as LinkIcon, Wallet } from 'lucide-react';
 import { Combobox } from '@headlessui/react';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
@@ -147,7 +147,7 @@ export default function ArNSAssociationPanel({
             className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
           />
           <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
-            Add a domain name
+            Add a domain
           </label>
         </div>
       ) : (
@@ -166,11 +166,11 @@ export default function ArNSAssociationPanel({
                 className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
               />
               <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
-                Add a domain name
+                Add a domain
               </label>
             </div>
             <p className="text-sm text-foreground/80">
-              Give it a memorable domain name
+              Give it a name people remember
             </p>
           </div>
         </div>
@@ -237,23 +237,51 @@ export default function ArNSAssociationPanel({
               Loading your ArNS names...
             </div>
           ) : names.length === 0 ? (
-            <div className="bg-card border border-border/20 rounded-2xl p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-foreground/60 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-sm font-medium text-foreground mb-1">
-                    No domains yet
-                  </div>
-                  <div className="text-sm text-foreground/80 mb-3">
-                    Register a domain at arns.ar.io, then assign it here.
-                  </div>
-                  <button
-                    onClick={() => window.open('https://arns.ar.io', '_blank')}
-                    className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
-                  >
-                    Register a domain
-                  </button>
-                </div>
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="mb-1 text-sm font-medium text-foreground">You don’t own a name yet</div>
+              <p className="mb-3 text-sm text-foreground/80">
+                Register an ArNS <span className="font-medium text-primary">smart domain</span> — a name
+                you own on-chain, backed by a smart contract — then come back and assign it here.
+              </p>
+              <ul className="mb-4 space-y-2">
+                <li className="flex items-start gap-2 text-xs text-foreground/80">
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">You own it.</span> No registrar, no
+                    yearly renewal to a company.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2 text-xs text-foreground/80">
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">Update forever.</span> Point it at new
+                    versions anytime; the link never changes.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2 text-xs text-foreground/80">
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">Yours everywhere.</span> Resolves
+                    through any ar.io gateway, permanently.
+                  </span>
+                </li>
+              </ul>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <button
+                  onClick={() => window.open('https://arns.ar.io', '_blank')}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                >
+                  <Globe className="h-4 w-4" />
+                  Find a name
+                </button>
+                {/* Registered elsewhere and came back? Pull the fresh list. */}
+                <button
+                  onClick={() => fetchOwnedNames(true)}
+                  disabled={loading}
+                  className="text-xs font-medium text-primary transition-colors hover:underline disabled:opacity-50"
+                >
+                  Just registered? Refresh
+                </button>
               </div>
             </div>
           ) : (
