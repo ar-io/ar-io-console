@@ -13,7 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { usePaymentHistory, type PaymentHistoryItem } from '@/hooks/usePaymentHistory';
 import { wincPerCredit, tokenLabels, type SupportedTokenType } from '@/constants';
-import { fromSmallestUnit } from '@/utils/jitPayment';
+import { formatSmallestUnit } from '@/utils/jitPayment';
 import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
 import CopyButton from '@/components/CopyButton';
 
@@ -62,18 +62,11 @@ function formatUsdEquiv(usdEquivalent: string): string | null {
   return `≈ $${n.toFixed(2)}`;
 }
 
-/** Crypto `tokenQuantity` is in smallest units; best-effort human amount. */
+/** Crypto `tokenQuantity` is in smallest units; exact human amount (capped for display). */
 function formatCryptoAmount(tokenQuantity: string, tokenType: string): string {
   const label = tokenLabels[tokenType as SupportedTokenType] ?? tokenType.toUpperCase();
-  let human: number | null = null;
-  try {
-    const v = fromSmallestUnit(Number(tokenQuantity), tokenType as SupportedTokenType);
-    if (Number.isFinite(v)) human = v;
-  } catch {
-    /* unknown token decimals — fall back to the label + USD equivalent only */
-  }
-  if (human == null) return label;
-  return `${human.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${label}`;
+  const amount = formatSmallestUnit(tokenQuantity, tokenType as SupportedTokenType, 6);
+  return amount == null ? label : `${amount} ${label}`;
 }
 
 // ---- CSV export --------------------------------------------------------------
@@ -101,13 +94,9 @@ function buildTopupCsv(payments: PaymentHistoryItem[]): string {
     const credits = csvNum(Number(p.wincCredited) / wincPerCredit);
     if (p.type === 'crypto') {
       const label = tokenLabels[p.tokenType as SupportedTokenType] ?? p.tokenType.toUpperCase();
-      let amount = label;
-      try {
-        const v = fromSmallestUnit(Number(p.tokenQuantity), p.tokenType as SupportedTokenType);
-        if (Number.isFinite(v)) amount = `${v} ${label}`;
-      } catch {
-        /* unknown decimals — keep the label */
-      }
+      // Full precision (no digit cap) — the CSV is for accounting, so keep it exact.
+      const v = formatSmallestUnit(p.tokenQuantity, p.tokenType as SupportedTokenType);
+      const amount = v == null ? label : `${v} ${label}`;
       return [p.date, 'Crypto', amount, csvNum(Number(p.usdEquivalent), 2), credits, p.transactionId];
     }
     const currency = (p.currencyType || 'USD').toUpperCase();
