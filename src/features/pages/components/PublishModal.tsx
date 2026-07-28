@@ -155,7 +155,11 @@ export default function PublishModal({
         <div className="mb-3 rounded-xl bg-card p-3 text-sm">
           <div className="space-y-2">
             <Row label="Page" value={def.title || def.profile.displayName || 'Untitled'} />
-            {domainLabel && <Row label="Domain" value={domainLabel} />}
+            {domainLabel ? (
+              <Row label="Domain" value={domainLabel} />
+            ) : (
+              <Row label="Lives at" value="A permanent link — add a domain anytime" />
+            )}
             {typeof nextVersion === 'number' && (
               <Row
                 label="Version"
@@ -197,7 +201,7 @@ export default function PublishModal({
             <span className="text-xs text-foreground/70">Cost</span>
             {free ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success">
-                <Sparkles className="h-3.5 w-3.5" /> Permanent
+                <Sparkles className="h-3.5 w-3.5" /> Free
               </span>
             ) : creditsKnown ? (
               <span className="text-sm font-medium text-foreground">{credits.toFixed(6)} Credits</span>
