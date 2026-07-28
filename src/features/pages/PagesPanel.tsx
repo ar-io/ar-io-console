@@ -10,7 +10,7 @@ import { DEFAULT_TEMPLATE, emptyPageDef, migratePageDef, type PageDef, type Temp
 import { renderCtxFor } from './publish/renderCtx';
 import { computeDefHash } from './publish/pageFile';
 import { prepareDefForPublish } from './publish/permalink';
-import type { RenderCtx } from './render/renderPageHtml';
+import { getTemplate, type RenderCtx } from './render/renderPageHtml';
 import type { Tag } from './publish/tags';
 import { usePagePublish, type PublishResult } from './hooks/usePagePublish';
 import { blankPageDef, seedFromTemplate, withBlockIds } from './components/pageDefFactory';
@@ -216,6 +216,7 @@ export default function PagesPanel() {
   // Reset all working/metadata state (shared by the fresh-create + view-all flows).
   const resetWorkingState = useCallback(() => {
     setDef(null);
+    setNewTemplateName(null);
     defRef.current = null;
     savedHashRef.current = null;
     setPublishResult(null);
@@ -235,6 +236,10 @@ export default function PagesPanel() {
   // persisted here: browsing templates and backing out must not litter the
   // dashboard with unedited demo drafts. The autosave persists it on the first
   // real edit (the seed hash is the baseline, see savedHashRef) (#3).
+  // Name of the template a brand-new page was seeded from — powers the editor's
+  // one-time "this is the X design, fill it in" orientation. Null for blank / edit.
+  const [newTemplateName, setNewTemplateName] = useState<string | null>(null);
+
   const startEditing = useCallback((nextDef: PageDef) => {
     const prepared = withBlockIds(nextDef);
     setDef(prepared);
@@ -250,6 +255,7 @@ export default function PagesPanel() {
     setPublishResult(null);
     setSaved(true);
     setEditorOrigin('gallery');
+    setNewTemplateName(null); // template picks re-set this right after (see handleSelectTemplate)
     setView('editor');
   }, []);
 
@@ -284,6 +290,7 @@ export default function PagesPanel() {
     setPublishResult(null);
     setSaved(true);
     setEditorOrigin('dashboard');
+    setNewTemplateName(null);
     setView('editor');
   }, []);
 
@@ -335,7 +342,10 @@ export default function PagesPanel() {
   );
 
   const handleSelectTemplate = useCallback(
-    (id: TemplateId) => startEditing(seedFromTemplate(id)),
+    (id: TemplateId) => {
+      startEditing(seedFromTemplate(id));
+      setNewTemplateName(getTemplate(id).meta.name);
+    },
     [startEditing],
   );
   const handleStartBlank = useCallback(() => startEditing(blankPageDef()), [startEditing]);
@@ -513,6 +523,7 @@ export default function PagesPanel() {
           publishing={publishing}
           signedIn={!!address}
           backLabel={editorOrigin === 'dashboard' ? 'All pages' : 'Templates'}
+          templateName={newTemplateName ?? undefined}
           arnsEnabled={arnsEnabled}
           onArnsEnabledChange={setArnsEnabled}
           arnsName={arnsName}

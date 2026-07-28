@@ -9,8 +9,10 @@ import {
   Palette,
   Rocket,
   Settings,
+  Sparkles,
   User,
   Wallet,
+  X,
 } from 'lucide-react';
 import { promptSignIn } from '@/utils';
 import type { PageDef } from '../schema';
@@ -38,6 +40,8 @@ export interface PageEditorProps {
   signedIn: boolean;
   /** Label for the back button (e.g. "Templates" for create, "All pages" for edit). */
   backLabel?: string;
+  /** Set for a brand-new page seeded from a template — shows a one-time orientation. */
+  templateName?: string;
   // Domain (ArNS) state
   arnsEnabled: boolean;
   onArnsEnabledChange: (v: boolean) => void;
@@ -64,8 +68,9 @@ export interface PageEditorProps {
 }
 
 export default function PageEditor(props: PageEditorProps) {
-  const { def, previewDef, update, ctx, saved, publishing = false, backLabel = 'Templates', signedIn, onBack, onPublish } = props;
+  const { def, previewDef, update, ctx, saved, publishing = false, backLabel = 'Templates', templateName, signedIn, onBack, onPublish } = props;
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [orientationDismissed, setOrientationDismissed] = useState(false);
   const [sizeBytes, setSizeBytes] = useState(0);
   const preview = previewDef ?? def;
 
@@ -116,6 +121,26 @@ export default function PageEditor(props: PageEditorProps) {
           </button>
         </div>
       </div>
+
+      {/* One-time orientation for a fresh template pick — reframes the intentionally
+          blanked content as "the design is yours, now add your details". */}
+      {templateName && !orientationDismissed && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3.5">
+          <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+          <p className="flex-1 text-sm text-foreground/80">
+            This is the <span className="font-medium text-foreground">{templateName}</span> design — add
+            your details on the left and it fills in live.
+          </p>
+          <button
+            type="button"
+            onClick={() => setOrientationDismissed(true)}
+            aria-label="Dismiss"
+            className="-mr-1 -mt-1 flex-shrink-0 rounded-md p-1 text-foreground/40 transition-colors hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Mobile preview (collapsible, mounts only when opened) */}
       <div className="mb-4 lg:hidden">
