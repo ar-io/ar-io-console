@@ -216,6 +216,7 @@ export default function PagesPanel() {
   // Reset all working/metadata state (shared by the fresh-create + view-all flows).
   const resetWorkingState = useCallback(() => {
     setDef(null);
+    setNewTemplateName(null);
     defRef.current = null;
     savedHashRef.current = null;
     setPublishResult(null);
