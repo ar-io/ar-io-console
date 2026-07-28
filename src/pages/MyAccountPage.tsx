@@ -19,7 +19,7 @@ const DOMAINS_SHOWN = 10;
 export default function MyAccountPage() {
   const { address, walletType, isPaymentServiceAvailable } = useStore();
   const navigate = useNavigate();
-  const { hasArNSAccess, arnsAddress, isPrimarySolana, isSolanaConnected, linkedWalletName, linkedAddress, unlinkWallet } = useLinkedSolanaWallet();
+  const { hasArNSAccess, arnsAddress, isPrimarySolana, isSolanaConnected, linkedAddress, unlinkWallet } = useLinkedSolanaWallet();
   const { arnsName, profile } = usePrimaryArNSName(arnsAddress);
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -89,7 +89,6 @@ export default function MyAccountPage() {
             walletType={walletType}
             isPrimarySolana={isPrimarySolana}
             linkedAddress={linkedAddress}
-            linkedWalletName={linkedWalletName}
             isSolanaConnected={isSolanaConnected}
             onLink={() => setShowLinkModal(true)}
             onUnlink={unlinkWallet}

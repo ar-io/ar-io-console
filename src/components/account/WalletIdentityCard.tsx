@@ -1,13 +1,8 @@
 import { Wallet, ExternalLink, Link2, Unlink } from 'lucide-react';
 import { formatWalletAddress } from '../../utils';
 import { getExplorerAddressUrl } from '../../utils/getExplorerAddressUrl';
+import { getWalletNetworkLabel } from '../../utils/walletDisplay';
 import CopyButton from '../CopyButton';
-
-const WALLET_LABELS: Record<string, string> = {
-  arweave: 'Arweave',
-  ethereum: 'Ethereum',
-  solana: 'Solana',
-};
 
 interface WalletIdentityCardProps {
   address: string;
@@ -15,7 +10,6 @@ interface WalletIdentityCardProps {
   /** Linked-wallet (Solana-for-ArNS) state, folded into this card. */
   isPrimarySolana: boolean;
   linkedAddress?: string | null;
-  linkedWalletName?: string | null;
   isSolanaConnected: boolean;
   onLink: () => void;
   onUnlink: () => void;
@@ -30,7 +24,6 @@ export default function WalletIdentityCard({
   walletType,
   isPrimarySolana,
   linkedAddress,
-  linkedWalletName,
   isSolanaConnected,
   onLink,
   onUnlink,
@@ -38,7 +31,7 @@ export default function WalletIdentityCard({
   if (!address || !walletType) return null;
 
   const explorerUrl = getExplorerAddressUrl(address, walletType);
-  const walletLabel = WALLET_LABELS[walletType] ?? walletType;
+  const walletLabel = getWalletNetworkLabel(walletType);
 
   return (
     <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
@@ -93,7 +86,7 @@ export default function WalletIdentityCard({
               {/* Matches the header profile dropdown: name + address + copy + unlink */}
               <div className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-sm font-medium text-foreground">
-                  {linkedWalletName || 'Solana'}
+                  {getWalletNetworkLabel('solana')}
                 </span>
                 <span className="truncate font-mono text-xs text-foreground/60">
                   {formatWalletAddress(linkedAddress, 6)}
