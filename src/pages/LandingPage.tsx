@@ -749,7 +749,7 @@ const LandingPage = () => {
           </p>
         </div>
         <a
-          href="https://ardrive.net/"
+          href="https://app.ardrive.io"
           target="_blank"
           rel="noopener noreferrer"
           className="group inline-flex flex-shrink-0 items-center justify-center gap-2 self-center rounded-full border border-border/30 bg-background px-5 py-2.5 font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
