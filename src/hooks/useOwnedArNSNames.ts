@@ -3,23 +3,9 @@ import { useStore } from '../store/useStore';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getARIO, getANT, getWritableANT, WRITE_OPTIONS, createWalletAdapterTransactionSendingSigner } from '../utils';
 import { ArNSName } from '@/types';
-
-// Helper to decode punycode names for better display
-const decodePunycode = (name: string): string => {
-  try {
-    // Modern browsers have punycode built into URL/domain APIs
-    if (name.startsWith('xn--')) {
-      // Use the native browser API to decode punycode
-      const url = new URL(`https://${name}.example.com`);
-      const decoded = url.hostname.split('.')[0];
-      return decoded !== name ? decoded : name;
-    }
-    return name;
-  } catch {
-    // If decoding fails, return original name
-    return name;
-  }
-};
+// Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
+// URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
+import { toUnicodeName as decodePunycode } from '../utils/punycode';
 
 interface ArNSUpdateResult {
   success: boolean;
@@ -53,6 +39,8 @@ export function useOwnedArNSNames() {
             currentTarget: cached.currentTarget,
             lastUpdated: undefined,
             undernames: cached.undernames || [],
+            type: cached.type,
+            endTimestamp: cached.endTimestamp,
           }));
           setNames(arnsNames);
           return arnsNames;
@@ -70,7 +58,9 @@ export function useOwnedArNSNames() {
           sortOrder: 'desc', // Most recent first
         });
 
-        // Process names WITHOUT fetching ANT details (lazy loading approach)
+        // Process names WITHOUT fetching ANT details (lazy loading approach).
+        // `type`/`endTimestamp` come free in this batch response (no per-name call),
+        // powering the expiry warnings on the account page.
         const processedNames: ArNSName[] = (records.items || []).map((record) => ({
           name: record.name,
           displayName: decodePunycode(record.name),
@@ -78,6 +68,8 @@ export function useOwnedArNSNames() {
           currentTarget: undefined, // Will be fetched on-demand
           lastUpdated: record.startTimestamp ? new Date(record.startTimestamp) : undefined,
           undernames: undefined, // Will be fetched on-demand
+          type: (record as any).type,
+          endTimestamp: (record as any).endTimestamp,
         }));
 
         // Check if we have cached ANT details for any of these names
@@ -99,6 +91,8 @@ export function useOwnedArNSNames() {
           processId: name.processId,
           currentTarget: name.currentTarget,
           undernames: name.undernames,
+          type: name.type,
+          endTimestamp: name.endTimestamp,
         }));
 
         // Cache the results
@@ -118,6 +112,8 @@ export function useOwnedArNSNames() {
             currentTarget: cached.currentTarget,
             lastUpdated: undefined,
             undernames: cached.undernames || [],
+            type: cached.type,
+            endTimestamp: cached.endTimestamp,
           }));
           setNames(fallbackNames);
           return fallbackNames;
@@ -346,6 +342,10 @@ export function useOwnedArNSNames() {
               undernames,
               ttl: ttl || 600,
               undernameTTLs,
+              // Preserve expiry metadata so a detail fetch doesn't wipe the
+              // expiry warnings on the next cache-backed render.
+              type: nameRecord.type,
+              endTimestamp: nameRecord.endTimestamp,
             };
           } else {
             // Add new cache entry
@@ -358,6 +358,8 @@ export function useOwnedArNSNames() {
                 undernames,
                 ttl: ttl || 600,
                 undernameTTLs,
+                type: nameRecord.type,
+                endTimestamp: nameRecord.endTimestamp,
               },
             ];
           }

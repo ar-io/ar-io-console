@@ -8,11 +8,12 @@ import {
   Loader2,
   RefreshCw,
   Inbox,
+  Download,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaymentHistory, type PaymentHistoryItem } from '@/hooks/usePaymentHistory';
 import { wincPerCredit, tokenLabels, type SupportedTokenType } from '@/constants';
-import { fromSmallestUnit } from '@/utils/jitPayment';
+import { formatSmallestUnit } from '@/utils/jitPayment';
 import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
 import CopyButton from '@/components/CopyButton';
 
@@ -42,6 +43,9 @@ function formatCredits(wincCredited: string): string {
 /** Fiat `paymentAmount` is in the currency's minor unit (e.g. USD cents). */
 function formatFiat(paymentAmount: string, currencyType: string): string {
   const major = Number(paymentAmount) / 100;
+  // Manually-granted / promotional credits come through with no real charge
+  // (e.g. 0.00 WINC via admin) — label them instead of showing a meaningless "0.00".
+  if (!Number.isFinite(major) || major <= 0) return 'Credit grant';
   const currency = currencyType?.toUpperCase() || 'USD';
   try {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(major);
@@ -50,18 +54,70 @@ function formatFiat(paymentAmount: string, currencyType: string): string {
   }
 }
 
-/** Crypto `tokenQuantity` is in smallest units; best-effort human amount. */
+/** USD equivalent for a crypto top-up — never a misleading "≈ $0.00"; null = omit. */
+function formatUsdEquiv(usdEquivalent: string): string | null {
+  const n = Number(usdEquivalent);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n < 0.01) return '≈ <$0.01';
+  return `≈ $${n.toFixed(2)}`;
+}
+
+/** Crypto `tokenQuantity` is in smallest units; exact human amount (capped for display). */
 function formatCryptoAmount(tokenQuantity: string, tokenType: string): string {
   const label = tokenLabels[tokenType as SupportedTokenType] ?? tokenType.toUpperCase();
-  let human: number | null = null;
-  try {
-    const v = fromSmallestUnit(Number(tokenQuantity), tokenType as SupportedTokenType);
-    if (Number.isFinite(v)) human = v;
-  } catch {
-    /* unknown token decimals — fall back to the label + USD equivalent only */
-  }
-  if (human == null) return label;
-  return `${human.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${label}`;
+  const amount = formatSmallestUnit(tokenQuantity, tokenType as SupportedTokenType, 6);
+  return amount == null ? label : `${amount} ${label}`;
+}
+
+// ---- CSV export --------------------------------------------------------------
+
+/** Quote every cell (doubling internal quotes) so commas/quotes/newlines are safe. */
+function csvCell(value: string | number): string {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+/** Format a numeric field for the CSV, leaving invalid input blank rather than "NaN". */
+function csvNum(value: number, digits?: number): string {
+  if (!Number.isFinite(value)) return '';
+  return digits === undefined ? String(value) : value.toFixed(digits);
+}
+
+/**
+ * Build a CSV from the loaded top-up rows. Exports what's loaded (see the button title).
+ * Note: the token Amount uses the same `fromSmallestUnit` conversion as the on-screen
+ * display; the accounting columns (USD Value, Credits) are computed independently and
+ * blanked when a value isn't finite.
+ */
+function buildTopupCsv(payments: PaymentHistoryItem[]): string {
+  const header = ['Date', 'Method', 'Amount', 'USD Value', 'Credits', 'Reference'];
+  const rows = payments.map((p) => {
+    const credits = csvNum(Number(p.wincCredited) / wincPerCredit);
+    if (p.type === 'crypto') {
+      const label = tokenLabels[p.tokenType as SupportedTokenType] ?? p.tokenType.toUpperCase();
+      // Full precision (no digit cap) — the CSV is for accounting, so keep it exact.
+      const v = formatSmallestUnit(p.tokenQuantity, p.tokenType as SupportedTokenType);
+      const amount = v == null ? label : `${v} ${label}`;
+      return [p.date, 'Crypto', amount, csvNum(Number(p.usdEquivalent), 2), credits, p.transactionId];
+    }
+    const currency = (p.currencyType || 'USD').toUpperCase();
+    const native = csvNum(Number(p.paymentAmount) / 100, 2);
+    // usdEquivalent isn't provided for fiat, so only fill USD Value when the charge is USD.
+    const usd = currency === 'USD' ? native : '';
+    return [p.date, 'Card', native ? `${native} ${currency}` : currency, usd, credits, p.receiptId];
+  });
+  return [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
+}
+
+function downloadTopupCsv(payments: PaymentHistoryItem[]): void {
+  const blob = new Blob([buildTopupCsv(payments)], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'turbo-topup-history.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // ---- row ---------------------------------------------------------------------
@@ -89,11 +145,13 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
               ? formatCryptoAmount(item.tokenQuantity, item.tokenType)
               : formatFiat(item.paymentAmount, item.currencyType)}
           </span>
-          <span className="text-xs text-foreground/60">
-            {isCrypto
-              ? `≈ $${Number(item.usdEquivalent).toFixed(2)}`
-              : `via ${item.paymentProvider || 'card'}`}
-          </span>
+          {isCrypto ? (
+            formatUsdEquiv(item.usdEquivalent) && (
+              <span className="text-xs text-foreground/60">{formatUsdEquiv(item.usdEquivalent)}</span>
+            )
+          ) : (
+            <span className="text-xs text-foreground/60">via {item.paymentProvider || 'card'}</span>
+          )}
         </div>
 
         {!isCrypto && item.giftMessage && (
@@ -152,7 +210,7 @@ export default function PaymentHistorySection() {
   return (
     <div className="rounded-2xl border border-border/20 bg-card">
       {/* Header (matches CreditSharingSection) */}
-      <div className="flex items-center gap-3 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center gap-3 p-4 sm:p-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
           <Receipt className="h-5 w-5 text-foreground" />
         </div>
@@ -160,17 +218,23 @@ export default function PaymentHistorySection() {
           <h3 className="text-lg font-bold text-foreground">Top-up History</h3>
           <p className="text-sm text-foreground/80">Every credit purchase you’ve made</p>
         </div>
-        {status === 'loaded' && payments.length > 0 && (
-          <span className="ml-auto text-xs text-foreground/60">Newest first</span>
+        {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={() => downloadTopupCsv(payments)}
+              title="Export loaded top-up history as CSV"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/20 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-card"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </button>
+          </div>
         )}
       </div>
 
       {/* Opt-in */}
       {status === 'idle' && (
-        <div className="px-4 pb-6 text-center sm:px-6">
-          <p className="mx-auto mb-4 max-w-md text-sm text-foreground/80">
-            See every credit top-up on this wallet — crypto and card — in one place.
-          </p>
+        <div className="px-4 pb-6 pt-2 text-center sm:px-6">
           <button
             onClick={load}
             className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
@@ -243,7 +307,8 @@ export default function PaymentHistorySection() {
           than growing the whole page. */}
       {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
         <div className="px-4 pb-4 sm:px-6">
-          <div className="max-h-[28rem] overflow-y-auto">
+          {/* pr-2 keeps the scrollbar from crowding the credits/tx column */}
+          <div className="max-h-[28rem] overflow-y-auto pr-2">
             {payments.map((item, i) => (
               <PaymentRow key={`${item.type}-${item.date}-${i}`} item={item} />
             ))}

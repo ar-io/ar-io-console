@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, X } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -45,7 +45,7 @@ const utilityServices = [
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable, linkedSolanaAddress, clearLinkedSolanaWallet } = useStore();
+  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable, linkedSolanaAddress, linkedSolanaWalletName, clearLinkedSolanaWallet } = useStore();
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
@@ -395,7 +395,7 @@ const Header = () => {
               {linkedSolanaAddress && walletType !== 'solana' && (
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-foreground/40">Solana</span>
+                    <span className="text-xs text-foreground/40">{linkedSolanaWalletName || 'Solana'}</span>
                     <span className="font-mono text-xs text-foreground/60">{formatWalletAddress(linkedSolanaAddress, 6)}</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -404,8 +404,9 @@ const Header = () => {
                       onClick={(e) => { e.stopPropagation(); clearLinkedSolanaWallet(); }}
                       className="p-1 text-foreground/30 hover:text-error transition-colors"
                       title="Unlink wallet"
+                      aria-label="Unlink Solana wallet"
                     >
-                      <X className="w-3 h-3" />
+                      <Unlink className="w-3 h-3" />
                     </button>
                   </div>
                 </div>

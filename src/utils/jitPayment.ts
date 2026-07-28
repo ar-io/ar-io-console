@@ -1,4 +1,20 @@
 import { SupportedTokenType } from '../constants';
+import { formatUnitsExact } from './formatUnits';
+
+/** Decimal places of each supported token's smallest unit. */
+const TOKEN_DECIMALS: Record<SupportedTokenType, number> = {
+  arweave: 12,
+  ario: 6, // 1 ARIO = 1,000,000 mARIO
+  'base-ario': 6, // 1 ARIO = 1,000,000 mARIO (same as ARIO on AO)
+  ethereum: 18,
+  'base-eth': 18,
+  solana: 9,
+  kyve: 18,
+  pol: 18,
+  usdc: 6, // USDC uses 6 decimals
+  'base-usdc': 6, // USDC uses 6 decimals
+  'polygon-usdc': 6, // USDC uses 6 decimals
+};
 
 /**
  * Check if a wallet type supports just-in-time (on-demand) payments
@@ -13,44 +29,35 @@ export function supportsJitPayment(tokenType: SupportedTokenType | null): boolea
  * Converts from readable amount to smallest unit (e.g., SOL → Lamports)
  */
 export function getTokenConverter(tokenType: SupportedTokenType): ((amount: number) => number) | null {
-  const TOKEN_DECIMALS: Record<SupportedTokenType, number> = {
-    arweave: 12,
-    ario: 6,  // 1 ARIO = 1,000,000 mARIO
-    'base-ario': 6, // 1 ARIO = 1,000,000 mARIO (same as ARIO on AO)
-    ethereum: 18,
-    'base-eth': 18,
-    solana: 9,
-    kyve: 18,
-    pol: 18,
-    'usdc': 6,        // USDC uses 6 decimals
-    'base-usdc': 6,   // USDC uses 6 decimals
-    'polygon-usdc': 6, // USDC uses 6 decimals
-  };
-
   const decimals = TOKEN_DECIMALS[tokenType];
   return (amount: number) => Math.floor(amount * Math.pow(10, decimals));
 }
 
 /**
- * Convert smallest unit back to readable amount
+ * Convert smallest unit back to readable amount.
+ *
+ * NOTE: coerces through `number`, so it loses precision for 18-decimal tokens above
+ * ~9e15 (Number.MAX_SAFE_INTEGER). For exact display/export of a smallest-unit
+ * STRING, prefer `formatSmallestUnit`.
  */
 export function fromSmallestUnit(amount: number, tokenType: SupportedTokenType): number {
-  const TOKEN_DECIMALS: Record<SupportedTokenType, number> = {
-    arweave: 12,
-    ario: 6,  // 1 ARIO = 1,000,000 mARIO
-    'base-ario': 6, // 1 ARIO = 1,000,000 mARIO (same as ARIO on AO)
-    ethereum: 18,
-    'base-eth': 18,
-    solana: 9,
-    kyve: 18,
-    pol: 18,
-    'usdc': 6,        // USDC uses 6 decimals
-    'base-usdc': 6,   // USDC uses 6 decimals
-    'polygon-usdc': 6, // USDC uses 6 decimals
-  };
-
   const decimals = TOKEN_DECIMALS[tokenType];
   return amount / Math.pow(10, decimals);
+}
+
+/**
+ * Format an exact smallest-unit amount (as a string) to a human decimal string, with
+ * no float precision loss — use for displaying/exporting payment amounts. Returns
+ * `null` for an unknown token or a non-integer input.
+ */
+export function formatSmallestUnit(
+  quantity: string,
+  tokenType: SupportedTokenType,
+  maxFractionDigits?: number,
+): string | null {
+  const decimals = TOKEN_DECIMALS[tokenType];
+  if (decimals === undefined) return null;
+  return formatUnitsExact(quantity, decimals, maxFractionDigits);
 }
 
 /**
