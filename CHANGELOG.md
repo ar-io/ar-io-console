@@ -2,13 +2,20 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [4.0.0] - 2026-07-28
+## [3.0.0] - 2026-07-29
 
-The account page is rebuilt around what you came for — your wallet, your credits,
-and your names — with your full top-up history, ArNS expiry warnings, and a free
-tier that reflects your real allowance.
+The big launch: **Pages**, a no-code builder for permanent link-in-bio pages, plus a
+rebuilt account page centered on your wallet, credits, and names, and a domain-first
+flow across Pages and Deploy.
 
 ### Added
+- **Pages** — a no-code, permanent link-in-bio builder in the console. Pick from a
+  library of self-contained templates, edit profile / links / theme with a live
+  preview, and publish a fully self-contained HTML page to Arweave at your ArNS
+  name. Load a page by its ArNS name on any device to keep editing; every
+  re-publish is its own permanent version.
+- **Testnet mode** (formerly "Development") with a faucet link — try uploads,
+  deploys, and Pages without touching real funds.
 - **Top-up history** on the account page: every credit purchase on your wallet —
   crypto and card — newest first, with block-explorer links for on-chain payments,
   copyable receipt ids for card, and the exact credits each one added. Opt-in and
@@ -48,8 +55,9 @@ tier that reflects your real allowance.
   credit sharing demoted to the bottom.
 - **Internationalized ArNS names render decoded** — `xn--` punycode names now show
   as their real Unicode (emoji or non-ASCII names), in the account page and header.
-- **Connected-wallet display unified** between the header profile dropdown and the
-  account page: consistent label, address format, and a single unlink icon.
+- **Consistent wallet display** — the header profile dropdown and the account card
+  show the same wallet identity, labeled by network (Arweave / Ethereum / Solana)
+  from one shared helper.
 - **Exact crypto amounts** in the top-up history and CSV — BigInt formatting
   replaces float coercion, so large 18-decimal amounts no longer lose precision.
 - **Domain-first across Pages and Deploy** — pointing an ArNS name at your work is
@@ -67,17 +75,6 @@ tier that reflects your real allowance.
 
 ### Removed
 - Dead x402-protocol upload hook and other unused code paths.
-
-## [3.0.0] - 2026-07-21
-
-### Added
-- **Pages** — a no-code, permanent link-in-bio builder in the console. Pick from a
-  library of self-contained templates, edit profile / links / theme with a live
-  preview, and publish a fully self-contained HTML page to Arweave at your ArNS
-  name. Load a page by its ArNS name on any device to keep editing; every
-  re-publish is its own permanent version.
-- **Testnet mode** (formerly "Development") with a faucet link — try uploads,
-  deploys, and Pages without touching real funds.
 
 ## [2.2.1] - 2026-07-16
 
