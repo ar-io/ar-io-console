@@ -1,0 +1,103 @@
+name: Deploy to Arweave (console.ar.io)
+
+# Manual-only permaweb deploy via ar.io. Builds the production bundle and publishes it to
+# Arweave through Turbo, then repoints the `console` ArNS name's ANT record at the new manifest.
+#
+# Wallet model (single Solana wallet, both roles — see .github/workflows/README or the repo docs):
+#   secrets.DEPLOY_KEY  base58 Solana secret key — pays for the Turbo upload (sig-type: solana)
+#   secrets.ARNS_KEY    same base58 Solana secret key — controller of `console`, signs the record update
+#   vars.ARNS_NAME      the ArNS name to update ("console")
+#
+# The `undername` input defaults to `staging` so an accidental run publishes to
+# staging_console.ar.io — never the live base record. Choose `@` to publish live console.ar.io.
+
+on:
+  workflow_dispatch:
+    inputs:
+      undername:
+        description: 'Publish target. "@" = live console.ar.io; "staging" (or any label) = <label>_console.ar.io.'
+        required: true
+        default: 'staging'
+        type: string
+      ref:
+        description: 'Git ref (branch / tag / SHA) to build & deploy.'
+        required: false
+        default: 'main'
+        type: string
+
+# Serialize deploys per target so two runs can't race on the same ArNS record.
+concurrency:
+  group: deploy-arweave-${{ inputs.undername }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Optional manual-approval gate + scoped secrets. Remove this line if you don't create the
+    # `production` GitHub environment (repo-level secrets/vars work either way).
+    environment: production
+    steps:
+      # Whitelist the manual undername input before it reaches the deploy action
+      # (which interpolates it into a shell step). Fail fast on anything unexpected.
+      - name: Validate inputs
+        env:
+          UNDERNAME: ${{ inputs.undername }}
+        run: |
+          if [[ "$UNDERNAME" != "@" && ! "$UNDERNAME" =~ ^[a-z0-9][a-z0-9_-]{0,59}$ ]]; then
+            echo "::error::Invalid undername '$UNDERNAME' — use '@' or a label of [a-z0-9_-], max 60 chars."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build:prod
+        env:
+          VITE_NODE_ENV: production
+          # Optional overrides — each falls back to an in-source default if unset, so none are required.
+          VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
+          VITE_WALLETCONNECT_PROJECT_ID: ${{ secrets.VITE_WALLETCONNECT_PROJECT_ID }}
+          VITE_SOLANA_RPC: ${{ vars.VITE_SOLANA_RPC }}
+
+      - name: Deploy to Arweave + update ArNS
+        id: deploy
+        uses: ar-io/ar-io-deploy@v1
+        with:
+          deploy-key: ${{ secrets.DEPLOY_KEY }}
+          arns-key: ${{ secrets.ARNS_KEY }}
+          arns-name: ${{ vars.ARNS_NAME }}
+          undername: ${{ inputs.undername }}
+          sig-type: solana
+          deploy-folder: ./dist
+          ttl-seconds: '300'
+
+      - name: Summary
+        if: always() && steps.deploy.outputs.tx-id != ''
+        # Pass every value through env + constant printf formats so nothing is expanded
+        # by the shell (avoids GitHub Actions script injection via workflow inputs/outputs).
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+          TX_ID: ${{ steps.deploy.outputs.tx-id }}
+          UNDERNAME_USED: ${{ steps.deploy.outputs.undername-used }}
+          DEPLOY_REF: ${{ inputs.ref }}
+        run: |
+          {
+            printf '%s\n' '### Deployed 🎉' ''
+            printf '%s\n' '| | |' '|---|---|'
+            printf '| URL | %s |\n' "$DEPLOYMENT_URL"
+            printf '| Tx | `%s` |\n' "$TX_ID"
+            printf '| Undername | `%s` |\n' "$UNDERNAME_USED"
+            printf '| Ref | `%s` |\n' "$DEPLOY_REF"
+          } >> "$GITHUB_STEP_SUMMARY"
