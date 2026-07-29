@@ -37,6 +37,17 @@ jobs:
     # `production` GitHub environment (repo-level secrets/vars work either way).
     environment: production
     steps:
+      # Whitelist the manual undername input before it reaches the deploy action
+      # (which interpolates it into a shell step). Fail fast on anything unexpected.
+      - name: Validate inputs
+        env:
+          UNDERNAME: ${{ inputs.undername }}
+        run: |
+          if [[ "$UNDERNAME" != "@" && ! "$UNDERNAME" =~ ^[a-z0-9][a-z0-9_-]{0,59}$ ]]; then
+            echo "::error::Invalid undername '$UNDERNAME' — use '@' or a label of [a-z0-9_-], max 60 chars."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -74,14 +85,19 @@ jobs:
 
       - name: Summary
         if: always() && steps.deploy.outputs.tx-id != ''
+        # Pass every value through env + constant printf formats so nothing is expanded
+        # by the shell (avoids GitHub Actions script injection via workflow inputs/outputs).
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+          TX_ID: ${{ steps.deploy.outputs.tx-id }}
+          UNDERNAME_USED: ${{ steps.deploy.outputs.undername-used }}
+          DEPLOY_REF: ${{ inputs.ref }}
         run: |
           {
-            echo "### Deployed 🎉"
-            echo ""
-            echo "| | |"
-            echo "|---|---|"
-            echo "| URL | ${{ steps.deploy.outputs.deployment-url }} |"
-            echo "| Tx  | \`${{ steps.deploy.outputs.tx-id }}\` |"
-            echo "| Undername | \`${{ steps.deploy.outputs.undername-used }}\` |"
-            echo "| Ref | \`${{ inputs.ref }}\` |"
+            printf '%s\n' '### Deployed 🎉' ''
+            printf '%s\n' '| | |' '|---|---|'
+            printf '| URL | %s |\n' "$DEPLOYMENT_URL"
+            printf '| Tx | `%s` |\n' "$TX_ID"
+            printf '| Undername | `%s` |\n' "$UNDERNAME_USED"
+            printf '| Ref | `%s` |\n' "$DEPLOY_REF"
           } >> "$GITHUB_STEP_SUMMARY"
