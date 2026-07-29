@@ -128,7 +128,7 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
   const explorerUrl = isCrypto ? getExplorerTxUrl(item.transactionId, item.tokenType) : null;
 
   return (
-    <div className="flex items-start justify-between gap-4 border-t border-border/20 py-4">
+    <div className="flex items-start justify-between gap-4 border-t border-border/20 py-3">
       {/* what + when */}
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -164,12 +164,15 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
         <div className="text-xs text-foreground/60">{formatDateTime(item.date)}</div>
       </div>
 
-      {/* credits + reference */}
+      {/* credits + reference — two lines: "+<amount> credits" then the tx/receipt
+          reference, so each entry stays compact and aligns with the left column. */}
       <div className="flex-shrink-0 text-right">
-        <div className="font-semibold tabular-nums text-success">+{credits}</div>
-        <div className="text-[10px] uppercase tracking-wider text-foreground/60">credits</div>
+        <div className="flex items-baseline justify-end gap-1">
+          <span className="font-semibold tabular-nums text-success">+{credits}</span>
+          <span className="text-[10px] uppercase tracking-wider text-foreground/60">credits</span>
+        </div>
 
-        <div className="mt-1.5 text-xs">
+        <div className="mt-0.5 text-xs">
           {isCrypto ? (
             explorerUrl ? (
               <a
@@ -257,7 +260,7 @@ export default function PaymentHistorySection() {
       {status === 'loading' && (
         <div className="px-4 pb-4 sm:px-6">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center justify-between gap-4 border-t border-border/20 py-4">
+            <div key={i} className="flex items-center justify-between gap-4 border-t border-border/20 py-3">
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-4 w-40 animate-pulse rounded bg-foreground/10" />
                 <div className="h-3 w-28 animate-pulse rounded bg-foreground/10" />
