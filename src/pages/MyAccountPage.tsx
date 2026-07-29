@@ -190,7 +190,10 @@ export default function MyAccountPage() {
             </div>
           ) : (
             <>
-              <DomainsTable domains={sortedDomains.slice(0, DOMAINS_SHOWN)} />
+              <DomainsTable
+                domains={sortedDomains.slice(0, DOMAINS_SHOWN)}
+                onChanged={() => fetchOwnedNames(true)}
+              />
 
               {ownedNames.length > DOMAINS_SHOWN && (
                 <div className="text-center mt-4">

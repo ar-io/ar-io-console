@@ -214,29 +214,49 @@ export class TurboArNSClient {
     intent = 'Buy-Name',
     type,
     years,
+    increaseQty,
   }: {
     name: string;
     intent?: TurboArNSIntent;
     type?: 'lease' | 'permabuy';
     years?: number;
+    increaseQty?: number;
   }): Promise<TurboArNSIntentPriceResponse> {
     const turbo = this.unauthenticated('solana');
+    const domain = lowerCaseDomain(name);
+
+    // `getArNSPriceForName` takes a discriminated union keyed on `intent`; build
+    // the intent-specific param object so each carries only its valid fields
+    // (Extend needs years, Increase needs increaseQty, Upgrade needs neither).
+    let params: Record<string, unknown>;
+    switch (intent) {
+      case 'Extend-Lease':
+        params = { intent, name: domain, years };
+        break;
+      case 'Increase-Undername-Limit':
+        params = { intent, name: domain, increaseQty };
+        break;
+      case 'Upgrade-Name':
+        params = { intent, name: domain };
+        break;
+      case 'Buy-Name':
+      default:
+        params = {
+          intent,
+          name: domain,
+          ...(type ? { type } : {}),
+          ...(type === 'lease' && years ? { years } : {}),
+        };
+    }
+
     // The alpha SDK exposes getArNSPriceForName on the unauthenticated client.
     const price = await (
       turbo as unknown as {
-        getArNSPriceForName: (p: {
-          intent: TurboArNSIntent;
-          name: string;
-          type?: 'lease' | 'permabuy';
-          years?: number;
-        }) => Promise<TurboArNSIntentPriceResponse>;
+        getArNSPriceForName: (
+          p: Record<string, unknown>,
+        ) => Promise<TurboArNSIntentPriceResponse>;
       }
-    ).getArNSPriceForName({
-      intent,
-      name: lowerCaseDomain(name),
-      ...(type ? { type } : {}),
-      ...(type === 'lease' && years ? { years } : {}),
-    });
+    ).getArNSPriceForName(params);
     return price;
   }
 

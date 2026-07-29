@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useStore } from '../../../store/useStore';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 import { useTurboArNSClient } from './useTurboArNSClient';
+import type { TurboArNSIntent } from '../services/TurboArNSClient';
 import { lowerCaseDomain, wincToCredits } from '../utils';
 
 export type ArNSRegistrationType = 'lease' | 'permabuy';
@@ -29,11 +30,19 @@ export function useArNSPrice({
   name,
   type,
   years,
+  intent = 'Buy-Name',
+  increaseQty,
   enabled = true,
 }: {
   name: string;
-  type: ArNSRegistrationType;
-  years: number;
+  /** Required for Buy-Name; unused by Extend/Upgrade/Increase intents. */
+  type?: ArNSRegistrationType;
+  /** Lease term for Buy-Name (lease) and Extend-Lease. */
+  years?: number;
+  /** Which ArNS intent to price. Defaults to Buy-Name (registration). */
+  intent?: TurboArNSIntent;
+  /** Undername slots to add — only for Increase-Undername-Limit. */
+  increaseQty?: number;
   enabled?: boolean;
 }) {
   const client = useTurboArNSClient();
@@ -46,9 +55,11 @@ export function useArNSPrice({
   return useQuery<ArNSPriceResult>({
     queryKey: [
       'arns-price',
+      intent,
       normalized,
-      type,
-      type === 'lease' ? years : 'permabuy',
+      type ?? '',
+      type === 'lease' || intent === 'Extend-Lease' ? years : 'permabuy',
+      increaseQty ?? '',
       configMode,
     ],
     enabled: active,
@@ -57,9 +68,10 @@ export function useArNSPrice({
     queryFn: async () => {
       const price = await client.getArNSPrice({
         name: normalized,
-        intent: 'Buy-Name',
+        intent,
         type,
         years,
+        increaseQty,
       });
       const credits = wincToCredits(price.winc);
       const fiatUsd = price.fiatEstimate?.paymentAmount;
