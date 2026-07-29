@@ -19,7 +19,7 @@ export interface BannerConfig {
 export const BANNER_CONFIG: BannerConfig = {
   enabled: true,
   id: 'pages-launch-2026',
-  message: 'New — build a permanent link-in-bio page, live in seconds.',
+  message: 'New feature! Build a permanent link-in-bio page, live in seconds.',
   link: {
     text: 'Try Pages',
     href: '/pages',
