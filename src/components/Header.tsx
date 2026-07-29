@@ -7,6 +7,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import CopyButton from './CopyButton';
 import { useStore } from '../store/useStore';
 import { formatWalletAddress, getTurboBalance } from '../utils';
+import { getWalletNetworkLabel } from '../utils/walletDisplay';
 import ArioLogo from './ArioLogo';
 import WalletSelectionModal from './modals/WalletSelectionModal';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
@@ -45,7 +46,7 @@ const utilityServices = [
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable, linkedSolanaAddress, linkedSolanaWalletName, clearLinkedSolanaWallet } = useStore();
+  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable, linkedSolanaAddress, clearLinkedSolanaWallet } = useStore();
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
@@ -382,9 +383,8 @@ const Header = () => {
             {/* Account Info Section */}
             <div className="px-6 py-4 border-b border-border/20">
               <div className="text-xs text-foreground/60 mb-2">
-                {walletType === 'arweave' && 'Arweave Account'}
-                {walletType === 'ethereum' && `Ethereum Account${isPrivyUser ? ' (Privy.io)' : ''}`}
-                {walletType === 'solana' && 'Solana Account'}
+                {walletType && `${getWalletNetworkLabel(walletType)} Account`}
+                {walletType === 'ethereum' && isPrivyUser && ' (Privy.io)'}
               </div>
               <div className="flex items-center justify-between">
                 <div className="font-bold text-base">
@@ -395,7 +395,7 @@ const Header = () => {
               {linkedSolanaAddress && walletType !== 'solana' && (
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-foreground/40">{linkedSolanaWalletName || 'Solana'}</span>
+                    <span className="text-xs text-foreground/40">{getWalletNetworkLabel('solana')}</span>
                     <span className="font-mono text-xs text-foreground/60">{formatWalletAddress(linkedSolanaAddress, 6)}</span>
                   </div>
                   <div className="flex items-center gap-1">
