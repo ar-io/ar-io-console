@@ -32,11 +32,7 @@ export function ArNSPurchaseStatus({
 
   if (phase === 'idle') return null;
 
-  const busy =
-    phase === 'spawning' ||
-    phase === 'submitting' ||
-    phase === 'confirming' ||
-    phase === 'polling';
+  const busy = phase === 'submitting';
 
   if (busy) {
     return (

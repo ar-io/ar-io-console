@@ -75,6 +75,32 @@ export const getANT = async (processId: string) => {
 };
 
 /**
+ * Create an ARIO write-enabled client bound to a Solana signer.
+ *
+ * Used for on-chain ArNS purchases via `buyRecord` — which, on @ar.io/sdk
+ * >= 4.1.0-alpha.5, atomically mints a fresh user-owned ANT AND assigns the
+ * name in a single transaction when `processId` is omitted (no client
+ * pre-spawn, no orphaned-ANT window). Mirrors `getWritableANT` but targets the
+ * ARIO registry program set.
+ */
+export const getWritableARIO = (signer: SolanaSigner) => {
+  const config = getCurrentConfig();
+  const rpcUrl = getSolanaRpcUrl();
+  const rpc = createSolanaRpc(rpcUrl);
+  const rpcSubscriptions = createSolanaRpcSubscriptions(getSolanaWsUrl(rpcUrl));
+
+  return ARIO.init({
+    rpc,
+    rpcSubscriptions,
+    signer,
+    coreProgramId: config.coreProgramId as Address | undefined,
+    garProgramId: config.garProgramId as Address | undefined,
+    arnsProgramId: config.arnsProgramId as Address | undefined,
+    antProgramId: config.antProgramId as Address | undefined,
+  });
+};
+
+/**
  * Create ANT write-enabled client for a specific processId using a Solana signer.
  */
 export const getWritableANT = async (processId: string, signer: SolanaSigner) => {

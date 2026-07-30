@@ -321,6 +321,7 @@ export type { WalletAddressType, AddressValidationResult } from './addressValida
 export {
   getARIO,
   getANT,
+  getWritableARIO,
   getWritableANT,
   WRITE_OPTIONS,
   createWalletAdapterTransactionSendingSigner,
