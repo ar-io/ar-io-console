@@ -15,11 +15,16 @@ import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
 import { daysUntil } from '../../../utils/domainExpiry';
 import { useArNSPrice } from '../hooks/useArNSPrice';
+import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
+import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
+import { ManageIntent, useManageArNSName } from '../hooks/useManageArNSName';
 import {
-  ManageIntent,
-  useManageArNSName,
-} from '../hooks/useManageArNSName';
+  ArNSFundingSource,
+  ArNSPaymentMethod,
+  ArNSPaymentSelector,
+} from './ArNSPaymentSelector';
+import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 
 const manageUrl = (name: string) => `https://arns.ar.io/#/manage/names/${name}`;
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -52,7 +57,8 @@ const ACTION_META: Record<
 /**
  * In-console lifecycle management for an owned ArNS name: renew (extend lease),
  * upgrade a lease to permanent, or add undername slots — each paid with Turbo
- * Credits, replacing the old external arns.ar.io deep-links.
+ * Credits or the wallet's ARIO, on the ARIO contract rail. Replaces the old
+ * external arns.ar.io deep-links.
  */
 export default function ManageDomainModal({
   domain,
@@ -62,6 +68,8 @@ export default function ManageDomainModal({
   const isLease = domain.type !== 'permabuy';
   const signer = useArNSTurboSigner();
   const canManage = signer.isReady;
+  const address = signer.address ?? undefined;
+  const balances = useArNSPaymentBalances(canManage ? address : undefined);
 
   // Lease names can renew / upgrade / add undernames; permabuy can only add.
   const actions: ManageIntent[] = isLease
@@ -71,50 +79,58 @@ export default function ManageDomainModal({
   const [action, setAction] = useState<ManageIntent>(actions[0]);
   const [years, setYears] = useState(1);
   const [qty, setQty] = useState(1);
+  const [method, setMethod] = useState<ArNSPaymentMethod>('credits');
+  const [fundingSource, setFundingSource] =
+    useState<ArNSFundingSource>('balance');
 
+  const fundFrom = method === 'credits' ? 'turbo' : fundingSource;
+
+  const { manage, phase, statusMessage, error, insufficientCredits, isBusy } =
+    useManageArNSName();
+
+  const active = canManage && phase !== 'success';
+
+  // Credits price (winc → credits) for the credits method.
   const {
-    manage,
-    phase,
-    statusMessage,
-    error,
-    insufficientCredits,
-    isBusy,
-  } = useManageArNSName();
-
-  const priceArgs =
-    action === 'Extend-Lease'
-      ? { intent: 'Extend-Lease' as const, years }
-      : action === 'Increase-Undername-Limit'
-        ? { intent: 'Increase-Undername-Limit' as const, increaseQty: qty }
-        : { intent: 'Upgrade-Name' as const };
-
-  const {
-    data: price,
-    isFetching: priceLoading,
-    error: priceError,
+    data: creditsPrice,
+    isFetching: creditsLoading,
+    error: creditsError,
   } = useArNSPrice({
     name: domain.name,
-    ...priceArgs,
-    enabled: canManage && phase !== 'success',
+    intent: action,
+    years: action === 'Extend-Lease' ? years : undefined,
+    increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
+    enabled: active && method === 'credits',
   });
 
-  const creditsLabel = useMemo(
-    () =>
-      price
-        ? price.credits.toLocaleString(undefined, { maximumFractionDigits: 4 })
-        : null,
-    [price],
-  );
-  const usdLabel = useMemo(
-    () =>
-      price?.usd
-        ? price.usd.toLocaleString(undefined, {
-            style: 'currency',
-            currency: 'USD',
-          })
-        : null,
-    [price],
-  );
+  // Cost details (ARIO price + SOL gas + affordability) for the selected source.
+  const {
+    data: cost,
+    isFetching: costLoading,
+    error: costError,
+  } = useArNSCostDetails({
+    intent: action,
+    name: domain.name,
+    years: action === 'Extend-Lease' ? years : undefined,
+    increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
+    fundFrom,
+    fromAddress: address,
+    enabled: active,
+  });
+
+  const insufficientSol =
+    !!cost && !balances.loading && balances.sol < cost.gasTotalSol;
+  const insufficientFunds = useMemo(() => {
+    if (method === 'credits') {
+      return creditsPrice ? balances.credits < creditsPrice.credits : false;
+    }
+    return (cost?.shortfallMARIO ?? 0) > 0;
+  }, [method, creditsPrice, balances.credits, cost?.shortfallMARIO]);
+
+  const priceReady =
+    method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
+  const canConfirm =
+    !isBusy && priceReady && !insufficientSol && !insufficientFunds;
 
   const expiryLabel =
     isLease && typeof domain.endTimestamp === 'number'
@@ -127,8 +143,8 @@ export default function ManageDomainModal({
         name: domain.name,
         intent: action,
         years: action === 'Extend-Lease' ? years : undefined,
-        increaseQty:
-          action === 'Increase-Undername-Limit' ? qty : undefined,
+        increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
+        fundFrom,
       });
       if (res) onSuccess?.();
     } catch {
@@ -138,7 +154,7 @@ export default function ManageDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-6">
+      <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
         {/* Header */}
         <div className="mb-5">
           <h3 className="font-heading text-xl font-bold text-foreground">
@@ -150,7 +166,6 @@ export default function ManageDomainModal({
           <p className="mt-1 text-sm text-foreground/70">{expiryLabel}</p>
         </div>
 
-        {/* Success state */}
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
@@ -159,7 +174,7 @@ export default function ManageDomainModal({
             </p>
             <button
               onClick={onClose}
-              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Close
             </button>
@@ -169,13 +184,13 @@ export default function ManageDomainModal({
           <div className="rounded-2xl border border-border/20 bg-card p-5 text-center">
             <p className="text-sm text-foreground/80">
               Connect or link a Solana wallet to manage this name in-console with
-              Turbo Credits.
+              Turbo Credits or ARIO.
             </p>
             <a
               href={manageUrl(domain.name)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
             >
               Manage on arns.ar.io
               <ExternalLink className="h-3.5 w-3.5" />
@@ -264,31 +279,34 @@ export default function ManageDomainModal({
               </p>
             )}
 
-            {/* Price */}
-            <div className="mb-4 rounded-2xl border border-border/20 bg-card p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground/70">Cost</span>
-                {priceLoading ? (
-                  <span className="flex items-center gap-2 text-sm text-foreground/70">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Fetching price…
-                  </span>
-                ) : priceError ? (
-                  <span className="text-sm text-error">Price unavailable</span>
-                ) : creditsLabel ? (
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-foreground">
-                      {creditsLabel} Credits
-                    </div>
-                    {usdLabel && (
-                      <div className="text-xs text-foreground/60">
-                        ≈ {usdLabel}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-sm text-foreground/50">—</span>
-                )}
-              </div>
+            {/* Payment method + source */}
+            <div className="mb-4">
+              <ArNSPaymentSelector
+                method={method}
+                fundingSource={fundingSource}
+                balances={balances}
+                onMethodChange={setMethod}
+                onSourceChange={setFundingSource}
+                disabled={isBusy}
+              />
+            </div>
+
+            {/* Cost breakdown */}
+            <div className="mb-4">
+              <ArNSCostBreakdown
+                method={method}
+                creditsPrice={creditsPrice?.credits}
+                arioPrice={cost?.arioCost}
+                priceLoading={method === 'credits' ? creditsLoading : costLoading}
+                priceError={!!(method === 'credits' ? creditsError : costError)}
+                gasTotalSol={cost?.gasTotalSol ?? 0}
+                gasRentSol={cost?.gasRentSol ?? 0}
+                gasFeeSol={cost?.gasFeeSol ?? 0}
+                gasLoading={costLoading}
+                solBalance={balances.sol}
+                insufficientFunds={insufficientFunds}
+                insufficientSol={insufficientSol}
+              />
             </div>
 
             {/* Status / error */}
@@ -301,15 +319,18 @@ export default function ManageDomainModal({
             {phase === 'error' && insufficientCredits && (
               <div className="mb-4 rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">
                 <p className="mb-2 font-medium text-foreground">
-                  Not enough Turbo Credits for this.
+                  Not enough {method === 'credits' ? 'Turbo Credits' : 'ARIO'} for
+                  this.
                 </p>
-                <Link
-                  to="/topup"
-                  onClick={onClose}
-                  className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-                >
-                  Top up credits
-                </Link>
+                {method === 'credits' && (
+                  <Link
+                    to="/topup"
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                  >
+                    Top up credits
+                  </Link>
+                )}
               </div>
             )}
             {phase === 'error' && !insufficientCredits && error && (
@@ -322,7 +343,7 @@ export default function ManageDomainModal({
             {/* Confirm */}
             <button
               onClick={handleConfirm}
-              disabled={isBusy || priceLoading || !price}
+              disabled={!canConfirm}
               className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isBusy ? (
@@ -331,8 +352,8 @@ export default function ManageDomainModal({
                 </>
               ) : (
                 <>
-                  <Wallet className="h-4 w-4" /> {ACTION_META[action].verb} with
-                  Turbo Credits
+                  <Wallet className="h-4 w-4" /> {ACTION_META[action].verb} with{' '}
+                  {method === 'credits' ? 'Turbo Credits' : 'ARIO'}
                 </>
               )}
             </button>
