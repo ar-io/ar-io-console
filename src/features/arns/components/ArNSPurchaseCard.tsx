@@ -3,7 +3,16 @@ import { Calendar, Infinity as InfinityIcon, Loader2, Wallet } from 'lucide-reac
 
 import type { ArNSRegistrationType } from '../hooks/useArNSPrice';
 import { useArNSPrice } from '../hooks/useArNSPrice';
+import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
+import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
+import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
 import type { BuyArNSNameInput } from '../hooks/useBuyArNSName';
+import {
+  ArNSFundingSource,
+  ArNSPaymentMethod,
+  ArNSPaymentSelector,
+} from './ArNSPaymentSelector';
+import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 
 interface ArNSPurchaseCardProps {
   name: string;
@@ -15,10 +24,10 @@ interface ArNSPurchaseCardProps {
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
 /**
- * Registration configurator for a selected name: lease vs permabuy, lease term,
- * live price in Turbo Credits (+ USD estimate), and the buy action. Undername
- * count at purchase is intentionally deferred (Phase 1) — names start with the
- * protocol-default undername allotment.
+ * Registration configurator: lease vs permabuy + term, payment method (Turbo
+ * Credits or the wallet's ARIO — liquid / staked / any), an itemized cost
+ * breakdown (name price + the SOL rent/fee every buy pays), affordability
+ * gating, and the buy action.
  */
 export function ArNSPurchaseCard({
   name,
@@ -28,59 +37,81 @@ export function ArNSPurchaseCard({
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
+  const [method, setMethod] = useState<ArNSPaymentMethod>('credits');
+  const [fundingSource, setFundingSource] =
+    useState<ArNSFundingSource>('balance');
 
+  const signer = useArNSTurboSigner();
+  const address = signer.address ?? undefined;
+  const balances = useArNSPaymentBalances(address);
+
+  const fundFrom = method === 'credits' ? 'turbo' : fundingSource;
+
+  // Credits price (winc → credits) for the credits method display.
   const {
-    data: price,
-    isFetching: priceLoading,
-    error: priceError,
-  } = useArNSPrice({ name, type, years });
+    data: creditsPrice,
+    isFetching: creditsLoading,
+    error: creditsError,
+  } = useArNSPrice({ name, type, years, enabled: method === 'credits' });
 
-  const creditsLabel = useMemo(() => {
-    if (!price) return null;
-    return price.credits.toLocaleString(undefined, {
-      maximumFractionDigits: 4,
-    });
-  }, [price]);
+  // Cost details (ARIO price + SOL gas + affordability) for the selected source.
+  const {
+    data: cost,
+    isFetching: costLoading,
+    error: costError,
+  } = useArNSCostDetails({
+    intent: 'Buy-Name',
+    name,
+    type,
+    years,
+    fundFrom,
+    fromAddress: address,
+  });
 
-  const usdLabel = useMemo(() => {
-    if (!price?.usd) return null;
-    return price.usd.toLocaleString(undefined, {
-      style: 'currency',
-      currency: 'USD',
-    });
-  }, [price]);
+  const insufficientSol =
+    !!cost && !balances.loading && balances.sol < cost.gasTotalSol;
+  const insufficientFunds = useMemo(() => {
+    if (method === 'credits') {
+      return creditsPrice ? balances.credits < creditsPrice.credits : false;
+    }
+    return (cost?.shortfallMARIO ?? 0) > 0;
+  }, [method, creditsPrice, balances.credits, cost?.shortfallMARIO]);
+
+  const priceReady =
+    method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
+  const canPay =
+    canBuy && priceReady && !insufficientSol && !insufficientFunds && !isBusy;
 
   return (
-    <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6">
-      <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-lg font-bold font-heading text-foreground">
-          Register{' '}
-          <span className="font-mono text-primary">{name}.ar.io</span>
+    <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">
+      <div className="mb-4 flex items-baseline justify-between">
+        <h3 className="font-heading text-lg font-bold text-foreground">
+          Register <span className="font-mono text-primary">{name}.ar.io</span>
         </h3>
       </div>
 
       {/* Lease vs permabuy */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="mb-4 grid grid-cols-2 gap-3">
         <button
           onClick={() => setType('lease')}
-          className={`flex items-center gap-2 p-3 rounded-2xl border transition-colors ${
+          className={`flex items-center gap-2 rounded-2xl border p-3 transition-colors ${
             type === 'lease'
               ? 'border-primary bg-primary/10 text-foreground'
               : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
           }`}
         >
-          <Calendar className="w-4 h-4" />
+          <Calendar className="h-4 w-4" />
           <span className="font-medium">Lease</span>
         </button>
         <button
           onClick={() => setType('permabuy')}
-          className={`flex items-center gap-2 p-3 rounded-2xl border transition-colors ${
+          className={`flex items-center gap-2 rounded-2xl border p-3 transition-colors ${
             type === 'permabuy'
               ? 'border-primary bg-primary/10 text-foreground'
               : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
           }`}
         >
-          <InfinityIcon className="w-4 h-4" />
+          <InfinityIcon className="h-4 w-4" />
           <span className="font-medium">Permabuy</span>
         </button>
       </div>
@@ -88,13 +119,13 @@ export function ArNSPurchaseCard({
       {/* Lease term */}
       {type === 'lease' && (
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Lease term</label>
+          <label className="mb-2 block text-sm font-medium">Lease term</label>
           <div className="flex flex-wrap gap-2">
             {LEASE_YEAR_OPTIONS.map((y) => (
               <button
                 key={y}
                 onClick={() => setYears(y)}
-                className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                   years === y
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
@@ -107,52 +138,63 @@ export function ArNSPurchaseCard({
         </div>
       )}
 
-      {/* Price */}
-      <div className="bg-card rounded-2xl p-4 border border-border/20 mb-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-foreground/70">Cost</span>
-          {priceLoading ? (
-            <span className="flex items-center gap-2 text-sm text-foreground/70">
-              <Loader2 className="w-4 h-4 animate-spin" /> Fetching price…
-            </span>
-          ) : priceError ? (
-            <span className="text-sm text-error">Price unavailable</span>
-          ) : creditsLabel ? (
-            <div className="text-right">
-              <div className="text-lg font-bold text-foreground">
-                {creditsLabel} Credits
-              </div>
-              {usdLabel && (
-                <div className="text-xs text-foreground/60">≈ {usdLabel}</div>
-              )}
-            </div>
-          ) : (
-            <span className="text-sm text-foreground/50">—</span>
-          )}
-        </div>
+      {/* Payment method + source */}
+      <div className="mb-4">
+        <ArNSPaymentSelector
+          method={method}
+          fundingSource={fundingSource}
+          balances={balances}
+          onMethodChange={setMethod}
+          onSourceChange={setFundingSource}
+          disabled={isBusy}
+        />
+      </div>
+
+      {/* Cost breakdown */}
+      <div className="mb-4">
+        <ArNSCostBreakdown
+          method={method}
+          creditsPrice={creditsPrice?.credits}
+          arioPrice={cost?.arioCost}
+          priceLoading={method === 'credits' ? creditsLoading : costLoading}
+          priceError={!!(method === 'credits' ? creditsError : costError)}
+          gasTotalSol={cost?.gasTotalSol ?? 0}
+          gasRentSol={cost?.gasRentSol ?? 0}
+          gasFeeSol={cost?.gasFeeSol ?? 0}
+          gasLoading={costLoading}
+          solBalance={balances.sol}
+          insufficientFunds={insufficientFunds}
+          insufficientSol={insufficientSol}
+        />
       </div>
 
       <button
         onClick={() =>
-          onBuy({ name, type, years: type === 'lease' ? years : undefined })
+          onBuy({
+            name,
+            type,
+            years: type === 'lease' ? years : undefined,
+            fundFrom,
+          })
         }
-        disabled={!canBuy || isBusy || priceLoading || !price}
-        className="w-full px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        disabled={!canPay}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isBusy ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" /> Processing…
+            <Loader2 className="h-4 w-4 animate-spin" /> Processing…
           </>
         ) : (
           <>
-            <Wallet className="w-4 h-4" /> Buy with Turbo Credits
+            <Wallet className="h-4 w-4" />{' '}
+            {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
           </>
         )}
       </button>
 
       {!canBuy && (
-        <p className="mt-3 text-xs text-center text-foreground/60">
-          Connect a Solana wallet to pay with Turbo Credits.
+        <p className="mt-3 text-center text-xs text-foreground/60">
+          Connect a Solana wallet to pay.
         </p>
       )}
     </div>

@@ -9,11 +9,16 @@ import type { ArNSRegistrationType } from './useArNSPrice';
 
 export type BuyPhase = 'idle' | 'submitting' | 'success' | 'error';
 
+/** Where the name's ARIO price is funded from. */
+export type ArNSBuyFundFrom = 'turbo' | 'balance' | 'stakes' | 'any';
+
 export interface BuyArNSNameInput {
   name: string;
   type: ArNSRegistrationType;
   /** Lease term in years (ignored for permabuy). */
   years?: number;
+  /** Funding source for the ARIO price. Defaults to Turbo Credits. */
+  fundFrom?: ArNSBuyFundFrom;
 }
 
 export interface UseBuyArNSNameResult {
@@ -36,7 +41,7 @@ type ARIOBuyWriteable = {
     years?: number;
     /** Omit to mint a fresh user-owned ANT atomically (Model B, no pre-spawn). */
     processId?: string;
-    fundFrom?: 'turbo';
+    fundFrom?: ArNSBuyFundFrom;
     referrer?: string;
   }): Promise<{ id: string; result?: { processId?: string } }>;
 };
@@ -87,6 +92,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       name,
       type,
       years,
+      fundFrom = 'turbo',
     }: BuyArNSNameInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
@@ -117,11 +123,13 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
 
         // Atomic: omit processId → buyRecord mints a fresh user-owned ANT and
         // assigns the name in ONE tx. No pre-spawn ⇒ no orphaned-ANT window.
+        // `fundFrom` selects where the ARIO price is drawn from (credits vs the
+        // wallet's ARIO balance/stakes); SOL rent is always paid by the signer.
         const res = await ario.buyRecord({
           name: lowered,
           type,
           ...(type === 'lease' && years ? { years } : {}),
-          fundFrom: 'turbo',
+          fundFrom,
           referrer: APP_NAME,
         });
 

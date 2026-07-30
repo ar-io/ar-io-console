@@ -65,8 +65,8 @@ export function ArNSBuyPanel() {
             Register an ArNS Name
           </h3>
           <p className="text-sm text-foreground/80">
-            Search, price, and buy a permanent name with your Turbo Credits — no
-            leaving the console.
+            Search, price, and buy a name with Turbo Credits or your ARIO tokens
+            — no leaving the console.
           </p>
         </div>
       </div>
@@ -97,8 +97,9 @@ export function ArNSBuyPanel() {
             <div className="flex items-center gap-3">
               <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
               <p className="text-sm text-foreground/80">
-                Connect a wallet to continue. ArNS names are paid for with Turbo
-                Credits from a Solana wallet.
+                Connect a wallet to continue. ArNS names are paid with Turbo
+                Credits or ARIO from a Solana wallet (plus a little SOL for
+                network rent).
               </p>
             </div>
           ) : needsLinking ? (
