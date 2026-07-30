@@ -11,7 +11,10 @@ interface ArNSPurchaseStatusProps {
   error: Error | undefined;
   insufficientCredits: boolean;
   name: string;
+  /** Reset the whole flow (clears the selected name). Used by "Register another". */
   onDone: () => void;
+  /** Retry the same name — resets buy state but keeps the selection. */
+  onRetry?: () => void;
 }
 
 /**
@@ -27,6 +30,7 @@ export function ArNSPurchaseStatus({
   insufficientCredits,
   name,
   onDone,
+  onRetry,
 }: ArNSPurchaseStatusProps) {
   const navigate = useNavigate();
 
@@ -86,8 +90,8 @@ export function ArNSPurchaseStatus({
               Not enough Turbo Credits
             </p>
             <p className="text-sm text-foreground/70 mt-1">
-              You don't have enough credits to register this name. Top up and try
-              again — your name selection is preserved.
+              You don't have enough credits to register this name. Add Turbo
+              Credits, then search for "{name}" again to finish registering.
             </p>
             <button
               onClick={() => navigate('/topup')}
@@ -110,7 +114,7 @@ export function ArNSPurchaseStatus({
           <p className="text-sm text-foreground/70 mt-1">
             {error?.message ?? 'Something went wrong. Please try again.'}
           </p>
-          <button onClick={onDone} className="btn-primary mt-4">
+          <button onClick={onRetry ?? onDone} className="btn-primary mt-4">
             Try again
           </button>
         </div>

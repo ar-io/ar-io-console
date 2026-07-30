@@ -45,6 +45,12 @@ export function ArNSBuyPanel() {
     setSearch('');
   };
 
+  // Retry the same name: clear the terminal buy state but keep the selection,
+  // so the purchase card re-appears for another attempt.
+  const handleRetry = () => {
+    buyState.reset();
+  };
+
   const canBuy = signer.isReady;
 
   return (
@@ -164,6 +170,7 @@ export function ArNSBuyPanel() {
           insufficientCredits={buyState.insufficientCredits}
           name={selectedName}
           onDone={handleDone}
+          onRetry={handleRetry}
         />
       )}
     </div>

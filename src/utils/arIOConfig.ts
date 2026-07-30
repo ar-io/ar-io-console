@@ -44,6 +44,18 @@ const getSolanaWsUrl = (rpcUrl: string) => {
 };
 
 /**
+ * Build the RPC + WS-subscription client pair from the active Solana config.
+ * Shared by the write-enabled clients so URL derivation lives in one place.
+ */
+const getSolanaRpcClients = () => {
+  const rpcUrl = getSolanaRpcUrl();
+  return {
+    rpc: createSolanaRpc(rpcUrl),
+    rpcSubscriptions: createSolanaRpcSubscriptions(getSolanaWsUrl(rpcUrl)),
+  };
+};
+
+/**
  * Get ARIO read-only client with dynamic Solana configuration.
  */
 export const getARIO = () => {
@@ -85,9 +97,7 @@ export const getANT = async (processId: string) => {
  */
 export const getWritableARIO = (signer: SolanaSigner) => {
   const config = getCurrentConfig();
-  const rpcUrl = getSolanaRpcUrl();
-  const rpc = createSolanaRpc(rpcUrl);
-  const rpcSubscriptions = createSolanaRpcSubscriptions(getSolanaWsUrl(rpcUrl));
+  const { rpc, rpcSubscriptions } = getSolanaRpcClients();
 
   return ARIO.init({
     rpc,
@@ -105,9 +115,7 @@ export const getWritableARIO = (signer: SolanaSigner) => {
  */
 export const getWritableANT = async (processId: string, signer: SolanaSigner) => {
   const config = getCurrentConfig();
-  const rpcUrl = getSolanaRpcUrl();
-  const rpc = createSolanaRpc(rpcUrl);
-  const rpcSubscriptions = createSolanaRpcSubscriptions(getSolanaWsUrl(rpcUrl));
+  const { rpc, rpcSubscriptions } = getSolanaRpcClients();
 
   return ANT.init({
     processId,
