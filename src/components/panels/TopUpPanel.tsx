@@ -21,7 +21,21 @@ import PendingTxRecoveryBanner from './crypto/PendingTxRecoveryBanner';
 import { getTurboBalance } from '../../utils';
 
 
-export default function TopUpPanel() {
+interface TopUpPanelProps {
+  /** Hide the page header + recipient section and tighten layout, for embedding
+   *  in a modal (e.g. on-demand credit top-up during an ArNS purchase). */
+  embedded?: boolean;
+  /** Pre-seed the USD amount once on mount (e.g. rounded up to cover a shortfall). */
+  initialUsdAmount?: number;
+  /** Fired once a top-up reaches a success terminal state (credits landed). */
+  onComplete?: () => void;
+}
+
+export default function TopUpPanel({
+  embedded = false,
+  initialUsdAmount,
+  onComplete,
+}: TopUpPanelProps = {}) {
   const {
     address,
     walletType,
@@ -367,6 +381,7 @@ export default function TopUpPanel() {
     setFiatFlowStep('amount');
     clearAllPaymentState();
     setPaymentMethod('fiat');
+    onComplete?.();
   };
 
   // Get available tokens based on wallet type (ordered by priority - first token is default)
@@ -489,6 +504,20 @@ export default function TopUpPanel() {
     }
   }, [deepLink]);
 
+  // Embedded pre-seed: apply the caller's target USD amount once on mount.
+  const initialAmountAppliedRef = useRef(false);
+  useEffect(() => {
+    if (initialAmountAppliedRef.current) return;
+    if (initialUsdAmount == null) return;
+    initialAmountAppliedRef.current = true;
+    const clamped = Math.min(
+      Math.max(initialUsdAmount, minUSDAmount),
+      maxUSDAmount,
+    );
+    setUsdAmount(clamped);
+    setUsdAmountInput(String(clamped));
+  }, [initialUsdAmount]);
+
   // Clear payment state when wallet changes
   useEffect(() => {
     clearAllPaymentState();
@@ -567,6 +596,7 @@ export default function TopUpPanel() {
               setCryptoFlowStep('selection');
               setCryptoPaymentResult(null);
               setPaymentMethod('fiat');
+              onComplete?.();
             }}
           />
         );
@@ -574,17 +604,20 @@ export default function TopUpPanel() {
   }
 
   return (
-    <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <CreditCard className="w-5 h-5 text-primary" />
+    <div className={embedded ? '' : 'px-4 sm:px-6'}>
+      {/* Inline Header with Description — hidden when embedded (the host modal
+          provides its own header). */}
+      {!embedded && (
+        <div className="flex items-start gap-3 mb-6">
+          <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+            <CreditCard className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Buy Credits</h3>
+            <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Buy Credits</h3>
-          <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
-        </div>
-      </div>
+      )}
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
@@ -651,7 +684,7 @@ export default function TopUpPanel() {
         </div>
 
         {/* Recipient Wallet Address - Only show for fiat payments */}
-        {paymentMethod === 'fiat' && !address && (
+        {paymentMethod === 'fiat' && !address && !embedded && (
           <div className="mb-6">
             <div className="bg-card rounded-2xl p-4 border border-border/20">
               <label className="block text-sm font-medium text-foreground/80 mb-3">

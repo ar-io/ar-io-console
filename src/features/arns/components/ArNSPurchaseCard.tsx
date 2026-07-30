@@ -1,11 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Calendar, Infinity as InfinityIcon, Loader2, Wallet } from 'lucide-react';
+import {
+  Calendar,
+  CreditCard,
+  Infinity as InfinityIcon,
+  Loader2,
+  Wallet,
+} from 'lucide-react';
 
 import type { ArNSRegistrationType } from '../hooks/useArNSPrice';
 import { useArNSPrice } from '../hooks/useArNSPrice';
 import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
 import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
+import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 import type { BuyArNSNameInput } from '../hooks/useBuyArNSName';
 import {
   ArNSFundingSource,
@@ -13,6 +20,7 @@ import {
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import BuyCreditsModal from './BuyCreditsModal';
 
 interface ArNSPurchaseCardProps {
   name: string;
@@ -40,6 +48,8 @@ export function ArNSPurchaseCard({
   const [method, setMethod] = useState<ArNSPaymentMethod>('credits');
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
+  const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
 
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
@@ -81,6 +91,17 @@ export function ArNSPurchaseCard({
     method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
   const canPay =
     canBuy && priceReady && !insufficientSol && !insufficientFunds && !isBusy;
+
+  // Credit shortfall → on-demand top-up (only offered for the credits method).
+  const creditShortfall =
+    method === 'credits' && creditsPrice
+      ? Math.max(0, creditsPrice.credits - balances.credits)
+      : 0;
+  const topUpUsd =
+    creditShortfall > 0 && creditsForOneUSD
+      ? Math.ceil(creditShortfall / creditsForOneUSD)
+      : undefined;
+  const offerTopUp = canBuy && method === 'credits' && insufficientFunds;
 
   return (
     <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">
@@ -168,34 +189,52 @@ export function ArNSPurchaseCard({
         />
       </div>
 
-      <button
-        onClick={() =>
-          onBuy({
-            name,
-            type,
-            years: type === 'lease' ? years : undefined,
-            fundFrom,
-          })
-        }
-        disabled={!canPay}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isBusy ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Processing…
-          </>
-        ) : (
-          <>
-            <Wallet className="h-4 w-4" />{' '}
-            {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
-          </>
-        )}
-      </button>
+      {offerTopUp ? (
+        <button
+          onClick={() => setShowBuyCredits(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <CreditCard className="h-4 w-4" /> Buy credits to continue
+        </button>
+      ) : (
+        <button
+          onClick={() =>
+            onBuy({
+              name,
+              type,
+              years: type === 'lease' ? years : undefined,
+              fundFrom,
+            })
+          }
+          disabled={!canPay}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isBusy ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Processing…
+            </>
+          ) : (
+            <>
+              <Wallet className="h-4 w-4" />{' '}
+              {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
+            </>
+          )}
+        </button>
+      )}
 
       {!canBuy && (
         <p className="mt-3 text-center text-xs text-foreground/60">
           Connect a Solana wallet to pay.
         </p>
+      )}
+
+      {showBuyCredits && (
+        <BuyCreditsModal
+          initialUsdAmount={topUpUsd}
+          shortfallCredits={creditShortfall}
+          onClose={() => setShowBuyCredits(false)}
+          onComplete={() => setShowBuyCredits(false)}
+        />
       )}
     </div>
   );

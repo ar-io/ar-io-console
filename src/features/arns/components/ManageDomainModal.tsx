@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   CalendarPlus,
   CheckCircle2,
+  CreditCard,
   ExternalLink,
   Infinity as InfinityIcon,
   Layers,
@@ -18,6 +19,7 @@ import { useArNSPrice } from '../hooks/useArNSPrice';
 import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
 import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
+import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 import { ManageIntent, useManageArNSName } from '../hooks/useManageArNSName';
 import {
   ArNSFundingSource,
@@ -25,6 +27,7 @@ import {
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import BuyCreditsModal from './BuyCreditsModal';
 
 const manageUrl = (name: string) => `https://arns.ar.io/#/manage/names/${name}`;
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -82,6 +85,8 @@ export default function ManageDomainModal({
   const [method, setMethod] = useState<ArNSPaymentMethod>('credits');
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
+  const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
 
   const fundFrom = method === 'credits' ? 'turbo' : fundingSource;
 
@@ -131,6 +136,17 @@ export default function ManageDomainModal({
     method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
   const canConfirm =
     !isBusy && priceReady && !insufficientSol && !insufficientFunds;
+
+  // Credit shortfall → on-demand top-up (credits method only).
+  const creditShortfall =
+    method === 'credits' && creditsPrice
+      ? Math.max(0, creditsPrice.credits - balances.credits)
+      : 0;
+  const topUpUsd =
+    creditShortfall > 0 && creditsForOneUSD
+      ? Math.ceil(creditShortfall / creditsForOneUSD)
+      : undefined;
+  const offerTopUp = method === 'credits' && insufficientFunds && !isBusy;
 
   const expiryLabel =
     isLease && typeof domain.endTimestamp === 'number'
@@ -341,22 +357,40 @@ export default function ManageDomainModal({
             )}
 
             {/* Confirm */}
-            <button
-              onClick={handleConfirm}
-              disabled={!canConfirm}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Processing…
-                </>
-              ) : (
-                <>
-                  <Wallet className="h-4 w-4" /> {ACTION_META[action].verb} with{' '}
-                  {method === 'credits' ? 'Turbo Credits' : 'ARIO'}
-                </>
-              )}
-            </button>
+            {offerTopUp ? (
+              <button
+                onClick={() => setShowBuyCredits(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <CreditCard className="h-4 w-4" /> Buy credits to continue
+              </button>
+            ) : (
+              <button
+                onClick={handleConfirm}
+                disabled={!canConfirm}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isBusy ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Processing…
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="h-4 w-4" /> {ACTION_META[action].verb} with{' '}
+                    {method === 'credits' ? 'Turbo Credits' : 'ARIO'}
+                  </>
+                )}
+              </button>
+            )}
+
+            {showBuyCredits && (
+              <BuyCreditsModal
+                initialUsdAmount={topUpUsd}
+                shortfallCredits={creditShortfall}
+                onClose={() => setShowBuyCredits(false)}
+                onComplete={() => setShowBuyCredits(false)}
+              />
+            )}
           </>
         )}
       </div>
