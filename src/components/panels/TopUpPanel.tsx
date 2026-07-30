@@ -354,6 +354,7 @@ export default function TopUpPanel({
     setCryptoPaymentResult(null);
     setPaymentMethod('fiat'); // Reset to fiat
     window.dispatchEvent(new CustomEvent('refresh-balance'));
+    onComplete?.();
   };
 
 

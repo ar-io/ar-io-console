@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   CalendarPlus,
   CheckCircle2,
@@ -339,13 +338,12 @@ export default function ManageDomainModal({
                   this.
                 </p>
                 {method === 'credits' && (
-                  <Link
-                    to="/topup"
-                    onClick={onClose}
+                  <button
+                    onClick={() => setShowBuyCredits(true)}
                     className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
                   >
-                    Top up credits
-                  </Link>
+                    Buy credits
+                  </button>
                 )}
               </div>
             )}

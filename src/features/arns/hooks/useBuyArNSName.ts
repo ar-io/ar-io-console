@@ -102,7 +102,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       const owner = signer.address;
       if (!signer.isReady || !owner || !signer.walletAdapter) {
         const e = new Error(
-          'Connect a Solana wallet with a live signer to pay with Turbo Credits.',
+          'Connect a Solana wallet with a live signer to pay with Turbo Credits or ARIO.',
         );
         setPhase('error');
         setError(e);
@@ -140,7 +140,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         };
         setResult(settlement);
         setPhase('success');
-        // Credits were debited on-chain — refresh the header balance.
+        // The name price was debited (credits or ARIO) — refresh the balance.
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return settlement;
       } catch (err) {

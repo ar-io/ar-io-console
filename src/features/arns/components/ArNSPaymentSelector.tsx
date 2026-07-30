@@ -34,6 +34,8 @@ function MethodCard({
 }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
       className={`flex items-start gap-2 p-3 rounded-2xl border text-left transition-colors disabled:opacity-50 ${
@@ -66,6 +68,8 @@ function SourceRow({
 }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
       className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors disabled:opacity-50 ${
