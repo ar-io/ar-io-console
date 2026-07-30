@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Globe, Wallet, Link2 } from 'lucide-react';
+import { ArrowLeft, Globe, Wallet, Link2 } from 'lucide-react';
 
 import { useStore } from '../../store/useStore';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
@@ -71,24 +71,39 @@ export function ArNSBuyPanel() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6 mb-4">
-        <ArNSNameSearch
-          value={search}
-          onChange={(v) => {
-            setSearch(v);
-            if (selectedName && v !== selectedName) {
-              setSelectedName(undefined);
+      {/* Search — collapses to a compact "change name" link once a name is
+          chosen, so the register/pay flow isn't crowded by the full search box
+          (the Register card below already headers with the selected name). */}
+      {!selectedName ? (
+        <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6 mb-4">
+          <ArNSNameSearch
+            value={search}
+            onChange={(v) => {
+              setSearch(v);
+              if (selectedName && v !== selectedName) {
+                setSelectedName(undefined);
+                buyState.reset();
+              }
+            }}
+            onSelect={(name) => {
+              setSelectedName(name);
               buyState.reset();
-            }
-          }}
-          onSelect={(name) => {
-            setSelectedName(name);
+            }}
+            selectedName={selectedName}
+          />
+        </div>
+      ) : (
+        <button
+          onClick={() => {
+            setSelectedName(undefined);
             buyState.reset();
           }}
-          selectedName={selectedName}
-        />
-      </div>
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Search a different name
+        </button>
+      )}
 
       {/* Wallet gate */}
       {selectedName && !canBuy && (
