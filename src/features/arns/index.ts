@@ -5,6 +5,8 @@
 export { ArNSBuyPanel, default as ArNSBuyPanelDefault } from './ArNSBuyPanel';
 export { default as BrowseDomainsPanel } from './components/BrowseDomainsPanel';
 export { default as ManageDomainModal } from './components/ManageDomainModal';
+export { default as TransferDomainModal } from './components/TransferDomainModal';
+export { default as ReassignDomainModal } from './components/ReassignDomainModal';
 
 // Service layer (reusable, framework-agnostic) — the extension point for later
 // phases (extend / increase-undername / upgrade / custodial manage + transfer).

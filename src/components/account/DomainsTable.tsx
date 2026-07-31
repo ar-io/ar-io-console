@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Globe, ExternalLink, AlertTriangle } from 'lucide-react';
 import { ArNSName } from '@/types';
 import { daysUntil, isExpiringSoon } from '@/utils/domainExpiry';
-import { ManageDomainModal } from '@/features/arns';
+import {
+  ManageDomainModal,
+  TransferDomainModal,
+  ReassignDomainModal,
+} from '@/features/arns';
 
 const visitUrl = (name: string) => `https://${name}.ar.io`;
 
@@ -34,6 +38,8 @@ export default function DomainsTable({
   onChanged?: () => void;
 }) {
   const [managing, setManaging] = useState<ArNSName | null>(null);
+  const [transferring, setTransferring] = useState<ArNSName | null>(null);
+  const [reassigning, setReassigning] = useState<ArNSName | null>(null);
 
   return (
     <>
@@ -94,6 +100,18 @@ export default function DomainsTable({
                     >
                       Manage
                     </button>
+                    <button
+                      onClick={() => setTransferring(domain)}
+                      className="text-foreground/70 hover:text-foreground hover:underline"
+                    >
+                      Transfer
+                    </button>
+                    <button
+                      onClick={() => setReassigning(domain)}
+                      className="text-foreground/70 hover:text-foreground hover:underline"
+                    >
+                      Reassign
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -106,6 +124,20 @@ export default function DomainsTable({
       <ManageDomainModal
         domain={managing}
         onClose={() => setManaging(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    {transferring && (
+      <TransferDomainModal
+        domain={transferring}
+        onClose={() => setTransferring(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    {reassigning && (
+      <ReassignDomainModal
+        domain={reassigning}
+        onClose={() => setReassigning(null)}
         onSuccess={onChanged}
       />
     )}
