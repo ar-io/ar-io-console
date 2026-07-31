@@ -4,6 +4,8 @@ import { useStore } from '../store/useStore';
 import { User, Globe, RefreshCw, ExternalLink, AlertTriangle, Download } from 'lucide-react';
 import { getExpiringDomains, expiryLabel, expirySortKey } from '../utils/domainExpiry';
 import { downloadDomainsCsv } from '../utils/domainCsv';
+import { ManageDomainModal } from '../features/arns';
+import type { ArNSName } from '@/types';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
@@ -24,6 +26,7 @@ export default function MyAccountPage() {
   const { arnsName, profile } = usePrimaryArNSName(arnsAddress);
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [renewDomain, setRenewDomain] = useState<ArNSName | null>(null);
 
   // Redirect to home if not logged in (declarative — never navigate during render)
   if (!address) {
@@ -171,14 +174,17 @@ export default function MyAccountPage() {
                     )}
                   </div>
                 </div>
-                <a
-                  href={`https://arns.ar.io/#/manage/names/${expiringDomains[0].name}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => {
+                    const target = ownedNames.find(
+                      (n) => n.name === expiringDomains[0].name,
+                    );
+                    if (target) setRenewDomain(target);
+                  }}
                   className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 >
                   Renew
-                </a>
+                </button>
               </div>
             </div>
           )}
@@ -237,6 +243,14 @@ export default function MyAccountPage() {
 
       {showLinkModal && (
         <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
+      )}
+
+      {renewDomain && (
+        <ManageDomainModal
+          domain={renewDomain}
+          onClose={() => setRenewDomain(null)}
+          onSuccess={() => fetchOwnedNames(true)}
+        />
       )}
     </div>
   );

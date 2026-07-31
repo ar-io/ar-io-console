@@ -38,7 +38,7 @@ const utilityServices = [
   { name: 'Browse Data', page: 'browse' as const, icon: Compass },
   { name: 'Verify Data', page: 'verify' as const, icon: ShieldCheck },
   { name: 'Search Domains', page: 'domains' as const, icon: Globe },
-  { name: 'Manage Domains', href: 'https://arns.ar.io/#/manage/names', icon: PencilLine, external: true },
+  { name: 'Manage Domains', page: 'account' as const, icon: PencilLine },
   { name: 'Network Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
   { name: 'Developer Docs', href: 'https://docs.ar.io', icon: Code, external: true },
 ];
