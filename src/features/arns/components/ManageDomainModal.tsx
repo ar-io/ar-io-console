@@ -145,7 +145,10 @@ export default function ManageDomainModal({
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
-  const offerTopUp = method === 'credits' && insufficientFunds && !isBusy;
+  // Only offer a credits top-up when SOL gas is sufficient — otherwise topping
+  // up credits still can't make the transaction succeed.
+  const offerTopUp =
+    method === 'credits' && insufficientFunds && !insufficientSol && !isBusy;
 
   const expiryLabel =
     isLease && typeof domain.endTimestamp === 'number'

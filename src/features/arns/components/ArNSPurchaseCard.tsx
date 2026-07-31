@@ -101,7 +101,10 @@ export function ArNSPurchaseCard({
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
-  const offerTopUp = canBuy && method === 'credits' && insufficientFunds;
+  // Only offer a credits top-up when SOL gas is sufficient — buying credits
+  // can't make the purchase succeed if SOL for rent is also short.
+  const offerTopUp =
+    canBuy && method === 'credits' && insufficientFunds && !insufficientSol;
 
   return (
     <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">

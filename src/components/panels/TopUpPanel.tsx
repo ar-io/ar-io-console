@@ -382,6 +382,8 @@ export default function TopUpPanel({
     setFiatFlowStep('amount');
     clearAllPaymentState();
     setPaymentMethod('fiat');
+    // Refresh balance after payment (parity with the crypto completion paths).
+    window.dispatchEvent(new CustomEvent('refresh-balance'));
     onComplete?.();
   };
 
