@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { User, Globe, RefreshCw, ExternalLink, AlertTriangle } from 'lucide-react';
+import { User, Globe, RefreshCw, ExternalLink, AlertTriangle, Download } from 'lucide-react';
 import { getExpiringDomains, expiryLabel, expirySortKey } from '../utils/domainExpiry';
+import { downloadDomainsCsv } from '../utils/domainCsv';
 import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
@@ -116,16 +117,29 @@ export default function MyAccountPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading font-bold text-xl text-foreground">Domains</h2>
-            <button
-              onClick={() => fetchOwnedNames(true)}
-              disabled={loadingDomains}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground hover:text-foreground/80 transition-colors disabled:opacity-50"
-              title="Refresh domain list"
-              aria-label="Refresh domain list"
-            >
-              <RefreshCw className={`w-4 h-4 ${loadingDomains ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
+            <div className="flex items-center gap-1">
+              {ownedNames.length > 0 && (
+                <button
+                  onClick={() => downloadDomainsCsv(sortedDomains)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground hover:text-foreground/80 transition-colors"
+                  title="Export domains to CSV"
+                  aria-label="Export domains to CSV"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                </button>
+              )}
+              <button
+                onClick={() => fetchOwnedNames(true)}
+                disabled={loadingDomains}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground hover:text-foreground/80 transition-colors disabled:opacity-50"
+                title="Refresh domain list"
+                aria-label="Refresh domain list"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingDomains ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            </div>
           </div>
 
           {/* Expiry warning — spans the owned leases we've loaded (the 100 most recent
