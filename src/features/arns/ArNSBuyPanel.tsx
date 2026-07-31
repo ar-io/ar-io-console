@@ -3,6 +3,8 @@ import { ArrowLeft, Globe, Wallet, Link2 } from 'lucide-react';
 
 import { useStore } from '../../store/useStore';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
+import LinkSolanaWalletModal from '../../components/modals/LinkSolanaWalletModal';
+import WalletSelectionModal from '../../components/modals/WalletSelectionModal';
 import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
 import { ArNSPurchaseStatus } from './components/ArNSPurchaseStatus';
@@ -20,17 +22,13 @@ import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
 export function ArNSBuyPanel() {
   const address = useStore((s) => s.address);
   const signer = useArNSTurboSigner();
-  const {
-    needsLinking,
-    isPrimarySolana,
-    solanaWallets,
-    linkWallet,
-    isLinking,
-    linkError,
-  } = useLinkedSolanaWallet();
+  const { needsLinking } = useLinkedSolanaWallet();
 
   const [search, setSearch] = useState('');
   const [selectedName, setSelectedName] = useState<string | undefined>();
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkReconnect, setLinkReconnect] = useState(false);
 
   const buyState = useBuyArNSName();
 
@@ -105,17 +103,28 @@ export function ArNSBuyPanel() {
         </button>
       )}
 
-      {/* Wallet gate */}
-      {selectedName && !canBuy && (
+      {/* Wallet gate — shown INSTEAD of the purchase card until a Solana signer
+          is ready, so the user sees one clear call-to-action, not two. */}
+      {selectedName && !canBuy && buyState.phase === 'idle' && (
         <div className="bg-card rounded-2xl border border-border/20 p-5 mb-4">
           {!address ? (
-            <div className="flex items-center gap-3">
-              <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
-              <p className="text-sm text-foreground/80">
-                Connect a wallet to continue. ArNS names are paid with Turbo
-                Credits or ARIO from a Solana wallet (plus a little SOL for
-                network rent).
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
+                <p className="text-sm font-medium text-foreground">
+                  Connect a wallet to continue
+                </p>
+              </div>
+              <p className="text-xs text-foreground/60 mb-3">
+                ArNS names are paid with Turbo Credits or ARIO from a Solana
+                wallet (plus a little SOL for network rent).
               </p>
+              <button
+                onClick={() => setShowWalletModal(true)}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Connect wallet
+              </button>
             </div>
           ) : needsLinking ? (
             <div>
@@ -127,47 +136,45 @@ export function ArNSBuyPanel() {
               </div>
               <p className="text-xs text-foreground/60 mb-3">
                 ArNS names live on Solana. Link a Solana wallet to sign the
-                purchase — your primary {address ? 'account' : 'session'} stays
-                the same.
+                purchase — your primary account stays the same.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {solanaWallets?.map((w) => (
-                  <button
-                    key={w.adapter.name}
-                    onClick={() => linkWallet(w.adapter.name)}
-                    disabled={isLinking}
-                    className="px-4 py-2 rounded-full border border-primary/40 bg-card text-sm font-medium hover:bg-primary/10 transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {w.adapter.icon && (
-                      <img
-                        src={w.adapter.icon}
-                        alt=""
-                        className="w-4 h-4 rounded"
-                      />
-                    )}
-                    {w.adapter.name}
-                  </button>
-                ))}
-              </div>
-              {linkError && (
-                <p className="mt-2 text-xs text-error">{linkError}</p>
-              )}
+              <button
+                onClick={() => {
+                  setLinkReconnect(false);
+                  setShowLinkModal(true);
+                }}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Link Solana wallet
+              </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <Wallet className="w-5 h-5 text-warning flex-shrink-0" />
-              <p className="text-sm text-foreground/80">
-                {isPrimarySolana
-                  ? 'Reconnect your Solana wallet to sign this purchase.'
-                  : 'Reconnect your linked Solana wallet to sign this purchase.'}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet className="w-5 h-5 text-warning flex-shrink-0" />
+                <p className="text-sm font-medium text-foreground">
+                  Reconnect your Solana wallet
+                </p>
+              </div>
+              <p className="text-xs text-foreground/60 mb-3">
+                Reconnect the Solana wallet that signs this purchase.
               </p>
+              <button
+                onClick={() => {
+                  setLinkReconnect(true);
+                  setShowLinkModal(true);
+                }}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Reconnect
+              </button>
             </div>
           )}
         </div>
       )}
 
-      {/* Configure + buy */}
-      {selectedName && buyState.phase === 'idle' && (
+      {/* Configure + buy — only once a signer is ready (no double CTA). */}
+      {selectedName && canBuy && buyState.phase === 'idle' && (
         <ArNSPurchaseCard
           name={selectedName}
           canBuy={canBuy}
@@ -187,6 +194,16 @@ export function ArNSBuyPanel() {
           name={selectedName}
           onDone={handleDone}
           onRetry={handleRetry}
+        />
+      )}
+
+      {showWalletModal && (
+        <WalletSelectionModal onClose={() => setShowWalletModal(false)} />
+      )}
+      {showLinkModal && (
+        <LinkSolanaWalletModal
+          isReconnect={linkReconnect}
+          onClose={() => setShowLinkModal(false)}
         />
       )}
     </div>

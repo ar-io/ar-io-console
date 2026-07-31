@@ -1,6 +1,9 @@
-import { AlertTriangle, Check, Info, Loader2 } from 'lucide-react';
+import { AlertTriangle, Check, ExternalLink, Info, Loader2 } from 'lucide-react';
 
 import type { ArNSPaymentMethod } from './ArNSPaymentSelector';
+
+/** Where to send users who need SOL for the network deposit. Configurable. */
+const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
 
 const fmtSol = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 4 });
@@ -138,18 +141,29 @@ export function ArNSCostBreakdown({
             </span>
           </Row>
           <p
-            className={`flex items-center justify-end gap-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
+            className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
           >
             {insufficientSol ? (
               <>
-                <AlertTriangle className="h-3 w-3" /> You have {fmtSol(solBalance)}{' '}
-                SOL — add more to cover the deposit
+                <span className="flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> You have{' '}
+                  {fmtSol(solBalance)} SOL — add more to cover the deposit
+                </span>
+                <a
+                  href={GET_SOL_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+                >
+                  Get SOL
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </>
             ) : (
-              <>
+              <span className="flex items-center gap-1">
                 <Check className="h-3 w-3 text-primary" /> You have{' '}
                 {fmtSol(solBalance)} SOL
-              </>
+              </span>
             )}
           </p>
         </>

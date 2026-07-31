@@ -1,4 +1,12 @@
-import { CheckCircle2, Loader2, AlertTriangle, CreditCard } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CreditCard,
+  ExternalLink,
+  Loader2,
+  Rocket,
+  Settings2,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
@@ -70,8 +78,37 @@ export function ArNSPurchaseStatus({
             <div className="mt-2 text-xs font-mono text-foreground/50 break-all">
               tx: {result.messageId}
             </div>
-            <button onClick={onDone} className="btn-primary mt-4">
-              Register another
+
+            <p className="mt-4 text-sm font-medium text-foreground">
+              What&apos;s next?
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => navigate('/deploy')}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Rocket className="h-4 w-4" /> Deploy a site to it
+              </button>
+              <button
+                onClick={() => navigate('/account')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+              >
+                <Settings2 className="h-4 w-4" /> Manage domains
+              </button>
+              <a
+                href={`https://${name}.ar.io`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+              >
+                Visit <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+            <button
+              onClick={onDone}
+              className="mt-3 text-sm font-medium text-primary hover:underline"
+            >
+              Register another name
             </button>
           </div>
         </div>
