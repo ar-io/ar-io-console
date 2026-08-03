@@ -8,6 +8,7 @@ export { default as ManageDomainModal } from './components/ManageDomainModal';
 export { default as TransferDomainModal } from './components/TransferDomainModal';
 export { default as ReassignDomainModal } from './components/ReassignDomainModal';
 export { default as EditDetailsModal } from './components/EditDetailsModal';
+export { default as UndernamesModal } from './components/UndernamesModal';
 
 // Service layer (reusable, framework-agnostic) — the extension point for later
 // phases (extend / increase-undername / upgrade / custodial manage + transfer).
@@ -38,6 +39,8 @@ export { useANTDetails } from './hooks/useANTDetails';
 export type { ANTDetails } from './hooks/useANTDetails';
 export { useSetArNSMetadata, buildMetadataOps } from './hooks/useSetArNSMetadata';
 export type { ArNSMetadataChanges } from './hooks/useSetArNSMetadata';
+export { useUndernameRecords, useUndernameWrites } from './hooks/useUndernames';
+export type { UndernameRecord } from './hooks/useUndernames';
 export { useAllArNSNames, loadArNSRegistry } from './hooks/useAllArNSNames';
 export type { AllArNSRecord, AllArNSSortKey } from './hooks/useAllArNSNames';
 export { useArNSPrice } from './hooks/useArNSPrice';

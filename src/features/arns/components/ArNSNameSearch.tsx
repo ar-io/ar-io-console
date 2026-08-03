@@ -95,7 +95,7 @@ export function ArNSNameSearch({
               ) : (
                 <button
                   onClick={() => onSelect(debounced)}
-                  className="btn-primary whitespace-nowrap"
+                  className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   Select this name
                 </button>

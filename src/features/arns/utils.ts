@@ -69,5 +69,16 @@ export function isValidArNSName(name: string): boolean {
   return n.length > 0 && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(n);
 }
 
+/**
+ * True when `label` is a usable ANT undername (the part before the name, e.g.
+ * `blog` in `blog_name.ar.io`). Must start alphanumeric, allow `-`/`_` after,
+ * be ≤ 61 chars, and never the apex `@`.
+ */
+export function isValidUndername(label: string): boolean {
+  const l = label.trim();
+  if (!l || l === '@' || l.length > 61) return false;
+  return /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(l);
+}
+
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,16 +1,20 @@
+import { useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
   CreditCard,
   ExternalLink,
   Loader2,
+  Pencil,
   Rocket,
   Settings2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import type { ArNSName } from '@/types';
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
 import type { BuyPhase } from '../hooks/useBuyArNSName';
+import EditDetailsModal from './EditDetailsModal';
 
 interface ArNSPurchaseStatusProps {
   phase: BuyPhase;
@@ -41,6 +45,7 @@ export function ArNSPurchaseStatus({
   onRetry,
 }: ArNSPurchaseStatusProps) {
   const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
 
   if (phase === 'idle') return null;
 
@@ -64,6 +69,15 @@ export function ArNSPurchaseStatus({
   }
 
   if (phase === 'success' && result) {
+    // buyRecord returns the freshly minted ANT id — lets the user set where the
+    // name points (its base @ target) right away instead of the default logo.
+    const newProcessId = (
+      result.receipt as { processId?: string | null } | undefined
+    )?.processId;
+    const newDomain: ArNSName | undefined = newProcessId
+      ? { name, displayName: name, processId: newProcessId }
+      : undefined;
+
     return (
       <div className="mt-4 bg-card rounded-2xl border border-primary/30 p-5">
         <div className="flex items-start gap-3">
@@ -89,6 +103,14 @@ export function ArNSPurchaseStatus({
               >
                 <Rocket className="h-4 w-4" /> Deploy a site to it
               </button>
+              {newDomain && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+                >
+                  <Pencil className="h-4 w-4" /> Edit details
+                </button>
+              )}
               <button
                 onClick={() => navigate('/account')}
                 className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
@@ -112,6 +134,12 @@ export function ArNSPurchaseStatus({
             </button>
           </div>
         </div>
+        {editing && newDomain && (
+          <EditDetailsModal
+            domain={newDomain}
+            onClose={() => setEditing(false)}
+          />
+        )}
       </div>
     );
   }
@@ -132,7 +160,7 @@ export function ArNSPurchaseStatus({
             </p>
             <button
               onClick={() => navigate('/topup')}
-              className="btn-primary mt-4 inline-flex items-center gap-2"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <CreditCard className="w-4 h-4" /> Buy Credits
             </button>
@@ -151,7 +179,10 @@ export function ArNSPurchaseStatus({
           <p className="text-sm text-foreground/70 mt-1">
             {error?.message ?? 'Something went wrong. Please try again.'}
           </p>
-          <button onClick={onRetry ?? onDone} className="btn-primary mt-4">
+          <button
+            onClick={onRetry ?? onDone}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
             Try again
           </button>
         </div>

@@ -7,6 +7,7 @@ import {
   TransferDomainModal,
   ReassignDomainModal,
   EditDetailsModal,
+  UndernamesModal,
 } from '@/features/arns';
 import RowActionsMenu from './RowActionsMenu';
 
@@ -43,6 +44,7 @@ export default function DomainsTable({
   const [transferring, setTransferring] = useState<ArNSName | null>(null);
   const [reassigning, setReassigning] = useState<ArNSName | null>(null);
   const [editing, setEditing] = useState<ArNSName | null>(null);
+  const [undernaming, setUndernaming] = useState<ArNSName | null>(null);
 
   return (
     <>
@@ -110,6 +112,10 @@ export default function DomainsTable({
                           onClick: () => setEditing(domain),
                         },
                         {
+                          label: 'Undernames',
+                          onClick: () => setUndernaming(domain),
+                        },
+                        {
                           label: 'Transfer…',
                           onClick: () => setTransferring(domain),
                           danger: true,
@@ -154,6 +160,13 @@ export default function DomainsTable({
       <EditDetailsModal
         domain={editing}
         onClose={() => setEditing(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    {undernaming && (
+      <UndernamesModal
+        domain={undernaming}
+        onClose={() => setUndernaming(null)}
         onSuccess={onChanged}
       />
     )}

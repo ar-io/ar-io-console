@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isArweaveTxId, parseKeywords } from './utils';
+import { isArweaveTxId, isValidUndername, parseKeywords } from './utils';
 
 describe('isArweaveTxId', () => {
   it('accepts a well-formed 43-char base64url id', () => {
@@ -19,6 +19,25 @@ describe('isArweaveTxId', () => {
 
   it('trims surrounding whitespace before checking', () => {
     expect(isArweaveTxId(`  ${'b'.repeat(43)}  `)).toBe(true);
+  });
+});
+
+describe('isValidUndername', () => {
+  it('accepts alphanumeric labels with inner - and _', () => {
+    expect(isValidUndername('blog')).toBe(true);
+    expect(isValidUndername('my-blog')).toBe(true);
+    expect(isValidUndername('v2_docs')).toBe(true);
+    expect(isValidUndername('2024')).toBe(true);
+  });
+
+  it('rejects the apex, empties, over-length, and bad leading chars', () => {
+    expect(isValidUndername('@')).toBe(false);
+    expect(isValidUndername('')).toBe(false);
+    expect(isValidUndername('   ')).toBe(false);
+    expect(isValidUndername('-lead')).toBe(false);
+    expect(isValidUndername('_lead')).toBe(false);
+    expect(isValidUndername('has space')).toBe(false);
+    expect(isValidUndername('a'.repeat(62))).toBe(false);
   });
 });
 
