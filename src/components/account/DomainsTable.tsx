@@ -6,7 +6,9 @@ import {
   ManageDomainModal,
   TransferDomainModal,
   ReassignDomainModal,
+  EditDetailsModal,
 } from '@/features/arns';
+import RowActionsMenu from './RowActionsMenu';
 
 const visitUrl = (name: string) => `https://${name}.ar.io`;
 
@@ -40,6 +42,7 @@ export default function DomainsTable({
   const [managing, setManaging] = useState<ArNSName | null>(null);
   const [transferring, setTransferring] = useState<ArNSName | null>(null);
   const [reassigning, setReassigning] = useState<ArNSName | null>(null);
+  const [editing, setEditing] = useState<ArNSName | null>(null);
 
   return (
     <>
@@ -100,18 +103,24 @@ export default function DomainsTable({
                     >
                       Manage
                     </button>
-                    <button
-                      onClick={() => setTransferring(domain)}
-                      className="text-foreground/70 hover:text-foreground hover:underline"
-                    >
-                      Transfer
-                    </button>
-                    <button
-                      onClick={() => setReassigning(domain)}
-                      className="text-foreground/70 hover:text-foreground hover:underline"
-                    >
-                      Reassign
-                    </button>
+                    <RowActionsMenu
+                      actions={[
+                        {
+                          label: 'Edit details',
+                          onClick: () => setEditing(domain),
+                        },
+                        {
+                          label: 'Transfer…',
+                          onClick: () => setTransferring(domain),
+                          danger: true,
+                        },
+                        {
+                          label: 'Reassign…',
+                          onClick: () => setReassigning(domain),
+                          danger: true,
+                        },
+                      ]}
+                    />
                   </div>
                 </td>
               </tr>
@@ -138,6 +147,13 @@ export default function DomainsTable({
       <ReassignDomainModal
         domain={reassigning}
         onClose={() => setReassigning(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    {editing && (
+      <EditDetailsModal
+        domain={editing}
+        onClose={() => setEditing(null)}
         onSuccess={onChanged}
       />
     )}

@@ -35,6 +35,34 @@ export function isValidSolanaAddress(value: string | undefined | null): boolean 
   }
 }
 
+/**
+ * True when `value` is a well-formed Arweave transaction ID (43-char
+ * base64url). Used to validate ANT record targets and logo txIds before a
+ * metadata write — the SDK's `ArweaveTxIdSchema` enforces the same shape.
+ */
+export function isArweaveTxId(value: string | undefined | null): boolean {
+  if (!value) return false;
+  return /^[A-Za-z0-9_-]{43}$/.test(value.trim());
+}
+
+/**
+ * Parse a free-text keywords field (comma/newline separated) into a clean,
+ * de-duplicated (case-insensitive), order-preserving list. Used by the ANT
+ * metadata editor before a `setKeywords` write.
+ */
+export function parseKeywords(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const k of raw.split(/[,\n]/)) {
+    const t = k.trim();
+    if (t && !seen.has(t.toLowerCase())) {
+      seen.add(t.toLowerCase());
+      out.push(t);
+    }
+  }
+  return out;
+}
+
 /** ArNS names may not start or end with a hyphen (matches the registry rule). */
 export function isValidArNSName(name: string): boolean {
   const n = lowerCaseDomain(name);
