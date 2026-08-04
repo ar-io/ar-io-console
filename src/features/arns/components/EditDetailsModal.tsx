@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
+  ExternalLink,
   Info,
   Loader2,
   Save,
@@ -395,6 +396,33 @@ export default function EditDetailsModal({
                 </>
               )}
             </button>
+
+            {/* On-chain details — the ArNS name is controlled by an ANT (a
+                Metaplex Core NFT on Solana); expose its address for devs. */}
+            <details className="mt-4 rounded-2xl border border-border/20 bg-card/50 p-3 text-xs">
+              <summary className="cursor-pointer select-none font-medium text-foreground/70">
+                On-chain details
+              </summary>
+              <div className="mt-2 space-y-1 text-foreground/70">
+                <p>
+                  This name is controlled by a token (an ANT) on Solana that
+                  holds all its records.
+                </p>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-foreground/50">Name token (ANT)</span>
+                  <a
+                    href={`https://explorer.solana.com/address/${domain.processId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 truncate font-mono text-primary hover:underline"
+                    title={domain.processId}
+                  >
+                    {domain.processId.slice(0, 6)}…{domain.processId.slice(-6)}
+                    <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                  </a>
+                </div>
+              </div>
+            </details>
           </>
         )}
       </div>
