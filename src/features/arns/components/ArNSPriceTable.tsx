@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import { useArNSPricing } from '../../../hooks/useArNSPricing';
 import { isValidArNSName, lowerCaseDomain } from '../utils';
 import {
+  arnsUndernameFees,
   findTierIndexForLength,
   formatTierCharacterLabel,
 } from '../arnsPriceTable';
@@ -116,6 +117,18 @@ export default function ArNSPriceTable() {
                   <th className="py-2 px-3 font-semibold text-right">
                     Permabuy
                   </th>
+                  <th
+                    className="py-2 px-3 font-semibold text-right"
+                    title="Cost to add one undername (label.name.ar.io) to a leased name"
+                  >
+                    + Undername
+                  </th>
+                  <th
+                    className="py-2 px-3 font-semibold text-right"
+                    title="Cost to add one undername to a permanently-owned name"
+                  >
+                    + Undername (perm.)
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -157,6 +170,26 @@ export default function ArNSPriceTable() {
                           ario={tier.pricesInARIO.permabuy}
                           compact
                           primaryClassName="text-sm font-semibold text-foreground"
+                        />
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="flex justify-end">
+                        <PriceAmount
+                          ario={arnsUndernameFees(tier.pricesInARIO.year1).lease}
+                          compact
+                          primaryClassName="text-sm font-medium text-foreground/80"
+                        />
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="flex justify-end">
+                        <PriceAmount
+                          ario={
+                            arnsUndernameFees(tier.pricesInARIO.year1).permabuy
+                          }
+                          compact
+                          primaryClassName="text-sm font-medium text-foreground/80"
                         />
                       </div>
                     </td>

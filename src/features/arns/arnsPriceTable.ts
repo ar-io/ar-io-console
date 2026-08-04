@@ -44,3 +44,27 @@ export function findTierIndexForLength(
 export function formatTierCharacterLabel(characterLength: number): string {
   return characterLength >= 13 ? '13+' : String(characterLength);
 }
+
+/**
+ * Per-undername registration fee for a tier, derived from its 1-year lease price.
+ *
+ * The ArNS fee schedule relates the 1-year lease, renewal, and undername fees to
+ * one demand-adjusted base annual registration fee (`arf`):
+ *   1-year lease = 1.2 × arf,  renewal/yr = 0.2 × arf,  permabuy = 5 × arf,
+ *   undername (lease)    = 0.001 × arf,
+ *   undername (permabuy) = 0.005 × arf.
+ * (Verified against the live schedule: renewal = year2−year1 = 0.2·arf and
+ * permabuy = 5·arf both check out.) `year1Ario` already carries the demand
+ * factor, so `arf = year1Ario / 1.2` and the undername fees fall straight out.
+ * Matches arns-react's Prices table (`baseFee × demand × {0.001, 0.005}`).
+ */
+export function arnsUndernameFees(year1Ario: number): {
+  lease: number;
+  permabuy: number;
+} {
+  if (!Number.isFinite(year1Ario) || year1Ario <= 0) {
+    return { lease: 0, permabuy: 0 };
+  }
+  const arf = year1Ario / 1.2;
+  return { lease: arf * 0.001, permabuy: arf * 0.005 };
+}

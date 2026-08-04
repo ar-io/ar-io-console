@@ -23,6 +23,10 @@ import {
   estimateReturnedNameArio,
   formatCountdown,
 } from '../returnedNamePricing';
+import {
+  returnedNameOrigin,
+  useArnsSettingsPda,
+} from '../hooks/useArnsSettingsPda';
 import PriceAmount from './PriceAmount';
 import PriceDisplayToggle from './PriceDisplayToggle';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
@@ -72,6 +76,7 @@ export default function ReturnedNamesPanel() {
   });
 
   const { data: priceInputs } = useReturnedNamePriceInputs();
+  const settingsPda = useArnsSettingsPda();
 
   const toggleSort = (key: ReturnedNameSortKey) => {
     if (sortBy === key) {
@@ -256,6 +261,14 @@ export default function ReturnedNamesPanel() {
                       .ar.io
                     </span>
                   </div>
+                  {(() => {
+                    const origin = returnedNameOrigin(r.initiator, settingsPda);
+                    return origin ? (
+                      <span className="ml-6 text-xs text-foreground/50">
+                        {origin}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
 
                 {/* Premium */}

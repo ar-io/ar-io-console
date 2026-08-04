@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_TIER_CHAR_LENGTH,
+  arnsUndernameFees,
   bucketCharacterLength,
   findTierIndexForLength,
   formatTierCharacterLabel,
@@ -72,5 +73,22 @@ describe('formatTierCharacterLabel', () => {
 
   it('renders the collapsed tier as "13+"', () => {
     expect(formatTierCharacterLabel(13)).toBe('13+');
+  });
+});
+
+describe('arnsUndernameFees', () => {
+  it('derives lease/permabuy undername fees from the 1-year lease (arf = year1/1.2)', () => {
+    // year1 = 1.2 × arf, so arf = 100 here → lease 0.001·arf, permabuy 0.005·arf.
+    const { lease, permabuy } = arnsUndernameFees(120);
+    expect(lease).toBeCloseTo(0.1, 10); // 0.001 × 100
+    expect(permabuy).toBeCloseTo(0.5, 10); // 0.005 × 100
+    // permabuy undername is always 5× the lease undername.
+    expect(permabuy / lease).toBeCloseTo(5, 10);
+  });
+
+  it('returns zeros for non-positive / non-finite input', () => {
+    expect(arnsUndernameFees(0)).toEqual({ lease: 0, permabuy: 0 });
+    expect(arnsUndernameFees(-5)).toEqual({ lease: 0, permabuy: 0 });
+    expect(arnsUndernameFees(NaN)).toEqual({ lease: 0, permabuy: 0 });
   });
 });
