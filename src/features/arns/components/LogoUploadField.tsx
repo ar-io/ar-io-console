@@ -66,6 +66,10 @@ export default function LogoUploadField({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  // Synchronous in-flight lock — claimed before the first await (compression),
+  // so a rapid second drop/pick can't start a concurrent upload whose late
+  // completion would clobber the first onChange(txId).
+  const uploadingRef = useRef(false);
 
   const canUpload = !!address;
 
@@ -90,39 +94,44 @@ export default function LogoUploadField({
   };
 
   const handleFile = async (file: File) => {
+    // Re-entry lock (synchronous, set before any await) so a second drop/pick
+    // during compression or upload is ignored rather than racing this one.
+    if (uploadingRef.current) return;
+    uploadingRef.current = true;
     setErrorMsg(null);
     // Live preview of the selected file immediately (and during upload).
     setPreview(URL.createObjectURL(file));
-
-    // Over the free tier? Try to compress it to fit before validating/uploading,
-    // so an oversized logo still uploads for free. Small images pass through
-    // untouched; a failed compress falls through to normal validation.
-    let toUpload = file;
-    if (freeUploadLimitBytes > 0 && file.size >= freeUploadLimitBytes) {
-      try {
-        toUpload = await compressImage(file, freeUploadLimitBytes - 1);
-      } catch {
-        toUpload = file;
-      }
-    }
-
-    const validation = validateLogoFile(
-      { name: toUpload.name, type: toUpload.type, size: toUpload.size },
-      freeUploadLimitBytes,
-      bytesRemaining,
-    );
-    if (!validation.ok) {
-      setPreview(null);
-      setStatus('error');
-      setErrorMsg(validation.message);
-      return;
-    }
-
-    const controller = new AbortController();
-    abortRef.current = controller;
+    // Mark uploading up front (before the compression await) so the drop zone,
+    // picker, and mode toggle all lock out re-entry immediately.
     setStatus('uploading');
     setProgress(0);
     try {
+      // Over the free tier? Try to compress it to fit before validating, so an
+      // oversized logo still uploads for free. Small images pass through; a
+      // failed compress falls through to normal validation.
+      let toUpload = file;
+      if (freeUploadLimitBytes > 0 && file.size >= freeUploadLimitBytes) {
+        try {
+          toUpload = await compressImage(file, freeUploadLimitBytes - 1);
+        } catch {
+          toUpload = file;
+        }
+      }
+
+      const validation = validateLogoFile(
+        { name: toUpload.name, type: toUpload.type, size: toUpload.size },
+        freeUploadLimitBytes,
+        bytesRemaining,
+      );
+      if (!validation.ok) {
+        setPreview(null);
+        setStatus('error');
+        setErrorMsg(validation.message);
+        return;
+      }
+
+      const controller = new AbortController();
+      abortRef.current = controller;
       const result = await uploadFile(toUpload, {
         onProgress: setProgress,
         signal: controller.signal,
@@ -147,6 +156,7 @@ export default function LogoUploadField({
       );
     } finally {
       abortRef.current = null;
+      uploadingRef.current = false;
     }
   };
 
@@ -193,7 +203,10 @@ export default function LogoUploadField({
           ]
         ).map(({ m, label: tLabel }) => {
           const isActive = mode === m;
-          const toggleDisabled = disabled || (m === 'upload' && !canUpload);
+          const toggleDisabled =
+            disabled ||
+            (m === 'upload' && !canUpload) ||
+            status === 'uploading';
           return (
             <button
               key={m}

@@ -115,6 +115,12 @@ export function useArNSCostDetails({
     retry: 1,
     queryFn: async () => {
       const ario = getARIO() as unknown as ARIOCostReadable;
+      // 'turbo' is a UI-only funding source (pay with Turbo Credits). The SDK's
+      // funding planner only accepts balance|stakes|any, so map it to 'balance'
+      // for the SOL-gas/price estimate; the wallet-ARIO shortfall it computes is
+      // irrelevant on the credits path and is zeroed out below.
+      const payWithCredits = fundFrom === 'turbo';
+      const sdkFundFrom = payWithCredits ? 'balance' : fundFrom;
       const cd = await ario.getCostDetails({
         intent,
         name: normalized,
@@ -123,7 +129,7 @@ export function useArNSCostDetails({
         ...(intent === 'Increase-Undername-Limit' && increaseQty
           ? { quantity: increaseQty }
           : {}),
-        fundFrom,
+        fundFrom: sdkFundFrom,
         ...(fromAddress ? { fromAddress } : {}),
       });
 
@@ -137,7 +143,9 @@ export function useArNSCostDetails({
         arioCost: mARIO / M_ARIO_PER_ARIO,
         mARIO,
         discountArio: discountMARIO / M_ARIO_PER_ARIO,
-        shortfallMARIO: cd.fundingPlan?.shortfall ?? 0,
+        // On the credits path the wallet-ARIO shortfall never gates the buy
+        // (credits pay the ARIO), so don't surface the SDK's balance shortfall.
+        shortfallMARIO: payWithCredits ? 0 : (cd.fundingPlan?.shortfall ?? 0),
         gasTotalSol: (gas?.totalLamports ?? 0) / LAMPORTS_PER_SOL,
         gasRentSol: (gas?.rentLamports ?? 0) / LAMPORTS_PER_SOL,
         gasFeeSol: (gas?.feeLamports ?? 0) / LAMPORTS_PER_SOL,

@@ -65,7 +65,10 @@ export default function PrimaryNameCard({
   }, [request, ownedNames]);
 
   const handleChanged = () => {
-    queryClient.invalidateQueries({ queryKey: ['arns-primary-name', address] });
+    // Prefix match — usePrimaryName keys as ['arns-primary-name', configKey,
+    // address], so invalidate the whole 'arns-primary-name' family rather than a
+    // stale ['arns-primary-name', address] key that never matches.
+    queryClient.invalidateQueries({ queryKey: ['arns-primary-name'] });
     onChanged?.();
   };
 

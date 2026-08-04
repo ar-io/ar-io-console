@@ -88,8 +88,16 @@ export function ArNSPurchaseCard({
 
   const priceReady =
     method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
+  // Every buy needs the SOL rent/gas estimate from useArNSCostDetails, even the
+  // credits path. If that query errored or resolved empty we have no estimate —
+  // don't let the user confirm against a missing (and cosmetically ~0) SOL cost.
+  const gasUnavailable = !!costError || (!cost && !costLoading);
   const canPay =
-    priceReady && !insufficientSol && !insufficientFunds && !isBusy;
+    priceReady &&
+    !gasUnavailable &&
+    !insufficientSol &&
+    !insufficientFunds &&
+    !isBusy;
 
   // Credit shortfall → on-demand top-up (only offered for the credits method).
   const creditShortfall =
@@ -185,6 +193,7 @@ export function ArNSPurchaseCard({
           gasRentSol={cost?.gasRentSol ?? 0}
           gasFeeSol={cost?.gasFeeSol ?? 0}
           gasLoading={costLoading}
+          gasError={gasUnavailable}
           solBalance={balances.sol}
           insufficientFunds={insufficientFunds}
           insufficientSol={insufficientSol}

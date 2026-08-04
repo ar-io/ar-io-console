@@ -41,6 +41,9 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 // serving another network's registry.
 let registryCache: { records: AllArNSRecord[]; timestamp: number; signature: string } | null = null;
 let inflight: Promise<AllArNSRecord[]> | null = null;
+// The config signature the current `inflight` request is fetching under, so a
+// request started on network A is never handed to a network-B caller.
+let inflightSignature: string | null = null;
 
 // Lazily-resolved ANT targets, keyed by processId. Shared across mounts, and
 // dropped alongside the registry when the network config changes.
@@ -48,13 +51,16 @@ const targetCache = new Map<string, string | null>();
 
 /**
  * Drop the module-level registry + target caches when the active ArNS network
- * config changes, so no read ever mixes data across networks. No-op when the
- * signature is unchanged. Called at the top of every registry fetch.
+ * config changes, so no read ever mixes data across networks. Also abandons an
+ * in-flight request whose signature no longer matches. No-op when unchanged.
  */
 function evictCachesOnConfigChange(signature: string): void {
-  if (registryCache && registryCache.signature !== signature) {
+  const cacheStale = registryCache && registryCache.signature !== signature;
+  const inflightStale = inflight && inflightSignature !== signature;
+  if (cacheStale || inflightStale) {
     registryCache = null;
     inflight = null;
+    inflightSignature = null;
     targetCache.clear();
   }
 }
@@ -72,9 +78,11 @@ export async function loadArNSRegistry(forceRefresh = false): Promise<AllArNSRec
   if (!forceRefresh && registryCache && Date.now() - registryCache.timestamp < CACHE_TTL_MS) {
     return registryCache.records;
   }
-  // De-dupe concurrent callers (e.g. two components mounting at once).
-  if (!forceRefresh && inflight) return inflight;
+  // De-dupe concurrent callers (e.g. two components mounting at once) — but only
+  // reuse an in-flight request fetched under the SAME config signature.
+  if (!forceRefresh && inflight && inflightSignature === signature) return inflight;
 
+  inflightSignature = signature;
   inflight = (async () => {
     const ario = getARIO();
     // limit: pass a ceiling well above the registry size so the SDK returns the
@@ -89,14 +97,21 @@ export async function loadArNSRegistry(forceRefresh = false): Promise<AllArNSRec
       undernameLimit: r.undernameLimit,
       purchasePrice: r.purchasePrice,
     }));
-    registryCache = { records, timestamp: Date.now(), signature };
+    // Only publish to the shared cache if the config hasn't changed under us.
+    if (readArNSConfigSignature() === signature) {
+      registryCache = { records, timestamp: Date.now(), signature };
+    }
     return records;
   })();
 
   try {
     return await inflight;
   } finally {
-    inflight = null;
+    // Clear only if a newer request (different signature) hasn't replaced ours.
+    if (inflightSignature === signature) {
+      inflight = null;
+      inflightSignature = null;
+    }
   }
 }
 

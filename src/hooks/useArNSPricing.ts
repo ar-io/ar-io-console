@@ -235,6 +235,9 @@ export function useArNSPricing(): UseArNSPricingReturn {
   };
 
   useEffect(() => {
+    // Guard against a superseded config: if configKey/creditsPerUSD change while
+    // a load is in flight, the stale run must not commit its (old-network) result.
+    let cancelled = false;
     const loadPricing = async () => {
       if (!creditsPerUSD) return;
 
@@ -262,6 +265,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
             },
           }));
 
+          if (cancelled) return;
           setPricingTiers(updatedTiers);
           setDemandFactor(cachedData.demandFactor);
           setLoading(false);
@@ -273,6 +277,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
 
         // Get the current demand factor once
         const currentDemandFactor = await ario.getDemandFactor();
+        if (cancelled) return;
         setDemandFactor(currentDemandFactor);
 
         // Fetch ARIO price and registration fees in parallel
@@ -354,6 +359,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
           });
         }
 
+        if (cancelled) return;
         setPricingTiers(tiers);
 
         // Cache the pricing data for future use
@@ -369,13 +375,16 @@ export function useArNSPricing(): UseArNSPricingReturn {
         console.log('ArNS pricing cached for 1 hour');
       } catch (err) {
         console.error('Failed to load ArNS pricing:', err);
-        setError('Failed to load ArNS pricing data');
+        if (!cancelled) setError('Failed to load ArNS pricing data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadPricing();
+    return () => {
+      cancelled = true;
+    };
   }, [creditsPerUSD, configKey]); // Re-run on rate change OR network-config change
 
   return {
