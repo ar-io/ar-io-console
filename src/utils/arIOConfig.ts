@@ -1,4 +1,9 @@
-import { ARIO, ANT, type SolanaSigner } from '@ar.io/sdk/solana';
+import {
+  ARIO,
+  ANT,
+  SolanaANTRegistryReadable,
+  type SolanaSigner,
+} from '@ar.io/sdk/solana';
 import { getPrimaryNamePDA, getPrimaryNameReversePDA, hashName } from '@ar.io/sdk/web';
 import {
   getMigratePrimaryNameReverseInstruction,
@@ -71,6 +76,26 @@ const getSolanaRpcClients = () => {
     rpc: createSolanaRpc(rpcUrl),
     rpcSubscriptions: createSolanaRpcSubscriptions(getSolanaWsUrl(rpcUrl)),
   };
+};
+
+/**
+ * A raw Solana read RPC bound to the active config's endpoint. For low-level
+ * reads (e.g. the MPL Core owner-scan in ACL-drift detection) that the SDK
+ * clients don't expose.
+ */
+export const getSolanaReadRpc = () => createSolanaRpc(getSolanaRpcUrl());
+
+/**
+ * ANT Registry read client bound to the active config's ANT program. Exposes
+ * `accessControlList({ address })` → `{ Owned, Controlled }`, the wallet's
+ * on-chain ACL used for ownership-drift detection.
+ */
+export const getANTRegistry = () => {
+  const config = getCurrentConfig();
+  return new SolanaANTRegistryReadable({
+    rpc: createSolanaRpc(getSolanaRpcUrl()) as any,
+    antProgramId: config.antProgramId as Address | undefined,
+  });
 };
 
 /**

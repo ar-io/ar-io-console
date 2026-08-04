@@ -323,6 +323,8 @@ export {
   getANT,
   getWritableARIO,
   getWritableANT,
+  getSolanaReadRpc,
+  getANTRegistry,
   removePrimaryName,
   WRITE_OPTIONS,
   createWalletAdapterTransactionSendingSigner,

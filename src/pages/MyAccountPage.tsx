@@ -15,6 +15,7 @@ import BalanceCard from '../components/account/BalanceCard';
 import CreditSharingSection from '../components/account/CreditSharingSection';
 import PaymentHistorySection from '@/components/account/PaymentHistorySection';
 import DomainsTable from '../components/account/DomainsTable';
+import SyncOwnershipBanner from '../components/account/SyncOwnershipBanner';
 import PrimaryNameCard from '../components/account/PrimaryNameCard';
 import LinkSolanaWalletModal from '../components/modals/LinkSolanaWalletModal';
 
@@ -199,6 +200,14 @@ export default function MyAccountPage() {
               />
             </div>
           )}
+
+          {/* Names owned on-chain but missing from the ACL index (out-of-band
+              ANT transfers) — shown regardless of the owned-names state, since
+              drifted names are exactly the ones not in that list. */}
+          <SyncOwnershipBanner
+            address={arnsAddress}
+            onSynced={() => fetchOwnedNames(true)}
+          />
 
           {loadingDomains ? (
             <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6 text-center">
