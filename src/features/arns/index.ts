@@ -9,6 +9,7 @@ export { default as ReturnedNameBuyModal } from './components/ReturnedNameBuyMod
 export { default as ManageDomainModal } from './components/ManageDomainModal';
 export { default as TransferDomainModal } from './components/TransferDomainModal';
 export { default as ReassignDomainModal } from './components/ReassignDomainModal';
+export { default as ReleaseDomainModal } from './components/ReleaseDomainModal';
 export { default as EditDetailsModal } from './components/EditDetailsModal';
 export { default as UndernamesModal } from './components/UndernamesModal';
 export { default as ControllersModal } from './components/ControllersModal';

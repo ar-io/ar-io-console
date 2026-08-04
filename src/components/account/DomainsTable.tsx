@@ -7,6 +7,7 @@ import {
   ManageDomainModal,
   TransferDomainModal,
   ReassignDomainModal,
+  ReleaseDomainModal,
   EditDetailsModal,
   UndernamesModal,
   ControllersModal,
@@ -68,6 +69,7 @@ export default function DomainsTable({
   const [managing, setManaging] = useState<ArNSName | null>(null);
   const [transferring, setTransferring] = useState<ArNSName | null>(null);
   const [reassigning, setReassigning] = useState<ArNSName | null>(null);
+  const [releasing, setReleasing] = useState<ArNSName | null>(null);
   const [editing, setEditing] = useState<ArNSName | null>(null);
   const [undernaming, setUndernaming] = useState<ArNSName | null>(null);
   const [controlling, setControlling] = useState<ArNSName | null>(null);
@@ -170,6 +172,17 @@ export default function DomainsTable({
                           onClick: () => setReassigning(domain),
                           danger: true,
                         },
+                        // Release only applies to permabuy names; leases expire
+                        // on their own, so there is nothing to release.
+                        ...(domain.type === 'permabuy'
+                          ? [
+                              {
+                                label: 'Release…',
+                                onClick: () => setReleasing(domain),
+                                danger: true,
+                              },
+                            ]
+                          : []),
                       ]}
                     />
                   </div>
@@ -198,6 +211,13 @@ export default function DomainsTable({
       <ReassignDomainModal
         domain={reassigning}
         onClose={() => setReassigning(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    {releasing && (
+      <ReleaseDomainModal
+        domain={releasing}
+        onClose={() => setReleasing(null)}
         onSuccess={onChanged}
       />
     )}
