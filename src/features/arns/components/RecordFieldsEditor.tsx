@@ -18,6 +18,12 @@ interface RecordFieldsEditorProps {
   disabled?: boolean;
   /** Prefix for label `htmlFor`/`id` uniqueness across multiple rows. */
   idPrefix: string;
+  /**
+   * When true, surface Nickname (displayName) + Description as first-class
+   * fields (default-visible) and move them out of Advanced — used for
+   * undernames, which read as mini-identities. Base `@` keeps them in Advanced.
+   */
+  promoteIdentity?: boolean;
 }
 
 /**
@@ -33,6 +39,7 @@ export default function RecordFieldsEditor({
   onChange,
   disabled,
   idPrefix,
+  promoteIdentity = false,
 }: RecordFieldsEditorProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const v = validateRecordFields(value);
@@ -131,6 +138,41 @@ export default function RecordFieldsEditor({
         </p>
       )}
 
+      {/* Identity fields (Nickname + Description) — first-class for undernames. */}
+      {promoteIdentity && (
+        <>
+          <label
+            htmlFor={`${idPrefix}-display`}
+            className="mb-1 mt-3 block text-sm font-medium"
+          >
+            Nickname
+          </label>
+          <input
+            id={`${idPrefix}-display`}
+            className={inputCls}
+            value={value.displayName}
+            onChange={(e) => set({ displayName: e.target.value })}
+            placeholder="Optional — a friendly name for this undername"
+            disabled={disabled}
+          />
+
+          <label
+            htmlFor={`${idPrefix}-desc`}
+            className="mb-1 mt-3 block text-sm font-medium"
+          >
+            Description
+          </label>
+          <textarea
+            id={`${idPrefix}-desc`}
+            className={`${inputCls} min-h-[60px] resize-y`}
+            value={value.description}
+            onChange={(e) => set({ description: e.target.value })}
+            placeholder="Optional — what this undername is for"
+            disabled={disabled}
+          />
+        </>
+      )}
+
       {/* Advanced disclosure */}
       <button
         type="button"
@@ -148,8 +190,9 @@ export default function RecordFieldsEditor({
       {advancedOpen && (
         <div className="mt-2 space-y-3 rounded-2xl border border-border/20 bg-card p-3">
           <p className="text-xs text-foreground/60">
-            These fields describe <span className="font-semibold">this record</span>{' '}
-            (distinct from the name&apos;s own nickname / logo / keywords).
+            Optional extra fields for{' '}
+            <span className="font-semibold">this record</span> (distinct from the
+            name&apos;s own metadata).
           </p>
 
           {/* Priority */}
@@ -177,23 +220,25 @@ export default function RecordFieldsEditor({
             )}
           </div>
 
-          {/* Display name */}
-          <div>
-            <label
-              htmlFor={`${idPrefix}-display`}
-              className="mb-1 block text-sm font-medium"
-            >
-              Record display name
-            </label>
-            <input
-              id={`${idPrefix}-display`}
-              className={inputCls}
-              value={value.displayName}
-              onChange={(e) => set({ displayName: e.target.value })}
-              placeholder="Optional label for this record"
-              disabled={disabled}
-            />
-          </div>
+          {/* Display name — only here when not promoted to a first-class field. */}
+          {!promoteIdentity && (
+            <div>
+              <label
+                htmlFor={`${idPrefix}-display`}
+                className="mb-1 block text-sm font-medium"
+              >
+                Record display name
+              </label>
+              <input
+                id={`${idPrefix}-display`}
+                className={inputCls}
+                value={value.displayName}
+                onChange={(e) => set({ displayName: e.target.value })}
+                placeholder="Optional label for this record"
+                disabled={disabled}
+              />
+            </div>
+          )}
 
           {/* Record logo */}
           <div>
@@ -211,23 +256,25 @@ export default function RecordFieldsEditor({
             )}
           </div>
 
-          {/* Record description */}
-          <div>
-            <label
-              htmlFor={`${idPrefix}-desc`}
-              className="mb-1 block text-sm font-medium"
-            >
-              Record description
-            </label>
-            <textarea
-              id={`${idPrefix}-desc`}
-              className={`${inputCls} min-h-[60px] resize-y`}
-              value={value.description}
-              onChange={(e) => set({ description: e.target.value })}
-              placeholder="What does this record point to?"
-              disabled={disabled}
-            />
-          </div>
+          {/* Record description — only here when not promoted. */}
+          {!promoteIdentity && (
+            <div>
+              <label
+                htmlFor={`${idPrefix}-desc`}
+                className="mb-1 block text-sm font-medium"
+              >
+                Record description
+              </label>
+              <textarea
+                id={`${idPrefix}-desc`}
+                className={`${inputCls} min-h-[60px] resize-y`}
+                value={value.description}
+                onChange={(e) => set({ description: e.target.value })}
+                placeholder="What does this record point to?"
+                disabled={disabled}
+              />
+            </div>
+          )}
 
           {/* Record keywords */}
           <div>

@@ -275,6 +275,7 @@ export default function UndernamesModal({
                         onChange={setEditRecord}
                         disabled={rowBusy}
                         idPrefix={`edit-${r.undername}`}
+                        promoteIdentity
                       />
                       <button
                         onClick={() => handleSaveEdit(r.undername)}
@@ -383,6 +384,7 @@ export default function UndernamesModal({
                 onChange={setNewRecord}
                 disabled={isBusy}
                 idPrefix="new-undername"
+                promoteIdentity
               />
             </div>
 
