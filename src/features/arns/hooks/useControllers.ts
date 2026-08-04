@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getANT, getWritableANT } from '../../../utils';
+import { useArNSConfigKey } from './useArNSConfigKey';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 
 /** The current controller set plus the owner, read for the Controllers editor. */
@@ -32,8 +33,9 @@ export function useControllersState(
   processId: string | undefined,
   enabled: boolean,
 ) {
+  const configKey = useArNSConfigKey();
   return useQuery<ControllersState>({
-    queryKey: ['ant-controllers', processId],
+    queryKey: ['ant-controllers', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 15_000,
     queryFn: async () => {

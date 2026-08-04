@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getANT } from '../../../utils';
+import { useArNSConfigKey } from './useArNSConfigKey';
 
 /** The editable metadata + base `@` record of an ANT, read for prefill. */
 export interface ANTDetails {
@@ -57,8 +58,9 @@ type ANTStateReadable = {
  * read on Solana); cached briefly and only fetched while the editor is open.
  */
 export function useANTDetails(processId: string | undefined, enabled: boolean) {
+  const configKey = useArNSConfigKey();
   return useQuery<ANTDetails>({
-    queryKey: ['ant-details', processId],
+    queryKey: ['ant-details', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 30_000,
     queryFn: async () => {

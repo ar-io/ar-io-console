@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getARIO } from '../../../utils';
 import { isValidSolanaAddress } from '../utils';
+import { useArNSConfigKey } from './useArNSConfigKey';
 
 /** The primary (reverse-resolution) name currently set for an address. */
 export interface PrimaryName {
@@ -42,11 +43,12 @@ type ARIOPrimaryReadable = {
  * Dedicated to the management UI: unlike `hooks/usePrimaryArNSName` (which
  * caches into the Zustand store and also resolves a logo for the header), this
  * hook reflects writes immediately via react-query `refetch`/`invalidate` on
- * the `['arns-primary-name', address]` key.
+ * the `['arns-primary-name', configKey, address]` key.
  */
 export function usePrimaryName(address: string | null | undefined, enabled: boolean) {
+  const configKey = useArNSConfigKey();
   return useQuery<PrimaryNameState>({
-    queryKey: ['arns-primary-name', address],
+    queryKey: ['arns-primary-name', configKey, address],
     enabled: enabled && !!address && isValidSolanaAddress(address),
     staleTime: 60_000,
     queryFn: async () => {

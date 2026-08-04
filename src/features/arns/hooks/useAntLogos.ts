@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getANT } from '../../../utils';
+import { useArNSConfigKey } from './useArNSConfigKey';
 
 /**
  * Structural view of the read-only ANT client's bulk summary loader. One
@@ -29,8 +30,9 @@ export function useAntLogos(processIds: string[]): Map<string, string> {
     [processIds],
   );
 
+  const configKey = useArNSConfigKey();
   const { data } = useQuery<Record<string, string>>({
-    queryKey: ['ant-logos', mints],
+    queryKey: ['ant-logos', configKey, mints],
     enabled: mints.length > 0,
     staleTime: 5 * 60_000,
     queryFn: async () => {

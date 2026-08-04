@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { mARIOToken } from '@ar.io/sdk';
 import { useCreditsForFiat } from './useCreditsForFiat';
 import { getARIO } from '../utils';
+import { useArNSConfigKey } from '../features/arns/hooks/useArNSConfigKey';
 
 interface ArNSPricingTier {
   characterLength: number;
@@ -40,6 +41,8 @@ interface ArNSPricingCache {
   arioUSDPrice: number;
   timestamp: number;
   creditsPerUSDAtCache: number; // Store the conversion rate used for cache
+  /** ArNS network config the prices were fetched against (see arnsConfigSignature). */
+  signature: string;
 }
 
 interface ArNSAffordabilityOption {
@@ -101,7 +104,7 @@ function getCategoryForLength(length: number): {
 }
 
 // Cache management functions
-function getCachedPricing(): ArNSPricingCache | null {
+function getCachedPricing(signature: string): ArNSPricingCache | null {
   try {
     const cached = localStorage.getItem(ARNS_PRICING_CACHE_KEY);
     if (!cached) return null;
@@ -111,6 +114,12 @@ function getCachedPricing(): ArNSPricingCache | null {
     // Check if cache is still valid
     if (Date.now() - data.timestamp > CACHE_DURATION_MS) {
       localStorage.removeItem(ARNS_PRICING_CACHE_KEY);
+      return null;
+    }
+
+    // Prices are network-specific: ignore a cache from a different config
+    // (gateway/program-ID/RPC or config-mode change).
+    if (data.signature !== signature) {
       return null;
     }
 
@@ -138,6 +147,10 @@ export function useArNSPricing(): UseArNSPricingReturn {
 
   // Get conversion rate from USD to Turbo credits
   const [creditsPerUSD] = useCreditsForFiat(1, () => {});
+
+  // Active ArNS network config: prices are network-specific, so a change must
+  // bypass the cache and refetch (see the effect deps below).
+  const configKey = useArNSConfigKey();
 
   const getPriceForName = async (
     name: string,
@@ -229,8 +242,8 @@ export function useArNSPricing(): UseArNSPricingReturn {
       setError(null);
 
       try {
-        // First, check if we have valid cached data
-        const cachedData = getCachedPricing();
+        // First, check if we have valid cached data (for the active network)
+        const cachedData = getCachedPricing(configKey);
 
         // If cache is valid and the credits conversion rate hasn't changed much (within 5%)
         if (cachedData && Math.abs(cachedData.creditsPerUSDAtCache - creditsPerUSD) / creditsPerUSD < 0.05) {
@@ -350,6 +363,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
           arioUSDPrice,
           timestamp: Date.now(),
           creditsPerUSDAtCache: creditsPerUSD,
+          signature: configKey,
         });
 
         console.log('ArNS pricing cached for 1 hour');
@@ -362,7 +376,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
     };
 
     loadPricing();
-  }, [creditsPerUSD]); // Re-run when credit conversion rate changes
+  }, [creditsPerUSD, configKey]); // Re-run on rate change OR network-config change
 
   return {
     pricingTiers,

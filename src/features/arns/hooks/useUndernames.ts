@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getANT, getWritableANT } from '../../../utils';
+import { useArNSConfigKey } from './useArNSConfigKey';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 
 /** One undername record, flattened for the editor (full field set). */
@@ -73,8 +74,9 @@ export function useUndernameRecords(
   processId: string | undefined,
   enabled: boolean,
 ) {
+  const configKey = useArNSConfigKey();
   return useQuery<UndernameRecord[]>({
-    queryKey: ['ant-undernames', processId],
+    queryKey: ['ant-undernames', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 15_000,
     queryFn: async () => {

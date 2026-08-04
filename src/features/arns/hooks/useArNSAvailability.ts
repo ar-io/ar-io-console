@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getARIO } from '../../../utils/arIOConfig';
 import { isValidArNSName, lowerCaseDomain } from '../utils';
 import { loadArNSRegistry } from './useAllArNSNames';
+import { useArNSConfigKey } from './useArNSConfigKey';
 
 export type ArNSAvailability = {
   available: boolean;
@@ -24,8 +25,9 @@ type RegistryIndex = {
  * rather than paged.
  */
 function useArNSRegistryIndex() {
+  const configKey = useArNSConfigKey();
   return useQuery<RegistryIndex>({
-    queryKey: ['arns-registry-index'],
+    queryKey: ['arns-registry-index', configKey],
     staleTime: 5 * 60_000,
     retry: false,
     queryFn: async () => {
@@ -63,13 +65,14 @@ function useArNSRegistryIndex() {
 export function useArNSAvailability(name: string) {
   const normalized = lowerCaseDomain(name);
   const enabled = normalized.length > 0 && isValidArNSName(normalized);
+  const configKey = useArNSConfigKey();
 
   const index = useArNSRegistryIndex();
   const indexReady = !!index.data;
 
   // Only runs until the index becomes available.
   const fallback = useQuery<ArNSAvailability>({
-    queryKey: ['arns-availability', normalized],
+    queryKey: ['arns-availability', configKey, normalized],
     enabled: enabled && !indexReady,
     staleTime: 30_000,
     retry: false,

@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getARIO } from '../../../utils';
-import { useStore } from '../../../store/useStore';
 import { isValidArNSName, lowerCaseDomain } from '../utils';
+import { useArNSConfigKey } from './useArNSConfigKey';
 import {
   clampPage,
   compareReturnedNames,
@@ -88,10 +88,10 @@ export function useReturnedNames(options: UseReturnedNamesOptions = {}) {
     now = Date.now(),
   } = options;
 
-  const configMode = useStore((s) => s.configMode);
+  const configKey = useArNSConfigKey();
 
   const query = useQuery<ReturnedNameRecord[]>({
-    queryKey: ['arns-returned-names', configMode],
+    queryKey: ['arns-returned-names', configKey],
     queryFn: loadReturnedNames,
     staleTime: STALE_MS,
     retry: 1,
@@ -161,12 +161,12 @@ export function useReturnedNames(options: UseReturnedNamesOptions = {}) {
  * Enabled only for a valid, non-empty name.
  */
 export function useReturnedName(name?: string) {
-  const configMode = useStore((s) => s.configMode);
+  const configKey = useArNSConfigKey();
   const normalized = name ? lowerCaseDomain(name) : '';
   const enabled = normalized.length > 0 && isValidArNSName(normalized);
 
   return useQuery<ReturnedNameRecord>({
-    queryKey: ['arns-returned-name', configMode, normalized],
+    queryKey: ['arns-returned-name', configKey, normalized],
     enabled,
     staleTime: STALE_MS,
     retry: 1,
@@ -188,10 +188,10 @@ export interface ReturnedNamePriceInputs {
  * 5 minutes and keyed by config mode.
  */
 export function useReturnedNamePriceInputs() {
-  const configMode = useStore((s) => s.configMode);
+  const configKey = useArNSConfigKey();
 
   return useQuery<ReturnedNamePriceInputs>({
-    queryKey: ['arns-returned-name-price-inputs', configMode],
+    queryKey: ['arns-returned-name-price-inputs', configKey],
     staleTime: STALE_MS,
     retry: 1,
     queryFn: async () => {

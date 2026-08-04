@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getANT, getARIO } from '../../../utils';
+import { readArNSConfigSignature } from './useArNSConfigKey';
 
 /**
  * Browse ALL ArNS names network-wide.
@@ -35,11 +36,28 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Module-level cache so the full registry survives route changes within a
 // session without bloating persisted localStorage (~700KB would be wasteful there).
-let registryCache: { records: AllArNSRecord[]; timestamp: number } | null = null;
+// `signature` pins the cache to the network config it was fetched against, so a
+// gateway/program-ID/RPC change (or config-mode switch) discards it rather than
+// serving another network's registry.
+let registryCache: { records: AllArNSRecord[]; timestamp: number; signature: string } | null = null;
 let inflight: Promise<AllArNSRecord[]> | null = null;
 
-// Lazily-resolved ANT targets, keyed by processId. Shared across mounts.
+// Lazily-resolved ANT targets, keyed by processId. Shared across mounts, and
+// dropped alongside the registry when the network config changes.
 const targetCache = new Map<string, string | null>();
+
+/**
+ * Drop the module-level registry + target caches when the active ArNS network
+ * config changes, so no read ever mixes data across networks. No-op when the
+ * signature is unchanged. Called at the top of every registry fetch.
+ */
+function evictCachesOnConfigChange(signature: string): void {
+  if (registryCache && registryCache.signature !== signature) {
+    registryCache = null;
+    inflight = null;
+    targetCache.clear();
+  }
+}
 
 /**
  * Fetch (and cache) the full ArNS registry. Exported so other features — e.g.
@@ -47,6 +65,10 @@ const targetCache = new Map<string, string | null>();
  * and module cache instead of issuing their own `getProgramAccounts`.
  */
 export async function loadArNSRegistry(forceRefresh = false): Promise<AllArNSRecord[]> {
+  const signature = readArNSConfigSignature();
+  // Discard a registry fetched against a different network before any cache hit.
+  evictCachesOnConfigChange(signature);
+
   if (!forceRefresh && registryCache && Date.now() - registryCache.timestamp < CACHE_TTL_MS) {
     return registryCache.records;
   }
@@ -67,7 +89,7 @@ export async function loadArNSRegistry(forceRefresh = false): Promise<AllArNSRec
       undernameLimit: r.undernameLimit,
       purchasePrice: r.purchasePrice,
     }));
-    registryCache = { records, timestamp: Date.now() };
+    registryCache = { records, timestamp: Date.now(), signature };
     return records;
   })();
 

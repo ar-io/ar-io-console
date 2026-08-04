@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { CostDetailsResult } from '@ar.io/sdk/solana';
 
 import { getARIO } from '../../../utils';
-import { useStore } from '../../../store/useStore';
+import { useArNSConfigKey } from './useArNSConfigKey';
 import { lowerCaseDomain } from '../utils';
 
 /** ArNS intents that carry a cost. */
@@ -94,7 +94,7 @@ export function useArNSCostDetails({
   fromAddress?: string;
   enabled?: boolean;
 }) {
-  const configMode = useStore((s) => s.configMode);
+  const configKey = useArNSConfigKey();
   const normalized = lowerCaseDomain(name);
   const active = enabled && normalized.length > 0;
 
@@ -108,7 +108,7 @@ export function useArNSCostDetails({
       increaseQty ?? '',
       fundFrom,
       fromAddress ?? '',
-      configMode,
+      configKey,
     ],
     enabled: active,
     staleTime: 60_000,

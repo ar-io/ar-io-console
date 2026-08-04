@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useStore } from '../../../store/useStore';
+import { useArNSConfigKey } from './useArNSConfigKey';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 import { useTurboArNSClient } from './useTurboArNSClient';
 import type { TurboArNSIntent } from '../services/TurboArNSClient';
@@ -46,7 +46,7 @@ export function useArNSPrice({
   enabled?: boolean;
 }) {
   const client = useTurboArNSClient();
-  const configMode = useStore((s) => s.configMode);
+  const configKey = useArNSConfigKey();
   const [creditsPerUSD] = useCreditsForFiat(1, () => {});
 
   const normalized = lowerCaseDomain(name);
@@ -60,7 +60,7 @@ export function useArNSPrice({
       type ?? '',
       type === 'lease' || intent === 'Extend-Lease' ? years : 'permabuy',
       increaseQty ?? '',
-      configMode,
+      configKey,
     ],
     enabled: active,
     staleTime: 60_000,

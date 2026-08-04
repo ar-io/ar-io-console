@@ -4,6 +4,7 @@ import { PublicKey } from '@solana/web3.js';
 
 import { getARIO } from '../../../utils';
 import { useStore } from '../../../store/useStore';
+import { useArNSConfigKey } from './useArNSConfigKey';
 
 const M_ARIO_PER_ARIO = 1e6;
 const LAMPORTS_PER_SOL = 1e9;
@@ -43,9 +44,10 @@ export function useArNSPaymentBalances(
 ): ArNSPaymentBalances {
   const { connection } = useConnection();
   const credits = useStore((s) => s.creditBalance);
+  const configKey = useArNSConfigKey();
 
   const arioQ = useQuery({
-    queryKey: ['arns-ario-balances', address],
+    queryKey: ['arns-ario-balances', configKey, address],
     enabled: !!address,
     staleTime: 30_000,
     queryFn: async () => {
