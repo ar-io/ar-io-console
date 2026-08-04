@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { User, Globe, RefreshCw, ExternalLink, AlertTriangle, Download } from 'lucide-react';
+import { User, Globe, RefreshCw, AlertTriangle, Download } from 'lucide-react';
 import { getExpiringDomains, expiryLabel, expirySortKey } from '../utils/domainExpiry';
 import { downloadDomainsCsv } from '../utils/domainCsv';
 import { ManageDomainModal } from '../features/arns';
@@ -29,6 +29,7 @@ export default function MyAccountPage() {
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [renewDomain, setRenewDomain] = useState<ArNSName | null>(null);
+  const [showAllDomains, setShowAllDomains] = useState(false);
 
   // Redirect to home if not logged in (declarative — never navigate during render)
   if (!address) {
@@ -231,22 +232,25 @@ export default function MyAccountPage() {
           ) : (
             <>
               <DomainsTable
-                domains={sortedDomains.slice(0, DOMAINS_SHOWN)}
+                domains={
+                  showAllDomains
+                    ? sortedDomains
+                    : sortedDomains.slice(0, DOMAINS_SHOWN)
+                }
                 onChanged={() => fetchOwnedNames(true)}
                 walletAddress={arnsAddress}
               />
 
               {ownedNames.length > DOMAINS_SHOWN && (
                 <div className="text-center mt-4">
-                  <a
-                    href="https://arns.ar.io/#/manage/names"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 py-2 text-primary hover:underline font-medium"
+                  <button
+                    onClick={() => setShowAllDomains((v) => !v)}
+                    className="inline-flex items-center justify-center gap-2 py-2 font-medium text-primary hover:underline"
                   >
-                    View all {ownedNames.length} domains
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+                    {showAllDomains
+                      ? 'Show fewer'
+                      : `Show all ${ownedNames.length} names`}
+                  </button>
                 </div>
               )}
             </>

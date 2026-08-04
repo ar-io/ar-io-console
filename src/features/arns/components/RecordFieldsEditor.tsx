@@ -120,7 +120,7 @@ export default function RecordFieldsEditor({
         htmlFor={`${idPrefix}-ttl`}
         className="mb-1 mt-3 block text-sm font-medium"
       >
-        TTL (seconds)
+        Cache time (TTL, seconds)
       </label>
       <input
         id={`${idPrefix}-ttl`}
@@ -132,9 +132,13 @@ export default function RecordFieldsEditor({
         max={MAX_TTL}
         disabled={disabled}
       />
+      <p className="mt-1 text-xs text-foreground/50">
+        How long ar.io gateways cache this record before re-checking. Lower =
+        updates show sooner; higher = faster repeat loads.
+      </p>
       {!v.ttlValid && (
         <p className="mt-1 text-xs text-error">
-          TTL must be between {MIN_TTL} and {MAX_TTL} seconds.
+          Cache time must be between {MIN_TTL} and {MAX_TTL} seconds.
         </p>
       )}
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Globe, ExternalLink, Loader2, RefreshCw, ChevronDown, Check, ChevronRight, Link as LinkIcon, Wallet } from 'lucide-react';
 import { Combobox } from '@headlessui/react';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
@@ -37,6 +38,7 @@ export default function ArNSAssociationPanel({
   onCustomTTLChange,
   bare = false,
 }: ArNSAssociationPanelProps) {
+  const navigate = useNavigate();
   const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, promptReconnect, showLinkModal, setShowLinkModal } = useLinkedSolanaWallet();
   const address = useStore((s) => s.address);
@@ -282,7 +284,7 @@ export default function ArNSAssociationPanel({
               </ul>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <button
-                  onClick={() => window.open('https://arns.ar.io', '_blank', 'noopener,noreferrer')}
+                  onClick={() => navigate('/arns')}
                   className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
                 >
                   <Globe className="h-4 w-4" />

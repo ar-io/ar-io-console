@@ -99,20 +99,24 @@ export default function ReassignDomainModal({
             </div>
 
             <label className="mb-2 block text-sm font-medium">
-              Target ANT process ID
+              Target name token (ANT) address
             </label>
             <input
               type="text"
               value={targetAnt}
               onChange={(e) => setTargetAnt(e.target.value)}
-              placeholder="ANT process ID you own"
+              placeholder="Address of an ANT you own"
               spellCheck={false}
               disabled={isBusy}
               className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
             />
+            <p className="mb-1 text-xs text-foreground/50">
+              Every ArNS name is controlled by a token (an ANT) that holds its
+              records. Reassigning points this name at a different one you own.
+            </p>
             {trimmed && !isValidSolanaAddress(trimmed) && (
               <p className="mb-2 text-xs text-error">
-                Enter a valid ANT process ID.
+                Enter a valid ANT address.
               </p>
             )}
             {trimmed && trimmed === domain.processId && (

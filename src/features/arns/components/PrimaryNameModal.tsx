@@ -148,7 +148,7 @@ export default function PrimaryNameModal({
               {TITLES[mode]}
             </h3>
             <p className="text-sm text-foreground/70">
-              The name your wallet reverse-resolves to.
+              The one name that stands for your wallet across ar.io apps.
             </p>
           </div>
         </div>

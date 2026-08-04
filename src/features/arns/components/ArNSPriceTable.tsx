@@ -77,7 +77,10 @@ export default function ArNSPriceTable() {
 
         <div className="flex items-center gap-2">
           {!loading && Number.isFinite(demandFactor) && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+              title="A network-wide price multiplier that rises when many names are being registered and eases back over time. It's already included in the prices below."
+            >
               Demand factor:{' '}
               {demandFactor.toLocaleString(undefined, {
                 maximumFractionDigits: 3,
