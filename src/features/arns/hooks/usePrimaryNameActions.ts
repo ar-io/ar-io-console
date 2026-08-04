@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { APP_NAME } from '../../../constants';
-import { getWritableARIO, WRITE_OPTIONS } from '../../../utils';
+import { getWritableARIO, removePrimaryName, WRITE_OPTIONS } from '../../../utils';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import type { ArNSBuyFundFrom } from './useBuyArNSName';
@@ -31,6 +31,8 @@ export interface UsePrimaryNameActionsResult {
   requestPrimaryName: (input: SetPrimaryNameInput) => Promise<string | undefined>;
   /** Base-name owner approves a pending primary-name request. */
   approveRequest: (input: ApprovePrimaryNameInput) => Promise<string | undefined>;
+  /** Remove the connected wallet's current primary name (clears reverse link). */
+  removePrimary: (name: string) => Promise<string | undefined>;
   reset: () => void;
   phase: PrimaryNamePhase;
   statusMessage: string;
@@ -253,10 +255,36 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
     [ensureSigner, signer],
   );
 
+  const removePrimary = useCallback(
+    async (name: string): Promise<string | undefined> => {
+      const lowered = lowerCaseDomain(name);
+      setError(undefined);
+      setInsufficientCredits(false);
+      ensureSigner();
+      try {
+        setPhase('submitting');
+        setStatusMessage(`Removing '${lowered}' as your primary name…`);
+        // No high-level SDK path on Solana — build the ario-core remove
+        // instructions directly (see utils/arIOConfig.removePrimaryName).
+        const id = await removePrimaryName(lowered, signer.getSolanaSigner());
+        setPhase('success');
+        setStatusMessage(`Removed '${lowered}' as your primary name.`);
+        return id;
+      } catch (err) {
+        const normalized = err instanceof Error ? err : new Error(String(err));
+        setPhase('error');
+        setError(normalized);
+        throw normalized;
+      }
+    },
+    [ensureSigner, signer],
+  );
+
   return {
     setPrimaryName,
     requestPrimaryName,
     approveRequest,
+    removePrimary,
     reset,
     phase,
     statusMessage,

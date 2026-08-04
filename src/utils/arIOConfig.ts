@@ -1,7 +1,25 @@
 import { ARIO, ANT, type SolanaSigner } from '@ar.io/sdk/solana';
+import { getPrimaryNamePDA, getPrimaryNameReversePDA, hashName } from '@ar.io/sdk/web';
 import {
+  getMigratePrimaryNameReverseInstruction,
+  getRemovePrimaryNameInstructionAsync,
+} from '@ar.io/solana-contracts/core';
+import {
+  getSetComputeUnitLimitInstruction,
+  getSetComputeUnitPriceInstruction,
+} from '@solana-program/compute-budget';
+import {
+  appendTransactionMessageInstructions,
   createSolanaRpc,
   createSolanaRpcSubscriptions,
+  createTransactionMessage,
+  fetchEncodedAccount,
+  getSignatureFromTransaction,
+  pipe,
+  sendAndConfirmTransactionFactory,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  signTransactionMessageWithSigners,
   address,
 } from '@solana/kit';
 import type {
@@ -124,6 +142,90 @@ export const getWritableANT = async (processId: string, signer: SolanaSigner) =>
     signer,
     antProgramId: config.antProgramId as Address | undefined,
   });
+};
+
+/**
+ * Remove the connected wallet's primary (reverse-resolution) name.
+ *
+ * There is no high-level SDK method for this on Solana — `ARIO.removePrimaryNames`
+ * throws "not applicable on Solana". So, like the arns-react app, we build the
+ * ario-core instructions directly and send them via `@solana/kit`:
+ *   1. `migrate_primary_name_reverse` — ONLY when the reverse PDA hasn't been
+ *      migrated to the current layout yet (older records); skipped otherwise.
+ *   2. `remove_primary_name` — clears the forward + reverse mapping.
+ *
+ * A single signature, gas-only (no ARIO price). The removed name still exists
+ * and is still owned — only the reverse (name → wallet) link is cleared.
+ */
+export const removePrimaryName = async (
+  name: string,
+  signer: SolanaSigner,
+): Promise<string> => {
+  const config = getCurrentConfig();
+  const { rpc, rpcSubscriptions } = getSolanaRpcClients();
+  const coreProgram = config.coreProgramId
+    ? (address(config.coreProgramId) as Address)
+    : undefined;
+
+  const [primaryNamePda] = coreProgram
+    ? await getPrimaryNamePDA(signer.address, coreProgram)
+    : await getPrimaryNamePDA(signer.address);
+  const [primaryNameReversePda] = coreProgram
+    ? await getPrimaryNameReversePDA(name, coreProgram)
+    : await getPrimaryNameReversePDA(name);
+
+  const ixs: any[] = [];
+
+  // The reverse PDA only needs migrating when it predates the current layout;
+  // if it already exists in the new form, skip the migrate ix.
+  const reverseAccount = await fetchEncodedAccount(rpc, primaryNameReversePda, {
+    commitment: 'confirmed',
+  });
+  if (!reverseAccount.exists) {
+    ixs.push(
+      getMigratePrimaryNameReverseInstruction(
+        { reverse: primaryNameReversePda, payer: signer as any },
+        coreProgram ? { programAddress: coreProgram } : undefined,
+      ),
+    );
+  }
+
+  ixs.push(
+    await getRemovePrimaryNameInstructionAsync(
+      {
+        primaryName: primaryNamePda,
+        primaryNameReverse: primaryNameReversePda,
+        owner: signer as any,
+        reverseLookupHash: hashName(name),
+      },
+      coreProgram ? { programAddress: coreProgram } : undefined,
+    ),
+  );
+
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+
+  const message = pipe(
+    createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(signer as any, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) =>
+      appendTransactionMessageInstructions(
+        [
+          getSetComputeUnitLimitInstruction({ units: 400_000 }),
+          getSetComputeUnitPriceInstruction({ microLamports: 0n }),
+          ...ixs,
+        ],
+        tx,
+      ),
+  );
+
+  const signedTx = await signTransactionMessageWithSigners(message);
+  const sendAndConfirm = sendAndConfirmTransactionFactory({
+    rpc: rpc as any,
+    rpcSubscriptions: rpcSubscriptions as any,
+  });
+  await sendAndConfirm(signedTx as any, { commitment: 'confirmed' });
+  return getSignatureFromTransaction(signedTx);
 };
 
 /**

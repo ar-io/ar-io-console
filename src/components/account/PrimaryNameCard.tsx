@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Loader2, Star } from 'lucide-react';
+import { AlertTriangle, Loader2, Star, XCircle } from 'lucide-react';
 
 import type { ArNSName } from '@/types';
 import {
   PrimaryNameModal,
   usePrimaryName,
+  usePrimaryNameActions,
   useArNSTurboSigner,
 } from '@/features/arns';
 import type { PrimaryNameModalMode } from '@/features/arns';
@@ -39,6 +40,12 @@ export default function PrimaryNameCard({
   const queryClient = useQueryClient();
   const { data, isLoading } = usePrimaryName(address, true);
   const [modalMode, setModalMode] = useState<PrimaryNameModalMode | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const {
+    removePrimary,
+    isBusy: removeBusy,
+    error: removeError,
+  } = usePrimaryNameActions();
 
   const current = data?.current;
   const request = data?.request;
@@ -63,6 +70,19 @@ export default function PrimaryNameCard({
   };
 
   const closeModal = () => setModalMode(null);
+
+  const handleRemove = async () => {
+    if (!current) return;
+    try {
+      const id = await removePrimary(current.name);
+      if (id) {
+        setConfirmingRemove(false);
+        handleChanged();
+      }
+    } catch {
+      /* surfaced via removeError */
+    }
+  };
 
   return (
     <div className="rounded-2xl border border-border/20 bg-card p-6">
@@ -91,18 +111,71 @@ export default function PrimaryNameCard({
       ) : (
         <div className="space-y-3">
           {current ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-sm text-primary">
-                {currentDisplay}.ar.io
-              </span>
-              <div className="flex items-center gap-3 text-sm">
-                <button
-                  onClick={() => setModalMode('change')}
-                  className="text-foreground/70 hover:text-foreground hover:underline"
-                >
-                  Change
-                </button>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-mono text-sm text-primary">
+                  {currentDisplay}.ar.io
+                </span>
+                <div className="flex items-center gap-3 text-sm">
+                  <button
+                    onClick={() => setModalMode('change')}
+                    disabled={removeBusy || confirmingRemove}
+                    className="text-foreground/70 hover:text-foreground hover:underline disabled:opacity-50"
+                  >
+                    Change
+                  </button>
+                  <button
+                    onClick={() => setConfirmingRemove(true)}
+                    disabled={removeBusy || confirmingRemove}
+                    className="text-error/80 hover:text-error hover:underline disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
+
+              {confirmingRemove && (
+                <div className="rounded-2xl border border-error/30 bg-error/10 p-3 text-sm">
+                  <p className="text-foreground/80">
+                    Remove{' '}
+                    <span className="font-mono text-foreground">
+                      {currentDisplay}.ar.io
+                    </span>{' '}
+                    as your primary name? Your wallet will no longer
+                    reverse-resolve to it. You still own the name and can set it
+                    again anytime.
+                  </p>
+                  {removeError && (
+                    <p className="mt-2 flex items-start gap-1.5 text-error">
+                      <XCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{removeError.message}</span>
+                    </p>
+                  )}
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={handleRemove}
+                      disabled={removeBusy}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-error px-4 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      {removeBusy ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />{' '}
+                          Removing…
+                        </>
+                      ) : (
+                        'Remove primary name'
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setConfirmingRemove(false)}
+                      disabled={removeBusy}
+                      className="rounded-full px-4 py-1.5 text-xs font-medium text-foreground/70 hover:text-foreground disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">

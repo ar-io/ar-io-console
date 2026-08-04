@@ -323,6 +323,7 @@ export {
   getANT,
   getWritableARIO,
   getWritableANT,
+  removePrimaryName,
   WRITE_OPTIONS,
   createWalletAdapterTransactionSendingSigner,
 } from './arIOConfig';
