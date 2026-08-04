@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { DEFAULT_ANT_TRANSACTION_ID } from '@ar.io/sdk/solana';
 
 import { MAX_KEYWORDS, MAX_TTL, MIN_TTL, parseKeywords, TARGET_PROTOCOL } from '../utils';
 import {
@@ -98,6 +99,12 @@ export default function RecordFieldsEditor({
           {isIpfs
             ? 'Enter a valid IPFS CID.'
             : 'Enter a valid 43-character Arweave TX ID.'}
+        </p>
+      )}
+      {value.target.trim() === DEFAULT_ANT_TRANSACTION_ID && (
+        <p className="mt-1 text-xs text-foreground/60">
+          Currently resolves to the default AR.IO placeholder — set a target to
+          point this name at your content.
         </p>
       )}
 

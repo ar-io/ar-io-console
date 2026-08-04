@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, ImageIcon, Loader2, Upload } from 'lucide-react';
+import { ARIO_LOGO_TX_ID } from '@ar.io/sdk/solana';
 
 import { useFileUpload } from '../../../hooks/useFileUpload';
 import {
@@ -9,6 +10,7 @@ import {
 import { useStore } from '../../../store/useStore';
 import { isArweaveTxId } from '../utils';
 import { IMAGE_ACCEPT, validateLogoFile } from '../logoUpload';
+import { compressImage } from '../imageCompress';
 
 const inputCls =
   'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
@@ -57,29 +59,60 @@ export default function LogoUploadField({
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  // Object-URL preview of the just-picked file, shown instantly (and while the
+  // upload runs) so there's never a blind moment before the gateway thumbnail.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   const canUpload = !!address;
+
+  // Set/clear the local file preview, always revoking the previous object URL.
+  const setPreview = (url: string | null) => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = url;
+    setPreviewUrl(url);
+  };
+
+  // Revoke any live object URL on unmount.
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    },
+    [],
+  );
 
   const handlePick = () => {
     if (disabled || status === 'uploading') return;
     fileInputRef.current?.click();
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    // Reset the input so re-picking the same file fires `onChange` again.
-    e.target.value = '';
-    if (!file) return;
-
+  const handleFile = async (file: File) => {
     setErrorMsg(null);
+    // Live preview of the selected file immediately (and during upload).
+    setPreview(URL.createObjectURL(file));
+
+    // Over the free tier? Try to compress it to fit before validating/uploading,
+    // so an oversized logo still uploads for free. Small images pass through
+    // untouched; a failed compress falls through to normal validation.
+    let toUpload = file;
+    if (freeUploadLimitBytes > 0 && file.size >= freeUploadLimitBytes) {
+      try {
+        toUpload = await compressImage(file, freeUploadLimitBytes - 1);
+      } catch {
+        toUpload = file;
+      }
+    }
+
     const validation = validateLogoFile(
-      { name: file.name, type: file.type, size: file.size },
+      { name: toUpload.name, type: toUpload.type, size: toUpload.size },
       freeUploadLimitBytes,
       bytesRemaining,
     );
     if (!validation.ok) {
+      setPreview(null);
       setStatus('error');
       setErrorMsg(validation.message);
       return;
@@ -90,7 +123,7 @@ export default function LogoUploadField({
     setStatus('uploading');
     setProgress(0);
     try {
-      const result = await uploadFile(file, {
+      const result = await uploadFile(toUpload, {
         onProgress: setProgress,
         signal: controller.signal,
       });
@@ -99,10 +132,13 @@ export default function LogoUploadField({
         throw new Error('Upload did not return a transaction ID.');
       }
       setPreviewFailed(false);
+      // Fall back to the gateway thumbnail now that the txId exists.
+      setPreview(null);
       onChange(txId);
       setStatus('idle');
       setProgress(0);
     } catch (err) {
+      setPreview(null);
       setStatus('error');
       setErrorMsg(
         err instanceof Error
@@ -114,7 +150,35 @@ export default function LogoUploadField({
     }
   };
 
-  const showPreview = isArweaveTxId(value) && !previewFailed;
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset the input so re-picking the same file fires `onChange` again.
+    e.target.value = '';
+    if (file) void handleFile(file);
+  };
+
+  const dropEnabled = !disabled && canUpload && status !== 'uploading';
+
+  const onDragOver = (e: React.DragEvent) => {
+    if (!dropEnabled) return;
+    e.preventDefault();
+    setDragOver(true);
+  };
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (!dropEnabled) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) void handleFile(file);
+  };
+
+  const showGatewayPreview =
+    !previewUrl && isArweaveTxId(value) && !previewFailed;
+  const isDefaultLogo = value === ARIO_LOGO_TX_ID;
 
   return (
     <div>
@@ -153,14 +217,22 @@ export default function LogoUploadField({
       </div>
 
       <div className="flex items-start gap-3">
-        {/* Thumbnail preview of the current TX id (both modes). */}
-        {showPreview && (
-          <img
-            src={`${arioGatewayUrl}/${value}`}
-            alt="Logo preview"
-            className="h-12 w-12 flex-shrink-0 rounded object-contain"
-            onError={() => setPreviewFailed(true)}
-          />
+        {/* Preview: the just-picked file (instant) or the current TX id's
+            gateway thumbnail (both modes). */}
+        {(previewUrl || showGatewayPreview) && (
+          <div className="flex flex-shrink-0 flex-col items-center gap-1">
+            <img
+              src={previewUrl ?? `${arioGatewayUrl}/${value}`}
+              alt="Logo preview"
+              className="h-12 w-12 rounded object-contain"
+              onError={previewUrl ? undefined : () => setPreviewFailed(true)}
+            />
+            {isDefaultLogo && !previewUrl && (
+              <span className="rounded-full bg-card px-2 py-0.5 text-[10px] font-medium text-foreground/50">
+                Default (AR.IO logo)
+              </span>
+            )}
+          </div>
         )}
 
         <div className="min-w-0 flex-1">
@@ -184,32 +256,48 @@ export default function LogoUploadField({
                 type="file"
                 accept={IMAGE_ACCEPT}
                 className="hidden"
-                onChange={handleFile}
+                onChange={onInputChange}
                 disabled={disabled}
               />
-              <button
-                type="button"
-                onClick={handlePick}
-                disabled={disabled || status === 'uploading'}
-                className="inline-flex items-center gap-2 rounded-full border border-border/20 bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+              <div
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                className={`rounded-2xl border border-dashed p-3 text-center transition-colors ${
+                  dragOver
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border/30 bg-card/50'
+                }`}
               >
-                {status === 'uploading' ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading… {progress}%
-                  </>
-                ) : isArweaveTxId(value) ? (
-                  <>
-                    <Check className="h-4 w-4 text-primary" />
-                    Choose a different image
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="h-4 w-4" />
-                    Choose image
-                  </>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={handlePick}
+                  disabled={disabled || status === 'uploading'}
+                  className="inline-flex items-center gap-2 rounded-full border border-border/20 bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {status === 'uploading' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading… {progress}%
+                    </>
+                  ) : isArweaveTxId(value) ? (
+                    <>
+                      <Check className="h-4 w-4 text-primary" />
+                      Choose a different image
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="h-4 w-4" />
+                      Choose image
+                    </>
+                  )}
+                </button>
+                <p className="mt-2 text-xs text-foreground/50">
+                  {dragOver
+                    ? 'Drop to upload'
+                    : 'or drag an image here — large images are compressed to upload free'}
+                </p>
+              </div>
               {isArweaveTxId(value) && status !== 'uploading' && (
                 <p className="mt-1 truncate font-mono text-xs text-foreground/60">
                   {value}

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Globe, ExternalLink, AlertTriangle } from 'lucide-react';
+import { ARIO_LOGO_TX_ID } from '@ar.io/sdk/solana';
 import { ArNSName } from '@/types';
 import { daysUntil, isExpiringSoon } from '@/utils/domainExpiry';
 import {
@@ -11,9 +12,31 @@ import {
   ControllersModal,
   PrimaryNameModal,
 } from '@/features/arns';
+import { useAntLogos } from '@/features/arns/hooks/useAntLogos';
+import { useStore } from '@/store/useStore';
 import RowActionsMenu from './RowActionsMenu';
 
 const visitUrl = (name: string) => `https://${name}.ar.io`;
+
+/**
+ * A name's ANT logo thumbnail, falling back to the Globe icon when there's no
+ * logo, on load error, or when the logo is still the default AR.IO placeholder
+ * (so real, user-set logos stand out from un-configured names).
+ */
+function NameLogo({ logo, gatewayUrl }: { logo?: string; gatewayUrl: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!logo || logo === ARIO_LOGO_TX_ID || failed) {
+    return <Globe className="h-4 w-4 flex-shrink-0 text-primary" />;
+  }
+  return (
+    <img
+      src={`${gatewayUrl}/${logo}`}
+      alt=""
+      className="h-6 w-6 flex-shrink-0 rounded object-contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 function StatusCell({ domain }: { domain: ArNSName }) {
   if (domain.type === 'permabuy') {
@@ -50,6 +73,13 @@ export default function DomainsTable({
   const [controlling, setControlling] = useState<ArNSName | null>(null);
   const [settingPrimary, setSettingPrimary] = useState<ArNSName | null>(null);
 
+  const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
+  const processIds = useMemo(
+    () => domains.map((d) => d.processId).filter(Boolean),
+    [domains],
+  );
+  const logos = useAntLogos(processIds);
+
   return (
     <>
     <div className="overflow-x-auto rounded-2xl border border-border/20 bg-card">
@@ -72,7 +102,10 @@ export default function DomainsTable({
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 flex-shrink-0 text-primary" />
+                    <NameLogo
+                      logo={logos.get(domain.processId)}
+                      gatewayUrl={arioGatewayUrl}
+                    />
                     <span className="truncate font-medium text-foreground" title={`${domain.displayName}.ar.io`}>
                       {domain.displayName}.ar.io
                     </span>
