@@ -75,29 +75,38 @@ export function formatPriceDisplay({
   ario,
   usdPerArio,
   currency,
+  withUnit = true,
 }: {
   ario: number | undefined;
   usdPerArio: number | undefined;
   currency: PriceDisplayCurrency;
+  /**
+   * Append the " ARIO" unit to the primary value. Set false for dense tables
+   * where the unit is shown once (via the ARIO/USD toggle) instead of on every
+   * cell — the disambiguating secondary "≈ …" line always keeps its unit.
+   * The USD primary always keeps its "$" (a compact, universal prefix).
+   */
+  withUnit?: boolean;
 }): PriceDisplay {
   if (ario == null || !Number.isFinite(ario)) {
     return { primary: '—' };
   }
 
   const usd = arioToUsd(ario, usdPerArio);
-  const arioStr = `${formatArioAmount(ario)} ARIO`;
+  const arioBare = formatArioAmount(ario);
+  const arioStr = `${arioBare} ARIO`;
 
   if (currency === 'usd') {
     if (usd == null) {
       // Graceful fallback: no rate → show ARIO rather than a broken dollar value.
-      return { primary: arioStr };
+      return { primary: withUnit ? arioStr : arioBare };
     }
     return { primary: formatUsdAmount(usd), secondary: `≈ ${arioStr}` };
   }
 
   // currency === 'ario'
   return {
-    primary: arioStr,
+    primary: withUnit ? arioStr : arioBare,
     secondary: usd == null ? undefined : `≈ ${formatUsdAmount(usd)}`,
   };
 }

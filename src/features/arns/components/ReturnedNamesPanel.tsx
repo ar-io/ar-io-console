@@ -292,7 +292,8 @@ export default function ReturnedNamesPanel() {
                   <PriceAmount
                     ario={estPriceArio(r, multiplier)}
                     compact
-                    primaryClassName="text-sm text-foreground/80"
+                    unit={false}
+                    primaryClassName="text-sm text-foreground/80 tabular-nums"
                   />
                 </div>
 

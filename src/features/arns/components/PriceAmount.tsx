@@ -16,12 +16,16 @@ import { formatPriceDisplay } from '../priceDisplay';
 export default function PriceAmount({
   ario,
   compact = false,
+  unit = true,
   className = '',
   primaryClassName = 'text-lg font-bold text-foreground',
 }: {
   ario?: number;
   /** Hide the secondary "≈ …" line (for tight table cells). */
   compact?: boolean;
+  /** Append the " ARIO" unit to the value. Off for dense tables where the unit
+   *  is shown once via the ARIO/USD toggle. USD keeps its "$". */
+  unit?: boolean;
   className?: string;
   /** Classes for the primary value (defaults to the cost-breakdown style). */
   primaryClassName?: string;
@@ -33,6 +37,7 @@ export default function PriceAmount({
     ario,
     usdPerArio,
     currency,
+    withUnit: unit,
   });
 
   return (

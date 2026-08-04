@@ -94,4 +94,28 @@ describe('formatPriceDisplay', () => {
       primary: '—',
     });
   });
+
+  it('drops the ARIO suffix when withUnit is false (dense tables)', () => {
+    const out = formatPriceDisplay({
+      ario: 1772,
+      usdPerArio: 0.05,
+      currency: 'ario',
+      withUnit: false,
+    });
+    expect(out.primary).toBe('1,772');
+    // The disambiguating secondary line keeps its unit.
+    expect(out.secondary).toContain('$');
+  });
+
+  it('keeps the $ on the USD primary regardless of withUnit', () => {
+    const out = formatPriceDisplay({
+      ario: 1000,
+      usdPerArio: 0.05,
+      currency: 'usd',
+      withUnit: false,
+    });
+    expect(out.primary).toBe('$50.00');
+    // USD secondary still shows the ARIO unit for disambiguation.
+    expect(out.secondary).toBe('≈ 1,000 ARIO');
+  });
 });
