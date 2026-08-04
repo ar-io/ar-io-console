@@ -32,6 +32,7 @@ import { auctionMultiplier, formatCountdown } from '../returnedNamePricing';
 import { ArNSFundingSource, ArNSPaymentSelector } from './ArNSPaymentSelector';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import EditDetailsModal from './EditDetailsModal';
+import ReturnedNamePremiumChart from './ReturnedNamePremiumChart';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -182,6 +183,20 @@ export default function ReturnedNameBuyModal({
                 {countdown}
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Premium-decay chart */}
+        {buyState.phase === 'idle' && !auctionEnded && (
+          <div className="mb-4 rounded-2xl border border-border/20 bg-card px-4 pb-2 pt-3">
+            <p className="mb-1 text-xs text-foreground/60">
+              Premium falls as the auction runs
+            </p>
+            <ReturnedNamePremiumChart
+              startTimestamp={startTimestamp}
+              endTimestamp={endTimestamp}
+              now={now}
+            />
           </div>
         )}
 
