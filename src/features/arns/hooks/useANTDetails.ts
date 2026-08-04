@@ -15,20 +15,39 @@ export interface ANTDetails {
   target?: string;
   /** Base `@` record TTL in seconds. */
   ttlSeconds?: number;
+  // --- Base `@` record fields (DISTINCT from the ANT-level metadata above). ---
+  /** Target storage protocol: 0 = Arweave, 1 = IPFS. */
+  targetProtocol?: number;
+  priority?: number;
+  /** Explicit record owner; undefined defaults to the ANT owner. */
+  recordOwner?: string;
+  recordDisplayName?: string;
+  recordLogo?: string;
+  recordDescription?: string;
+  recordKeywords?: string[];
 }
 
 /** Structural view of the read-only ANT client's state getter. */
+type ANTRecordState = {
+  transactionId?: string;
+  ttlSeconds?: number;
+  targetProtocol?: number;
+  priority?: number;
+  owner?: string;
+  displayName?: string;
+  logo?: string;
+  description?: string;
+  keywords?: string[];
+};
+
 type ANTStateReadable = {
-  getState(): Promise<{
+  getState(opts?: { includeMetadata?: boolean }): Promise<{
     Name?: string;
     Ticker?: string;
     Description?: string;
     Keywords?: string[];
     Logo?: string;
-    Records?: Record<
-      string,
-      { transactionId?: string; ttlSeconds?: number } | undefined
-    >;
+    Records?: Record<string, ANTRecordState | undefined>;
   }>;
 };
 
@@ -44,7 +63,7 @@ export function useANTDetails(processId: string | undefined, enabled: boolean) {
     staleTime: 30_000,
     queryFn: async () => {
       const ant = (await getANT(processId as string)) as unknown as ANTStateReadable;
-      const state = await ant.getState();
+      const state = await ant.getState({ includeMetadata: true });
       const apex = state.Records?.['@'];
       return {
         name: state.Name ?? '',
@@ -54,6 +73,13 @@ export function useANTDetails(processId: string | undefined, enabled: boolean) {
         logo: state.Logo ?? '',
         target: apex?.transactionId,
         ttlSeconds: apex?.ttlSeconds,
+        targetProtocol: apex?.targetProtocol,
+        priority: apex?.priority,
+        recordOwner: apex?.owner,
+        recordDisplayName: apex?.displayName,
+        recordLogo: apex?.logo,
+        recordDescription: apex?.description,
+        recordKeywords: Array.isArray(apex?.keywords) ? apex?.keywords : undefined,
       };
     },
   });

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Globe, Search } from 'lucide-react';
+import { Flame, Globe, Search } from 'lucide-react';
 
-import { ArNSBuyPanel, BrowseDomainsPanel } from '../features/arns';
+import { ArNSBuyPanel, BrowseDomainsPanel, ReturnedNamesPanel } from '../features/arns';
 
-type DomainsTab = 'buy' | 'browse';
+type DomainsTab = 'buy' | 'browse' | 'auctions';
 
 /**
  * Domains page — the "Search Domains" nav entry. Hosts the in-console ArNS buy
@@ -38,10 +38,23 @@ export default function DomainsPage() {
             <Globe className="w-4 h-4" />
             Browse All
           </button>
+          <button
+            onClick={() => setTab('auctions')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              tab === 'auctions'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-foreground/70 hover:text-foreground'
+            }`}
+          >
+            <Flame className="w-4 h-4" />
+            Auctions
+          </button>
         </div>
       </div>
 
-      {tab === 'buy' ? <ArNSBuyPanel /> : <BrowseDomainsPanel />}
+      {tab === 'buy' && <ArNSBuyPanel />}
+      {tab === 'browse' && <BrowseDomainsPanel />}
+      {tab === 'auctions' && <ReturnedNamesPanel />}
     </div>
   );
 }

@@ -4,18 +4,33 @@ import {
   Info,
   Loader2,
   Save,
+  ShieldAlert,
   Tag,
   XCircle,
 } from 'lucide-react';
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
-import { isArweaveTxId, parseKeywords } from '../utils';
+import {
+  DEFAULT_TTL,
+  isArweaveTxId,
+  isValidSolanaAddress,
+  MAX_KEYWORDS,
+  parseKeywords,
+  TARGET_PROTOCOL,
+} from '../utils';
 import { useANTDetails } from '../hooks/useANTDetails';
+import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
 import {
   ArNSMetadataChanges,
   useSetArNSMetadata,
 } from '../hooks/useSetArNSMetadata';
+import RecordFieldsEditor from './RecordFieldsEditor';
+import {
+  RecordFieldsState,
+  toRecordChange,
+  validateRecordFields,
+} from '../recordFields';
 
 interface EditDetailsModalProps {
   domain: ArNSName;
@@ -24,19 +39,15 @@ interface EditDetailsModalProps {
   onSuccess?: () => void;
 }
 
-const DEFAULT_TTL = 3600;
-const MIN_TTL = 60;
-const MAX_TTL = 2_592_000; // 30 days
-const MAX_KEYWORDS = 16;
-
 const arraysEqual = (a: string[], b: string[]) =>
   a.length === b.length && a.every((x, i) => x === b[i]);
 
 /**
  * Edit an owned name's ANT metadata (nickname, ticker, description, keywords,
- * logo) and its base `@` target record. Each changed field is a separate ANT
- * write / wallet signature — there's no batch setter — so the modal saves only
- * what changed and shows per-field progress.
+ * logo) and its base `@` target record. ANT-level fields are each a separate
+ * write / wallet signature; the base record saves in ONE signature (all its
+ * fields bundled); a record-ownership transfer is one more signature. The modal
+ * saves only what changed and shows per-op progress.
  */
 export default function EditDetailsModal({
   domain,
@@ -44,43 +55,85 @@ export default function EditDetailsModal({
   onSuccess,
 }: EditDetailsModalProps) {
   const details = useANTDetails(domain.processId, true);
+  const signer = useArNSTurboSigner();
   const { apply, phase, progress, completed, error, isBusy } =
     useSetArNSMetadata();
 
-  // Form fields — seeded from the loaded ANT state once it arrives.
+  // ANT-level metadata fields.
   const [name, setName] = useState('');
   const [ticker, setTicker] = useState('');
   const [description, setDescription] = useState('');
   const [keywordsRaw, setKeywordsRaw] = useState('');
   const [logo, setLogo] = useState('');
-  const [target, setTarget] = useState('');
-  const [ttl, setTtl] = useState(String(DEFAULT_TTL));
+  // Base `@` record editor state + its original (for diffing).
+  const [record, setRecord] = useState<RecordFieldsState>(() => ({
+    target: '',
+    protocol: TARGET_PROTOCOL.arweave,
+    ttl: String(DEFAULT_TTL),
+    priority: '',
+    displayName: '',
+    logo: '',
+    description: '',
+    keywordsRaw: '',
+  }));
+  const [origRecord, setOrigRecord] = useState<RecordFieldsState | null>(null);
+  // Record ownership transfer.
+  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [recipient, setRecipient] = useState('');
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
     if (details.data && !seeded) {
-      setName(details.data.name);
-      setTicker(details.data.ticker);
-      setDescription(details.data.description);
-      setKeywordsRaw(details.data.keywords.join(', '));
-      setLogo(details.data.logo);
-      setTarget(details.data.target ?? '');
-      setTtl(String(details.data.ttlSeconds ?? DEFAULT_TTL));
+      const d = details.data;
+      setName(d.name);
+      setTicker(d.ticker);
+      setDescription(d.description);
+      setKeywordsRaw(d.keywords.join(', '));
+      setLogo(d.logo);
+      const seededRecord: RecordFieldsState = {
+        target: d.target ?? '',
+        protocol: d.targetProtocol ?? TARGET_PROTOCOL.arweave,
+        ttl: String(d.ttlSeconds ?? DEFAULT_TTL),
+        priority: d.priority !== undefined ? String(d.priority) : '',
+        displayName: d.recordDisplayName ?? '',
+        logo: d.recordLogo ?? '',
+        description: d.recordDescription ?? '',
+        keywordsRaw: (d.recordKeywords ?? []).join(', '),
+      };
+      setRecord(seededRecord);
+      setOrigRecord(seededRecord);
       setSeeded(true);
     }
   }, [details.data, seeded]);
 
   const orig = details.data;
   const keywords = useMemo(() => parseKeywords(keywordsRaw), [keywordsRaw]);
-  const ttlNum = Number(ttl);
 
-  // Per-field validity for the fields the user actually touched.
+  // ANT-level metadata validity.
   const logoValid = logo.trim() === '' || isArweaveTxId(logo);
-  const targetTrimmed = target.trim();
-  const targetValid = targetTrimmed === '' || isArweaveTxId(targetTrimmed);
-  const ttlValid =
-    Number.isInteger(ttlNum) && ttlNum >= MIN_TTL && ttlNum <= MAX_TTL;
   const keywordsValid = keywords.length <= MAX_KEYWORDS;
+
+  // Base record validity + diff.
+  const recordValidity = validateRecordFields(record);
+  const recordChanged = useMemo(() => {
+    if (!origRecord) return false;
+    return (
+      JSON.stringify(toRecordChange(record)) !==
+      JSON.stringify(toRecordChange(origRecord))
+    );
+  }, [record, origRecord]);
+
+  // Ownership: recipient must be a valid, changed Solana address.
+  const currentRecordOwner =
+    orig?.recordOwner ?? signer.address ?? undefined;
+  const recipientTrimmed = recipient.trim();
+  const recipientValid = isValidSolanaAddress(recipientTrimmed);
+  const recipientIsSelf =
+    recipientTrimmed !== '' &&
+    (recipientTrimmed === currentRecordOwner ||
+      recipientTrimmed === signer.address);
+  const ownershipChanged =
+    ownerOpen && recipientTrimmed !== '' && recipientValid && !recipientIsSelf;
 
   // Diff vs. the loaded state — only changed + valid fields are written.
   const changes: ArNSMetadataChanges = useMemo(() => {
@@ -93,17 +146,13 @@ export default function EditDetailsModal({
     // Logo can be changed but not cleared (setLogo requires a txId).
     if (logo.trim() && logo.trim() !== orig.logo && isArweaveTxId(logo))
       c.logo = logo.trim();
-    // Base record needs a valid target txId; TTL can't be set without one.
-    const targetChanged = targetTrimmed !== (orig.target ?? '');
-    const ttlChanged = ttlNum !== (orig.ttlSeconds ?? DEFAULT_TTL);
-    if (
-      targetTrimmed &&
-      isArweaveTxId(targetTrimmed) &&
-      ttlValid &&
-      (targetChanged || ttlChanged)
-    ) {
-      c.baseRecord = { transactionId: targetTrimmed, ttlSeconds: ttlNum };
+    // Base record: whenever ANY record field changed, resend the FULL param
+    // set (setBaseNameRecord requires transactionId + ttlSeconds every time).
+    if (recordChanged && recordValidity.allValid) {
+      c.baseRecord = toRecordChange(record);
     }
+    // Ownership transfer is its own op.
+    if (ownershipChanged) c.baseRecordOwner = recipientTrimmed;
     return c;
   }, [
     orig,
@@ -112,14 +161,28 @@ export default function EditDetailsModal({
     description,
     keywords,
     logo,
-    targetTrimmed,
-    ttlNum,
-    ttlValid,
+    record,
+    recordChanged,
+    recordValidity.allValid,
+    ownershipChanged,
+    recipientTrimmed,
   ]);
 
   const changeCount = Object.keys(changes).length;
-  const allValid = logoValid && targetValid && ttlValid && keywordsValid;
-  const canSave = seeded && changeCount > 0 && allValid && !isBusy;
+  // Block save if a touched-but-invalid field would silently drop.
+  const antLevelValid = logoValid && keywordsValid;
+  const recordBlocks = recordChanged && !recordValidity.allValid;
+  const ownershipBlocks =
+    ownerOpen &&
+    recipientTrimmed !== '' &&
+    (!recipientValid || recipientIsSelf);
+  const canSave =
+    seeded &&
+    changeCount > 0 &&
+    antLevelValid &&
+    !recordBlocks &&
+    !ownershipBlocks &&
+    !isBusy;
 
   const handleSave = async () => {
     try {
@@ -174,9 +237,10 @@ export default function EditDetailsModal({
           <>
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-              Each changed field is saved as a separate transaction, so expect
-              one wallet approval per field. It&apos;s free apart from a tiny SOL
-              network fee.
+              Each ANT metadata field is its own transaction; the record saves in
+              one approval (all its fields together); a record-ownership transfer
+              is a separate approval. It&apos;s free apart from a tiny SOL network
+              fee.
             </div>
 
             {/* Nickname */}
@@ -247,52 +311,66 @@ export default function EditDetailsModal({
 
             <div className="my-4 border-t border-border/20" />
 
-            {/* Base @ target record */}
-            <label className="mb-1 block text-sm font-medium">
+            {/* Base @ record */}
+            <h4 className="mb-1 text-sm font-semibold text-foreground">
               Target (base <span className="font-mono">@</span> record)
-            </label>
-            <p className="mb-2 text-xs text-foreground/60">
-              The Arweave TX ID this name resolves to. Set this so{' '}
-              {domain.displayName}.ar.io points at your content.
+            </h4>
+            <p className="mb-3 text-xs text-foreground/60">
+              Where {domain.displayName}.ar.io resolves. Choose the storage
+              protocol, then enter the target.
             </p>
-            <input
-              className={`${inputCls} font-mono`}
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder="43-character transaction ID"
-              spellCheck={false}
+            <RecordFieldsEditor
+              value={record}
+              onChange={setRecord}
               disabled={isBusy}
+              idPrefix="base-record"
             />
-            {!targetValid && (
-              <p className="mt-1 text-xs text-error">
-                Enter a valid 43-character Arweave TX ID.
-              </p>
-            )}
 
-            <label className="mb-1 mt-3 block text-sm font-medium">
-              TTL (seconds)
-            </label>
-            <input
-              type="number"
-              className={inputCls}
-              value={ttl}
-              onChange={(e) => setTtl(e.target.value)}
-              min={MIN_TTL}
-              max={MAX_TTL}
-              disabled={isBusy}
-            />
-            {!ttlValid && (
-              <p className="mt-1 text-xs text-error">
-                TTL must be between {MIN_TTL} and {MAX_TTL} seconds.
-              </p>
-            )}
+            {/* Record ownership */}
+            <div className="mt-4 rounded-2xl border border-error/20 bg-error/10 p-3">
+              <button
+                type="button"
+                onClick={() => setOwnerOpen((o) => !o)}
+                className="flex w-full items-center gap-2 text-left text-sm font-semibold text-error"
+              >
+                <ShieldAlert className="h-4 w-4 flex-shrink-0" />
+                Transfer record ownership
+              </button>
+              {ownerOpen && (
+                <div className="mt-3">
+                  <p className="mb-2 text-xs text-error/90">
+                    Hand this record&apos;s ownership to another Solana wallet.
+                    This is a separate approval and cannot be undone by you.
+                  </p>
+                  <input
+                    className={`${inputCls} font-mono`}
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    placeholder="Recipient Solana address"
+                    spellCheck={false}
+                    disabled={isBusy}
+                  />
+                  {recipientTrimmed !== '' && !recipientValid && (
+                    <p className="mt-1 text-xs text-error">
+                      Enter a valid Solana address.
+                    </p>
+                  )}
+                  {recipientIsSelf && (
+                    <p className="mt-1 text-xs text-error">
+                      This wallet already owns this record.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Progress / error */}
             {isBusy && (
               <div className="mt-4 flex items-center gap-2 text-sm text-foreground/70">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Saving {progress.label} — {Math.min(progress.done + 1, progress.total)}{' '}
-                of {progress.total} (approve in your wallet)…
+                Saving {progress.label} —{' '}
+                {Math.min(progress.done + 1, progress.total)} of {progress.total}{' '}
+                (approve in your wallet)…
               </div>
             )}
             {phase === 'error' && error && (

@@ -8,6 +8,8 @@ import {
   ReassignDomainModal,
   EditDetailsModal,
   UndernamesModal,
+  ControllersModal,
+  PrimaryNameModal,
 } from '@/features/arns';
 import RowActionsMenu from './RowActionsMenu';
 
@@ -45,6 +47,8 @@ export default function DomainsTable({
   const [reassigning, setReassigning] = useState<ArNSName | null>(null);
   const [editing, setEditing] = useState<ArNSName | null>(null);
   const [undernaming, setUndernaming] = useState<ArNSName | null>(null);
+  const [controlling, setControlling] = useState<ArNSName | null>(null);
+  const [settingPrimary, setSettingPrimary] = useState<ArNSName | null>(null);
 
   return (
     <>
@@ -116,6 +120,14 @@ export default function DomainsTable({
                           onClick: () => setUndernaming(domain),
                         },
                         {
+                          label: 'Controllers',
+                          onClick: () => setControlling(domain),
+                        },
+                        {
+                          label: 'Set as primary',
+                          onClick: () => setSettingPrimary(domain),
+                        },
+                        {
                           label: 'Transfer…',
                           onClick: () => setTransferring(domain),
                           danger: true,
@@ -167,6 +179,23 @@ export default function DomainsTable({
       <UndernamesModal
         domain={undernaming}
         onClose={() => setUndernaming(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    {controlling && (
+      <ControllersModal
+        domain={controlling}
+        onClose={() => setControlling(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    {settingPrimary && (
+      <PrimaryNameModal
+        mode="set"
+        ownedNames={domains}
+        presetName={settingPrimary.displayName}
+        presetProcessId={settingPrimary.processId}
+        onClose={() => setSettingPrimary(null)}
         onSuccess={onChanged}
       />
     )}

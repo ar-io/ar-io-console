@@ -4,11 +4,16 @@
 // Page / panel
 export { ArNSBuyPanel, default as ArNSBuyPanelDefault } from './ArNSBuyPanel';
 export { default as BrowseDomainsPanel } from './components/BrowseDomainsPanel';
+export { default as ReturnedNamesPanel } from './components/ReturnedNamesPanel';
+export { default as ReturnedNameBuyModal } from './components/ReturnedNameBuyModal';
 export { default as ManageDomainModal } from './components/ManageDomainModal';
 export { default as TransferDomainModal } from './components/TransferDomainModal';
 export { default as ReassignDomainModal } from './components/ReassignDomainModal';
 export { default as EditDetailsModal } from './components/EditDetailsModal';
 export { default as UndernamesModal } from './components/UndernamesModal';
+export { default as ControllersModal } from './components/ControllersModal';
+export { default as PrimaryNameModal } from './components/PrimaryNameModal';
+export type { PrimaryNameModalMode } from './components/PrimaryNameModal';
 
 // Service layer (reusable, framework-agnostic) — the extension point for later
 // phases (extend / increase-undername / upgrade / custodial manage + transfer).
@@ -38,12 +43,54 @@ export type { ManageIntent, ManageArNSInput } from './hooks/useManageArNSName';
 export { useANTDetails } from './hooks/useANTDetails';
 export type { ANTDetails } from './hooks/useANTDetails';
 export { useSetArNSMetadata, buildMetadataOps } from './hooks/useSetArNSMetadata';
-export type { ArNSMetadataChanges } from './hooks/useSetArNSMetadata';
+export type {
+  ArNSMetadataChanges,
+  BaseRecordChange,
+} from './hooks/useSetArNSMetadata';
 export { useUndernameRecords, useUndernameWrites } from './hooks/useUndernames';
-export type { UndernameRecord } from './hooks/useUndernames';
+export type {
+  UndernameRecord,
+  UndernameRecordChange,
+} from './hooks/useUndernames';
+export { useControllersState, useControllerWrites } from './hooks/useControllers';
+export type { ControllersState } from './hooks/useControllers';
 export { useAllArNSNames, loadArNSRegistry } from './hooks/useAllArNSNames';
 export type { AllArNSRecord, AllArNSSortKey } from './hooks/useAllArNSNames';
 export { useArNSPrice } from './hooks/useArNSPrice';
 export { useBuyArNSName } from './hooks/useBuyArNSName';
 export type { ArNSRegistrationType } from './hooks/useArNSPrice';
 export type { BuyArNSNameInput, BuyPhase } from './hooks/useBuyArNSName';
+export { usePrimaryName } from './hooks/usePrimaryName';
+export type {
+  PrimaryName,
+  PrimaryNameRequest,
+  PrimaryNameState,
+} from './hooks/usePrimaryName';
+export { usePrimaryNameActions } from './hooks/usePrimaryNameActions';
+export type { PrimaryNamePhase } from './hooks/usePrimaryNameActions';
+export {
+  useReturnedNames,
+  useReturnedName,
+  useReturnedNamePriceInputs,
+} from './hooks/useReturnedNames';
+export type {
+  ReturnedNameRecord,
+  ReturnedNameSortKey,
+  ReturnedNameSortOrder,
+} from './hooks/useReturnedNames';
+export { useBuyReturnedName } from './hooks/useBuyReturnedName';
+export type {
+  BuyReturnedNameInput,
+  BuyReturnedNamePhase,
+  BuyReturnedNameResult,
+} from './hooks/useBuyReturnedName';
+export {
+  auctionMultiplier,
+  estimateReturnedNameArio,
+  auctionTimeRemainingMs,
+  formatCountdown,
+  isAuctionActive,
+  baseAnnualMARIOForName,
+  START_RNP_PREMIUM,
+} from './returnedNamePricing';
+export type { ReturnedNameFees } from './returnedNamePricing';

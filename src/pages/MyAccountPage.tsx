@@ -15,6 +15,7 @@ import BalanceCard from '../components/account/BalanceCard';
 import CreditSharingSection from '../components/account/CreditSharingSection';
 import PaymentHistorySection from '@/components/account/PaymentHistorySection';
 import DomainsTable from '../components/account/DomainsTable';
+import PrimaryNameCard from '../components/account/PrimaryNameCard';
 import LinkSolanaWalletModal from '../components/modals/LinkSolanaWalletModal';
 
 const DOMAINS_SHOWN = 10;
@@ -186,6 +187,16 @@ export default function MyAccountPage() {
                   Renew
                 </button>
               </div>
+            </div>
+          )}
+
+          {arnsAddress && (
+            <div className="mb-4">
+              <PrimaryNameCard
+                address={arnsAddress}
+                ownedNames={ownedNames}
+                onChanged={() => fetchOwnedNames(true)}
+              />
             </div>
           )}
 

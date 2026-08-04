@@ -15,6 +15,13 @@ interface Props {
   onMethodChange: (m: ArNSPaymentMethod) => void;
   onSourceChange: (s: ArNSFundingSource) => void;
   disabled?: boolean;
+  /**
+   * Hide the Credits/ARIO method toggle and show only the ARIO funding-source
+   * picker. Used where paying with Turbo Credits is not a valid option (e.g.
+   * returned-name auctions, which always settle from the wallet's ARIO at the
+   * premium price — see ReturnedNameBuyModal).
+   */
+  hideMethodToggle?: boolean;
 }
 
 function MethodCard({
@@ -104,30 +111,36 @@ export function ArNSPaymentSelector({
   onMethodChange,
   onSourceChange,
   disabled,
+  hideMethodToggle = false,
 }: Props) {
+  const showSources = hideMethodToggle || method === 'ario';
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium">Pay with</label>
-      <div className="mb-3 grid grid-cols-2 gap-3">
-        <MethodCard
-          active={method === 'credits'}
-          disabled={disabled}
-          onClick={() => onMethodChange('credits')}
-          icon={<Coins className="h-4 w-4" />}
-          title="Turbo Credits"
-          sub={`${fmt(balances.credits)} available`}
-        />
-        <MethodCard
-          active={method === 'ario'}
-          disabled={disabled}
-          onClick={() => onMethodChange('ario')}
-          icon={<Wallet className="h-4 w-4" />}
-          title="ARIO tokens"
-          sub={`${fmt(balances.totalArio)} ARIO available`}
-        />
-      </div>
+      {!hideMethodToggle && (
+        <>
+          <label className="mb-2 block text-sm font-medium">Pay with</label>
+          <div className="mb-3 grid grid-cols-2 gap-3">
+            <MethodCard
+              active={method === 'credits'}
+              disabled={disabled}
+              onClick={() => onMethodChange('credits')}
+              icon={<Coins className="h-4 w-4" />}
+              title="Turbo Credits"
+              sub={`${fmt(balances.credits)} available`}
+            />
+            <MethodCard
+              active={method === 'ario'}
+              disabled={disabled}
+              onClick={() => onMethodChange('ario')}
+              icon={<Wallet className="h-4 w-4" />}
+              title="ARIO tokens"
+              sub={`${fmt(balances.totalArio)} ARIO available`}
+            />
+          </div>
+        </>
+      )}
 
-      {method === 'ario' && (
+      {showSources && (
         <div className="mb-3 space-y-2">
           <p className="text-xs font-medium text-foreground/70">Funding source</p>
           <SourceRow

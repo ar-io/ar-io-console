@@ -4,31 +4,64 @@ import { useQuery } from '@tanstack/react-query';
 import { getANT, getWritableANT } from '../../../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 
-/** One undername record, flattened for the editor. */
+/** One undername record, flattened for the editor (full field set). */
 export interface UndernameRecord {
   undername: string;
   transactionId: string;
   ttlSeconds: number;
+  /** Target storage protocol: 0 = Arweave, 1 = IPFS. */
+  targetProtocol: number;
+  priority?: number;
+  /** Explicit record owner; undefined defaults to the ANT owner. */
+  owner?: string;
+  displayName?: string;
+  logo?: string;
+  description?: string;
+  keywords?: string[];
 }
+
+/** The base-record param set threaded into a `setUndernameRecord` write. */
+export interface UndernameRecordChange {
+  transactionId: string;
+  ttlSeconds: number;
+  targetProtocol: number;
+  priority?: number;
+  displayName?: string;
+  logo?: string;
+  description?: string;
+  keywords?: string[];
+}
+
+type ANTRecordReadState = {
+  transactionId?: string;
+  ttlSeconds?: number;
+  targetProtocol?: number;
+  priority?: number;
+  owner?: string;
+  displayName?: string;
+  logo?: string;
+  description?: string;
+  keywords?: string[];
+  index?: number;
+};
 
 /** Structural view of the read-only ANT client's records getter. */
 type ANTRecordsReadable = {
-  getRecords(): Promise<
-    Record<
-      string,
-      { transactionId?: string; ttlSeconds?: number; index?: number } | undefined
-    >
-  >;
+  getRecords(opts?: {
+    includeMetadata?: boolean;
+  }): Promise<Record<string, ANTRecordReadState | undefined>>;
 };
 
 /** Structural view of the ANT writeable's undername setters. */
 type ANTUndernameWriteable = {
-  setUndernameRecord(p: {
-    undername: string;
-    transactionId: string;
-    ttlSeconds: number;
-  }): Promise<{ id: string }>;
+  setUndernameRecord(
+    p: { undername: string } & UndernameRecordChange,
+  ): Promise<{ id: string }>;
   removeUndernameRecord(p: { undername: string }): Promise<{ id: string }>;
+  transferRecord(p: {
+    undername: string;
+    recipient: string;
+  }): Promise<{ id: string }>;
 };
 
 /**
@@ -46,21 +79,26 @@ export function useUndernameRecords(
     staleTime: 15_000,
     queryFn: async () => {
       const ant = (await getANT(processId as string)) as unknown as ANTRecordsReadable;
-      const records = await ant.getRecords();
+      const records = await ant.getRecords({ includeMetadata: true });
       return Object.entries(records)
         .filter(([key]) => key !== '@')
         .map(([undername, rec]) => ({
-          undername,
-          transactionId: rec?.transactionId ?? '',
-          ttlSeconds: rec?.ttlSeconds ?? 0,
           index: rec?.index ?? Number.MAX_SAFE_INTEGER,
+          record: {
+            undername,
+            transactionId: rec?.transactionId ?? '',
+            ttlSeconds: rec?.ttlSeconds ?? 0,
+            targetProtocol: rec?.targetProtocol ?? 0,
+            priority: rec?.priority,
+            owner: rec?.owner,
+            displayName: rec?.displayName,
+            logo: rec?.logo,
+            description: rec?.description,
+            keywords: Array.isArray(rec?.keywords) ? rec?.keywords : undefined,
+          } satisfies UndernameRecord,
         }))
         .sort((a, b) => a.index - b.index)
-        .map(({ undername, transactionId, ttlSeconds }) => ({
-          undername,
-          transactionId,
-          ttlSeconds,
-        }));
+        .map((entry) => entry.record);
     },
   });
 }
@@ -95,7 +133,7 @@ export function useUndernameWrites() {
     async (
       processId: string,
       undername: string,
-      record: { transactionId: string; ttlSeconds: number },
+      record: UndernameRecordChange,
     ): Promise<boolean> => {
       setError(undefined);
       ensureSigner();
@@ -107,6 +145,36 @@ export function useUndernameWrites() {
           signer.getSolanaSigner(),
         )) as unknown as ANTUndernameWriteable;
         await ant.setUndernameRecord({ undername, ...record });
+        setPhase('success');
+        return true;
+      } catch (err) {
+        const normalized = err instanceof Error ? err : new Error(String(err));
+        setPhase('error');
+        setError(normalized);
+        throw normalized;
+      } finally {
+        setBusyKey(null);
+      }
+    },
+    [ensureSigner, signer],
+  );
+
+  const transferUndernameOwnership = useCallback(
+    async (
+      processId: string,
+      undername: string,
+      recipient: string,
+    ): Promise<boolean> => {
+      setError(undefined);
+      ensureSigner();
+      setPhase('submitting');
+      setBusyKey(undername);
+      try {
+        const ant = (await getWritableANT(
+          processId,
+          signer.getSolanaSigner(),
+        )) as unknown as ANTUndernameWriteable;
+        await ant.transferRecord({ undername, recipient });
         setPhase('success');
         return true;
       } catch (err) {
@@ -156,6 +224,7 @@ export function useUndernameWrites() {
   return {
     saveUndername,
     removeUndername,
+    transferUndernameOwnership,
     reset,
     phase,
     busyKey,

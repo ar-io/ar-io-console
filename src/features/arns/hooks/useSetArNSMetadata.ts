@@ -6,10 +6,30 @@ import { useArNSTurboSigner } from './useArNSTurboSigner';
 export type SetMetadataPhase = 'idle' | 'submitting' | 'success' | 'error';
 
 /**
+ * The full base `@` record param set. `setBaseNameRecord` bundles all of these
+ * into ONE transaction (metadata is a second instruction in the same tx), so an
+ * entire record — target, protocol, ttl, and the advanced fields — saves in a
+ * single wallet signature. `owner` is deliberately NOT part of this shape:
+ * record-ownership transfers route through the separate `baseRecordOwner` op.
+ */
+export interface BaseRecordChange {
+  transactionId: string;
+  ttlSeconds: number;
+  /** Storage protocol: 0 = Arweave, 1 = IPFS. */
+  targetProtocol: number;
+  priority?: number;
+  displayName?: string;
+  logo?: string;
+  description?: string;
+  keywords?: string[];
+}
+
+/**
  * A diff of ANT metadata + base `@` record fields to write. Only include the
- * fields that changed — each present field becomes its own on-chain write (and
- * its own wallet signature). `baseRecord` carries transactionId + ttlSeconds
- * together because `setBaseNameRecord` sets them atomically.
+ * fields that changed. ANT-level metadata fields (name/ticker/description/
+ * keywords/logo) each become their own on-chain write (and wallet signature).
+ * `baseRecord` bundles every base-record field into a SINGLE `setBaseNameRecord`
+ * write. `baseRecordOwner` is a SEPARATE op — a record-ownership transfer.
  */
 export interface ArNSMetadataChanges {
   name?: string;
@@ -17,7 +37,9 @@ export interface ArNSMetadataChanges {
   description?: string;
   keywords?: string[];
   logo?: string;
-  baseRecord?: { transactionId: string; ttlSeconds: number };
+  baseRecord?: BaseRecordChange;
+  /** New owner for the base `@` record — its own `transferRecord` signature. */
+  baseRecordOwner?: string;
 }
 
 /** Structural view of the ANT writeable's metadata + base-record setters. */
@@ -27,9 +49,10 @@ type ANTMetadataWriteable = {
   setDescription(p: { description: string }): Promise<{ id: string }>;
   setKeywords(p: { keywords: string[] }): Promise<{ id: string }>;
   setLogo(p: { txId: string }): Promise<{ id: string }>;
-  setBaseNameRecord(p: {
-    transactionId: string;
-    ttlSeconds: number;
+  setBaseNameRecord(p: BaseRecordChange): Promise<{ id: string }>;
+  transferRecord(p: {
+    undername: string;
+    recipient: string;
   }): Promise<{ id: string }>;
 };
 
@@ -44,8 +67,9 @@ export interface MetadataProgress {
 
 /**
  * Build the ordered list of write operations from a changes diff. Order is
- * fixed (name → ticker → description → keywords → logo → target) so progress is
- * deterministic and testable.
+ * fixed (name → ticker → description → keywords → logo → target → record owner)
+ * so progress is deterministic and testable. The base record saves in a single
+ * op (all its fields bundled); a record-ownership transfer is a separate op.
  */
 function buildOps(
   changes: ArNSMetadataChanges,
@@ -74,6 +98,12 @@ function buildOps(
     ops.push({
       label: 'Target',
       run: (a) => a.setBaseNameRecord(changes.baseRecord!),
+    });
+  if (changes.baseRecordOwner !== undefined)
+    ops.push({
+      label: 'Record owner',
+      run: (a) =>
+        a.transferRecord({ undername: '@', recipient: changes.baseRecordOwner! }),
     });
   return ops;
 }
