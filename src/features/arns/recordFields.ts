@@ -72,7 +72,9 @@ export function validateRecordFields(
   const priorityValid =
     s.priority.trim() === '' ||
     (Number.isInteger(Number(s.priority)) && Number(s.priority) >= 0);
-  const logoValid = s.logo.trim() === '' || isArweaveTxId(s.logo);
+  // Validate the trimmed value (the write path sends `s.logo.trim()`), so a
+  // pasted TX ID with surrounding whitespace isn't wrongly rejected.
+  const logoValid = s.logo.trim() === '' || isArweaveTxId(s.logo.trim());
   const keywordsValid = parseKeywords(s.keywordsRaw).length <= MAX_KEYWORDS;
   return {
     targetValid,

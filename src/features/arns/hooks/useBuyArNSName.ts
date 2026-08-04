@@ -53,7 +53,10 @@ type ARIOBuyWriteable = {
  */
 function isInsufficientCredits(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return /insufficient|not enough|balance too low|underfunded|exceeds balance|402/i.test(
+  // `\b402\b` (not a bare `402`) so unrelated digit runs — tx-signature
+  // fragments, program error codes, slot numbers — aren't misread as an
+  // insufficient-funds / HTTP-402 signal and swallowed as a top-up prompt.
+  return /insufficient|not enough|balance too low|underfunded|exceeds balance|\b402\b/i.test(
     msg,
   );
 }

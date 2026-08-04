@@ -220,7 +220,9 @@ export default function LogoUploadField({
         </div>
       </div>
 
-      {mode === 'upload' && !canUpload && (
+      {/* Show whenever signed out — the Upload toggle is disabled in that state,
+          so gating on `mode === 'upload'` would make this hint unreachable. */}
+      {!canUpload && (
         <p className="mt-2 flex items-center gap-1 text-xs text-foreground/60">
           <Upload className="h-3 w-3" />
           Connect a wallet to upload, or paste an existing TX ID.

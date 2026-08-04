@@ -167,15 +167,17 @@ export function compareReturnedNames<T extends ReturnedNameWindow>(
 /**
  * Base annual (1-year lease) fee in mARIO for a name of `nameLength` chars,
  * picking the fee bucket. Lengths > 12 collapse to the "13+" tier (same rule as
- * `useArNSPricing.ts`). Returns undefined when no usable bucket is present so
- * the caller can hide the estimate rather than show a wrong price.
+ * `useArNSPricing.ts`). Returns undefined when the exact bucket is absent so the
+ * caller can hide the estimate rather than show a wrong price. We DON'T fall
+ * back to bucket 13 for a 1–12 char name: bucket 13 is the longest/cheapest
+ * tier, so that fallback would under-quote a short name.
  */
 export function baseAnnualMARIOForName(
   fees: ReturnedNameFees,
   nameLength: number,
 ): number | undefined {
   const bucketKey = nameLength > 12 ? 13 : Math.max(1, nameLength);
-  const entry = fees[bucketKey] ?? fees[13];
+  const entry = fees[bucketKey];
   const annual = entry?.lease?.[1];
   return typeof annual === 'number' && Number.isFinite(annual) ? annual : undefined;
 }

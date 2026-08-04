@@ -185,8 +185,9 @@ export default function ReturnedNameBuyModal({
           </div>
         )}
 
-        {/* Auction ended */}
-        {auctionEnded && buyState.phase !== 'success' && (
+        {/* Auction ended — only while idle, so it never competes with a terminal
+            error (the clock can tick past `end` mid-submit; the failure must win). */}
+        {auctionEnded && buyState.phase === 'idle' && (
           <div className="rounded-2xl border border-error/20 bg-error/10 p-5 text-sm">
             <div className="mb-1 flex items-center gap-2 font-semibold text-error">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -478,8 +479,10 @@ export default function ReturnedNameBuyModal({
           </div>
         )}
 
-        {/* Error / insufficient ARIO */}
-        {buyState.phase === 'error' && !auctionEnded && (
+        {/* Error / insufficient ARIO — gated on phase, NOT the auction window: a
+            submit that fails as the clock passes `end` must still show its reason
+            (incl. the "your ANT was created — retry" hint), not the ended banner. */}
+        {buyState.phase === 'error' && (
           buyState.insufficientCredits ? (
             <div className="rounded-2xl border border-warning/30 bg-warning/10 p-5">
               <div className="flex items-start gap-3">

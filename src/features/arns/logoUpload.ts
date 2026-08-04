@@ -15,6 +15,7 @@ export const ACCEPTED_IMAGE_MIME = [
   'image/webp',
   'image/svg+xml',
   'image/x-icon',
+  'image/vnd.microsoft.icon',
   'image/bmp',
 ] as const;
 
@@ -87,7 +88,7 @@ export function validateLogoFile(
     return {
       ok: false,
       reason: 'not-image',
-      message: 'Choose an image file (PNG, JPG, GIF, WebP, SVG, or ICO).',
+      message: 'Choose an image file (PNG, JPG, GIF, WebP, SVG, ICO, or BMP).',
     };
   }
   if (desc.size <= 0) {

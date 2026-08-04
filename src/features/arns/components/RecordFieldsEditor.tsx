@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Tag } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { MAX_KEYWORDS, MAX_TTL, MIN_TTL, parseKeywords, TARGET_PROTOCOL } from '../utils';
 import {
@@ -37,6 +37,15 @@ export default function RecordFieldsEditor({
   const v = validateRecordFields(value);
   const set = (patch: Partial<RecordFieldsState>) =>
     onChange({ ...value, ...patch });
+
+  // The Advanced fields (priority / logo / keywords) feed `allValid`, so an
+  // invalid one silently blocks save while the section is collapsed. Auto-open
+  // it so the error is visible and actionable.
+  const advancedInvalid =
+    !v.priorityValid || !v.logoValid || !v.keywordsValid;
+  useEffect(() => {
+    if (advancedInvalid) setAdvancedOpen(true);
+  }, [advancedInvalid]);
 
   const keywordCount = parseKeywords(value.keywordsRaw).length;
   const isIpfs = value.protocol === TARGET_PROTOCOL.ipfs;

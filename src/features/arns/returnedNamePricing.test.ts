@@ -256,10 +256,18 @@ describe('baseAnnualMARIOForName', () => {
     expect(baseAnnualMARIOForName(fees, 20)).toBe(100);
   });
 
-  it('returns undefined when neither the bucket nor the 13+ fallback exists', () => {
+  it('does NOT fall back to the cheap 13+ bucket for a short name whose exact bucket is absent', () => {
+    // Bucket 3 is missing; falling back to fees[13] (100) would under-quote a
+    // 3-char name, so we return undefined and hide the estimate instead.
+    expect(baseAnnualMARIOForName(fees, 3)).toBeUndefined();
+  });
+
+  it('returns undefined when the exact bucket is absent', () => {
     const sparse: ReturnedNameFees = { 13: { lease: {}, permabuy: 500 } };
-    // length 3 → bucket 3 missing, fallback fees[13] has no lease['1']
+    // length 3 → bucket 3 missing (no fallback to 13 for short names)
     expect(baseAnnualMARIOForName(sparse, 3)).toBeUndefined();
     expect(baseAnnualMARIOForName({}, 3)).toBeUndefined();
+    // length > 12 with an empty 13+ lease also yields undefined
+    expect(baseAnnualMARIOForName(sparse, 20)).toBeUndefined();
   });
 });

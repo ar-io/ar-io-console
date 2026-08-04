@@ -135,7 +135,13 @@ export function useArioUsdRate(): number | undefined {
   const turboConfig = useTurboConfig('ario');
 
   const { data } = useQuery({
-    queryKey: ['arioUsdRate', turboConfig.paymentServiceConfig.url],
+    // Key on the ARIO gateway too: it can change independently of the
+    // payment-service URL, and a stale cached rate would otherwise survive it.
+    queryKey: [
+      'arioUsdRate',
+      turboConfig.paymentServiceConfig.url,
+      turboConfig.gatewayUrl,
+    ],
     queryFn: async () => {
       const turbo = TurboFactory.unauthenticated({
         ...turboConfig,

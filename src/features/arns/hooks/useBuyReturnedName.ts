@@ -59,7 +59,10 @@ type ARIOReturnedNameWriteable = {
  */
 function isInsufficientCredits(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return /insufficient|not enough|balance too low|underfunded|exceeds balance|402/i.test(
+  // `\b402\b` (not a bare `402`) so unrelated digit runs — tx-signature
+  // fragments, program error codes, slot numbers — aren't misread as an
+  // insufficient-funds / HTTP-402 signal and swallowed as a top-up prompt.
+  return /insufficient|not enough|balance too low|underfunded|exceeds balance|\b402\b/i.test(
     msg,
   );
 }
@@ -93,12 +96,28 @@ export function useBuyReturnedName() {
   // Survives a step-2 retry within the same mount so we never re-spawn an ANT.
   const spawnedProcessId = useRef<string | undefined>();
 
+  /**
+   * Retry-safe reset (the "Try again" path): clears only the transient UI/error
+   * state and returns to `idle` so the user can re-submit. It DELIBERATELY
+   * preserves `spawnedProcessId.current` and the persisted pending entry, so a
+   * post-spawn failure retry REUSES the already-spawned ANT instead of spending
+   * another ~0.02–0.076 SOL on a fresh spawn.
+   */
   const reset = useCallback(() => {
     setPhase('idle');
     setProgress({ done: 0, total: 2, label: '' });
     setResult(undefined);
     setError(undefined);
     setInsufficientCredits(false);
+  }, []);
+
+  /**
+   * Discard the spawned ANT + persisted resume state. Only for terminal
+   * outcomes — a completed purchase (settled below) or an explicit "start over /
+   * new name" — where reusing the old ANT would be wrong. NEVER call this on a
+   * retry.
+   */
+  const clearSpawn = useCallback(() => {
     spawnedProcessId.current = undefined;
     clearPendingArNSPurchase();
   }, []);
@@ -189,8 +208,7 @@ export function useBuyReturnedName() {
         setProgress({ done: 2, total: 2, label: '' });
         setPhase('success');
         // Purchase settled — clear resume state and refresh balances.
-        clearPendingArNSPurchase();
-        spawnedProcessId.current = undefined;
+        clearSpawn();
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return settlement;
       } catch (err) {
@@ -212,12 +230,13 @@ export function useBuyReturnedName() {
         throw normalized;
       }
     },
-    [signer, getCurrentConfig],
+    [signer, getCurrentConfig, clearSpawn],
   );
 
   return {
     buy,
     reset,
+    clearSpawn,
     phase,
     progress,
     result,

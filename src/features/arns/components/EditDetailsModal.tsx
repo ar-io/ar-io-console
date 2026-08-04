@@ -110,8 +110,9 @@ export default function EditDetailsModal({
   const orig = details.data;
   const keywords = useMemo(() => parseKeywords(keywordsRaw), [keywordsRaw]);
 
-  // ANT-level metadata validity.
-  const logoValid = logo.trim() === '' || isArweaveTxId(logo);
+  // ANT-level metadata validity. Validate the TRIMMED value so a pasted TX ID
+  // with surrounding whitespace isn't rejected (the write path sends trimmed).
+  const logoValid = logo.trim() === '' || isArweaveTxId(logo.trim());
   const keywordsValid = keywords.length <= MAX_KEYWORDS;
 
   // Base record validity + diff.

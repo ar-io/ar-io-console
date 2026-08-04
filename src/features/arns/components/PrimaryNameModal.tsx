@@ -102,8 +102,11 @@ export default function PrimaryNameModal({
   const handleSet = async () => {
     if (!selected) return;
     try {
-      await setPrimaryName({ name: selected.name });
-      afterWrite();
+      // Insufficient-credits failures resolve to `undefined` (the write did NOT
+      // land) while surfacing the error via state — mirror ManageDomainModal and
+      // only fire onSuccess when we actually got a tx id back.
+      const id = await setPrimaryName({ name: selected.name });
+      if (id) afterWrite();
     } catch {
       /* surfaced via error */
     }
@@ -112,11 +115,11 @@ export default function PrimaryNameModal({
   const handleApprove = async () => {
     if (!pendingRequest) return;
     try {
-      await approveRequest({
+      const id = await approveRequest({
         name: pendingRequest.name,
         address: pendingRequest.initiator,
       });
-      afterWrite();
+      if (id) afterWrite();
     } catch {
       /* surfaced via error */
     }
@@ -326,7 +329,10 @@ export default function PrimaryNameModal({
                 </div>
                 {insufficientCredits && (
                   <button
-                    onClick={() => navigate('/topup')}
+                    onClick={() => {
+                      onClose();
+                      navigate('/topup');
+                    }}
                     className="mt-2 font-semibold text-primary hover:underline"
                   >
                     Top up credits →

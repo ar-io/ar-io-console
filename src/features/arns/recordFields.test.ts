@@ -67,6 +67,8 @@ describe('validateRecordFields', () => {
     expect(v('')).toBe(true);
     expect(v('b'.repeat(43))).toBe(true);
     expect(v('too-short')).toBe(false);
+    // A pasted TX ID with surrounding whitespace is valid (validated trimmed).
+    expect(v(`  ${'b'.repeat(43)}  `)).toBe(true);
   });
 
   it('caps keywords at 16', () => {

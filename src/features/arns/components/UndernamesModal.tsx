@@ -258,6 +258,7 @@ export default function UndernamesModal({
                           <button
                             onClick={() => handleRemove(r.undername)}
                             disabled={isBusy}
+                            aria-label={`Remove undername ${r.undername}`}
                             className="inline-flex items-center gap-1 text-error hover:underline disabled:opacity-50"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

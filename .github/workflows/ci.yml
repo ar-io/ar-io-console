@@ -15,12 +15,20 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The job only reads the repo — grant the workflow token read-only scope so a
+# compromised step can't push, open PRs, etc.
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: type-check · lint · test · build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Don't leave the GitHub token in .git/config — nothing here pushes.
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
