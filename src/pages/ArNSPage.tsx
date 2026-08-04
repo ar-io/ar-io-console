@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { ArNSBuyPanel } from '../features/arns';
 
 /**
@@ -6,9 +7,13 @@ import { ArNSBuyPanel } from '../features/arns';
  * `src/features/arns` flow (search → price → buy → receipt).
  */
 export function ArNSPage() {
+  const [searchParams] = useSearchParams();
+  const initialSearch =
+    (searchParams.get('q') ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '') || undefined;
+
   return (
     <div className="py-6">
-      <ArNSBuyPanel />
+      <ArNSBuyPanel initialSearch={initialSearch} />
     </div>
   );
 }

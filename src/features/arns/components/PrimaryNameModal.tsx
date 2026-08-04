@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowDown,
   CheckCircle2,
+  ExternalLink,
   Info,
   Loader2,
   Search,
@@ -179,7 +180,16 @@ export default function PrimaryNameModal({
                 <span>
                   Setting a name you own is a single wallet approval. A name
                   owned by someone else instead creates a pending request the
-                  owner must approve.
+                  owner must approve.{' '}
+                  <a
+                    href="https://docs.ar.io/learn/arns"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary hover:underline"
+                  >
+                    Learn about primary names
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </span>
               )}
             </div>

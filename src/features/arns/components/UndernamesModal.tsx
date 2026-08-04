@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  ExternalLink,
   Info,
   Loader2,
   Plus,
@@ -192,7 +193,16 @@ export default function UndernamesModal({
             label_{domain.displayName}.ar.io
           </span>
           . A record saves in one approval; a record-ownership transfer is a
-          separate approval.
+          separate approval.{' '}
+          <a
+            href="https://docs.ar.io/learn/arns"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary hover:underline"
+          >
+            Learn about undernames
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
 
         {/* Existing undernames */}

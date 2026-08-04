@@ -296,6 +296,15 @@ export default function ManageDomainModal({
                     </button>
                   ))}
                 </div>
+                <a
+                  href="https://docs.ar.io/learn/arns"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Learn about undernames
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             )}
 

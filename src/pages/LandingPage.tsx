@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -10,10 +10,15 @@ import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
 import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit';
 import {
   ArrowRight, Zap, Github,
-  CreditCard, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal
+  CreditCard, Users, Upload, Globe2, Search, Check, CheckCircle, Copy, ChevronDown, Info,
+  Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal,
+  Tag, Layers, KeyRound, Loader2, Lock, ExternalLink, XCircle
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
+import useDebounce from '../hooks/useDebounce';
+import { useArNSAvailability } from '../features/arns/hooks/useArNSAvailability';
+import { isValidArNSName, lowerCaseDomain } from '../features/arns/utils';
+import { useArNSPricing } from '../hooks/useArNSPricing';
 
 const LandingPage = () => {
   const { address } = useStore();
@@ -35,6 +40,33 @@ const LandingPage = () => {
   };
   const [copied, setCopied] = useState(false);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
+  const [arnsQuery, setArnsQuery] = useState('');
+
+  const handleArnsSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = arnsQuery.trim();
+    navigate(q ? `/arns?q=${encodeURIComponent(q)}` : '/arns');
+  };
+
+  // Live ArNS availability for the homepage search (debounced, index-backed).
+  const debounced = useDebounce(arnsQuery);
+  const normalized = lowerCaseDomain(debounced);
+  const validName = normalized.length > 0 && isValidArNSName(normalized);
+  const { data: avail, isFetching } = useArNSAvailability(debounced);
+  const { pricingTiers } = useArNSPricing();
+
+  // "from ~$X/yr" figure: first-year lease USD for the typed name's length tier
+  // (character length bucketed at 13+ to match the pricing tier structure).
+  const year1USD = useMemo(() => {
+    if (!validName || pricingTiers.length === 0) return undefined;
+    const bucket = normalized.length > 12 ? 13 : normalized.length;
+    const tier = pricingTiers.find((t) => t.characterLength === bucket);
+    const usd = tier?.pricesInUSD.year1;
+    return typeof usd === 'number' && usd > 0 ? usd : undefined;
+  }, [validName, normalized, pricingTiers]);
+
+  const formatUsd = (n: number) =>
+    n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(2)}`;
 
   // Get pricing data (matches pricing calculator logic)
   const wincForOneGiB = useWincForOneGiB();
@@ -336,6 +368,186 @@ const LandingPage = () => {
             <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Try it Out</span>
           </button>
+        </div>
+      </div>
+
+      {/* ArNS spotlight — dedicated, conversion-focused domain section */}
+      <div className="mb-12">
+        <div className="rounded-3xl bg-lavender p-6 sm:p-10 md:p-12">
+          {/* SPLIT: copy + live search on the left, resolved-page mockup on the right */}
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            {/* LEFT — headline, subhead, live availability search */}
+            <div>
+              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                ArNS · Domains
+              </div>
+              <h2 className="mb-3 font-heading text-3xl font-bold text-foreground sm:text-4xl">
+                One name. Every gateway.
+              </h2>
+              <p className="text-base leading-relaxed text-foreground/80 sm:text-lg">
+                A &ldquo;dot-anything&rdquo; name — no registrar, no ICANN. <span className="font-mono text-foreground">yourname.ar.io</span> resolves across every ar.io gateway to your content on Arweave or IPFS, and stays reachable by the same name even if a host goes offline. Point it at an app deployment, a Pages site, or any TX ID / CID.
+              </p>
+
+              {/* Live availability search (primary conversion action) */}
+              <form onSubmit={handleArnsSearch} className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <label htmlFor="arns-home-search" className="sr-only">Search for an ArNS name</label>
+                <div className="flex flex-1 items-center rounded-full border border-primary/30 bg-background pl-5 pr-3 transition-colors focus-within:border-primary">
+                  <input
+                    id="arns-home-search"
+                    type="text"
+                    value={arnsQuery}
+                    onChange={(e) => setArnsQuery(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="yourname"
+                    className="min-w-0 flex-1 bg-transparent py-3 text-foreground outline-none placeholder:text-foreground/40"
+                  />
+                  <span className="select-none pl-1 font-medium text-foreground/60">.ar.io</span>
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  <Search className="h-4 w-4" />
+                  {validName && avail?.available ? 'Register' : 'Check availability'}
+                </button>
+              </form>
+
+              {/* Result line — reserved min-height so the layout never jumps */}
+              <div aria-live="polite" className="mt-3 min-h-[1.75rem] text-sm">
+                {validName && isFetching && (
+                  <span className="inline-flex items-center gap-2 text-foreground/60">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking availability…
+                  </span>
+                )}
+                {validName && !isFetching && avail && avail.available && (
+                  <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 text-foreground">
+                    <CheckCircle className="h-4 w-4 flex-shrink-0 text-success" />
+                    <span><b className="font-semibold">{normalized}.ar.io</b> is available</span>
+                    {year1USD !== undefined && (
+                      <span className="text-foreground/60">· from ~{formatUsd(year1USD)}/yr</span>
+                    )}
+                  </span>
+                )}
+                {validName && !isFetching && avail && !avail.available && avail.reserved && (
+                  <span className="text-foreground/60">
+                    <b className="font-semibold">{normalized}.ar.io</b> is reserved — not available.
+                  </span>
+                )}
+                {validName && !isFetching && avail && !avail.available && !avail.reserved && (
+                  <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-foreground/60">
+                    <span className="inline-flex items-center gap-1.5">
+                      <XCircle className="h-4 w-4 flex-shrink-0 text-foreground/40" />
+                      <span><b className="font-semibold">{normalized}.ar.io</b> taken</span>
+                    </span>
+                    <a
+                      href={`https://${normalized}.ar.io`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 font-medium text-primary transition-opacity hover:opacity-80"
+                    >
+                      Visit <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT — browser-frame mockup of a resolved ArNS page */}
+            <div className="overflow-hidden rounded-2xl border border-primary/15 bg-background shadow-xl">
+              {/* Title bar with traffic lights + live address bar */}
+              <div className="flex items-center gap-2 border-b border-border/10 bg-card px-4 py-2.5">
+                <div className="flex flex-shrink-0 items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-red-400" />
+                  <span className="h-3 w-3 rounded-full bg-amber-400" />
+                  <span className="h-3 w-3 rounded-full bg-green-400" />
+                </div>
+                <div className="flex flex-1 items-center gap-1.5 truncate rounded-full border border-border/20 bg-background px-3 py-1 text-xs font-mono text-foreground/70">
+                  <Lock className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{(arnsQuery || 'yourname')}.ar.io</span>
+                </div>
+              </div>
+
+              {/* Body — a clean "resolved content" surface */}
+              <div className="flex min-h-[220px] flex-col gap-4 bg-gradient-to-br from-primary/5 to-lavender/40 p-5">
+                {/* Faux page header: motif + skeleton title + resolves-to badges */}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                    <Globe2 className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3 w-2/3 rounded-full bg-primary/25" />
+                    <div className="h-2.5 w-2/5 rounded-full bg-foreground/15" />
+                  </div>
+                  <div className="flex flex-shrink-0 flex-wrap justify-end gap-1.5">
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Arweave</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">IPFS</span>
+                  </div>
+                </div>
+
+                {/* Faux content block */}
+                <div className="space-y-2 rounded-xl border border-primary/10 bg-background/70 p-4">
+                  <div className="h-2.5 w-full rounded-full bg-foreground/10" />
+                  <div className="h-2.5 w-5/6 rounded-full bg-foreground/10" />
+                  <div className="h-2.5 w-3/4 rounded-full bg-foreground/10" />
+                </div>
+
+                {/* Gateway chip */}
+                <div className="mt-auto flex justify-center">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-background/70 px-3 py-1 text-xs text-foreground/70">
+                    <Globe2 className="h-3.5 w-3.5 text-primary" />
+                    Served by the ar.io gateway network
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Value props — 2-col grid on sm+ */}
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
+            {[
+              { icon: Tag, label: 'Human-readable', copy: 'a name, not a 43-character TX ID or CID.' },
+              { icon: Layers, label: 'Arweave or IPFS', copy: 'point it at either; your deployed app, your Pages site, your files.' },
+              { icon: Globe2, label: 'Resolves everywhere', copy: 'served by every ar.io gateway, with cryptographic verification.' },
+              { icon: KeyRound, label: 'Own or lease', copy: 'you hold the ANT (an NFT you control); buy it outright or lease by the year.' },
+            ].map(({ icon: Icon, label, copy }) => (
+              <div key={label} className="flex items-start gap-3 rounded-2xl border border-primary/10 bg-background/60 p-4">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="font-semibold text-foreground">{label}</div>
+                  <div className="text-sm leading-snug text-foreground/70">{copy}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Use-case chips */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            {['Deploy an app → app.yourname.ar.io', 'Publish a Pages site', 'Point at an IPFS CID'].map((chip) => (
+              <span key={chip} className="inline-flex items-center rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80">
+                {chip}
+              </span>
+            ))}
+          </div>
+
+          {/* Secondary links */}
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <button
+              onClick={() => navigate('/name-prices')}
+              className="inline-flex items-center gap-1.5 font-semibold text-primary transition-opacity hover:opacity-80"
+            >
+              See name prices <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+            <a
+              href="https://docs.ar.io/learn/arns"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+            >
+              Learn about ArNS <BookOpen className="h-3.5 w-3.5" />
+            </a>
+          </div>
         </div>
       </div>
 

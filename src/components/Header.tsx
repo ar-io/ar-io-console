@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame, Tag } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -47,6 +47,7 @@ const domainServices = [
   { name: 'Search Domains', page: 'domains' as const, icon: Search },
   { name: 'Register a Name', page: 'arns' as const, icon: Globe },
   { name: 'Returned Names', page: 'returned-names' as const, icon: Flame },
+  { name: 'Name Prices', page: 'name-prices' as const, icon: Tag },
   { name: 'Manage Domains', page: 'account' as const, icon: PencilLine },
 ];
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Globe, Wallet, Link2 } from 'lucide-react';
+import { ArrowLeft, Globe, Wallet, Link2, ExternalLink } from 'lucide-react';
 
 import { useStore } from '../../store/useStore';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
@@ -19,12 +19,12 @@ import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
  * status. Lease/permabuy + lease years are in scope; undername-count-at-purchase
  * and non-credit payment methods are deferred.
  */
-export function ArNSBuyPanel() {
+export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {}) {
   const address = useStore((s) => s.address);
   const signer = useArNSTurboSigner();
   const { needsLinking } = useLinkedSolanaWallet();
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch ?? '');
   const [selectedName, setSelectedName] = useState<string | undefined>();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -66,6 +66,15 @@ export function ArNSBuyPanel() {
             Search, price, and buy a name with Turbo Credits or your ARIO tokens
             — no leaving the console.
           </p>
+          <a
+            href="https://docs.ar.io/learn/arns"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            What is ArNS?
+            <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
       </div>
 

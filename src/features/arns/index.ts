@@ -105,3 +105,12 @@ export {
 export type { PriceDisplayCurrency, PriceDisplay } from './priceDisplay';
 export { default as PriceAmount } from './components/PriceAmount';
 export { default as PriceDisplayToggle } from './components/PriceDisplayToggle';
+
+// ArNS fee-schedule table (name price by character length)
+export { default as ArNSPriceTable } from './components/ArNSPriceTable';
+export {
+  MAX_TIER_CHAR_LENGTH,
+  bucketCharacterLength,
+  findTierIndexForLength,
+  formatTierCharacterLabel,
+} from './arnsPriceTable';

@@ -188,6 +188,17 @@ export function ArNSCostBreakdown({
           </p>
         </>
       )}
+      <div className="mt-3 border-t border-border/10 pt-2 text-right">
+        <a
+          href="https://docs.ar.io/build/upload/turbo-credits#pricing--fees"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline"
+        >
+          How pricing works
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
     </div>
   );
 }
