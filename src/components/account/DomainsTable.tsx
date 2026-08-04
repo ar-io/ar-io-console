@@ -13,7 +13,8 @@ import {
   ControllersModal,
   PrimaryNameModal,
 } from '@/features/arns';
-import { useAntLogos } from '@/features/arns/hooks/useAntLogos';
+import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
+import { deriveAntRole, isOwnerOnlyAllowed } from '@/features/arns/antRole';
 import { useStore } from '@/store/useStore';
 import RowActionsMenu from './RowActionsMenu';
 
@@ -61,10 +62,13 @@ function StatusCell({ domain }: { domain: ArNSName }) {
 export default function DomainsTable({
   domains,
   onChanged,
+  walletAddress,
 }: {
   domains: ArNSName[];
   /** Called after an in-app lifecycle change settles, so the caller can refetch. */
   onChanged?: () => void;
+  /** Connected/linked Solana address — used to derive owner vs controller role. */
+  walletAddress?: string | null;
 }) {
   const [managing, setManaging] = useState<ArNSName | null>(null);
   const [transferring, setTransferring] = useState<ArNSName | null>(null);
@@ -80,7 +84,7 @@ export default function DomainsTable({
     () => domains.map((d) => d.processId).filter(Boolean),
     [domains],
   );
-  const logos = useAntLogos(processIds);
+  const summaries = useAntSummaries(processIds);
 
   return (
     <>
@@ -97,6 +101,11 @@ export default function DomainsTable({
         <tbody>
           {domains.map((domain) => {
             const expiringSoon = isExpiringSoon(domain, Date.now());
+            const role = deriveAntRole(
+              summaries.get(domain.processId),
+              walletAddress,
+            );
+            const ownerActions = isOwnerOnlyAllowed(role);
             return (
               <tr
                 key={domain.name}
@@ -105,12 +114,20 @@ export default function DomainsTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <NameLogo
-                      logo={logos.get(domain.processId)}
+                      logo={summaries.get(domain.processId)?.logo}
                       gatewayUrl={arioGatewayUrl}
                     />
                     <span className="truncate font-medium text-foreground" title={`${domain.displayName}.ar.io`}>
                       {domain.displayName}.ar.io
                     </span>
+                    {role === 'controller' && (
+                      <span
+                        className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                        title="You control this name but don't own it — you can edit its records, but can't transfer, reassign, or release it."
+                      >
+                        Controller
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="hidden whitespace-nowrap px-4 py-3 text-foreground/70 md:table-cell">
@@ -154,27 +171,38 @@ export default function DomainsTable({
                           label: 'Undernames',
                           onClick: () => setUndernaming(domain),
                         },
-                        {
-                          label: 'Controllers',
-                          onClick: () => setControlling(domain),
-                        },
+                        // Managing the controller set is owner-only.
+                        ...(ownerActions
+                          ? [
+                              {
+                                label: 'Controllers',
+                                onClick: () => setControlling(domain),
+                              },
+                            ]
+                          : []),
                         {
                           label: 'Set as primary name',
                           onClick: () => setSettingPrimary(domain),
                         },
-                        {
-                          label: 'Transfer…',
-                          onClick: () => setTransferring(domain),
-                          danger: true,
-                        },
-                        {
-                          label: 'Reassign…',
-                          onClick: () => setReassigning(domain),
-                          danger: true,
-                        },
-                        // Release only applies to permabuy names; leases expire
-                        // on their own, so there is nothing to release.
-                        ...(domain.type === 'permabuy'
+                        // Transfer / Reassign / Release change ownership or the
+                        // name→ANT mapping — owner-only; hidden for controllers.
+                        ...(ownerActions
+                          ? [
+                              {
+                                label: 'Transfer…',
+                                onClick: () => setTransferring(domain),
+                                danger: true,
+                              },
+                              {
+                                label: 'Reassign…',
+                                onClick: () => setReassigning(domain),
+                                danger: true,
+                              },
+                            ]
+                          : []),
+                        // Release only applies to permabuy names you own; leases
+                        // expire on their own, so there is nothing to release.
+                        ...(ownerActions && domain.type === 'permabuy'
                           ? [
                               {
                                 label: 'Release…',

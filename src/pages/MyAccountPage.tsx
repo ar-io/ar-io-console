@@ -224,6 +224,7 @@ export default function MyAccountPage() {
               <DomainsTable
                 domains={sortedDomains.slice(0, DOMAINS_SHOWN)}
                 onChanged={() => fetchOwnedNames(true)}
+                walletAddress={arnsAddress}
               />
 
               {ownedNames.length > DOMAINS_SHOWN && (
