@@ -21,10 +21,10 @@ import {
 } from './ArNSPaymentSelector';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import BuyCreditsModal from './BuyCreditsModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 
 interface ArNSPurchaseCardProps {
   name: string;
-  canBuy: boolean;
   isBusy: boolean;
   onBuy: (input: BuyArNSNameInput) => void;
 }
@@ -39,7 +39,6 @@ const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
  */
 export function ArNSPurchaseCard({
   name,
-  canBuy,
   isBusy,
   onBuy,
 }: ArNSPurchaseCardProps) {
@@ -90,7 +89,7 @@ export function ArNSPurchaseCard({
   const priceReady =
     method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
   const canPay =
-    canBuy && priceReady && !insufficientSol && !insufficientFunds && !isBusy;
+    priceReady && !insufficientSol && !insufficientFunds && !isBusy;
 
   // Credit shortfall → on-demand top-up (only offered for the credits method).
   const creditShortfall =
@@ -104,7 +103,7 @@ export function ArNSPurchaseCard({
   // Only offer a credits top-up when SOL gas is sufficient — buying credits
   // can't make the purchase succeed if SOL for rent is also short.
   const offerTopUp =
-    canBuy && method === 'credits' && insufficientFunds && !insufficientSol;
+    method === 'credits' && insufficientFunds && !insufficientSol;
 
   return (
     <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">
@@ -200,8 +199,8 @@ export function ArNSPurchaseCard({
           <CreditCard className="h-4 w-4" /> Buy Turbo Credits to continue
         </button>
       ) : (
-        <button
-          onClick={() =>
+        <SolanaGateButton
+          onAction={() =>
             onBuy({
               name,
               type,
@@ -210,25 +209,17 @@ export function ArNSPurchaseCard({
             })
           }
           disabled={!canPay}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isBusy ? (
+          busy={isBusy}
+          actionVerb="buy this name"
+          busyLabel={
             <>
               <Loader2 className="h-4 w-4 animate-spin" /> Processing…
             </>
-          ) : (
-            <>
-              <Wallet className="h-4 w-4" />{' '}
-              {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
-            </>
-          )}
-        </button>
-      )}
-
-      {!canBuy && (
-        <p className="mt-3 text-center text-xs text-foreground/60">
-          Connect a Solana wallet to pay.
-        </p>
+          }
+        >
+          <Wallet className="h-4 w-4" />{' '}
+          {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
+        </SolanaGateButton>
       )}
 
       {showBuyCredits && (

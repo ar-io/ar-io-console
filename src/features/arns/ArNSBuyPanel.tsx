@@ -1,14 +1,9 @@
 import { useState } from 'react';
-import { ArrowLeft, Globe, Wallet, Link2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Globe, ExternalLink } from 'lucide-react';
 
-import { useStore } from '../../store/useStore';
-import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
-import LinkSolanaWalletModal from '../../components/modals/LinkSolanaWalletModal';
-import WalletSelectionModal from '../../components/modals/WalletSelectionModal';
 import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
 import { ArNSPurchaseStatus } from './components/ArNSPurchaseStatus';
-import { useArNSTurboSigner } from './hooks/useArNSTurboSigner';
 import { useBuyArNSName } from './hooks/useBuyArNSName';
 import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
 
@@ -20,15 +15,8 @@ import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
  * and non-credit payment methods are deferred.
  */
 export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {}) {
-  const address = useStore((s) => s.address);
-  const signer = useArNSTurboSigner();
-  const { needsLinking } = useLinkedSolanaWallet();
-
   const [search, setSearch] = useState(initialSearch ?? '');
   const [selectedName, setSelectedName] = useState<string | undefined>();
-  const [showWalletModal, setShowWalletModal] = useState(false);
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [linkReconnect, setLinkReconnect] = useState(false);
 
   const buyState = useBuyArNSName();
 
@@ -48,8 +36,6 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   const handleRetry = () => {
     buyState.reset();
   };
-
-  const canBuy = signer.isReady;
 
   return (
     <div className="px-4 sm:px-6 max-w-3xl">
@@ -112,81 +98,12 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
         </button>
       )}
 
-      {/* Wallet gate — shown INSTEAD of the purchase card until a Solana signer
-          is ready, so the user sees one clear call-to-action, not two. */}
-      {selectedName && !canBuy && buyState.phase === 'idle' && (
-        <div className="bg-card rounded-2xl border border-border/20 p-5 mb-4">
-          {!address ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
-                <p className="text-sm font-medium text-foreground">
-                  Connect a wallet to continue
-                </p>
-              </div>
-              <p className="text-xs text-foreground/60 mb-3">
-                ArNS names are paid with Turbo Credits or ARIO from a Solana
-                wallet (plus a little SOL for network rent).
-              </p>
-              <button
-                onClick={() => setShowWalletModal(true)}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                Connect wallet
-              </button>
-            </div>
-          ) : needsLinking ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Link2 className="w-5 h-5 text-primary flex-shrink-0" />
-                <p className="text-sm font-medium text-foreground">
-                  Link a Solana wallet to buy ArNS names
-                </p>
-              </div>
-              <p className="text-xs text-foreground/60 mb-3">
-                ArNS names live on Solana. Link a Solana wallet to sign the
-                purchase — your primary account stays the same.
-              </p>
-              <button
-                onClick={() => {
-                  setLinkReconnect(false);
-                  setShowLinkModal(true);
-                }}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                Link Solana wallet
-              </button>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Wallet className="w-5 h-5 text-warning flex-shrink-0" />
-                <p className="text-sm font-medium text-foreground">
-                  Reconnect your Solana wallet
-                </p>
-              </div>
-              <p className="text-xs text-foreground/60 mb-3">
-                Reconnect the Solana wallet that signs this purchase.
-              </p>
-              <button
-                onClick={() => {
-                  setLinkReconnect(true);
-                  setShowLinkModal(true);
-                }}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                Reconnect
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Configure + buy — only once a signer is ready (no double CTA). */}
-      {selectedName && canBuy && buyState.phase === 'idle' && (
+      {/* Configure + buy. The buy button itself gates on a Solana signer (via
+          SolanaGateButton), so the user configures freely and meets the wallet
+          step only at the moment of purchase — no upfront wall. */}
+      {selectedName && buyState.phase === 'idle' && (
         <ArNSPurchaseCard
           name={selectedName}
-          canBuy={canBuy}
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
         />
@@ -203,16 +120,6 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           name={selectedName}
           onDone={handleDone}
           onRetry={handleRetry}
-        />
-      )}
-
-      {showWalletModal && (
-        <WalletSelectionModal onClose={() => setShowWalletModal(false)} />
-      )}
-      {showLinkModal && (
-        <LinkSolanaWalletModal
-          isReconnect={linkReconnect}
-          onClose={() => setShowLinkModal(false)}
         />
       )}
     </div>

@@ -6,7 +6,6 @@ import {
   ExternalLink,
   Flame,
   Infinity as InfinityIcon,
-  Link2,
   Loader2,
   Pencil,
   RefreshCw,
@@ -18,10 +17,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
-import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
-import WalletSelectionModal from '../../../components/modals/WalletSelectionModal';
-import { useStore } from '../../../store/useStore';
-import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import type { ArNSRegistrationType } from '../hooks/useArNSPrice';
 import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
 import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
@@ -64,17 +60,12 @@ export default function ReturnedNameBuyModal({
   onClose,
 }: ReturnedNameBuyModalProps) {
   const navigate = useNavigate();
-  const address = useStore((s) => s.address);
   const signer = useArNSTurboSigner();
-  const { needsLinking } = useLinkedSolanaWallet();
 
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
-  const [showWalletModal, setShowWalletModal] = useState(false);
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [linkReconnect, setLinkReconnect] = useState(false);
   const [editing, setEditing] = useState(false);
 
   // Live now-tick so the premium/countdown banner decays on screen.
@@ -127,9 +118,7 @@ export default function ReturnedNameBuyModal({
   );
 
   const priceReady = cost?.arioCost != null;
-  const canBuy = signer.isReady;
   const canPay =
-    canBuy &&
     priceReady &&
     !insufficientSol &&
     !insufficientFunds &&
@@ -248,77 +237,9 @@ export default function ReturnedNameBuyModal({
           </div>
         )}
 
-        {/* Wallet gate */}
-        {!auctionEnded && !canBuy && buyState.phase === 'idle' && (
-          <div className="rounded-2xl border border-border/20 bg-card p-5">
-            {!address ? (
-              <div>
-                <div className="mb-3 flex items-center gap-2">
-                  <Wallet className="h-5 w-5 flex-shrink-0 text-primary" />
-                  <p className="text-sm font-medium text-foreground">
-                    Connect a wallet to continue
-                  </p>
-                </div>
-                <p className="mb-3 text-xs text-foreground/60">
-                  Returned names are paid with ARIO from a Solana wallet (plus a
-                  little SOL for network rent).
-                </p>
-                <button
-                  onClick={() => setShowWalletModal(true)}
-                  className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Connect wallet
-                </button>
-              </div>
-            ) : needsLinking ? (
-              <div>
-                <div className="mb-3 flex items-center gap-2">
-                  <Link2 className="h-5 w-5 flex-shrink-0 text-primary" />
-                  <p className="text-sm font-medium text-foreground">
-                    Link a Solana wallet to buy ArNS names
-                  </p>
-                </div>
-                <p className="mb-3 text-xs text-foreground/60">
-                  ArNS names live on Solana. Link a Solana wallet to sign the
-                  purchase — your primary account stays the same.
-                </p>
-                <button
-                  onClick={() => {
-                    setLinkReconnect(false);
-                    setShowLinkModal(true);
-                  }}
-                  className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Link Solana wallet
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div className="mb-3 flex items-center gap-2">
-                  <Wallet className="h-5 w-5 flex-shrink-0 text-warning" />
-                  <p className="text-sm font-medium text-foreground">
-                    Reconnect your Solana wallet
-                  </p>
-                </div>
-                <p className="mb-3 text-xs text-foreground/60">
-                  Reconnect the Solana wallet that signs this purchase.
-                </p>
-                <button
-                  onClick={() => {
-                    setLinkReconnect(true);
-                    setShowLinkModal(true);
-                  }}
-                  className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Reconnect
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Configure + buy */}
-        {!auctionEnded && canBuy && buyState.phase === 'idle' && (
+        {/* Configure + buy. The buy button gates on a Solana signer via
+            SolanaGateButton, so the wallet step appears at purchase time. */}
+        {!auctionEnded && buyState.phase === 'idle' && (
           <>
             {/* Lease vs permabuy */}
             <div className="mb-4 grid grid-cols-2 gap-3">
@@ -402,13 +323,13 @@ export default function ReturnedNameBuyModal({
               </p>
             </div>
 
-            <button
-              onClick={handleBuy}
+            <SolanaGateButton
+              onAction={handleBuy}
               disabled={!canPay}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="buy this name"
             >
               <Flame className="h-4 w-4" /> Buy with ARIO
-            </button>
+            </SolanaGateButton>
           </>
         )}
 
@@ -541,15 +462,6 @@ export default function ReturnedNameBuyModal({
           )
         )}
 
-        {showWalletModal && (
-          <WalletSelectionModal onClose={() => setShowWalletModal(false)} />
-        )}
-        {showLinkModal && (
-          <LinkSolanaWalletModal
-            isReconnect={linkReconnect}
-            onClose={() => setShowLinkModal(false)}
-          />
-        )}
         {editing && newDomain && (
           <EditDetailsModal domain={newDomain} onClose={() => setEditing(false)} />
         )}

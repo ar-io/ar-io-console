@@ -13,6 +13,7 @@ import {
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import { daysUntil } from '../../../utils/domainExpiry';
 import { useArNSPrice } from '../hooks/useArNSPrice';
 import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
@@ -28,7 +29,6 @@ import {
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import BuyCreditsModal from './BuyCreditsModal';
 
-const manageUrl = (name: string) => `https://arns.ar.io/#/manage/names/${name}`;
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 const UNDERNAME_QTY_OPTIONS = [1, 5, 10, 25, 50];
 
@@ -69,9 +69,8 @@ export default function ManageDomainModal({
 }: ManageDomainModalProps) {
   const isLease = domain.type !== 'permabuy';
   const signer = useArNSTurboSigner();
-  const canManage = signer.isReady;
   const address = signer.address ?? undefined;
-  const balances = useArNSPaymentBalances(canManage ? address : undefined);
+  const balances = useArNSPaymentBalances(address);
 
   // Lease names can renew / upgrade / add undernames; permabuy can only add.
   const actions: ManageIntent[] = isLease
@@ -92,7 +91,7 @@ export default function ManageDomainModal({
   const { manage, phase, statusMessage, error, insufficientCredits, isBusy } =
     useManageArNSName();
 
-  const active = canManage && phase !== 'success';
+  const active = phase !== 'success';
 
   // Credits price (winc → credits) for the credits method.
   const {
@@ -205,23 +204,6 @@ export default function ManageDomainModal({
             >
               Close
             </button>
-          </div>
-        ) : !canManage ? (
-          /* Wallet gate — non-Solana falls back to the external manage app. */
-          <div className="rounded-2xl border border-border/20 bg-card p-5 text-center">
-            <p className="text-sm text-foreground/80">
-              Connect or link a Solana wallet to manage this name in-console with
-              Turbo Credits or ARIO.
-            </p>
-            <a
-              href={manageUrl(domain.name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-            >
-              Manage on arns.ar.io
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
           </div>
         ) : (
           <>
@@ -385,22 +367,20 @@ export default function ManageDomainModal({
                 <CreditCard className="h-4 w-4" /> Buy Turbo Credits to continue
               </button>
             ) : (
-              <button
-                onClick={handleConfirm}
+              <SolanaGateButton
+                onAction={handleConfirm}
                 disabled={!canConfirm}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isBusy ? (
+                busy={isBusy}
+                actionVerb="manage this name"
+                busyLabel={
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" /> Processing…
                   </>
-                ) : (
-                  <>
-                    <Wallet className="h-4 w-4" /> {ACTION_META[action].verb} with{' '}
-                    {method === 'credits' ? 'Turbo Credits' : 'ARIO'}
-                  </>
-                )}
-              </button>
+                }
+              >
+                <Wallet className="h-4 w-4" /> {ACTION_META[action].verb} with{' '}
+                {method === 'credits' ? 'Turbo Credits' : 'ARIO'}
+              </SolanaGateButton>
             )}
 
             {showBuyCredits && (
