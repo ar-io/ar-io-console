@@ -118,7 +118,10 @@ export default function ReleaseDomainModal({
               </p>
             </div>
 
-            <label className="mb-2 block text-sm font-medium">
+            <label
+              htmlFor="release-confirm-name"
+              className="mb-2 block text-sm font-medium"
+            >
               Type{' '}
               <span className="font-mono text-primary">
                 {domain.displayName}
@@ -126,6 +129,7 @@ export default function ReleaseDomainModal({
               to confirm
             </label>
             <input
+              id="release-confirm-name"
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}

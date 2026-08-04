@@ -118,4 +118,16 @@ describe('formatPriceDisplay', () => {
     // USD secondary still shows the ARIO unit for disambiguation.
     expect(out.secondary).toBe('≈ 1,000 ARIO');
   });
+
+  it('keeps the ARIO unit on the USD-mode fallback even when withUnit is false', () => {
+    // No rate + USD mode + dense-table (withUnit:false): must NOT render a bare
+    // ARIO number under a "USD" heading — keep the unit so it reads as ARIO.
+    const out = formatPriceDisplay({
+      ario: 1000,
+      usdPerArio: undefined,
+      currency: 'usd',
+      withUnit: false,
+    });
+    expect(out.primary).toBe('1,000 ARIO');
+  });
 });

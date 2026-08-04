@@ -27,8 +27,10 @@ export function deriveAntRole(
   return 'controller';
 }
 
-/** Owner-only actions: hidden/blocked for controllers. */
+/** Owner-only actions: shown ONLY once the wallet is confirmed the owner. */
 export function isOwnerOnlyAllowed(role: AntRole): boolean {
-  // Optimistic while unknown (summary still loading); strict once resolved.
-  return role !== 'controller';
+  // Strict: 'unknown' (summary still loading or lookup failed) and 'controller'
+  // are both denied, so destructive owner-only actions (transfer/reassign/
+  // release/controllers) never flash before ownership is confirmed.
+  return role === 'owner';
 }

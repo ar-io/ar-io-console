@@ -36,9 +36,10 @@ describe('deriveAntRole', () => {
 });
 
 describe('isOwnerOnlyAllowed', () => {
-  it('allows owner and (optimistically) unknown, blocks controller', () => {
+  it('allows only a confirmed owner; denies unknown and controller', () => {
     expect(isOwnerOnlyAllowed('owner')).toBe(true);
-    expect(isOwnerOnlyAllowed('unknown')).toBe(true);
+    // 'unknown' (still loading / lookup failed) must NOT show owner-only actions.
+    expect(isOwnerOnlyAllowed('unknown')).toBe(false);
     expect(isOwnerOnlyAllowed('controller')).toBe(false);
   });
 });

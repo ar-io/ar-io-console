@@ -98,8 +98,10 @@ export function formatPriceDisplay({
 
   if (currency === 'usd') {
     if (usd == null) {
-      // Graceful fallback: no rate → show ARIO rather than a broken dollar value.
-      return { primary: withUnit ? arioStr : arioBare };
+      // Graceful fallback: no USD rate → show ARIO. Always keep the ARIO unit
+      // here (even when withUnit is false), otherwise a bare number would sit
+      // under a "USD" table heading and read as dollars.
+      return { primary: arioStr };
     }
     return { primary: formatUsdAmount(usd), secondary: `≈ ${arioStr}` };
   }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Globe, ExternalLink, AlertTriangle } from 'lucide-react';
 import { ARIO_LOGO_TX_ID } from '@ar.io/sdk/solana';
 import { ArNSName } from '@/types';
@@ -27,6 +27,9 @@ const visitUrl = (name: string) => `https://${name}.ar.io`;
  */
 function NameLogo({ logo, gatewayUrl }: { logo?: string; gatewayUrl: string }) {
   const [failed, setFailed] = useState(false);
+  // Clear a prior load error when the source changes (logo edit / gateway switch),
+  // so a fixed/updated logo stops falling back to the Globe icon.
+  useEffect(() => setFailed(false), [logo, gatewayUrl]);
   if (!logo || logo === ARIO_LOGO_TX_ID || failed) {
     return <Globe className="h-4 w-4 flex-shrink-0 text-primary" />;
   }

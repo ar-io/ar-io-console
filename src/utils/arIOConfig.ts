@@ -2,9 +2,11 @@ import {
   ARIO,
   ANT,
   SolanaANTRegistryReadable,
+  getPrimaryNamePDA,
+  getPrimaryNameReversePDA,
+  hashName,
   type SolanaSigner,
 } from '@ar.io/sdk/solana';
-import { getPrimaryNamePDA, getPrimaryNameReversePDA, hashName } from '@ar.io/sdk/web';
 import {
   getMigratePrimaryNameReverseInstruction,
   getRemovePrimaryNameInstructionAsync,

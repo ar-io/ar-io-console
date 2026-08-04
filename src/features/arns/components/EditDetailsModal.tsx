@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { ArNSName } from '@/types';
+import { useStore } from '../../../store/useStore';
 import BaseModal from '../../../components/modals/BaseModal';
 import {
   DEFAULT_TTL,
@@ -45,6 +46,25 @@ const arraysEqual = (a: string[], b: string[]) =>
   a.length === b.length && a.every((x, i) => x === b[i]);
 
 /**
+ * Solana Explorer link for an address, pointed at the cluster the console is
+ * configured against — otherwise a devnet/custom ANT resolves to a mainnet
+ * "account not found" page. Production → mainnet (no param); Testnet → devnet;
+ * custom → the configured RPC via `cluster=custom&customUrl=`.
+ */
+function explorerAddressUrl(
+  address: string,
+  configMode: string,
+  solanaRpc?: string,
+): string {
+  const base = `https://explorer.solana.com/address/${address}`;
+  if (configMode === 'production') return base;
+  if (configMode === 'development') return `${base}?cluster=devnet`;
+  return solanaRpc
+    ? `${base}?cluster=custom&customUrl=${encodeURIComponent(solanaRpc)}`
+    : `${base}?cluster=devnet`;
+}
+
+/**
  * Edit an owned name's ANT metadata (nickname, ticker, description, keywords,
  * logo) and its base `@` target record. ANT-level fields are each a separate
  * write / wallet signature; the base record saves in ONE signature (all its
@@ -57,6 +77,8 @@ export default function EditDetailsModal({
   onSuccess,
 }: EditDetailsModalProps) {
   const details = useANTDetails(domain.processId, true);
+  const configMode = useStore((s) => s.configMode);
+  const solanaRpc = useStore((s) => s.getCurrentConfig().tokenMap?.solana);
   const signer = useArNSTurboSigner();
   const { apply, phase, progress, completed, error, isBusy } =
     useSetArNSMetadata();
@@ -411,7 +433,11 @@ export default function EditDetailsModal({
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <span className="text-foreground/50">Name token (ANT)</span>
                   <a
-                    href={`https://explorer.solana.com/address/${domain.processId}`}
+                    href={explorerAddressUrl(
+                      domain.processId,
+                      configMode,
+                      solanaRpc,
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 truncate font-mono text-primary hover:underline"
