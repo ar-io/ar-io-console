@@ -197,7 +197,7 @@ export function ArNSPurchaseCard({
           onClick={() => setShowBuyCredits(true)}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          <CreditCard className="h-4 w-4" /> Buy credits to continue
+          <CreditCard className="h-4 w-4" /> Buy Turbo Credits to continue
         </button>
       ) : (
         <button

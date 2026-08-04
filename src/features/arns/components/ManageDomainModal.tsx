@@ -133,8 +133,17 @@ export default function ManageDomainModal({
 
   const priceReady =
     method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
+  // The SOL gas estimate comes from the cost-details query regardless of the
+  // payment method. If that query errored (or resolved with no data), we have
+  // no estimate — don't render a misleading "~0 SOL" and don't let the user
+  // confirm against an absent estimate.
+  const gasUnavailable = !!costError || (!cost && !costLoading);
   const canConfirm =
-    !isBusy && priceReady && !insufficientSol && !insufficientFunds;
+    !isBusy &&
+    priceReady &&
+    !gasUnavailable &&
+    !insufficientSol &&
+    !insufficientFunds;
 
   // Credit shortfall → on-demand top-up (credits method only).
   const creditShortfall =
@@ -321,6 +330,7 @@ export default function ManageDomainModal({
                 gasRentSol={cost?.gasRentSol ?? 0}
                 gasFeeSol={cost?.gasFeeSol ?? 0}
                 gasLoading={costLoading}
+                gasError={gasUnavailable}
                 solBalance={balances.sol}
                 insufficientFunds={insufficientFunds}
                 insufficientSol={insufficientSol}
@@ -345,7 +355,7 @@ export default function ManageDomainModal({
                     onClick={() => setShowBuyCredits(true)}
                     className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
                   >
-                    Buy credits
+                    Buy Turbo Credits
                   </button>
                 )}
               </div>
@@ -363,7 +373,7 @@ export default function ManageDomainModal({
                 onClick={() => setShowBuyCredits(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                <CreditCard className="h-4 w-4" /> Buy credits to continue
+                <CreditCard className="h-4 w-4" /> Buy Turbo Credits to continue
               </button>
             ) : (
               <button

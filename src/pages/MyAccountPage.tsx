@@ -80,7 +80,7 @@ export default function MyAccountPage() {
             {arnsName ? `${makePossessive(arnsName)} Account` : 'My Account'}
           </h1>
           <p className="text-sm text-foreground/80">
-            Your wallet, credits, domains and recent activity.
+            Your wallet, credits, names and recent activity.
           </p>
         </div>
       </div>
@@ -137,8 +137,8 @@ export default function MyAccountPage() {
                 onClick={() => fetchOwnedNames(true)}
                 disabled={loadingDomains}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground hover:text-foreground/80 transition-colors disabled:opacity-50"
-                title="Refresh domain list"
-                aria-label="Refresh domain list"
+                title="Refresh domains"
+                aria-label="Refresh domains"
               >
                 <RefreshCw className={`w-4 h-4 ${loadingDomains ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
@@ -159,7 +159,7 @@ export default function MyAccountPage() {
                       : `${expiringDomains.length} domains are expiring soon`}
                   </p>
                   <p className="mt-0.5 text-xs text-foreground/80">
-                    Renew before the lease ends to keep {expiringDomains.length === 1 ? 'it' : 'them'} — an expired name can be registered by someone else.
+                    Renew before the lease ends to keep {expiringDomains.length === 1 ? 'it' : 'them'} — an expired domain can be registered by someone else.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     {expiringDomains.slice(0, 6).map((d) => (
@@ -210,13 +210,13 @@ export default function MyAccountPage() {
               <Globe className="w-12 h-12 text-primary/50 mx-auto mb-4" />
               <h3 className="font-heading font-bold text-foreground mb-2">No domains yet</h3>
               <p className="text-sm text-foreground/80 mb-4">
-                Register an ArNS domain to give your apps and sites friendly names
+                Register an ArNS name to give your sites and apps a friendly address
               </p>
               <button
                 onClick={() => navigate('/domains')}
                 className="px-4 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
               >
-                Search for your name
+                Search for a domain
               </button>
             </div>
           ) : (

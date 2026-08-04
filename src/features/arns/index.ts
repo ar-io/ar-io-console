@@ -94,3 +94,14 @@ export {
   START_RNP_PREMIUM,
 } from './returnedNamePricing';
 export type { ReturnedNameFees } from './returnedNamePricing';
+
+// Price-display toggle (ARIO ⇄ USD)
+export {
+  arioToUsd,
+  formatArioAmount,
+  formatUsdAmount,
+  formatPriceDisplay,
+} from './priceDisplay';
+export type { PriceDisplayCurrency, PriceDisplay } from './priceDisplay';
+export { default as PriceAmount } from './components/PriceAmount';
+export { default as PriceDisplayToggle } from './components/PriceDisplayToggle';

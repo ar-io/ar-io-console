@@ -1,6 +1,8 @@
 import { AlertTriangle, Check, ExternalLink, Info, Loader2 } from 'lucide-react';
 
 import type { ArNSPaymentMethod } from './ArNSPaymentSelector';
+import PriceAmount from './PriceAmount';
+import PriceDisplayToggle from './PriceDisplayToggle';
 
 /** Where to send users who need SOL for the network deposit. Configurable. */
 const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
@@ -23,6 +25,8 @@ interface Props {
   gasRentSol: number;
   gasFeeSol: number;
   gasLoading: boolean;
+  /** The gas estimate couldn't be fetched — show an unavailable state, not ~0 SOL. */
+  gasError?: boolean;
   /** Balances for the affordability lines. */
   solBalance: number;
   /** Name price can't be covered by the chosen source (ARIO shortfall or credits < price). */
@@ -35,7 +39,7 @@ function Row({
   children,
   strong,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   strong?: boolean;
 }) {
@@ -68,6 +72,7 @@ export function ArNSCostBreakdown({
   gasRentSol,
   gasFeeSol,
   gasLoading,
+  gasError,
   solBalance,
   insufficientFunds,
   insufficientSol,
@@ -80,16 +85,18 @@ export function ArNSCostBreakdown({
     <span className="text-sm text-error">Unavailable</span>
   ) : method === 'credits' ? (
     creditsPrice != null ? (
+      // Casing convention across ArNS priced surfaces: "Turbo Credits" is the
+      // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
+      // lowercase "credits" is the unit that follows an amount. Keep it lowercase
+      // here — it's a unit, not the product name.
       <span className="text-lg font-bold text-foreground">
-        {fmtNum(creditsPrice)} Credits
+        {fmtNum(creditsPrice)} credits
       </span>
     ) : (
       <span className="text-sm text-foreground/50">—</span>
     )
   ) : arioPrice != null ? (
-    <span className="text-lg font-bold text-foreground">
-      {fmtNum(arioPrice)} ARIO
-    </span>
+    <PriceAmount ario={arioPrice} />
   ) : (
     <span className="text-sm text-foreground/50">—</span>
   );
@@ -97,7 +104,15 @@ export function ArNSCostBreakdown({
   return (
     <div className="rounded-2xl border border-border/20 bg-card p-4">
       {/* Name price */}
-      <Row label="Name price" strong>
+      <Row
+        label={
+          <span className="flex items-center gap-2">
+            Name price
+            {method === 'ario' && <PriceDisplayToggle />}
+          </span>
+        }
+        strong
+      >
         {priceNode}
       </Row>
       {insufficientFunds && !priceLoading && (
@@ -115,6 +130,11 @@ export function ArNSCostBreakdown({
       {gasLoading ? (
         <div className="flex items-center gap-2 py-1 text-sm text-foreground/70">
           <Loader2 className="h-4 w-4 animate-spin" /> Estimating network cost…
+        </div>
+      ) : gasError ? (
+        <div className="flex items-center gap-2 py-1 text-sm text-error">
+          <AlertTriangle className="h-4 w-4" /> Network cost unavailable — try
+          again
         </div>
       ) : (
         <>

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { TurboFactory } from '@ardrive/turbo-sdk/web';
+import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { SupportedTokenType } from '../constants';
 import { useTurboConfig } from './useTurboConfig';
 
@@ -117,4 +117,54 @@ export function useWincForCrypto(
   });
 
   return wincAmount;
+}
+
+/**
+ * USD value of 1 ARIO, derived at runtime from Turbo's own rates — the same
+ * primitives the credit-pricing flows already trust (`getWincForToken` /
+ * `getWincForFiat`). Because winc is the common denominator, it cancels out:
+ *
+ *   usdPerArio = wincForOneArio / wincForOneUsd
+ *
+ * This keeps the toggle's USD consistent with what the user actually pays via
+ * Turbo (no hardcoded rate, no separate CoinGecko call). Returns `undefined`
+ * while loading or when either denominator is zero/non-finite, so display code
+ * degrades to ARIO-only rather than showing a broken value.
+ */
+export function useArioUsdRate(): number | undefined {
+  const turboConfig = useTurboConfig('ario');
+
+  const { data } = useQuery({
+    queryKey: ['arioUsdRate', turboConfig.paymentServiceConfig.url],
+    queryFn: async () => {
+      const turbo = TurboFactory.unauthenticated({
+        ...turboConfig,
+        token: 'ario' as any,
+      });
+
+      // 1 ARIO = 1,000,000 mARIO (smallest unit).
+      const oneArio = BigInt(10 ** 6);
+      const [{ winc: wincForOneArio }, { winc: wincForOneUsd }] =
+        await Promise.all([
+          turbo.getWincForToken({ tokenAmount: oneArio }),
+          turbo.getWincForFiat({ amount: USD(1), promoCodes: [] }),
+        ]);
+
+      const wincPerArio = Number(wincForOneArio);
+      const wincPerUsd = Number(wincForOneUsd);
+      if (
+        !Number.isFinite(wincPerArio) ||
+        !Number.isFinite(wincPerUsd) ||
+        wincPerUsd <= 0
+      ) {
+        return undefined;
+      }
+      return wincPerArio / wincPerUsd;
+    },
+    staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: 2, // Retry failed requests twice
+  });
+
+  return data ?? undefined;
 }

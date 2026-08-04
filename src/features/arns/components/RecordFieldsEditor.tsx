@@ -6,6 +6,7 @@ import {
   RecordFieldsState,
   validateRecordFields,
 } from '../recordFields';
+import LogoUploadField from './LogoUploadField';
 
 const inputCls =
   'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
@@ -180,19 +181,11 @@ export default function RecordFieldsEditor({
 
           {/* Record logo */}
           <div>
-            <label
-              htmlFor={`${idPrefix}-logo`}
-              className="mb-1 block text-sm font-medium"
-            >
-              Record logo (Arweave TX ID)
-            </label>
-            <input
-              id={`${idPrefix}-logo`}
-              className={`${inputCls} font-mono`}
+            <LogoUploadField
+              idPrefix={`${idPrefix}-logo`}
+              label="Record logo"
               value={value.logo}
-              onChange={(e) => set({ logo: e.target.value })}
-              placeholder="43-character transaction ID"
-              spellCheck={false}
+              onChange={(txid) => set({ logo: txid })}
               disabled={disabled}
             />
             {!v.logoValid && (

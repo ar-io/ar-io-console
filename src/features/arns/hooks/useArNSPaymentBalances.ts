@@ -49,19 +49,28 @@ export function useArNSPaymentBalances(
     enabled: !!address,
     staleTime: 30_000,
     queryFn: async () => {
+      if (!address) return { liquidMARIO: 0, stakedMARIO: 0 };
       const ario = getARIO() as unknown as ARIOBalanceReadable;
-      const liquidMARIO = await ario.getBalance({ address: address! }).catch(() => 0);
+      const liquidMARIO = await ario.getBalance({ address }).catch(() => 0);
 
       // Sum every delegation (stake + vault) for the staked/vaulted total.
+      // Bound the loop: a repeated/non-advancing `nextCursor` from the SDK
+      // would otherwise spin forever, so cap the page count and break on a
+      // cursor we've already seen.
+      const MAX_PAGES = 50;
       let stakedMARIO = 0;
       let cursor: string | undefined;
+      const seen = new Set<string>();
+      let pages = 0;
       do {
         const page = await ario
-          .getDelegations({ address: address!, limit: 100, cursor })
+          .getDelegations({ address, limit: 100, cursor })
           .catch(() => ({ items: [], nextCursor: undefined }));
         for (const d of page.items ?? []) stakedMARIO += d.balance ?? 0;
         cursor = page.nextCursor;
-      } while (cursor);
+        if (cursor && seen.has(cursor)) break;
+        if (cursor) seen.add(cursor);
+      } while (cursor && ++pages < MAX_PAGES);
 
       return { liquidMARIO, stakedMARIO };
     },

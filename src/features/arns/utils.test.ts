@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_CONTROLLERS,
   isArweaveTxId,
+  isControllerLimitReached,
   isValidIpfsCid,
   isValidPrimaryName,
   isValidRecordTarget,
@@ -162,13 +164,24 @@ describe('isValidPrimaryName', () => {
 });
 
 describe('validateNewController', () => {
-  // Two known-valid Solana base58 pubkeys (decode to 32 bytes).
+  // Four known-valid Solana base58 pubkeys (each decodes to 32 bytes).
   const VALID_A = 'So11111111111111111111111111111111111111112';
   const VALID_B = '4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T';
+  const VALID_C = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+  const VALID_D = '11111111111111111111111111111111';
+  // A full list at the SDK-defined cap (length === MAX_CONTROLLERS). The cap
+  // check only counts length, so filler strings past the four named fixtures are
+  // fine here.
+  const FULL = Array.from({ length: MAX_CONTROLLERS }, (_, i) =>
+    [VALID_A, VALID_B, VALID_C, VALID_D][i] ?? `filler-controller-${i}`,
+  );
 
   it('uses fixtures that are actually valid Solana addresses', () => {
     expect(isValidSolanaAddress(VALID_A)).toBe(true);
     expect(isValidSolanaAddress(VALID_B)).toBe(true);
+    expect(isValidSolanaAddress(VALID_C)).toBe(true);
+    expect(isValidSolanaAddress(VALID_D)).toBe(true);
+    expect(FULL).toHaveLength(MAX_CONTROLLERS);
   });
 
   it('rejects empty or whitespace-only candidates', () => {
@@ -231,5 +244,62 @@ describe('validateNewController', () => {
     expect(validateNewController(VALID_A, undefined, [VALID_B])).toEqual({
       ok: true,
     });
+  });
+
+  it('rejects with "max" when the list is already at the controller cap', () => {
+    // A brand-new valid address still cannot be added once the list is full.
+    const brandNew = '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM';
+    expect(isValidSolanaAddress(brandNew)).toBe(true);
+    expect(validateNewController(brandNew, VALID_A, FULL)).toEqual({
+      ok: false,
+      reason: 'max',
+    });
+  });
+
+  it('returns "max" first — even for owner/duplicate/empty candidates', () => {
+    // The cap check runs before every other check, so a full list is "max"
+    // regardless of the candidate (the Add form is hidden at the cap anyway).
+    expect(validateNewController(VALID_A, VALID_A, FULL)).toEqual({
+      ok: false,
+      reason: 'max',
+    });
+    expect(validateNewController(VALID_B, VALID_A, FULL)).toEqual({
+      ok: false,
+      reason: 'max',
+    });
+    expect(validateNewController('', VALID_A, FULL)).toEqual({
+      ok: false,
+      reason: 'max',
+    });
+  });
+
+  it('still accepts a valid address one below the cap (< not <=)', () => {
+    // A list one short of MAX_CONTROLLERS is not yet full, so a valid new
+    // address is accepted.
+    const oneBelowCap = Array.from(
+      { length: MAX_CONTROLLERS - 1 },
+      (_, i) => `filler-controller-${i}`,
+    );
+    expect(validateNewController(VALID_D, VALID_A, oneBelowCap)).toEqual({
+      ok: true,
+    });
+  });
+});
+
+describe('MAX_CONTROLLERS / isControllerLimitReached', () => {
+  it('caps controllers at 4 (the deployed contract limit, not the stale SDK 10)', () => {
+    // The on-chain ario-ant contract enforces 4 (tightened 10→4 2026-05-21);
+    // the SDK's exported MAX_CONTROLLERS=10 is stale and must NOT be tracked.
+    expect(MAX_CONTROLLERS).toBe(4);
+  });
+
+  it('is false below the cap and true at/above it', () => {
+    const list = (len: number) =>
+      Array.from({ length: len }, (_, i) => `c${i}`);
+    expect(isControllerLimitReached([])).toBe(false);
+    expect(isControllerLimitReached(list(MAX_CONTROLLERS - 1))).toBe(false);
+    expect(isControllerLimitReached(list(MAX_CONTROLLERS))).toBe(true);
+    // Defensive: an ANT that somehow exceeded the cap is still reported full.
+    expect(isControllerLimitReached(list(MAX_CONTROLLERS + 1))).toBe(true);
   });
 });

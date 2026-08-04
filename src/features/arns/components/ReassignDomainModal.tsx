@@ -105,14 +105,14 @@ export default function ReassignDomainModal({
               type="text"
               value={targetAnt}
               onChange={(e) => setTargetAnt(e.target.value)}
-              placeholder="ANT address you own"
+              placeholder="ANT process ID you own"
               spellCheck={false}
               disabled={isBusy}
               className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
             />
             {trimmed && !isValidSolanaAddress(trimmed) && (
               <p className="mb-2 text-xs text-error">
-                Enter a valid ANT (Solana) address.
+                Enter a valid ANT process ID.
               </p>
             )}
             {trimmed && trimmed === domain.processId && (

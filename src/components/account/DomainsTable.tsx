@@ -124,7 +124,7 @@ export default function DomainsTable({
                           onClick: () => setControlling(domain),
                         },
                         {
-                          label: 'Set as primary',
+                          label: 'Set as primary name',
                           onClick: () => setSettingPrimary(domain),
                         },
                         {

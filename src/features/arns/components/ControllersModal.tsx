@@ -3,7 +3,11 @@ import { Info, Loader2, Plus, Trash2, XCircle } from 'lucide-react';
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
-import { validateNewController } from '../utils';
+import {
+  MAX_CONTROLLERS,
+  isControllerLimitReached,
+  validateNewController,
+} from '../utils';
 import {
   useControllersState,
   useControllerWrites,
@@ -35,6 +39,7 @@ export default function ControllersModal({
 
   const controllers = state.data?.controllers ?? [];
   const owner = state.data?.owner;
+  const atMax = isControllerLimitReached(controllers);
 
   const [addOpen, setAddOpen] = useState(false);
   const [newController, setNewController] = useState('');
@@ -48,6 +53,7 @@ export default function ControllersModal({
   const canAdd = validation.ok && !isBusy;
 
   const handleAdd = async () => {
+    if (atMax) return;
     try {
       await addController(domain.processId, newController.trim());
       setNewController('');
@@ -82,8 +88,7 @@ export default function ControllersModal({
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
           Controllers can manage this name&apos;s records and metadata but cannot
-          transfer or sell it. Each change is its own transaction, so expect a
-          wallet approval per change.
+          transfer or sell it. Each change is a separate wallet approval.
         </div>
 
         {/* Existing controllers */}
@@ -132,7 +137,13 @@ export default function ControllersModal({
         )}
 
         {/* Add controller */}
-        {addOpen ? (
+        {atMax ? (
+          <div className="mt-3 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
+            <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+            Maximum of {MAX_CONTROLLERS} controllers reached. Remove one before
+            adding another.
+          </div>
+        ) : addOpen ? (
           <div className="mt-3 rounded-2xl border border-primary/30 bg-card p-4">
             <label className="mb-1 block text-sm font-medium">
               Controller address

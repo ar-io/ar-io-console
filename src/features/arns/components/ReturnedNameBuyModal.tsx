@@ -407,8 +407,8 @@ export default function ReturnedNameBuyModal({
                   /{buyState.progress.total} — {buyState.progress.label}
                 </p>
                 <p className="mt-0.5 text-xs text-foreground/60">
-                  Keep this tab open. Approve each wallet prompt — this takes two
-                  signatures.
+                  Keep this tab open. Approve each prompt — this takes two wallet
+                  approvals.
                 </p>
               </div>
             </div>
@@ -425,7 +425,7 @@ export default function ReturnedNameBuyModal({
                   Bought &quot;{name}.ar.io&quot;
                 </p>
                 <p className="mt-1 text-sm text-foreground/70">
-                  The name is now yours and resolves across the AR.IO network.
+                  The name is now yours and resolves across the ar.io network.
                 </p>
                 <div className="mt-2 break-all font-mono text-xs text-foreground/50">
                   tx: {buyState.result.messageId}

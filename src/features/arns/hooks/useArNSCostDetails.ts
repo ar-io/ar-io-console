@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { CostDetailsResult } from '@ar.io/sdk/solana';
 
 import { getARIO } from '../../../utils';
 import { useStore } from '../../../store/useStore';
@@ -43,7 +44,13 @@ export interface ArNSCostDetails {
   gasFeeSol: number;
 }
 
-/** Structural view of the readable ARIO client's getCostDetails. */
+/**
+ * Structural view of the readable ARIO client's getCostDetails. The return type
+ * is the SDK's published `CostDetailsResult` (not a hand-rolled all-optional
+ * shape) so any drift in `tokenCost`, `fundingPlan.shortfall`, or the
+ * `gasEstimate.*Lamports` fields surfaces as a compile error here instead of
+ * silently casting to 0 and letting the affordability gate pass.
+ */
 type ARIOCostReadable = {
   getCostDetails(params: {
     intent: ArNSCostIntent;
@@ -53,16 +60,7 @@ type ARIOCostReadable = {
     quantity?: number;
     fundFrom?: ArNSFundFrom;
     fromAddress?: string;
-  }): Promise<{
-    tokenCost?: number;
-    discounts?: Array<{ discountTotal?: number }>;
-    fundingPlan?: { shortfall?: number };
-    gasEstimate?: {
-      totalLamports?: number;
-      rentLamports?: number;
-      feeLamports?: number;
-    };
-  }>;
+  }): Promise<CostDetailsResult>;
 };
 
 /**
@@ -134,15 +132,15 @@ export function useArNSCostDetails({
         (sum, d) => sum + (d.discountTotal ?? 0),
         0,
       );
-      const gas = cd.gasEstimate ?? {};
+      const gas = cd.gasEstimate;
       return {
         arioCost: mARIO / M_ARIO_PER_ARIO,
         mARIO,
         discountArio: discountMARIO / M_ARIO_PER_ARIO,
         shortfallMARIO: cd.fundingPlan?.shortfall ?? 0,
-        gasTotalSol: (gas.totalLamports ?? 0) / LAMPORTS_PER_SOL,
-        gasRentSol: (gas.rentLamports ?? 0) / LAMPORTS_PER_SOL,
-        gasFeeSol: (gas.feeLamports ?? 0) / LAMPORTS_PER_SOL,
+        gasTotalSol: (gas?.totalLamports ?? 0) / LAMPORTS_PER_SOL,
+        gasRentSol: (gas?.rentLamports ?? 0) / LAMPORTS_PER_SOL,
+        gasFeeSol: (gas?.feeLamports ?? 0) / LAMPORTS_PER_SOL,
       };
     },
   });

@@ -124,10 +124,37 @@ export function isValidUndername(label: string): boolean {
   return /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(l);
 }
 
+/**
+ * Hard cap on the number of delegated ANT controllers.
+ *
+ * Deliberately a local literal `4`, NOT the SDK's exported `MAX_CONTROLLERS`
+ * (which is stale at 10): the deployed ANT contract tightened this 10 → 4 on
+ * 2026-05-21 (`ario-ant/state.rs`, "mainnet rent shrink"), and `add_controller`
+ * rejects the 5th with "Maximum controllers reached (4)". Tracking the SDK's 10
+ * would let the UI accept controllers that then fail on-chain. Revisit if a
+ * later SDK re-syncs its constant to the contract.
+ *
+ * Only the delegated controllers list is capped. The owner is a separate entity
+ * in the contract (read from the MPL Core asset, never pushed into the
+ * controllers Vec) and is NOT counted against this cap.
+ */
+export const MAX_CONTROLLERS = 4;
+
+/**
+ * True when the controllers list is already at the cap (`MAX_CONTROLLERS`), so
+ * no further controller can be added. Counts only the delegated controllers —
+ * the owner is not included. Uses `>=` to match the
+ * delegated controllers — the owner is not included. Uses `>=` to match the
+ * contract's `len() < MAX_CONTROLLERS` guard exactly (a full list is at the cap).
+ */
+export function isControllerLimitReached(controllers: string[]): boolean {
+  return controllers.length >= MAX_CONTROLLERS;
+}
+
 /** Result of validating a candidate ANT controller address. */
 export type ControllerValidation =
   | { ok: true }
-  | { ok: false; reason: 'empty' | 'invalid' | 'owner' | 'duplicate' };
+  | { ok: false; reason: 'empty' | 'invalid' | 'owner' | 'duplicate' | 'max' };
 
 /**
  * Validate a candidate ANT controller address before an `addController` write.
@@ -135,6 +162,11 @@ export type ControllerValidation =
  * Controllers are delegated managers: they can edit an ANT's records/metadata
  * but cannot transfer or sell the name. The ANT owner is implicitly a
  * controller, so re-adding the owner is a no-op on-chain and is rejected here.
+ *
+ * Enforces the controller cap (`MAX_CONTROLLERS`) FIRST: once the list is full
+ * nothing is addable regardless of the candidate, so a full list returns
+ * `'max'` even for empty/duplicate/owner input. This is intentional — the Add
+ * form is hidden at the cap, so the candidate is moot.
  *
  * Solana addresses are base58 and case-sensitive, so owner/duplicate checks use
  * exact string comparison (never lowercased — unlike ETH addresses).
@@ -144,6 +176,7 @@ export function validateNewController(
   owner: string | undefined,
   controllers: string[],
 ): ControllerValidation {
+  if (isControllerLimitReached(controllers)) return { ok: false, reason: 'max' };
   const c = (candidate ?? '').trim();
   if (!c) return { ok: false, reason: 'empty' };
   if (!isValidSolanaAddress(c)) return { ok: false, reason: 'invalid' };

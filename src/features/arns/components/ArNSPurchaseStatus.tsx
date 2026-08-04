@@ -87,7 +87,7 @@ export function ArNSPurchaseStatus({
               Registered "{name}.ar.io"
             </p>
             <p className="text-sm text-foreground/70 mt-1">
-              Your ArNS name is now yours and resolves across the AR.IO network.
+              The name is now yours and resolves across the ar.io network.
             </p>
             <div className="mt-2 text-xs font-mono text-foreground/50 break-all">
               tx: {result.messageId}
@@ -101,7 +101,7 @@ export function ArNSPurchaseStatus({
                 onClick={() => navigate('/deploy')}
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                <Rocket className="h-4 w-4" /> Deploy a site to it
+                <Rocket className="h-4 w-4" /> Deploy a site
               </button>
               {newDomain && (
                 <button
@@ -162,7 +162,7 @@ export function ArNSPurchaseStatus({
               onClick={() => navigate('/topup')}
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              <CreditCard className="w-4 h-4" /> Buy Credits
+              <CreditCard className="w-4 h-4" /> Buy Turbo Credits
             </button>
           </div>
         </div>

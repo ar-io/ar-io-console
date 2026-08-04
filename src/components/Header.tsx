@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -37,10 +37,17 @@ const utilityServices = [
   { name: 'Check Balance', page: 'balances' as const, icon: Search },
   { name: 'Browse Data', page: 'browse' as const, icon: Compass },
   { name: 'Verify Data', page: 'verify' as const, icon: ShieldCheck },
-  { name: 'Search Domains', page: 'domains' as const, icon: Globe },
-  { name: 'Manage Domains', page: 'account' as const, icon: PencilLine },
   { name: 'Network Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
   { name: 'Developer Docs', href: 'https://docs.ar.io', icon: Code, external: true },
+];
+
+// ArNS / domain actions — grouped into a single labeled "Domains" cluster in the
+// mega-menu. None are payment-gated routes, so no x402/payment filtering applies.
+const domainServices = [
+  { name: 'Search Domains', page: 'domains' as const, icon: Search },
+  { name: 'Register a Name', page: 'arns' as const, icon: Globe },
+  { name: 'Returned Names', page: 'returned-names' as const, icon: Flame },
+  { name: 'Manage Domains', page: 'account' as const, icon: PencilLine },
 ];
 
 const Header = () => {
@@ -243,6 +250,30 @@ const Header = () => {
                   // preview locally, and each flow prompts to connect a wallet at the
                   // action (pay / upload / deploy / sign). Navigation only — this never
                   // triggers signing. Sign-in stays on the header button + wallet modal.
+                  return (
+                    <Link
+                      key={service.page}
+                      to={`/${service.page}`}
+                      onClick={() => close()}
+                      className={`flex items-center gap-3 py-2 px-4 text-sm transition-colors ${
+                        isActive
+                          ? 'bg-primary/15 text-foreground font-medium'
+                          : 'text-foreground/80 hover:bg-primary/10 hover:text-foreground'
+                      }`}
+                    >
+                      <service.icon className={`w-4 h-4 ${
+                        isActive ? 'text-primary' : 'text-foreground/60'
+                      }`} />
+                      {service.name}
+                    </Link>
+                  );
+                })}
+                <div className="border-t border-border/20 my-1" />
+
+                {/* Domains — ArNS name actions grouped into one cluster */}
+                <div className="px-4 py-2 text-xs font-semibold text-foreground/60 uppercase tracking-wider">Domains</div>
+                {domainServices.map((service) => {
+                  const isActive = location.pathname === `/${service.page}`;
                   return (
                     <Link
                       key={service.page}

@@ -26,6 +26,7 @@ import {
   useSetArNSMetadata,
 } from '../hooks/useSetArNSMetadata';
 import RecordFieldsEditor from './RecordFieldsEditor';
+import LogoUploadField from './LogoUploadField';
 import {
   RecordFieldsState,
   toRecordChange,
@@ -237,10 +238,9 @@ export default function EditDetailsModal({
           <>
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-              Each ANT metadata field is its own transaction; the record saves in
-              one approval (all its fields together); a record-ownership transfer
-              is a separate approval. It&apos;s free apart from a tiny SOL network
-              fee.
+              Each ANT-metadata field is a separate wallet approval; the record
+              saves in one approval (all its fields together); a record-ownership
+              transfer is one more. Free apart from a small SOL network fee.
             </div>
 
             {/* Nickname */}
@@ -249,7 +249,7 @@ export default function EditDetailsModal({
               className={`${inputCls} mb-4`}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Display name"
+              placeholder="Friendly name (e.g. My Project)"
               disabled={isBusy}
             />
 
@@ -292,15 +292,11 @@ export default function EditDetailsModal({
             </div>
 
             {/* Logo */}
-            <label className="mb-1 block text-sm font-medium">
-              Logo (Arweave TX ID)
-            </label>
-            <input
-              className={`${inputCls} font-mono`}
+            <LogoUploadField
+              idPrefix="ant-logo"
+              label="Logo"
               value={logo}
-              onChange={(e) => setLogo(e.target.value)}
-              placeholder="43-character transaction ID"
-              spellCheck={false}
+              onChange={setLogo}
               disabled={isBusy}
             />
             {!logoValid && (

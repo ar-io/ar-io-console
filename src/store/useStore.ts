@@ -12,6 +12,7 @@ import {
 import { SupportedTokenType } from '../constants';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
+import type { PriceDisplayCurrency } from '../features/arns/priceDisplay';
 
 // Preset configurations
 const PRESET_CONFIGS = {
@@ -281,6 +282,9 @@ interface StoreState {
   fileHashCache: Record<string, FileHashEntry>;
   smartDeployEnabled: boolean;
 
+  // Price-display preference (ARIO ⇄ USD toggle on priced surfaces)
+  priceDisplayCurrency: PriceDisplayCurrency;
+
   // App Details state (deployed apps history)
   deployedApps: Record<string, DeployedAppEntry>; // Keyed by app name
   lastDeployedAppName: string | null; // Most recently deployed app for pre-fill
@@ -408,6 +412,7 @@ interface StoreState {
   getFileHashEntry: (hash: string) => FileHashEntry | null;
   clearFileHashCache: () => void;
   setSmartDeployEnabled: (enabled: boolean) => void;
+  setPriceDisplayCurrency: (currency: PriceDisplayCurrency) => void;
 
   // App Details actions
   saveDeployedApp: (appName: string, appVersion: string) => void;
@@ -452,6 +457,9 @@ export const useStore = create<StoreState>()(
       // Smart Deploy state (file deduplication)
       fileHashCache: {},
       smartDeployEnabled: true, // Default ON
+
+      // Price-display preference — ARIO by default (native ArNS currency)
+      priceDisplayCurrency: 'ario',
 
       // App Details state (deployed apps history)
       deployedApps: {},
@@ -904,6 +912,8 @@ export const useStore = create<StoreState>()(
       },
       clearFileHashCache: () => set({ fileHashCache: {} }),
       setSmartDeployEnabled: (enabled) => set({ smartDeployEnabled: enabled }),
+      setPriceDisplayCurrency: (priceDisplayCurrency) =>
+        set({ priceDisplayCurrency }),
 
       // App Details actions
       saveDeployedApp: (appName, appVersion) => {
@@ -982,6 +992,8 @@ export const useStore = create<StoreState>()(
         // Smart Deploy state
         fileHashCache: state.fileHashCache,
         smartDeployEnabled: state.smartDeployEnabled,
+        // Price-display preference
+        priceDisplayCurrency: state.priceDisplayCurrency,
         // App Details state
         deployedApps: state.deployedApps,
         lastDeployedAppName: state.lastDeployedAppName,

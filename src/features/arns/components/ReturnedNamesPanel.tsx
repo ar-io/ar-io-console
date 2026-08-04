@@ -23,14 +23,11 @@ import {
   estimateReturnedNameArio,
   formatCountdown,
 } from '../returnedNamePricing';
+import PriceAmount from './PriceAmount';
+import PriceDisplayToggle from './PriceDisplayToggle';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
 
 const PAGE_SIZE = 25;
-
-const fmtArio = (n: number) =>
-  n.toLocaleString(undefined, {
-    maximumFractionDigits: n >= 100 ? 0 : 2,
-  });
 
 /** Color-grade the premium badge by magnitude so high premiums draw attention. */
 function premiumClasses(multiplier: number): string {
@@ -118,13 +115,17 @@ export default function ReturnedNamesPanel() {
     return `${start.toLocaleString()}–${end.toLocaleString()} of ${totalFiltered.toLocaleString()}`;
   }, [safePage, totalFiltered]);
 
-  const estPrice = (r: ReturnedNameRecord, multiplier: number): string => {
-    if (!priceInputs) return '—';
+  // Estimated ARIO price for a row's current premium, or undefined when the fee
+  // schedule isn't loaded/usable — PriceAmount renders '—' for undefined.
+  const estPriceArio = (
+    r: ReturnedNameRecord,
+    multiplier: number,
+  ): number | undefined => {
+    if (!priceInputs) return undefined;
     const base = baseAnnualMARIOForName(priceInputs.fees, r.name.length);
-    if (base == null) return '—';
+    if (base == null) return undefined;
     const ario = estimateReturnedNameArio(base, priceInputs.demandFactor, multiplier);
-    if (!Number.isFinite(ario)) return '—';
-    return `≈ ${fmtArio(ario)} ARIO`;
+    return Number.isFinite(ario) ? ario : undefined;
   };
 
   return (
@@ -153,15 +154,18 @@ export default function ReturnedNamesPanel() {
             )}
           </p>
         </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          title="Refresh auctions"
-          className="flex items-center gap-2 rounded-full border border-border/20 bg-card px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-primary/10 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <PriceDisplayToggle />
+          <button
+            onClick={refresh}
+            disabled={loading}
+            title="Refresh auctions"
+            className="flex items-center gap-2 rounded-full border border-border/20 bg-card px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-primary/10 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -272,7 +276,11 @@ export default function ReturnedNamesPanel() {
 
                 {/* Est. price */}
                 <div className="font-mono text-sm text-foreground/80 sm:col-span-2">
-                  {estPrice(r, multiplier)}
+                  <PriceAmount
+                    ario={estPriceArio(r, multiplier)}
+                    compact
+                    primaryClassName="text-sm text-foreground/80"
+                  />
                 </div>
 
                 {/* Action */}
