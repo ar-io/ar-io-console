@@ -13,6 +13,7 @@ import { useArNSCostDetails, type ArNSFundFrom } from '../hooks/useArNSCostDetai
 import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
+import { useArNSPricing } from '@/hooks/useArNSPricing';
 import type { BuyArNSNameInput } from '../hooks/useBuyArNSName';
 import {
   ArNSFundingSource,
@@ -164,6 +165,29 @@ export function ArNSPurchaseCard({
   const offerTopUp =
     !!address && method === 'credits' && insufficientFunds && !insufficientSol;
 
+  // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
+  // years = 1 + (permabuy − year1) / annualRenewal, where annualRenewal is the
+  // marginal (year2 − year1). Ratios cancel the length, so it's stable per name.
+  const { pricingTiers } = useArNSPricing();
+  const permabuyBreakEvenYears = useMemo(() => {
+    if (!name || pricingTiers.length === 0) return undefined;
+    const bucket = name.length > 12 ? 13 : name.length;
+    const tier = pricingTiers.find((t) => t.characterLength === bucket);
+    const y1 = tier?.pricesInARIO?.year1;
+    const y2 = tier?.pricesInARIO?.year2;
+    const perm = tier?.pricesInARIO?.permabuy;
+    if (
+      typeof y1 !== 'number' ||
+      typeof y2 !== 'number' ||
+      typeof perm !== 'number' ||
+      y1 <= 0 ||
+      y2 <= y1 ||
+      perm <= 0
+    )
+      return undefined;
+    return Math.round(1 + (perm - y1) / (y2 - y1));
+  }, [name, pricingTiers]);
+
   return (
     <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">
       {/* Warm every lease term's price so switching the term is instant (no
@@ -202,6 +226,15 @@ export function ArNSPurchaseCard({
           <span className="font-medium">Permabuy</span>
         </button>
       </div>
+
+      {/* Lease-vs-permabuy decision aid */}
+      {permabuyBreakEvenYears !== undefined && (
+        <p className="-mt-2 mb-4 text-xs text-foreground/60">
+          {type === 'permabuy'
+            ? `Own it forever — no renewals, ever. Roughly the cost of ${permabuyBreakEvenYears} years of leasing.`
+            : `Permabuy ≈ ${permabuyBreakEvenYears} years of leasing — own it forever, never renew.`}
+        </p>
+      )}
 
       {/* Lease term */}
       {type === 'lease' && (

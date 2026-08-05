@@ -37,6 +37,19 @@ export function ArNSNameSearch({
   // Starting (1-year lease) price for the typed name's length tier, so the user
   // sees the cost BEFORE selecting — mirrors arns-react's DomainPriceList.
   const { pricingTiers } = useArNSPricing();
+
+  // 1-year lease USD for a name of a given length (character tier bucketed at
+  // 13+). Used for the main result AND each taken-name suggestion.
+  const usdForLength = (len: number): number | undefined => {
+    if (pricingTiers.length === 0) return undefined;
+    const bucket = len > 12 ? 13 : len;
+    const usd = pricingTiers.find((t) => t.characterLength === bucket)
+      ?.pricesInUSD?.year1;
+    return typeof usd === 'number' && usd > 0 ? usd : undefined;
+  };
+
+  // Starting (1-year lease) price for the typed name, so the user sees the cost
+  // BEFORE selecting — mirrors arns-react's DomainPriceList.
   const startPrice = useMemo(() => {
     if (!validName || pricingTiers.length === 0) return undefined;
     const bucket = debounced.length > 12 ? 13 : debounced.length;
@@ -150,15 +163,23 @@ export function ArNSNameSearch({
                 <div className="mt-3">
                   <p className="text-sm text-foreground/80 mb-2">Try one of these instead:</p>
                   <div className="flex flex-wrap gap-2">
-                    {suggestions.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => onChange(s)}
-                        className="px-3 py-1.5 rounded-full bg-card border border-primary/30 text-sm font-mono text-foreground hover:bg-primary/10 transition-colors"
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {suggestions.map((s) => {
+                      const usd = usdForLength(s.length);
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => onChange(s)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-primary/10"
+                        >
+                          <span className="font-mono">{s}</span>
+                          {usd !== undefined && (
+                            <span className="text-xs text-foreground/50">
+                              ~${usd.toFixed(2)}/yr
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
