@@ -467,37 +467,62 @@ const LandingPage = () => {
                 </div>
               </div>
 
-              {/* Body — a clean "resolved content" surface */}
-              <div className="flex min-h-[220px] flex-col gap-4 bg-gradient-to-br from-primary/5 to-lavender/40 p-5">
-                {/* Faux page header: motif + skeleton title + resolves-to badges */}
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/15">
-                    <Globe2 className="h-6 w-6 text-primary" />
+              {/* Body — a real resolved page: a Pages link-in-bio site (modeled on
+                  the "Link Classic" template) so the frame shows something we
+                  actually make, not a generic skeleton. */}
+              <div className="bg-gradient-to-br from-primary/5 to-lavender/40 px-5 py-6">
+                <div className="mx-auto max-w-[15rem] text-center">
+                  {/* Avatar */}
+                  <div className="mx-auto mb-2.5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 font-heading text-lg font-bold text-white shadow-md">
+                    SR
                   </div>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="h-3 w-2/3 rounded-full bg-primary/25" />
-                    <div className="h-2.5 w-2/5 rounded-full bg-foreground/15" />
-                  </div>
-                  <div className="flex flex-shrink-0 flex-wrap justify-end gap-1.5">
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Arweave</span>
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">IPFS</span>
-                  </div>
-                </div>
+                  <div className="font-heading text-base font-bold text-foreground">Sam Rivera</div>
+                  <div className="text-xs font-medium text-primary">sam.ar.io</div>
+                  <p className="mx-auto mt-1.5 mb-4 text-[11px] leading-snug text-foreground/70">
+                    Notes on creativity, small business, and building in public — kept permanently.
+                  </p>
 
-                {/* Faux content block */}
-                <div className="space-y-2 rounded-xl border border-primary/10 bg-background/70 p-4">
-                  <div className="h-2.5 w-full rounded-full bg-foreground/10" />
-                  <div className="h-2.5 w-5/6 rounded-full bg-foreground/10" />
-                  <div className="h-2.5 w-3/4 rounded-full bg-foreground/10" />
-                </div>
+                  {/* Link buttons */}
+                  <div className="space-y-2 text-left">
+                    {[
+                      { icon: '✉', label: 'Read the newsletter' },
+                      { icon: '▶', label: 'Listen to the podcast' },
+                      { icon: '★', label: 'Shop my gear' },
+                    ].map((l) => (
+                      <div
+                        key={l.label}
+                        className="flex items-center gap-2 rounded-full border border-primary/15 bg-background/80 px-3 py-2 text-[11px] font-semibold text-foreground shadow-sm"
+                      >
+                        <span className="text-sm text-primary">{l.icon}</span>
+                        <span className="truncate">{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
 
-                {/* Gateway chip */}
-                <div className="mt-auto flex justify-center">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-background/70 px-3 py-1 text-xs text-foreground/70">
-                    <Globe2 className="h-3.5 w-3.5 text-primary" />
-                    Served by the ar.io gateway network
-                  </span>
+                  {/* Socials */}
+                  <div className="mt-3 flex justify-center gap-2 text-[10px] font-bold text-primary">
+                    {['IG', 'YT', 'X', 'TT'].map((s) => (
+                      <span
+                        key={s}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
+              </div>
+
+              {/* Footer strip — verification + gateway provenance */}
+              <div className="flex items-center justify-between gap-2 border-t border-border/10 bg-card px-4 py-2 text-[10px] text-foreground/60">
+                <span className="inline-flex items-center gap-1 truncate">
+                  <CheckCircle className="h-3 w-3 flex-shrink-0 text-success" />
+                  Verified · permanent on Arweave
+                </span>
+                <span className="inline-flex flex-shrink-0 items-center gap-1">
+                  <Globe2 className="h-3 w-3 text-primary" />
+                  ar.io gateway
+                </span>
               </div>
             </div>
           </div>
@@ -524,7 +549,7 @@ const LandingPage = () => {
 
           {/* Use-case chips */}
           <div className="mt-6 flex flex-wrap gap-2">
-            {['Deploy an app → app.yourname.ar.io', 'Publish a Pages site', 'Point at an IPFS CID'].map((chip) => (
+            {['Deploy an app → app.yourname.ar.io', 'Publish a Pages site', 'Point at an IPFS CID', "Serve your agent's dataset"].map((chip) => (
               <span key={chip} className="inline-flex items-center rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80">
                 {chip}
               </span>
