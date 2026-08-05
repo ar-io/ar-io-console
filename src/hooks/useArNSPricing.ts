@@ -311,9 +311,14 @@ export function useArNSPricing(): UseArNSPricingReturn {
           const lease = fees[key].lease;
           const permabuy = fees[key].permabuy;
 
-          // Convert mARIO to ARIO, then to USD with demand factor
+          // Convert mARIO → ARIO → USD. Do NOT re-apply the demand factor:
+          // getRegistrationFees() already bakes it into `lease`/`permabuy`
+          // (SDK io-readable multiplies fees by currentDemandFactor). Multiplying
+          // again here double-counted it, inflating every price by a factor of
+          // DF (e.g. ~7× at DF 7.1). `currentDemandFactor` is still fetched for
+          // the display chip + cache signature.
           const formatPrice = (mARIO: number) => {
-            const ario = (mARIO / 1e6) * currentDemandFactor;
+            const ario = mARIO / 1e6;
             const usd = ario * arioUSDPrice;
             return { ario, usd };
           };
