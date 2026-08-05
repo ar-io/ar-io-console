@@ -1,6 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+
+// Real Pages template rendered in the hero browser frame — lazy so the template
+// registry it pulls in doesn't weigh down the initial landing bundle.
+const ArNSResolvedPreview = lazy(() => import('../components/ArNSResolvedPreview'));
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../hooks/useTheme';
@@ -467,51 +471,17 @@ const LandingPage = () => {
                 </div>
               </div>
 
-              {/* Body — a real resolved page: a Pages link-in-bio site (modeled on
-                  the "Link Classic" template) so the frame shows something we
-                  actually make, not a generic skeleton. */}
-              <div className="bg-gradient-to-br from-primary/5 to-lavender/40 px-5 py-6">
-                <div className="mx-auto max-w-[15rem] text-center">
-                  {/* Avatar */}
-                  <div className="mx-auto mb-2.5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 font-heading text-lg font-bold text-white shadow-md">
-                    SR
-                  </div>
-                  <div className="font-heading text-base font-bold text-foreground">Sam Rivera</div>
-                  <div className="text-xs font-medium text-primary">sam.ar.io</div>
-                  <p className="mx-auto mt-1.5 mb-4 text-[11px] leading-snug text-foreground/70">
-                    Notes on creativity, small business, and building in public — kept permanently.
-                  </p>
-
-                  {/* Link buttons */}
-                  <div className="space-y-2 text-left">
-                    {[
-                      { icon: '✉', label: 'Read the newsletter' },
-                      { icon: '▶', label: 'Listen to the podcast' },
-                      { icon: '★', label: 'Shop my gear' },
-                    ].map((l) => (
-                      <div
-                        key={l.label}
-                        className="flex items-center gap-2 rounded-full border border-primary/15 bg-background/80 px-3 py-2 text-[11px] font-semibold text-foreground shadow-sm"
-                      >
-                        <span className="text-sm text-primary">{l.icon}</span>
-                        <span className="truncate">{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Socials */}
-                  <div className="mt-3 flex justify-center gap-2 text-[10px] font-bold text-primary">
-                    {['IG', 'YT', 'X', 'TT'].map((s) => (
-                      <span
-                        key={s}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10"
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              {/* Body — a REAL Pages template rendered exactly as it resolves at a
+                  name (same renderPageHtml + iframe path as the Pages thumbnails),
+                  lazy-loaded so the template registry stays out of the initial
+                  bundle. */}
+              <Suspense
+                fallback={
+                  <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
+                }
+              >
+                <ArNSResolvedPreview />
+              </Suspense>
 
               {/* Footer strip — verification + gateway provenance */}
               <div className="flex items-center justify-between gap-2 border-t border-border/10 bg-card px-4 py-2 text-[10px] text-foreground/60">
