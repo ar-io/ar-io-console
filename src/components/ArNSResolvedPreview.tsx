@@ -8,9 +8,11 @@ import { useElementWidth } from '../features/pages/components/useElementWidth';
 
 // A real, self-contained Pages template rendered exactly as it resolves at an
 // ArNS name — the same `renderPageHtml` + `<iframe srcDoc>` path PageCard uses
-// for its thumbnails, not a hand-drawn mockup. Swap the id to feature a
-// different template in the hero.
-const SHOWCASE_TEMPLATE: TemplateId = 'aurora-glass';
+// for its thumbnails, not a hand-drawn mockup. One is chosen at random from the
+// ENTIRE template library per mount so the hero shows a different real page each
+// visit. (Random selection is fine here — this is app code, not a template
+// render fn, which must stay deterministic.)
+const SHOWCASE_POOL = Object.keys(templates) as TemplateId[];
 const DESIGN_W = 440; // width the page renders at before being scaled to fit
 const VIEWPORT_H = 340; // visible viewport height inside the browser frame
 
@@ -25,16 +27,22 @@ export default function ArNSResolvedPreview() {
   const { ref, width } = useElementWidth<HTMLDivElement>();
   const scale = width > 0 ? width / DESIGN_W : 0;
 
+  // Pick a template once per mount (stable across re-renders/resizes).
+  const templateId = useMemo(
+    () => SHOWCASE_POOL[Math.floor(Math.random() * SHOWCASE_POOL.length)],
+    [],
+  );
+
   const html = useMemo(() => {
     try {
-      const def = templates[SHOWCASE_TEMPLATE].seed;
+      const def = templates[templateId].seed;
       const ctx: RenderCtx = renderCtxFor(def, { configMode }, { arnsName: 'maya' });
       return renderPageHtml(def, ctx);
     } catch (e) {
       console.error('ArNS hero preview render failed:', e);
       return '<!doctype html><html><body></body></html>';
     }
-  }, [configMode]);
+  }, [configMode, templateId]);
 
   return (
     <div
