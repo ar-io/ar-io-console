@@ -431,11 +431,21 @@ if (privyWallet) {
 
 ```typescript
 '/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share',
-'/account', '/domains', '/calculator', '/services-calculator', '/balances',
-'/settings', '/try', '/browse', '/verify', '/pages'
+'/account', '/pages', '/balances', '/settings', '/try', '/browse', '/verify',
+// ArNS / domains — flat, one purpose per route (no tabs):
+'/domains',        // Browse & search all registered names (BrowseDomainsPanel)
+'/arns',           // Register a name (ArNSBuyPanel; accepts ?q=)
+'/returned-names', // Auctions (ReturnedNamesPanel)
+'/pricing'         // Unified pricing: Storage + Domain Names (?type=domains seeds the tab)
 ```
 
 Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unknown routes redirect to home.
+
+**ArNS/domains IA (flat, no tabs):** `/domains` is the Browse page, `/arns` is Register, `/returned-names` is Auctions — each its own route. There is NO tabbed DomainsPage; don't reintroduce in-page tabs for these (the app convention is one page per route). Browse cross-links to `/arns` ("Register a name").
+
+**Pricing is unified at `/pricing`** (Storage calculator + Domain-name price table, chosen via a mode selector; `?type=domains` seeds the domains mode). The old pricing routes now **redirect** (kept alive): `/calculator`→`/pricing`, `/name-prices`→`/pricing?type=domains`, `/services-calculator`→`/pricing`. The operator-facing Services calculator + `PricingCalculator.tsx` were removed. `PricingCalculatorPanel` (storage) and `ArNSPriceTable` (domains) are reused by `PricingPage`; the panel's own header was hoisted out (the page provides it).
+
+**Stripe is NOT provided app-wide.** `<Elements>` lives in `StripeElementsProvider`, mounted only around payment surfaces (`TopUpPage`, `BuyCreditsModal`, `GiftPage`) so Stripe.js stays off the homepage/critical path. `getStripePromise()` is lazy+cached — never re-add an eager `STRIPE_PROMISE` at the app root, and any new component calling `useStripe`/`useElements` must render under `StripeElementsProvider`.
 
 **Deprecated/disabled routes:** `/gift` and `/redeem` are commented out in `App.tsx` (gifting was deprecated in favor of manual TX recovery on the top-up page). `GiftPage.tsx`/`RedeemPage.tsx` still exist but are not routed — don't wire them back up without checking why they were removed.
 
