@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { renderPageHtml, type RenderCtx } from '../features/pages/render/renderPageHtml';
 import { renderCtxFor } from '../features/pages/publish/renderCtx';
@@ -22,7 +22,13 @@ const VIEWPORT_H = 340; // visible viewport height inside the browser frame
  * "the top of a real resolved page"). Lazy-loaded by LandingPage so the template
  * registry lands in its own chunk instead of the initial bundle.
  */
-export default function ArNSResolvedPreview() {
+export default function ArNSResolvedPreview({
+  onHandle,
+}: {
+  /** Reports the shown template's ArNS handle so the frame's address bar can
+   *  match the page inside (e.g. `ava.ar.io`) instead of drifting from it. */
+  onHandle?: (name: string) => void;
+}) {
   const configMode = useStore((s) => s.configMode);
   const { ref, width } = useElementWidth<HTMLDivElement>();
   const scale = width > 0 ? width / DESIGN_W : 0;
@@ -33,16 +39,24 @@ export default function ArNSResolvedPreview() {
     [],
   );
 
+  // The template's own persona handle — used BOTH in the render ctx and reported
+  // up for the address bar, so URL and content always agree.
+  const arnsName = templates[templateId].seed.arnsName || 'yourname';
+
+  useEffect(() => {
+    onHandle?.(arnsName);
+  }, [arnsName, onHandle]);
+
   const html = useMemo(() => {
     try {
       const def = templates[templateId].seed;
-      const ctx: RenderCtx = renderCtxFor(def, { configMode }, { arnsName: 'maya' });
+      const ctx: RenderCtx = renderCtxFor(def, { configMode }, { arnsName });
       return renderPageHtml(def, ctx);
     } catch (e) {
       console.error('ArNS hero preview render failed:', e);
       return '<!doctype html><html><body></body></html>';
     }
-  }, [configMode, templateId]);
+  }, [configMode, templateId, arnsName]);
 
   return (
     <div

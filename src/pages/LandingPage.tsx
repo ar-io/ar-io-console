@@ -16,7 +16,7 @@ import {
   ArrowRight, Zap, Github,
   CreditCard, Users, Upload, Globe2, Search, Check, CheckCircle, Copy, ChevronDown, Info,
   Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal,
-  Tag, Layers, KeyRound, Loader2, Lock, ExternalLink, XCircle,
+  Tag, Layers, KeyRound, Loader2, Lock, XCircle,
   ChevronLeft, ChevronRight, RotateCw
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
@@ -46,6 +46,11 @@ const LandingPage = () => {
   const [copied, setCopied] = useState(false);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const [arnsQuery, setArnsQuery] = useState('');
+
+  // The ArNS handle shown in the preview's address bar — matches the template
+  // being rendered (reported up by ArNSResolvedPreview), so URL and content
+  // agree. Deliberately NOT tied to the search box.
+  const [heroName, setHeroName] = useState('yourname');
 
   // Defer loading the hero template preview (and its template-registry chunk)
   // until the browser is idle, so it never competes with the initial/critical
@@ -407,7 +412,7 @@ const LandingPage = () => {
                 One name. Every gateway.
               </h2>
               <p className="text-base leading-relaxed text-foreground/80 sm:text-lg">
-                A &ldquo;dot-anything&rdquo; name — no registrar, no ICANN. <span className="font-mono text-foreground">yourname.ar.io</span> resolves across every ar.io gateway to your content on Arweave or IPFS, and stays reachable by the same name even if a host goes offline. Point it at an app deployment, a Pages site, or any TX ID / CID.
+                A &ldquo;dot-anything&rdquo; name — no registrar, no ICANN. <span className="font-mono text-foreground">yourname.ar.io</span> resolves across every ar.io gateway to your content on Arweave (IPFS coming soon), and stays reachable by the same name even if a host goes offline. Point it at an app deployment, a Pages site, or any TX ID / CID.
               </p>
 
               {/* Live availability search (primary conversion action) */}
@@ -424,63 +429,61 @@ const LandingPage = () => {
                   />
                   <span className="select-none pl-1 font-medium text-foreground/60">.ar.io</span>
                 </div>
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  {/* Availability is shown live below as you type, so the button
-                      is always the forward action — never a redundant "check". */}
-                  {validName ? (
-                    <>
-                      Register <ArrowRight className="h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4" /> Search names
-                    </>
-                  )}
-                </button>
+                {/* One button that IS the live status + action — availability and
+                    price are folded in, so there's no separate result row. */}
+                {!validName ? (
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    <Search className="h-4 w-4" /> Search names
+                  </button>
+                ) : isFetching || !avail ? (
+                  <button
+                    type="submit"
+                    disabled
+                    className="inline-flex cursor-wait items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary/60 px-6 py-3 font-semibold text-primary-foreground"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" /> Checking…
+                  </button>
+                ) : avail.available ? (
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    <CheckCircle className="h-4 w-4" /> Register
+                    {year1USD !== undefined && (
+                      <span className="font-normal opacity-90">· ~{formatUsd(year1USD)}/yr</span>
+                    )}
+                  </button>
+                ) : avail.reserved ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-full bg-foreground/10 px-6 py-3 font-semibold text-foreground/50"
+                  >
+                    Reserved
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-foreground/10 px-6 py-3 font-semibold text-foreground/80 transition-colors hover:bg-foreground/15"
+                  >
+                    <XCircle className="h-4 w-4 text-foreground/40" /> Taken · see options
+                  </button>
+                )}
               </form>
 
-              {/* Result line — reserved min-height so the layout never jumps */}
-              <div aria-live="polite" className="mt-3 min-h-[1.75rem] text-sm">
-                {validName && isFetching && (
-                  <span className="inline-flex items-center gap-2 text-foreground/60">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Checking availability…
-                  </span>
-                )}
-                {validName && !isFetching && avail && avail.available && (
-                  <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 text-foreground">
-                    <CheckCircle className="h-4 w-4 flex-shrink-0 text-success" />
-                    <span><b className="font-semibold">{normalized}.ar.io</b> is available</span>
-                    {year1USD !== undefined && (
-                      <span className="text-foreground/60">· from ~{formatUsd(year1USD)}/yr</span>
-                    )}
-                  </span>
-                )}
-                {validName && !isFetching && avail && !avail.available && avail.reserved && (
-                  <span className="text-foreground/60">
-                    <b className="font-semibold">{normalized}.ar.io</b> is reserved — not available.
-                  </span>
-                )}
-                {validName && !isFetching && avail && !avail.available && !avail.reserved && (
-                  <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-foreground/60">
-                    <span className="inline-flex items-center gap-1.5">
-                      <XCircle className="h-4 w-4 flex-shrink-0 text-foreground/40" />
-                      <span><b className="font-semibold">{normalized}.ar.io</b> taken</span>
-                    </span>
-                    <a
-                      href={`https://${normalized}.ar.io`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 font-medium text-primary transition-opacity hover:opacity-80"
-                    >
-                      Visit <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </span>
-                )}
-              </div>
+              {/* Screen-reader-only live status (the visual status lives in the button). */}
+              <span className="sr-only" aria-live="polite">
+                {validName && !isFetching && avail
+                  ? avail.available
+                    ? `${normalized}.ar.io is available`
+                    : avail.reserved
+                      ? `${normalized}.ar.io is reserved`
+                      : `${normalized}.ar.io is taken`
+                  : ''}
+              </span>
             </div>
 
             {/* RIGHT — browser-frame mockup of a resolved ArNS page */}
@@ -499,7 +502,7 @@ const LandingPage = () => {
                 </div>
                 <div className="flex flex-1 items-center gap-1.5 truncate rounded-full border border-border/20 bg-background px-3 py-1 text-xs font-mono text-foreground/70">
                   <Lock className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{(arnsQuery || 'yourname')}.ar.io</span>
+                  <span className="truncate">{heroName}.ar.io</span>
                 </div>
               </div>
 
@@ -516,7 +519,7 @@ const LandingPage = () => {
                       <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
                     }
                   >
-                    <ArNSResolvedPreview />
+                    <ArNSResolvedPreview onHandle={setHeroName} />
                   </Suspense>
                 ) : (
                   <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
@@ -533,7 +536,7 @@ const LandingPage = () => {
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
             {[
               { icon: Tag, label: 'Human-readable', copy: 'a name, not a 43-character TX ID or CID.' },
-              { icon: Layers, label: 'Arweave or IPFS', copy: 'point it at either; your deployed app, your Pages site, your files.' },
+              { icon: Layers, label: 'Arweave (IPFS soon)', copy: 'point it at your deployed app, your Pages site, or any file — IPFS support is on the way.' },
               { icon: Globe2, label: 'Resolves everywhere', copy: 'served by every ar.io gateway, with cryptographic verification.' },
               { icon: KeyRound, label: 'Own or lease', copy: 'you hold the ANT (an NFT you control); buy it outright or lease by the year.' },
             ].map(({ icon: Icon, label, copy }) => (
@@ -551,7 +554,7 @@ const LandingPage = () => {
 
           {/* Use-case chips */}
           <div className="mt-6 flex flex-wrap gap-2">
-            {['Deploy an app → app.yourname.ar.io', 'Publish a Pages site', 'Point at an IPFS CID', "Serve your agent's dataset"].map((chip) => (
+            {['Deploy an app → app.yourname.ar.io', 'Publish a Pages site', 'Point at an IPFS CID (soon)', "Serve your agent's dataset"].map((chip) => (
               <span key={chip} className="inline-flex items-center rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80">
                 {chip}
               </span>
@@ -840,9 +843,9 @@ const LandingPage = () => {
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm shadow-md">
                   1
                 </div>
-                <p className="text-xs text-foreground/80 text-center mb-3 leading-snug">Learn the fundamentals of ar.io and Arweave</p>
+                <p className="text-xs text-foreground/80 text-center mb-3 leading-snug">Learn the fundamentals of ar.io</p>
                 <a
-                  href="https://docs.ar.io/learn/what-is-arweave/"
+                  href="https://docs.ar.io/learn/what-is-ario/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-1 bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary/90 transition-all text-xs font-medium w-full"
@@ -909,13 +912,13 @@ const LandingPage = () => {
 
             <div className="space-y-3 relative" style={{ zIndex: 1 }}>
               {/* Mobile: Step 1 - Learn (special start box like desktop) */}
-              <a href="https://docs.ar.io/learn/what-is-arweave/" target="_blank" rel="noopener noreferrer" className="block group">
+              <a href="https://docs.ar.io/learn/what-is-ario/" target="_blank" rel="noopener noreferrer" className="block group">
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-xs shadow-md shrink-0">
                     1
                   </div>
                   <div className="flex-1 bg-white border-2 border-primary/30 rounded-lg px-3 py-3 group-hover:border-primary/50 transition-colors">
-                    <p className="text-xs text-foreground/80 mb-2"><strong className="text-foreground">Learn</strong> the fundamentals of ar.io and Arweave</p>
+                    <p className="text-xs text-foreground/80 mb-2"><strong className="text-foreground">Learn</strong> the fundamentals of ar.io</p>
                     <span className="inline-flex items-center justify-center gap-1 bg-primary text-white rounded-lg px-3 py-1.5 text-xs font-medium">
                       Get Started
                     </span>
