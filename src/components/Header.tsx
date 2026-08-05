@@ -48,7 +48,7 @@ const domainServices = [
   { name: 'Register a Name', page: 'arns' as const, icon: Globe },
   { name: 'Browse Domains', page: 'domains' as const, icon: Search },
   { name: 'Returned Names', page: 'returned-names' as const, icon: Flame },
-  { name: 'Manage Domains', page: 'account' as const, icon: PencilLine },
+  { name: 'Manage Domains', page: 'my-domains' as const, icon: PencilLine },
 ];
 
 const Header = () => {

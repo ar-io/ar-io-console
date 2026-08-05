@@ -28,6 +28,7 @@ const GatewayInfoPage = lazy(() => import('./pages/GatewayInfoPage'));
 const DeploySitePage = lazy(() => import('./pages/DeploySitePage'));
 const RecentDeploymentsPage = lazy(() => import('./pages/RecentDeploymentsPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
+const MyDomainsPage = lazy(() => import('./pages/MyDomainsPage'));
 const TryItNowPage = lazy(() => import('./pages/TryItNowPage'));
 const VerifyPage = lazy(() => import('./pages/VerifyPage'));
 const PagesPage = lazy(() => import('./pages/PagesPage'));
@@ -124,6 +125,7 @@ function AppRoutes() {
           <Route path="services-calculator" element={<Navigate to="/pricing" replace />} />
           <Route path="balances" element={<BalanceCheckerPage />} />
           <Route path="account" element={<AccountPage />} />
+          <Route path="my-domains" element={<MyDomainsPage />} />
           {/* <Route path="redeem" element={<RedeemPage />} /> */}
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />

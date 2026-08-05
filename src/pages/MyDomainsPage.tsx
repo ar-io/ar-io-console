@@ -1,0 +1,252 @@
+import { useState } from 'react';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { useStore } from '@/store/useStore';
+import { Globe, RefreshCw, AlertTriangle, Download, Search, Flame } from 'lucide-react';
+import { getExpiringDomains, expiryLabel, expirySortKey } from '@/utils/domainExpiry';
+import { downloadDomainsCsv } from '@/utils/domainCsv';
+import { ManageDomainModal } from '@/features/arns';
+import type { ArNSName } from '@/types';
+import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
+import DomainsTable from '@/components/account/DomainsTable';
+import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
+import PrimaryNameCard from '@/components/account/PrimaryNameCard';
+import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
+
+const DOMAINS_SHOWN = 10;
+
+/**
+ * Domain Manager (`/my-domains`) — the dedicated home for everything you do with
+ * the ArNS names you OWN: renew/extend, upgrade, transfer/reassign, records &
+ * undernames, controllers, primary name, ownership sync, and CSV export. Split
+ * out of the account/billing page so each has one job. Reachable from the waffle
+ * "Manage Domains" entry.
+ */
+export default function MyDomainsPage() {
+  const { address } = useStore();
+  const navigate = useNavigate();
+  const { hasArNSAccess, arnsAddress } = useLinkedSolanaWallet();
+  const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [renewDomain, setRenewDomain] = useState<ArNSName | null>(null);
+  const [showAllDomains, setShowAllDomains] = useState(false);
+
+  // Redirect to home if not logged in (declarative — never navigate during render)
+  if (!address) {
+    return <Navigate to="/" replace />;
+  }
+
+  const now = Date.now();
+  const expiringDomains = getExpiringDomains(ownedNames, now);
+  const sortedDomains = [...ownedNames].sort((a, b) => expirySortKey(a, now) - expirySortKey(b, now));
+
+  return (
+    <div className="px-4 sm:px-6">
+      {/* Header — title + (when signed in with ArNS access) CSV/Refresh actions */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20">
+            <Globe className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="mb-1 font-heading text-2xl font-bold text-foreground sm:text-3xl">
+              Manage Domains
+            </h1>
+            <p className="text-sm text-foreground/80">
+              Renew, transfer, and configure the ArNS names you own.
+            </p>
+          </div>
+        </div>
+
+        {hasArNSAccess && (
+          <div className="flex flex-shrink-0 items-center gap-1">
+            {ownedNames.length > 0 && (
+              <button
+                onClick={() => downloadDomainsCsv(sortedDomains)}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground transition-colors hover:text-foreground/80"
+                title="Export domains to CSV"
+                aria-label="Export domains to CSV"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+            )}
+            <button
+              onClick={() => fetchOwnedNames(true)}
+              disabled={loadingDomains}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground transition-colors hover:text-foreground/80 disabled:opacity-50"
+              title="Refresh domains"
+              aria-label="Refresh domains"
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingDomains ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Cross-links to the other domain surfaces */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        <Link
+          to="/arns"
+          className="inline-flex items-center gap-1.5 font-medium text-primary transition-opacity hover:opacity-80"
+        >
+          <Search className="h-4 w-4" /> Register a name
+        </Link>
+        <Link
+          to="/domains"
+          className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+        >
+          <Globe className="h-4 w-4" /> Browse all names
+        </Link>
+        <Link
+          to="/returned-names"
+          className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+        >
+          <Flame className="h-4 w-4" /> Returned-name auctions
+        </Link>
+      </div>
+
+      {hasArNSAccess ? (
+        <div className="mb-8">
+          {/* Expiry warning — spans the owned leases we've loaded (the 100 most recent
+              from the batch), so it surfaces at-risk names beyond the shown page. */}
+          {expiringDomains.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-warning/40 bg-warning/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 text-warning" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {expiringDomains.length === 1
+                      ? '1 domain is expiring soon'
+                      : `${expiringDomains.length} domains are expiring soon`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-foreground/80">
+                    Renew before the lease ends to keep {expiringDomains.length === 1 ? 'it' : 'them'} — an expired domain can be registered by someone else.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    {expiringDomains.slice(0, 6).map((d) => (
+                      <span key={d.name} className="text-xs text-foreground/80">
+                        <span className="font-medium text-foreground">{d.displayName}</span>{' '}
+                        <span className={d.daysRemaining < 0 ? 'text-error' : 'text-warning'}>
+                          ({expiryLabel(d.daysRemaining)})
+                        </span>
+                      </span>
+                    ))}
+                    {expiringDomains.length > 6 && (
+                      <span className="text-xs text-foreground/60">+{expiringDomains.length - 6} more</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const target = ownedNames.find(
+                      (n) => n.name === expiringDomains[0].name,
+                    );
+                    if (target) setRenewDomain(target);
+                  }}
+                  className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  Renew
+                </button>
+              </div>
+            </div>
+          )}
+
+          {arnsAddress && (
+            <div className="mb-4">
+              <PrimaryNameCard
+                address={arnsAddress}
+                ownedNames={ownedNames}
+                onChanged={() => fetchOwnedNames(true)}
+              />
+            </div>
+          )}
+
+          {/* Names owned on-chain but missing from the ACL index (out-of-band
+              ANT transfers) — shown regardless of the owned-names state. */}
+          <SyncOwnershipBanner
+            address={arnsAddress}
+            onSynced={() => fetchOwnedNames(true)}
+          />
+
+          {loadingDomains ? (
+            <div className="rounded-2xl border border-border/20 bg-card p-4 text-center sm:p-6">
+              <RefreshCw className="mx-auto mb-3 h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-foreground/80">Loading your domains…</p>
+            </div>
+          ) : ownedNames.length === 0 ? (
+            <div className="rounded-2xl border border-border/20 bg-card p-6 text-center sm:p-8">
+              <Globe className="mx-auto mb-4 h-12 w-12 text-primary/50" />
+              <h3 className="mb-2 font-heading font-bold text-foreground">No domains yet</h3>
+              <p className="mb-4 text-sm text-foreground/80">
+                Register an ArNS name to give your sites and apps a friendly address.
+              </p>
+              <button
+                onClick={() => navigate('/arns')}
+                className="rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary/90"
+              >
+                Register a name
+              </button>
+            </div>
+          ) : (
+            <>
+              <DomainsTable
+                domains={
+                  showAllDomains
+                    ? sortedDomains
+                    : sortedDomains.slice(0, DOMAINS_SHOWN)
+                }
+                onChanged={() => fetchOwnedNames(true)}
+                walletAddress={arnsAddress}
+              />
+
+              {ownedNames.length > DOMAINS_SHOWN && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => setShowAllDomains((v) => !v)}
+                    className="inline-flex items-center justify-center gap-2 py-2 font-medium text-primary hover:underline"
+                  >
+                    {showAllDomains
+                      ? 'Show fewer'
+                      : `Show all ${ownedNames.length} names`}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        // Signed in, but no Solana/ArNS access — prompt to link a Solana wallet.
+        <div className="mb-8 rounded-2xl border border-border/20 bg-card p-6 text-center">
+          <Globe className="mx-auto mb-3 h-8 w-8 text-primary" />
+          <p className="font-semibold text-foreground">Manage your ArNS names</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-foreground/70">
+            ArNS names live on Solana. Link a Solana wallet to view, renew, and
+            manage the names you own — your other wallet stays your primary
+            sign-in.
+          </p>
+          <button
+            onClick={() => setShowLinkModal(true)}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <Globe className="h-4 w-4" />
+            Link a Solana wallet
+          </button>
+        </div>
+      )}
+
+      {showLinkModal && (
+        <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
+      )}
+
+      {renewDomain && (
+        <ManageDomainModal
+          domain={renewDomain}
+          onClose={() => setRenewDomain(null)}
+          onSuccess={() => fetchOwnedNames(true)}
+        />
+      )}
+    </div>
+  );
+}
