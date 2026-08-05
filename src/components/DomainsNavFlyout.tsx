@@ -93,7 +93,10 @@ export default function DomainsNavFlyout({
       <button
         ref={rowRef}
         type="button"
-        aria-haspopup="menu"
+        // A disclosure toggle revealing a group of nav links — deliberately NOT
+        // an ARIA menu (we don't implement roving-focus/arrow-key menu semantics);
+        // the links are natively keyboard-focusable.
+        aria-haspopup="true"
         aria-expanded={open}
         onClick={() => (open ? setOpen(false) : openNow())}
         className={`flex w-full items-center gap-3 py-2 px-4 text-sm transition-colors ${
@@ -113,7 +116,6 @@ export default function DomainsNavFlyout({
         pos &&
         createPortal(
           <div
-            role="menu"
             aria-label="Domains"
             onMouseEnter={openNow}
             onMouseLeave={closeSoon}
@@ -126,7 +128,6 @@ export default function DomainsNavFlyout({
                 <Link
                   key={service.page}
                   to={`/${service.page}`}
-                  role="menuitem"
                   onClick={() => {
                     setOpen(false);
                     onNavigate();

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Calculator, HardDrive, Tag } from 'lucide-react';
 
-import PricingCalculatorPanel from '../components/panels/PricingCalculatorPanel';
-import { ArNSPriceTable } from '../features/arns';
+import PricingCalculatorPanel from '@/components/panels/PricingCalculatorPanel';
+import { ArNSPriceTable } from '@/features/arns';
 
 type PricingMode = 'storage' | 'domains';
 

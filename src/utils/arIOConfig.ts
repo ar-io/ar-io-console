@@ -175,16 +175,28 @@ export const getARIO = () => {
  * Cached per (config, processId) so repeated target resolutions reuse one client.
  * @param processId - The ANT process ID
  */
+const MAX_ANT_CLIENTS = 256; // bound the per-processId cache (browse/account can touch many names)
+
 export const getANT = async (processId: string) => {
   syncConfigCache();
   const existing = antClientCache.get(processId);
-  if (existing) return existing;
+  if (existing) {
+    // Refresh LRU position so hot ANTs survive eviction.
+    antClientCache.delete(processId);
+    antClientCache.set(processId, existing);
+    return existing;
+  }
   const config = getCurrentConfig();
   const client = ANT.init({
     processId,
     rpc: readRpc(),
     antProgramId: config.antProgramId as Address | undefined,
   });
+  // Evict the oldest entry when over the cap (Map preserves insertion order).
+  if (antClientCache.size >= MAX_ANT_CLIENTS) {
+    const oldest = antClientCache.keys().next().value;
+    if (oldest !== undefined) antClientCache.delete(oldest);
+  }
   antClientCache.set(processId, client);
   return client;
 };

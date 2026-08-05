@@ -8,7 +8,7 @@ export const HeroBackground = memo(function HeroBackground() {
     <div className="absolute inset-0">
       {/* Static clouds background image */}
       <img
-        src="/cloud.webp"
+        src={`${import.meta.env.BASE_URL}cloud.webp`}
         alt=""
         aria-hidden="true"
         decoding="async"

@@ -1,5 +1,5 @@
 import GiftPanel from '../components/panels/GiftPanel';
-import StripeElementsProvider from '../components/StripeElementsProvider';
+import StripeElementsProvider from '@/components/StripeElementsProvider';
 
 export default function GiftPage() {
   return (

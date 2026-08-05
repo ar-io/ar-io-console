@@ -5,7 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import CopyButton from './CopyButton';
-import DomainsNavFlyout from './DomainsNavFlyout';
+import DomainsNavFlyout from '@/components/DomainsNavFlyout';
 import { useStore } from '../store/useStore';
 import { formatWalletAddress, getTurboBalance } from '../utils';
 import { getWalletNetworkLabel } from '../utils/walletDisplay';

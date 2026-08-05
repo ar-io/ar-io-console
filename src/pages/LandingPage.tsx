@@ -968,7 +968,7 @@ const LandingPage = () => {
           horizontal strip so it reads as a footer cross-link, not a second
           feature card stacked under the dark agents section above. */}
       <section className="flex flex-col gap-4 rounded-2xl border border-border/20 bg-gradient-to-r from-primary/[0.06] to-card p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-        <img src="/ardrive-logo.png" alt="ArDrive" loading="lazy" decoding="async" className="h-14 w-14 flex-shrink-0" />
+        <img src={`${import.meta.env.BASE_URL}ardrive-logo.png`} alt="ArDrive" loading="lazy" decoding="async" className="h-14 w-14 flex-shrink-0" />
         <div className="flex-1 text-center sm:text-left">
           <h3 className="font-heading text-lg font-bold text-foreground">Just want to store files?</h3>
           <p className="mt-1 text-sm leading-relaxed text-foreground/70">

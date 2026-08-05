@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
-import { getStripePromise } from '../services/paymentService';
+import { getStripePromise } from '@/services/paymentService';
 
 /**
  * Scopes the Stripe `<Elements>` context to the payment surfaces that actually
