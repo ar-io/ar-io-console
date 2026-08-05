@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import { address as toSolanaAddress } from '@solana/kit';
 
-import { getARIO } from '../../../utils';
+import { getARIO, getSolanaReadRpc } from '../../../utils';
 import { useStore } from '../../../store/useStore';
 import { useArNSConfigKey } from './useArNSConfigKey';
 
@@ -43,7 +42,6 @@ type ARIOBalanceReadable = {
 export function useArNSPaymentBalances(
   address: string | undefined,
 ): ArNSPaymentBalances {
-  const { connection } = useConnection();
   const credits = useStore((s) => s.creditBalance);
   const configKey = useArNSConfigKey();
   const queryClient = useQueryClient();
@@ -93,16 +91,20 @@ export function useArNSPaymentBalances(
   });
 
   const solQ = useQuery({
-    // configKey is part of the key because `connection` follows the active
-    // config's RPC/cluster — without it, switching configMode would serve the
-    // previous cluster's cached lamports for the same address.
+    // Keyed by configKey since the RPC/cluster is config-derived.
     queryKey: ['arns-sol-balance', configKey, address],
     enabled: !!address,
     staleTime: 30_000,
     queryFn: async () => {
       if (!address) return 0;
       try {
-        return await connection.getBalance(new PublicKey(address));
+        // Query SOL on the CONSOLE-CONFIG cluster (same RPC the ARIO balance and
+        // the ArNS buy tx use) — NOT the wallet-adapter connection, whose
+        // endpoint is fixed to mainnet/VITE_SOLANA_RPC. Otherwise a Testnet/
+        // devnet wallet reads 0 SOL because it's queried against mainnet.
+        const rpc = getSolanaReadRpc();
+        const { value } = await rpc.getBalance(toSolanaAddress(address)).send();
+        return Number(value);
       } catch {
         return 0;
       }
