@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
-import { Calculator, HardDrive, DollarSign, Zap, Upload, Globe, CreditCard, ChevronDown, Check, Wallet } from 'lucide-react';
+import { HardDrive, DollarSign, Zap, Upload, Globe, CreditCard, ChevronDown, Check, Wallet } from 'lucide-react';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import { useCryptoPriceForWinc, useWincForCrypto } from '../../hooks/useCryptoPrice';
@@ -249,18 +249,7 @@ export default function PricingCalculatorPanel() {
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <Calculator className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Storage Pricing Calculator</h3>
-          <p className="text-sm text-foreground/80">
-            Calculate exactly how much permanent storage you get for your budget
-          </p>
-        </div>
-      </div>
+      {/* Header is provided by the unified PricingPage (the only consumer). */}
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
@@ -755,7 +744,7 @@ export default function PricingCalculatorPanel() {
                   Upload Files
                 </Link>
                 <Link
-                  to="/domains"
+                  to="/arns"
                   className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
                 >
                   <Globe className="w-4 h-4" />

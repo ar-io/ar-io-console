@@ -551,7 +551,7 @@ const LandingPage = () => {
           {/* Secondary links */}
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
             <button
-              onClick={() => navigate('/name-prices')}
+              onClick={() => navigate('/pricing?type=domains')}
               className="inline-flex items-center gap-1.5 font-semibold text-primary transition-opacity hover:opacity-80"
             >
               See name prices <ArrowRight className="h-3.5 w-3.5" />
@@ -602,7 +602,7 @@ const LandingPage = () => {
             <div className="text-lg text-foreground font-medium mb-1">Per GiB</div>
             <div className="text-sm text-foreground/80 mb-4">Larger files & bulk storage</div>
             <button
-              onClick={() => navigate('/calculator')}
+              onClick={() => navigate('/pricing')}
               className="inline-flex items-center gap-1 text-sm text-foreground/80 hover:text-foreground font-medium group"
             >
               <Calculator className="w-3.5 h-3.5" />

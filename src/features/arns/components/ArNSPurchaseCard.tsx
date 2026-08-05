@@ -9,7 +9,7 @@ import {
 
 import type { ArNSRegistrationType } from '../hooks/useArNSPrice';
 import { useArNSPrice } from '../hooks/useArNSPrice';
-import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
+import { useArNSCostDetails, type ArNSFundFrom } from '../hooks/useArNSCostDetails';
 import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
@@ -30,6 +30,54 @@ interface ArNSPurchaseCardProps {
 }
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
+
+/**
+ * Renders nothing — just mounts the two price queries for one lease term so its
+ * cost is already in the react-query cache before the user selects it. Keyed
+ * identically to the visible card's queries (same fundFrom/fromAddress), so a
+ * term switch reads from cache instead of firing a fresh Solana RPC.
+ */
+function PrefetchLeaseTerm({
+  name,
+  years,
+  fundFrom,
+  fromAddress,
+}: {
+  name: string;
+  years: number;
+  fundFrom: ArNSFundFrom;
+  fromAddress?: string;
+}) {
+  useArNSPrice({ name, type: 'lease', years });
+  useArNSCostDetails({
+    intent: 'Buy-Name',
+    name,
+    type: 'lease',
+    years,
+    fundFrom,
+    fromAddress,
+  });
+  return null;
+}
+
+/**
+ * Prefetch every lease term up front so switching 1↔5 years is instant. Fixed
+ * child count keeps hooks stable; the current term dedupes against the card's
+ * own query, so this adds the OTHER terms, not duplicate fetches.
+ */
+function LeaseTermPrefetcher(props: {
+  name: string;
+  fundFrom: ArNSFundFrom;
+  fromAddress?: string;
+}) {
+  return (
+    <>
+      {LEASE_YEAR_OPTIONS.map((y) => (
+        <PrefetchLeaseTerm key={y} years={y} {...props} />
+      ))}
+    </>
+  );
+}
 
 /**
  * Registration configurator: lease vs permabuy + term, payment method (Turbo
@@ -118,6 +166,11 @@ export function ArNSPurchaseCard({
 
   return (
     <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">
+      {/* Warm every lease term's price so switching the term is instant (no
+          per-term RPC). Only while leasing; renders nothing. */}
+      {type === 'lease' && name && (
+        <LeaseTermPrefetcher name={name} fundFrom={fundFrom} fromAddress={address} />
+      )}
       <div className="mb-4 flex items-baseline justify-between">
         <h3 className="font-heading text-lg font-bold text-foreground">
           Register <span className="font-mono text-primary">{name}.ar.io</span>

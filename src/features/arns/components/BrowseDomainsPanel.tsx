@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ArrowDown,
   ArrowUp,
@@ -6,6 +7,7 @@ import {
   ExternalLink,
   Globe,
   Loader2,
+  Plus,
   RefreshCw,
   Search,
 } from 'lucide-react';
@@ -119,15 +121,25 @@ export default function BrowseDomainsPanel() {
             )}
           </p>
         </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          title="Refresh registry"
-          className="flex items-center gap-2 px-3 py-2 rounded-full bg-card border border-border/20 text-sm text-foreground/80 hover:bg-primary/10 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/arns"
+            title="Register a name"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Register a name</span>
+          </Link>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            title="Refresh registry"
+            className="flex items-center gap-2 px-3 py-2 rounded-full bg-card border border-border/20 text-sm text-foreground/80 hover:bg-primary/10 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Search */}

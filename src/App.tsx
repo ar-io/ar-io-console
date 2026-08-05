@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useFreeUploadLimit } from './hooks/useFreeUploadLimit';
 import { useTheme } from './hooks/useTheme';
@@ -22,9 +22,7 @@ const ShareCreditsPage = lazy(() => import('./pages/ShareCreditsPage'));
 const DomainsPage = lazy(() => import('./pages/DomainsPage'));
 const ArNSPage = lazy(() => import('./pages/ArNSPage'));
 const ReturnedNamesPage = lazy(() => import('./pages/ReturnedNamesPage'));
-const NamePricesPage = lazy(() => import('./pages/NamePricesPage'));
-const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
-const ServicesCalculatorPage = lazy(() => import('./pages/ServicesCalculatorPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
 const BalanceCheckerPage = lazy(() => import('./pages/BalanceCheckerPage'));
 const GatewayInfoPage = lazy(() => import('./pages/GatewayInfoPage'));
 const DeploySitePage = lazy(() => import('./pages/DeploySitePage'));
@@ -119,9 +117,11 @@ function AppRoutes() {
           <Route path="domains" element={<DomainsPage />} />
           <Route path="arns" element={<ArNSPage />} />
           <Route path="returned-names" element={<ReturnedNamesPage />} />
-          <Route path="name-prices" element={<NamePricesPage />} />
-          <Route path="calculator" element={<CalculatorPage />} />
-          <Route path="services-calculator" element={<ServicesCalculatorPage />} />
+          <Route path="pricing" element={<PricingPage />} />
+          {/* Old pricing routes fold into the unified page (keep links alive). */}
+          <Route path="calculator" element={<Navigate to="/pricing" replace />} />
+          <Route path="name-prices" element={<Navigate to="/pricing?type=domains" replace />} />
+          <Route path="services-calculator" element={<Navigate to="/pricing" replace />} />
           <Route path="balances" element={<BalanceCheckerPage />} />
           <Route path="account" element={<AccountPage />} />
           {/* <Route path="redeem" element={<RedeemPage />} /> */}

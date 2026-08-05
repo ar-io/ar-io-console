@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame, Tag } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -34,7 +34,7 @@ const accountServices = [
 
 // Public utility services
 const utilityServices = [
-  { name: 'Pricing Calculator', page: 'calculator' as const, icon: Calculator },
+  { name: 'Pricing', page: 'pricing' as const, icon: Calculator },
   { name: 'Check Balance', page: 'balances' as const, icon: Search },
   { name: 'Browse Data', page: 'browse' as const, icon: Compass },
   { name: 'Verify Data', page: 'verify' as const, icon: ShieldCheck },
@@ -45,10 +45,9 @@ const utilityServices = [
 // ArNS / domain actions — grouped into a single labeled "Domains" cluster in the
 // mega-menu. None are payment-gated routes, so no x402/payment filtering applies.
 const domainServices = [
-  { name: 'Search Domains', page: 'domains' as const, icon: Search },
   { name: 'Register a Name', page: 'arns' as const, icon: Globe },
+  { name: 'Browse Domains', page: 'domains' as const, icon: Search },
   { name: 'Returned Names', page: 'returned-names' as const, icon: Flame },
-  { name: 'Name Prices', page: 'name-prices' as const, icon: Tag },
   { name: 'Manage Domains', page: 'account' as const, icon: PencilLine },
 ];
 
@@ -198,7 +197,7 @@ const Header = () => {
 
   // Filter services based on payment service availability (x402-only mode)
   // Payment service dependent routes: topup, share, gift, balances, redeem
-  // Note: calculator is NOT included - it works in x402-only mode with USDC pricing
+  // Note: pricing is NOT included - it works in x402-only mode with USDC pricing
   const paymentServiceRoutes = ['topup', 'share', 'balances']; // 'gift' and 'redeem' deprecated
   const filteredAccountServices = accountServices.filter(service =>
     isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page)

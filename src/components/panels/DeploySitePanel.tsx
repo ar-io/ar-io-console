@@ -2514,7 +2514,7 @@ export default function DeploySitePanel() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => navigate('/domains')}
+                onClick={() => navigate('/arns')}
                 className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 Find a name

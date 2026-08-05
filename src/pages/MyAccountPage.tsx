@@ -223,7 +223,7 @@ export default function MyAccountPage() {
                 Register an ArNS name to give your sites and apps a friendly address
               </p>
               <button
-                onClick={() => navigate('/domains')}
+                onClick={() => navigate('/arns')}
                 className="px-4 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary/90 transition-colors"
               >
                 Search for a domain
