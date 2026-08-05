@@ -395,7 +395,7 @@ export default function ReturnedNameBuyModal({
                     </button>
                   )}
                   <button
-                    onClick={() => navigate('/account')}
+                    onClick={() => navigate('/my-domains')}
                     className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10"
                   >
                     <Settings2 className="h-4 w-4" /> Manage domains

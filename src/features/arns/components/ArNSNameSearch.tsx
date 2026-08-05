@@ -3,7 +3,7 @@ import { Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 import useDebounce from '../../../hooks/useDebounce';
 import { useArNSAvailability } from '../hooks/useArNSAvailability';
-import { useArNSPricing } from '../../../hooks/useArNSPricing';
+import { useArNSPricing } from '@/hooks/useArNSPricing';
 import { isValidArNSName } from '../utils';
 
 interface ArNSNameSearchProps {
