@@ -1,9 +1,12 @@
 import TopUpPanel from '../components/panels/TopUpPanel';
+import StripeElementsProvider from '../components/StripeElementsProvider';
 
 export default function TopUpPage() {
   return (
     <div>
-      <TopUpPanel />
+      <StripeElementsProvider>
+        <TopUpPanel />
+      </StripeElementsProvider>
     </div>
   );
 }

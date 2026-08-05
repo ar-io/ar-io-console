@@ -37,9 +37,6 @@ export const getStripePromise = () => {
   return stripePromiseCache;
 };
 
-// Legacy exports for backwards compatibility
-export const STRIPE_PROMISE = getStripePromise();
-
 export const getPaymentIntent = async (
   address: string,
   amount: number,

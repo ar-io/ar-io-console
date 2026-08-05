@@ -1,6 +1,7 @@
 import { CreditCard } from 'lucide-react';
 
 import BaseModal from '../../../components/modals/BaseModal';
+import StripeElementsProvider from '../../../components/StripeElementsProvider';
 import TopUpPanel from '../../../components/panels/TopUpPanel';
 
 interface BuyCreditsModalProps {
@@ -46,11 +47,13 @@ export default function BuyCreditsModal({
           )}
         </div>
 
-        <TopUpPanel
-          embedded
-          initialUsdAmount={initialUsdAmount}
-          onComplete={onComplete}
-        />
+        <StripeElementsProvider>
+          <TopUpPanel
+            embedded
+            initialUsdAmount={initialUsdAmount}
+            onComplete={onComplete}
+          />
+        </StripeElementsProvider>
       </div>
     </BaseModal>
   );
