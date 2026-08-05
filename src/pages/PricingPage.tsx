@@ -33,31 +33,33 @@ export default function PricingPage() {
   return (
     <div className="py-6">
       <div className="px-4 sm:px-6">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
-            <Calculator className="h-5 w-5 text-foreground" />
+        {/* Header row — title/description on the left, mode selector top-right */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-card">
+              <Calculator className="h-5 w-5 text-foreground" />
+            </div>
+            <div>
+              <h3 className="font-heading text-2xl font-extrabold text-foreground mb-1">
+                Pricing
+              </h3>
+              <p className="text-sm text-foreground/80">
+                See what storage and domain names cost on the permanent cloud.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-heading text-2xl font-extrabold text-foreground mb-1">
-              Pricing
-            </h3>
-            <p className="text-sm text-foreground/80">
-              See what storage and domain names cost on the permanent web.
-            </p>
-          </div>
-        </div>
 
-        {/* Mode selector */}
-        <div className="mb-6 inline-flex gap-1 rounded-full border border-border/20 bg-card p-1">
-          <button onClick={() => setMode('storage')} className={pill(mode === 'storage')}>
-            <HardDrive className="h-4 w-4" />
-            Storage
-          </button>
-          <button onClick={() => setMode('domains')} className={pill(mode === 'domains')}>
-            <Tag className="h-4 w-4" />
-            Domain Names
-          </button>
+          {/* Mode selector */}
+          <div className="inline-flex flex-shrink-0 gap-1 self-start rounded-full border border-border/20 bg-card p-1 sm:self-auto">
+            <button onClick={() => setMode('storage')} className={pill(mode === 'storage')}>
+              <HardDrive className="h-4 w-4" />
+              Storage
+            </button>
+            <button onClick={() => setMode('domains')} className={pill(mode === 'domains')}>
+              <Tag className="h-4 w-4" />
+              Domain Names
+            </button>
+          </div>
         </div>
       </div>
 

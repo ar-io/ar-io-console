@@ -1581,7 +1581,7 @@ The ar.io Console is the unified platform for interacting with the AR.IO Network
 - Showcases multi-chain capabilities
 - Community-driven development
 
-Whether you're uploading files, managing domains, sharing credits, deploying websites, or building on the permanent web, the ar.io Console provides the tools and infrastructure needed to succeed.
+Whether you're uploading files, managing domains, sharing credits, deploying websites, or building on the permanent cloud, the ar.io Console provides the tools and infrastructure needed to succeed.
 
 ---
 

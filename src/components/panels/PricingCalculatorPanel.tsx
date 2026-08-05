@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
-import { HardDrive, DollarSign, Zap, Upload, Globe, CreditCard, ChevronDown, Check, Wallet } from 'lucide-react';
+import { HardDrive, DollarSign, Upload, Globe, CreditCard, ChevronDown, Check, Wallet } from 'lucide-react';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import { useCryptoPriceForWinc, useWincForCrypto } from '../../hooks/useCryptoPrice';
@@ -253,16 +253,6 @@ export default function PricingCalculatorPanel() {
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
-        {/* Free Tier Notice */}
-        {freeSummary && (
-          <div className="text-center mb-6">
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${bytesRemaining === 0 ? 'bg-card text-foreground/60' : 'bg-primary/10 text-primary'}`}>
-              <Zap className="w-4 h-4" />
-              {freeSummary}
-            </div>
-          </div>
-        )}
 
         {/* Calculator Mode Toggle */}
         <div className="flex justify-center mb-6">
@@ -767,6 +757,17 @@ export default function PricingCalculatorPanel() {
             </>
           )}
         </div>
+
+        {/* Free-tier note — kept below the CTA so it doesn't eat vertical space
+            at the top of the calculator. */}
+        {freeSummary && (
+          <div className="mt-4 text-center">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${bytesRemaining === 0 ? 'bg-card text-foreground/60' : 'bg-primary/10 text-primary'}`}>
+              <DollarSign className="w-4 h-4" />
+              {freeSummary}
+            </div>
+          </div>
+        )}
       </div>
 
     </div>

@@ -45,18 +45,10 @@ export default function ArNSPriceTable() {
   );
 
   return (
-    <div className="mb-12 mx-auto max-w-4xl">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="font-heading font-extrabold text-2xl text-foreground mb-2">
-          ArNS Name Prices
-        </h2>
-        <p className="text-foreground/80">
-          Registration fees by name length — shorter names cost more.
-        </p>
-      </div>
-
-      {/* Controls */}
+    // Full-width container matching the storage PricingCalculatorPanel — the
+    // page-level "Pricing" header already titles this, so no sub-header here.
+    <div className="px-4 sm:px-6">
+      {/* Controls: name lookup + demand factor + currency toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="w-full sm:max-w-xs">
           <div className="relative">
@@ -93,8 +85,8 @@ export default function ArNSPriceTable() {
         </div>
       </div>
 
-      {/* Card */}
-      <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-8">
+      {/* Card — matches the storage panel's card (p-4 sm:p-6) */}
+      <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />

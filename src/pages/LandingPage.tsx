@@ -95,6 +95,14 @@ const LandingPage = () => {
   const formatUsd = (n: number) =>
     n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(2)}`;
 
+  // Example ArNS domain price for the pricing section: an 8-character permabuy
+  // (own it forever). Falls back to a dash while pricing loads.
+  const domainPermabuyUSD = useMemo(() => {
+    const tier = pricingTiers.find((t) => t.characterLength === 8);
+    const usd = tier?.pricesInUSD?.permabuy;
+    return typeof usd === 'number' && usd > 0 ? usd : undefined;
+  }, [pricingTiers]);
+
   // Get pricing data (matches pricing calculator logic)
   const wincForOneGiB = useWincForOneGiB();
   const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
@@ -201,12 +209,12 @@ const LandingPage = () => {
     {
       name: 'Domains',
       icon: Globe2,
-      title: 'Search Available Domain Names',
-      description: 'Search for available ArNS domain names and check registration costs. No login required to browse available names.',
-      benefits: ['Search any name', 'Check availability', 'View pricing'],
+      title: 'Register & Manage ArNS Names',
+      description: 'Get a permanent, human-readable name — then do everything with it in-console: register and renew, point it at any content, add undernames, edit records, transfer or reassign, set it as your primary name, or grab one from a returned-name auction.',
+      benefits: ['Register, renew & upgrade', 'Undernames & records', 'Transfer & primary names', 'Returned-name auctions'],
       action: 'domains',
-      loginText: 'Search Domains',
-      connectText: 'Search Available Domains'
+      loginText: 'Explore Domains',
+      connectText: 'Explore Domains'
     },
     {
       name: 'Check Balance',
@@ -554,7 +562,7 @@ const LandingPage = () => {
 
           {/* Use-case chips */}
           <div className="mt-6 flex flex-wrap gap-2">
-            {['Deploy an app → app.yourname.ar.io', 'Publish a Pages site', 'Point at an IPFS CID (soon)', "Serve your agent's dataset"].map((chip) => (
+            {['A Pages site → yourname.ar.io', 'A deployed app → app.yourname.ar.io', "Your agent's dataset → agent.yourname.ar.io", 'One name across every ar.io app'].map((chip) => (
               <span key={chip} className="inline-flex items-center rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80">
                 {chip}
               </span>
@@ -588,7 +596,7 @@ const LandingPage = () => {
           <p className="text-foreground/80">Pay-as-you-go storage with no subscriptions, now with x402</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:gap-6 max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6 max-w-4xl mx-auto">
           {/* Free Tier */}
           <div className="bg-card rounded-2xl border border-success/30 p-4 md:p-8 text-center">
             <div className="text-4xl font-heading font-bold text-success mb-2">FREE</div>
@@ -620,6 +628,22 @@ const LandingPage = () => {
             >
               <Calculator className="w-3.5 h-3.5" />
               <span>Calculate your costs</span>
+            </button>
+          </div>
+
+          {/* Domain name example — an 8-char permabuy (own it forever) */}
+          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-8 text-center">
+            <div className="text-4xl font-heading font-bold text-primary mb-2">
+              {domainPermabuyUSD !== undefined ? formatUsd(domainPermabuyUSD) : '—'}
+            </div>
+            <div className="text-lg text-foreground font-medium mb-1">Domain name</div>
+            <div className="text-sm text-foreground/80 mb-4">8-character name, forever</div>
+            <button
+              onClick={() => navigate('/pricing?type=domains')}
+              className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium group"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span>See name prices</span>
             </button>
           </div>
         </div>
