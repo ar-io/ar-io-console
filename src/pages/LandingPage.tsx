@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
@@ -45,6 +45,23 @@ const LandingPage = () => {
   const [copied, setCopied] = useState(false);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const [arnsQuery, setArnsQuery] = useState('');
+
+  // Defer loading the hero template preview (and its template-registry chunk)
+  // until the browser is idle, so it never competes with the initial/critical
+  // render. Falls back to a short timeout where requestIdleCallback is absent.
+  const [heroPreviewReady, setHeroPreviewReady] = useState(false);
+  useEffect(() => {
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(() => setHeroPreviewReady(true), { timeout: 2500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(() => setHeroPreviewReady(true), 800);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const handleArnsSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -472,16 +489,21 @@ const LandingPage = () => {
               </div>
 
               {/* Body — a REAL Pages template rendered exactly as it resolves at a
-                  name (same renderPageHtml + iframe path as the Pages thumbnails),
-                  lazy-loaded so the template registry stays out of the initial
-                  bundle. */}
-              <Suspense
-                fallback={
-                  <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
-                }
-              >
-                <ArNSResolvedPreview />
-              </Suspense>
+                  name (same renderPageHtml + iframe path as the Pages thumbnails).
+                  Lazy-loaded AND deferred to idle (heroPreviewReady) so the
+                  template-registry chunk never competes with the initial/critical
+                  render — it only fetches once the page is interactive. */}
+              {heroPreviewReady ? (
+                <Suspense
+                  fallback={
+                    <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
+                  }
+                >
+                  <ArNSResolvedPreview />
+                </Suspense>
+              ) : (
+                <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
+              )}
 
               {/* Footer strip — verification + gateway provenance */}
               <div className="flex items-center justify-between gap-2 border-t border-border/10 bg-card px-4 py-2 text-[10px] text-foreground/60">
