@@ -94,6 +94,7 @@ export function useReturnedNames(options: UseReturnedNamesOptions = {}) {
     queryKey: ['arns-returned-names', configKey],
     queryFn: loadReturnedNames,
     staleTime: STALE_MS,
+    refetchOnWindowFocus: false,
     retry: 1,
   });
 
@@ -169,6 +170,7 @@ export function useReturnedName(name?: string) {
     queryKey: ['arns-returned-name', configKey, normalized],
     enabled,
     staleTime: STALE_MS,
+    refetchOnWindowFocus: false,
     retry: 1,
     queryFn: async () => {
       const ario = getARIO() as unknown as ARIOReturnedNamesReadable;
@@ -193,6 +195,7 @@ export function useReturnedNamePriceInputs() {
   return useQuery<ReturnedNamePriceInputs>({
     queryKey: ['arns-returned-name-price-inputs', configKey],
     staleTime: STALE_MS,
+    refetchOnWindowFocus: false,
     retry: 1,
     queryFn: async () => {
       const ario = getARIO() as unknown as ARIOReturnedNamesReadable;

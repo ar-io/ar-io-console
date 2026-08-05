@@ -1,23 +1,23 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore } from '@/store/useStore';
 import { User, Globe, RefreshCw, AlertTriangle, Download } from 'lucide-react';
-import { getExpiringDomains, expiryLabel, expirySortKey } from '../utils/domainExpiry';
-import { downloadDomainsCsv } from '../utils/domainCsv';
-import { ManageDomainModal } from '../features/arns';
+import { getExpiringDomains, expiryLabel, expirySortKey } from '@/utils/domainExpiry';
+import { downloadDomainsCsv } from '@/utils/domainCsv';
+import { ManageDomainModal } from '@/features/arns';
 import type { ArNSName } from '@/types';
-import { usePrimaryArNSName } from '../hooks/usePrimaryArNSName';
-import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
-import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
-import { makePossessive } from '../utils';
-import WalletIdentityCard from '../components/account/WalletIdentityCard';
-import BalanceCard from '../components/account/BalanceCard';
-import CreditSharingSection from '../components/account/CreditSharingSection';
+import { usePrimaryArNSName } from '@/hooks/usePrimaryArNSName';
+import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
+import { makePossessive } from '@/utils';
+import WalletIdentityCard from '@/components/account/WalletIdentityCard';
+import BalanceCard from '@/components/account/BalanceCard';
+import CreditSharingSection from '@/components/account/CreditSharingSection';
 import PaymentHistorySection from '@/components/account/PaymentHistorySection';
-import DomainsTable from '../components/account/DomainsTable';
-import SyncOwnershipBanner from '../components/account/SyncOwnershipBanner';
-import PrimaryNameCard from '../components/account/PrimaryNameCard';
-import LinkSolanaWalletModal from '../components/modals/LinkSolanaWalletModal';
+import DomainsTable from '@/components/account/DomainsTable';
+import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
+import PrimaryNameCard from '@/components/account/PrimaryNameCard';
+import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
 
 const DOMAINS_SHOWN = 10;
 

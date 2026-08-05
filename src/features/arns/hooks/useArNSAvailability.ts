@@ -29,6 +29,9 @@ function useArNSRegistryIndex() {
   return useQuery<RegistryIndex>({
     queryKey: ['arns-registry-index', configKey],
     staleTime: 5 * 60_000,
+    // The whole-registry index is a ~700KB single fetch — don't re-pull it on
+    // every tab refocus; the 5-min staleTime + manual refresh cover freshness.
+    refetchOnWindowFocus: false,
     retry: false,
     queryFn: async () => {
       const ario = getARIO();

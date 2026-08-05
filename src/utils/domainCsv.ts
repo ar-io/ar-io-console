@@ -16,7 +16,11 @@ function csvCell(v: unknown): string {
   return `"${String(v ?? '').replace(/"/g, '""')}"`;
 }
 
-const isoDate = (ms: number) => new Date(ms).toISOString().split('T')[0];
+// A NaN/Infinity ms would make `new Date(ms).toISOString()` throw
+// `RangeError: Invalid time value` and fail the whole export — emit an empty
+// cell for a non-finite timestamp instead.
+const isoDate = (ms: number) =>
+  Number.isFinite(ms) ? new Date(ms).toISOString().split('T')[0] : '';
 
 /**
  * Build a CSV of owned ArNS names. Pure (no DOM) so it's unit-testable.
@@ -34,11 +38,11 @@ export function buildDomainsCsv(
       d.lastUpdated ? isoDate(d.lastUpdated.getTime()) : '',
       isPermabuy
         ? 'Never'
-        : typeof d.endTimestamp === 'number'
-          ? isoDate(d.endTimestamp)
+        : Number.isFinite(d.endTimestamp)
+          ? isoDate(d.endTimestamp as number)
           : '',
-      !isPermabuy && typeof d.endTimestamp === 'number'
-        ? String(daysUntil(d.endTimestamp, now))
+      !isPermabuy && Number.isFinite(d.endTimestamp)
+        ? String(daysUntil(d.endTimestamp as number, now))
         : '',
       d.processId ?? '',
       d.currentTarget ?? '',

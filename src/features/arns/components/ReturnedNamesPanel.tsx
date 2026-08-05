@@ -186,6 +186,7 @@ export default function ReturnedNamesPanel() {
             }}
             className="min-w-0 flex-1 bg-transparent p-3 font-mono text-foreground focus:outline-none"
             placeholder="Filter names…"
+            aria-label="Filter returned names"
           />
           {searchInput && (
             <button

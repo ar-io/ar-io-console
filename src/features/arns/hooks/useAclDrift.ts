@@ -19,6 +19,9 @@ export function useAclDrift(address: string | null | undefined) {
     queryKey: ['arns-acl-drift', configKey, address],
     enabled: !!address,
     staleTime: 5 * 60_000,
+    // Drift rarely changes and the scan is a getProgramAccounts owner-scan —
+    // don't re-run it on every tab refocus.
+    refetchOnWindowFocus: false,
     retry: false,
     queryFn: () => computeAclDrift(address as string),
   });

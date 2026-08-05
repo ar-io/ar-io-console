@@ -101,6 +101,11 @@ export default function ReturnedNameBuyModal({
     years,
     fundFrom,
     fromAddress: signerAddress,
+    // Re-price the (premium-decaying) auction quote on a coarse ~20s cadence so
+    // it doesn't stay frozen for the full 60s staleTime while the displayed
+    // multiplier keeps falling every second. Conservative by design — the quote
+    // trails the live premium, so the affordability gate never under-charges.
+    refreshTick: Math.floor(now / 20_000),
   });
 
   const multiplier = auctionMultiplier({ startTimestamp, endTimestamp, now });

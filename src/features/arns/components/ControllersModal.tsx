@@ -49,7 +49,13 @@ export default function ControllersModal({
     onSuccess?.();
   };
 
-  const validation = validateNewController(newController, owner, controllers);
+  // Validate the trimmed value — the same one passed to `addController` — so the
+  // gate and the write agree on leading/trailing whitespace.
+  const validation = validateNewController(
+    newController.trim(),
+    owner,
+    controllers,
+  );
   const canAdd = validation.ok && !isBusy;
 
   const handleAdd = async () => {

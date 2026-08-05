@@ -19,16 +19,33 @@ export interface RowAction {
  * clipped by the owned-names table's `overflow-x-auto` wrapper (which would
  * otherwise hide the actions on lower rows).
  */
+// Rough menu height budget (px) used to decide flip-up vs. flip-down; the menu
+// also caps its own height and scrolls, so this only needs to be approximate.
+const MENU_MAX_HEIGHT = 260;
+
 export default function RowActionsMenu({ actions }: { actions: RowAction[] }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [pos, setPos] = useState<{
+    top?: number;
+    bottom?: number;
+    right: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const place = () => {
       const r = btnRef.current?.getBoundingClientRect();
-      if (r) setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+      if (!r) return;
+      const right = window.innerWidth - r.right;
+      const spaceBelow = window.innerHeight - r.bottom;
+      // Flip above the trigger when a lower row wouldn't leave room below — so
+      // the menu's actions never fall off the bottom of the viewport.
+      if (spaceBelow < MENU_MAX_HEIGHT && r.top > spaceBelow) {
+        setPos({ bottom: window.innerHeight - r.top + 4, right });
+      } else {
+        setPos({ top: r.bottom + 4, right });
+      }
     };
     place();
     const onKey = (e: KeyboardEvent) => {
@@ -66,8 +83,8 @@ export default function RowActionsMenu({ actions }: { actions: RowAction[] }) {
             <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
             <div
               role="menu"
-              style={{ top: pos.top, right: pos.right }}
-              className="fixed z-50 min-w-[11rem] rounded-xl border border-border/20 bg-background p-1 shadow-lg"
+              style={{ top: pos.top, bottom: pos.bottom, right: pos.right }}
+              className="fixed z-50 max-h-[260px] min-w-[11rem] overflow-y-auto rounded-xl border border-border/20 bg-background p-1 shadow-lg"
             >
               {actions.map((a) => (
                 <button

@@ -158,12 +158,16 @@ export function useArioUsdRate(): number | undefined {
 
       const wincPerArio = Number(wincForOneArio);
       const wincPerUsd = Number(wincForOneUsd);
+      // TanStack Query v5 forbids a queryFn resolving `undefined` — return
+      // `null` for invalid data. Require BOTH sides positive so a zero
+      // wincPerArio can't surface as a $0.00 rate.
       if (
         !Number.isFinite(wincPerArio) ||
         !Number.isFinite(wincPerUsd) ||
+        wincPerArio <= 0 ||
         wincPerUsd <= 0
       ) {
-        return undefined;
+        return null;
       }
       return wincPerArio / wincPerUsd;
     },

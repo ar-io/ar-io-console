@@ -33,12 +33,15 @@ export default function TransferDomainModal({
   const [acknowledged, setAcknowledged] = useState(false);
   const { transfer, phase, error, txId, isBusy } = useTransferArNSName();
 
-  const validRecipient = isValidSolanaAddress(recipient.trim());
+  // Trim once and use the SAME value to validate and to write, so the gate can
+  // never green-light one address while the transfer submits another.
+  const trimmedRecipient = recipient.trim();
+  const validRecipient = isValidSolanaAddress(trimmedRecipient);
   const canTransfer = validRecipient && acknowledged && !isBusy;
 
   const handleTransfer = async () => {
     try {
-      await transfer(domain.processId, recipient);
+      await transfer(domain.processId, trimmedRecipient);
       onSuccess?.();
     } catch {
       // surfaced via `error`

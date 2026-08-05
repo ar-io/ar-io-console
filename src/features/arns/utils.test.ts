@@ -125,8 +125,15 @@ describe('parsePrimaryName', () => {
     });
   });
 
-  it('splits on the FIRST underscore only', () => {
-    expect(parsePrimaryName('a_b_c')).toEqual({ label: 'a', baseName: 'b_c' });
+  it('splits on the LAST underscore (base names have no underscore; labels may)', () => {
+    // The base name never contains an underscore (`isValidArNSName` forbids it),
+    // while an undername label may — so `v2_docs_myname` is label `v2_docs`,
+    // base `myname`.
+    expect(parsePrimaryName('a_b_c')).toEqual({ label: 'a_b', baseName: 'c' });
+    expect(parsePrimaryName('v2_docs_myname')).toEqual({
+      label: 'v2_docs',
+      baseName: 'myname',
+    });
   });
 
   it('trims and lowercases before splitting', () => {

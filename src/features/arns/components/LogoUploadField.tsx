@@ -89,11 +89,14 @@ export default function LogoUploadField({
   );
 
   const handlePick = () => {
-    if (disabled || status === 'uploading') return;
+    if (disabled || !canUpload || status === 'uploading') return;
     fileInputRef.current?.click();
   };
 
   const handleFile = async (file: File) => {
+    // Authoritative guard: never compress/upload without a connected wallet, so
+    // a disconnect mid-flow (which leaves `mode === 'upload'`) can't submit.
+    if (disabled || !canUpload) return;
     // Re-entry lock (synchronous, set before any await) so a second drop/pick
     // during compression or upload is ignored rather than racing this one.
     if (uploadingRef.current) return;
@@ -270,7 +273,7 @@ export default function LogoUploadField({
                 accept={IMAGE_ACCEPT}
                 className="hidden"
                 onChange={onInputChange}
-                disabled={disabled}
+                disabled={disabled || !canUpload}
               />
               <div
                 onDragOver={onDragOver}
@@ -285,7 +288,7 @@ export default function LogoUploadField({
                 <button
                   type="button"
                   onClick={handlePick}
-                  disabled={disabled || status === 'uploading'}
+                  disabled={disabled || !canUpload || status === 'uploading'}
                   className="inline-flex items-center gap-2 rounded-full border border-border/20 bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {status === 'uploading' ? (

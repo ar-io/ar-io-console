@@ -48,20 +48,18 @@ const arraysEqual = (a: string[], b: string[]) =>
 /**
  * Solana Explorer link for an address, pointed at the cluster the console is
  * configured against — otherwise a devnet/custom ANT resolves to a mainnet
- * "account not found" page. Production → mainnet (no param); Testnet → devnet;
- * custom → the configured RPC via `cluster=custom&customUrl=`.
+ * "account not found" page. Production → mainnet (no param); Testnet/custom →
+ * devnet.
+ *
+ * We deliberately do NOT forward the configured RPC as `customUrl`: that URL
+ * comes from `tokenMap.solana` and can carry an API key/credential, which would
+ * then be sent to the third-party explorer (CWE-598). Custom mode falls back to
+ * the devnet cluster view rather than leaking the endpoint.
  */
-function explorerAddressUrl(
-  address: string,
-  configMode: string,
-  solanaRpc?: string,
-): string {
+function explorerAddressUrl(address: string, configMode: string): string {
   const base = `https://explorer.solana.com/address/${address}`;
   if (configMode === 'production') return base;
-  if (configMode === 'development') return `${base}?cluster=devnet`;
-  return solanaRpc
-    ? `${base}?cluster=custom&customUrl=${encodeURIComponent(solanaRpc)}`
-    : `${base}?cluster=devnet`;
+  return `${base}?cluster=devnet`;
 }
 
 /**
@@ -78,7 +76,6 @@ export default function EditDetailsModal({
 }: EditDetailsModalProps) {
   const details = useANTDetails(domain.processId, true);
   const configMode = useStore((s) => s.configMode);
-  const solanaRpc = useStore((s) => s.getCurrentConfig().tokenMap?.solana);
   const signer = useArNSTurboSigner();
   const { apply, phase, progress, completed, error, isBusy } =
     useSetArNSMetadata();
@@ -433,11 +430,7 @@ export default function EditDetailsModal({
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <span className="text-foreground/50">Name token (ANT)</span>
                   <a
-                    href={explorerAddressUrl(
-                      domain.processId,
-                      configMode,
-                      solanaRpc,
-                    )}
+                    href={explorerAddressUrl(domain.processId, configMode)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 truncate font-mono text-primary hover:underline"

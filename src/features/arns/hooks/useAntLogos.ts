@@ -53,6 +53,9 @@ export function useAntSummaries(processIds: string[]): Map<string, AntSummary> {
     queryKey: ['ant-summaries', configKey, mints],
     enabled: mints.length > 0,
     staleTime: 5 * 60_000,
+    // Owner/controllers/logo change rarely and this is a bulk multi-account
+    // read — skip the tab-refocus refetch.
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const ant = (await getANT(mints[0])) as unknown as ANTSummariesReadable;
       const summaries = await ant.getANTSummaries(mints);

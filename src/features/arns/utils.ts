@@ -84,9 +84,11 @@ export function isValidRecordTarget(
   target: string | undefined | null,
   protocol: number,
 ): boolean {
-  return protocol === TARGET_PROTOCOL.ipfs
-    ? isValidIpfsCid(target)
-    : isArweaveTxId(target);
+  if (protocol === TARGET_PROTOCOL.ipfs) return isValidIpfsCid(target);
+  if (protocol === TARGET_PROTOCOL.arweave) return isArweaveTxId(target);
+  // Any other protocol value is unknown — reject rather than silently treating
+  // it as Arweave (which would let `toRecordChange` forward a bogus protocol).
+  return false;
 }
 
 /**
@@ -190,9 +192,12 @@ export function validateNewController(
  *
  * A primary name is either an apex name (`myname`) or an undername
  * (`blog_myname`, resolving as `blog_myname.ar.io`). The registry encodes an
- * undername primary as `label_base`, so we split on the FIRST underscore: the
- * part before it is the undername label, the remainder is the base name (which
- * itself owns the ANT the primary maps to). Apex names have no label.
+ * undername primary as `label_base`, so we split on the LAST underscore: the
+ * remainder after it is the base name (which itself owns the ANT the primary
+ * maps to) and never contains an underscore (`isValidArNSName` forbids it),
+ * while the label before it MAY contain underscores (`isValidUndername` allows
+ * them) — e.g. `v2_docs_myname` is label `v2_docs`, base `myname`. Apex names
+ * have no label.
  *
  * The input is trimmed/lowercased (ArNS is case-insensitive) so callers can
  * pass raw user text.
@@ -202,7 +207,7 @@ export function parsePrimaryName(fullName: string): {
   baseName: string;
 } {
   const s = lowerCaseDomain(fullName);
-  const idx = s.indexOf('_');
+  const idx = s.lastIndexOf('_');
   if (idx === -1) return { baseName: s };
   return { label: s.slice(0, idx), baseName: s.slice(idx + 1) };
 }

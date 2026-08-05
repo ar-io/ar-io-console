@@ -228,6 +228,10 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
     }: ApprovePrimaryNameInput): Promise<string | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
+      // Reset the credits flag like setPrimaryName/requestPrimaryName do — a
+      // prior credits failure must not leave the Top-Up prompt armed for an
+      // approve that hasn't failed on credits.
+      setInsufficientCredits(false);
       ensureSigner();
       try {
         setPhase('submitting');

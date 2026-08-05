@@ -34,11 +34,29 @@ type ARIOPrimaryReadable = {
 };
 
 /**
+ * The primary-name reads THROW when there's simply nothing set — but ALSO on a
+ * gateway/RPC/network failure. Only the former is a valid "unset" state; the
+ * latter must propagate so react-query surfaces an error instead of the UI
+ * treating a failed read as "no primary name". Swallow ONLY the not-found case.
+ */
+async function absentToUndefined<T>(p: Promise<T>): Promise<T | undefined> {
+  try {
+    return await p;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/not found|does not exist|no record|notfound|no primary/i.test(msg)) {
+      return undefined;
+    }
+    throw err instanceof Error ? err : new Error(msg);
+  }
+}
+
+/**
  * Read the reverse-resolution state for a Solana address: its current primary
  * name (`getPrimaryName`) and any pending primary-name request it initiated
  * (`getPrimaryNameRequest`). Both SDK reads THROW when absent, so each is
- * wrapped in `.catch(() => undefined)` and treated as "not set" rather than an
- * error.
+ * wrapped in `absentToUndefined` — a not-found becomes "not set" while any
+ * other (gateway/RPC/network) failure propagates as a real query error.
  *
  * Dedicated to the management UI: unlike `hooks/usePrimaryArNSName` (which
  * caches into the Zustand store and also resolves a logo for the header), this
@@ -55,8 +73,8 @@ export function usePrimaryName(address: string | null | undefined, enabled: bool
       const ario = getARIO() as unknown as ARIOPrimaryReadable;
       const addr = address as string;
       const [current, request] = await Promise.all([
-        ario.getPrimaryName({ address: addr }).catch(() => undefined),
-        ario.getPrimaryNameRequest({ initiator: addr }).catch(() => undefined),
+        absentToUndefined(ario.getPrimaryName({ address: addr })),
+        absentToUndefined(ario.getPrimaryNameRequest({ initiator: addr })),
       ]);
       return { current, request };
     },

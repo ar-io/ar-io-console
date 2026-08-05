@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 
@@ -45,6 +46,19 @@ export function useArNSPaymentBalances(
   const { connection } = useConnection();
   const credits = useStore((s) => s.creditBalance);
   const configKey = useArNSConfigKey();
+  const queryClient = useQueryClient();
+
+  // Refetch the ARIO + SOL balances the moment any payment/write dispatches
+  // 'refresh-balance', instead of waiting out the 30s staleTime — otherwise an
+  // ARIO-funded ArNS action leaves the balance panel stale until it goes cold.
+  useEffect(() => {
+    const onRefresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['arns-ario-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['arns-sol-balance'] });
+    };
+    window.addEventListener('refresh-balance', onRefresh);
+    return () => window.removeEventListener('refresh-balance', onRefresh);
+  }, [queryClient]);
 
   const arioQ = useQuery({
     queryKey: ['arns-ario-balances', configKey, address],
@@ -79,7 +93,10 @@ export function useArNSPaymentBalances(
   });
 
   const solQ = useQuery({
-    queryKey: ['arns-sol-balance', address],
+    // configKey is part of the key because `connection` follows the active
+    // config's RPC/cluster — without it, switching configMode would serve the
+    // previous cluster's cached lamports for the same address.
+    queryKey: ['arns-sol-balance', configKey, address],
     enabled: !!address,
     staleTime: 30_000,
     queryFn: async () => {

@@ -82,6 +82,7 @@ export function useArNSCostDetails({
   increaseQty,
   fundFrom,
   fromAddress,
+  refreshTick,
   enabled = true,
 }: {
   intent: ArNSCostIntent;
@@ -92,6 +93,15 @@ export function useArNSCostDetails({
   fundFrom: ArNSFundFrom;
   /** Wallet address whose ARIO balance the funding plan is checked against. */
   fromAddress?: string;
+  /**
+   * Optional coarse cache-busting token folded into the query key. For
+   * time-priced intents (a returned-name Dutch auction, whose premium decays
+   * every second) callers pass a value that changes on a slow cadence (e.g.
+   * every ~20s) so the quote re-prices periodically instead of staying frozen
+   * for the full 60s staleTime while the displayed premium keeps falling. Omit
+   * for fixed-price intents — the key then stays stable and nothing re-fetches.
+   */
+  refreshTick?: number | string;
   enabled?: boolean;
 }) {
   const configKey = useArNSConfigKey();
@@ -108,6 +118,7 @@ export function useArNSCostDetails({
       increaseQty ?? '',
       fundFrom,
       fromAddress ?? '',
+      refreshTick ?? '',
       configKey,
     ],
     enabled: active,

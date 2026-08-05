@@ -12,7 +12,7 @@ import {
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
 import { DEFAULT_TTL, isValidSolanaAddress, isValidUndername } from '../utils';
-import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
+import { useControllersState } from '../hooks/useControllers';
 import {
   UndernameRecord,
   useUndernameRecords,
@@ -63,7 +63,10 @@ export default function UndernamesModal({
   onSuccess,
 }: UndernamesModalProps) {
   const records = useUndernameRecords(domain.processId, true);
-  const signer = useArNSTurboSigner();
+  // A record with no explicit owner defaults to the ANT owner (see
+  // `UndernameRecord.owner`) — NOT the connected wallet. A controller managing
+  // someone else's ANT would otherwise get a wrong self-check on transfer.
+  const antOwner = useControllersState(domain.processId, true).data?.owner;
   const {
     saveUndername,
     removeUndername,
@@ -225,13 +228,15 @@ export default function UndernamesModal({
               const rowBusy = busyKey === r.undername;
               const isEditing = editKey === r.undername;
               const isTransferring = transferKey === r.undername;
-              const rowOwner = r.owner ?? signer.address ?? undefined;
+              const rowOwner = r.owner ?? antOwner ?? undefined;
               const recipientTrimmed = recipient.trim();
               const recipientValid = isValidSolanaAddress(recipientTrimmed);
+              // "Already owns this record" is a no-op ONLY when the recipient IS
+              // the record's current owner. Don't also test the connected wallet
+              // — a controller (not the owner) transferring to itself is a real
+              // ownership change, not a no-op.
               const recipientIsSelf =
-                recipientTrimmed !== '' &&
-                (recipientTrimmed === rowOwner ||
-                  recipientTrimmed === signer.address);
+                recipientTrimmed !== '' && recipientTrimmed === rowOwner;
               const canTransfer =
                 recipientValid && !recipientIsSelf && !isBusy;
               return (
