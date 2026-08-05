@@ -637,7 +637,7 @@ const LandingPage = () => {
               {domainPermabuyUSD !== undefined ? formatUsd(domainPermabuyUSD) : '—'}
             </div>
             <div className="text-lg text-foreground font-medium mb-1">Domain name</div>
-            <div className="text-sm text-foreground/80 mb-4">8-character name, forever</div>
+            <div className="text-sm text-foreground/80 mb-4">8-character name, no renewals</div>
             <button
               onClick={() => navigate('/pricing?type=domains')}
               className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium group"
