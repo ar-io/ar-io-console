@@ -25,7 +25,7 @@ npm run preview      # Preview production build
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
-- BrowsePage is lazy-loaded (`React.lazy`) to isolate wayfinder dependencies
+- All route pages are lazy-loaded (`React.lazy`); Layout wraps `<Outlet>` in `<Suspense>` so the header/nav stay mounted while page chunks load
 - `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
 - `vite-plugin-pwa` (`VitePWA` in `vite.config.ts`) is configured in `injectManifest` mode purely to compile the Browse service worker (`src/features/browse/service-worker/service-worker.ts`) — `manifest: false`, no offline app caching. It is the build mechanism for the Browse verification SW, not a general PWA setup.
 

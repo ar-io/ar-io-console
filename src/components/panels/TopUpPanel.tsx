@@ -786,7 +786,7 @@ export default function TopUpPanel({
                 <div className="px-4 pb-4">
                   <input
                     type="text"
-                    value={targetAddressInput || address}
+                    value={targetAddressInput || paymentTargetAddress || address}
                     onChange={(e) => {
                       const value = e.target.value;
                       setTargetAddressInput(value);
@@ -827,7 +827,7 @@ export default function TopUpPanel({
                     onFocus={() => {
                       // If showing connected address, clear input for easy editing
                       if (!targetAddressInput) {
-                        setTargetAddressInput(address || '');
+                        setTargetAddressInput(paymentTargetAddress || address || '');
                       }
                     }}
                     placeholder="Enter Arweave, Ethereum, or Solana address"
@@ -1089,7 +1089,7 @@ export default function TopUpPanel({
                 <div className="px-4 pb-4">
                   <input
                     type="text"
-                    value={targetAddressInput || address}
+                    value={targetAddressInput || paymentTargetAddress || address}
                     onChange={(e) => {
                       const value = e.target.value;
                       setTargetAddressInput(value);
@@ -1130,7 +1130,7 @@ export default function TopUpPanel({
                     onFocus={() => {
                       // If showing connected address, clear input for easy editing
                       if (!targetAddressInput) {
-                        setTargetAddressInput(address || '');
+                        setTargetAddressInput(paymentTargetAddress || address || '');
                       }
                     }}
                     placeholder="Enter Arweave, Ethereum, or Solana address"
