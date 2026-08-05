@@ -144,7 +144,7 @@ export default function DomainsTable({
                     {expiringSoon && (
                       <button
                         onClick={() => setManaging(domain)}
-                        className="font-medium text-warning hover:underline"
+                        className="py-1 font-medium text-warning hover:underline"
                       >
                         Renew
                       </button>
@@ -153,14 +153,14 @@ export default function DomainsTable({
                       href={visitUrl(domain.name)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                      className="inline-flex items-center gap-1 py-1 text-primary hover:underline"
                     >
                       Visit
                       <ExternalLink className="h-3 w-3" />
                     </a>
                     <button
                       onClick={() => setManaging(domain)}
-                      className="text-foreground/70 hover:text-foreground hover:underline"
+                      className="py-1 text-foreground/70 hover:text-foreground hover:underline"
                     >
                       Manage
                     </button>

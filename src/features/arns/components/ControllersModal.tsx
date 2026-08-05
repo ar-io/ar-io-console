@@ -85,7 +85,7 @@ export default function ControllersModal({
         <div className="mb-4">
           <h3 className="font-heading text-xl font-bold text-foreground">
             Controllers for{' '}
-            <span className="font-mono text-primary">
+            <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
             </span>
           </h3>

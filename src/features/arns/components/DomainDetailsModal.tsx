@@ -69,7 +69,7 @@ export default function DomainDetailsModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-md p-6">
+      <div className="max-h-[88vh] w-[92vw] max-w-md overflow-y-auto p-6">
         {/* Title */}
         <div className="mb-5 flex items-center gap-2 min-w-0">
           <Globe className="w-5 h-5 text-primary flex-shrink-0" />

@@ -273,7 +273,8 @@ export default function ReturnedNamesPanel() {
                 </div>
 
                 {/* Premium */}
-                <div className="sm:col-span-2">
+                <div className="col-span-2 flex items-center justify-between sm:col-span-2 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Premium</span>
                   <span
                     className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${premiumClasses(
                       multiplier,
@@ -284,12 +285,14 @@ export default function ReturnedNamesPanel() {
                 </div>
 
                 {/* Ends in */}
-                <div className="text-sm text-foreground/80 sm:col-span-2">
-                  {formatCountdown(remaining)}
+                <div className="col-span-2 flex items-center justify-between text-sm text-foreground/80 sm:col-span-2 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Ends in</span>
+                  <span>{formatCountdown(remaining)}</span>
                 </div>
 
                 {/* Est. price */}
-                <div className="font-mono text-sm text-foreground/80 sm:col-span-2">
+                <div className="col-span-2 flex items-center justify-between font-mono text-sm text-foreground/80 sm:col-span-2 sm:block">
+                  <span className="font-sans text-xs text-foreground/50 sm:hidden">Est. price</span>
                   <PriceAmount
                     ario={estPriceArio(r, multiplier)}
                     compact

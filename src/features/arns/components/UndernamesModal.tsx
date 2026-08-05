@@ -183,7 +183,7 @@ export default function UndernamesModal({
         <div className="mb-4">
           <h3 className="font-heading text-xl font-bold text-foreground">
             Undernames for{' '}
-            <span className="font-mono text-primary">
+            <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
             </span>
           </h3>
@@ -192,7 +192,7 @@ export default function UndernamesModal({
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
           Undernames resolve as{' '}
-          <span className="whitespace-nowrap font-mono text-foreground">
+          <span className="break-all font-mono text-foreground">
             label_{domain.displayName}.ar.io
           </span>
           . A record saves in one approval; a record-ownership transfer is a

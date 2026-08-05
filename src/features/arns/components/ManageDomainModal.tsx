@@ -185,7 +185,7 @@ export default function ManageDomainModal({
         <div className="mb-5">
           <h3 className="font-heading text-xl font-bold text-foreground">
             Manage{' '}
-            <span className="font-mono text-primary">
+            <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
             </span>
           </h3>

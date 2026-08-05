@@ -50,11 +50,11 @@ export default function TransferDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-md p-6">
+      <div className="max-h-[88vh] w-[92vw] max-w-md overflow-y-auto p-6">
         <div className="mb-5">
           <h3 className="font-heading text-xl font-bold text-foreground">
             Transfer{' '}
-            <span className="font-mono text-primary">
+            <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
             </span>
           </h3>

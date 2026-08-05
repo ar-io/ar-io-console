@@ -156,7 +156,7 @@ export default function ReturnedNameBuyModal({
           </div>
           <div className="min-w-0">
             <h3 className="font-heading text-xl font-bold text-foreground">
-              Buy <span className="font-mono text-primary">{name}.ar.io</span>
+              Buy <span className="break-all font-mono text-primary">{name}.ar.io</span>
             </h3>
             <p className="text-sm text-foreground/70">from the returned-name auction</p>
           </div>

@@ -173,7 +173,7 @@ export default function BrowseDomainsPanel() {
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button
             onClick={() => expiringOnly && toggleExpiring()}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
               !expiringOnly
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
@@ -183,7 +183,7 @@ export default function BrowseDomainsPanel() {
           </button>
           <button
             onClick={() => !expiringOnly && toggleExpiring()}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
               expiringOnly
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
@@ -256,8 +256,9 @@ export default function BrowseDomainsPanel() {
                   </button>
                 </div>
 
-                {/* Type */}
-                <div className="sm:col-span-2">
+                {/* Type — mobile: labeled row; sm+: bare pill in its column */}
+                <div className="col-span-2 flex items-center justify-between sm:col-span-2 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Type</span>
                   <span
                     className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                       r.type === 'permabuy'
@@ -270,23 +271,25 @@ export default function BrowseDomainsPanel() {
                 </div>
 
                 {/* Registered */}
-                <div className="sm:col-span-3 text-sm text-foreground/80">
-                  {fmtDate(r.startTimestamp)}
+                <div className="col-span-2 flex items-center justify-between text-sm text-foreground/80 sm:col-span-3 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Registered</span>
+                  <span>{fmtDate(r.startTimestamp)}</span>
                 </div>
 
                 {/* Expires */}
-                <div className="sm:col-span-2 text-sm text-foreground/80">
-                  {r.type === 'permabuy' ? 'Never' : fmtDate(r.endTimestamp)}
+                <div className="col-span-2 flex items-center justify-between text-sm text-foreground/80 sm:col-span-2 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Expires</span>
+                  <span>{r.type === 'permabuy' ? 'Never' : fmtDate(r.endTimestamp)}</span>
                 </div>
 
                 {/* Links */}
-                <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-2">
+                <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
                   <a
                     href={`https://${r.name}.ar.io`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Visit"
-                    className="p-2 rounded-full hover:bg-primary/10 text-foreground/70 hover:text-primary transition-colors"
+                    className="p-2.5 rounded-full hover:bg-primary/10 text-foreground/70 hover:text-primary transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
