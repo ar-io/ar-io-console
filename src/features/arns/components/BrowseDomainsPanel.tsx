@@ -9,18 +9,20 @@ import {
   RefreshCw,
   Search,
 } from 'lucide-react';
-import { daysRemaining } from '../../../utils';
 import {
+  AllArNSRecord,
   AllArNSSortKey,
   SortOrder,
   useAllArNSNames,
 } from '../hooks/useAllArNSNames';
+import DomainDetailsModal from './DomainDetailsModal';
 import useDebounce from '../../../hooks/useDebounce';
 
 const PAGE_SIZE = 25;
 const EXPIRING_WINDOW_DAYS = 60;
 
-const shortId = (id: string) => (id.length > 12 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id);
+const fmtDate = (ms?: number) =>
+  ms ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
 
 export default function BrowseDomainsPanel() {
   const [searchInput, setSearchInput] = useState('');
@@ -29,6 +31,7 @@ export default function BrowseDomainsPanel() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [page, setPage] = useState(0);
   const [expiringOnly, setExpiringOnly] = useState(false);
+  const [selected, setSelected] = useState<AllArNSRecord | null>(null);
 
   // Reset to first page whenever the query or sort changes.
   const resetPage = () => setPage(0);
@@ -221,29 +224,23 @@ export default function BrowseDomainsPanel() {
           </div>
         ) : (
           items.map((r) => {
-            const target = targets[r.processId];
             return (
               <div
                 key={r.name}
                 className="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 px-4 py-3 border-b border-border/10 last:border-0 items-center hover:bg-primary/5 transition-colors"
               >
-                {/* Name */}
+                {/* Name — click to open details */}
                 <div className="col-span-2 sm:col-span-4 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="font-heading font-bold text-foreground truncate">{r.name}</span>
-                    <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>
-                  </div>
                   <button
-                    onClick={() => resolveTarget(r.processId)}
-                    className="mt-0.5 text-xs text-foreground/50 font-mono hover:text-primary transition-colors block truncate max-w-full"
-                    title="Resolve current target"
+                    onClick={() => setSelected(r)}
+                    title="View details"
+                    className="group flex items-center gap-2 min-w-0 text-left"
                   >
-                    {target === undefined
-                      ? `→ ${shortId(r.processId)} (resolve target)`
-                      : target === null
-                        ? '→ no target set'
-                        : `→ ${shortId(target)}`}
+                    <Globe className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="font-heading font-bold text-foreground truncate group-hover:text-primary group-hover:underline transition-colors">
+                      {r.name}
+                    </span>
+                    <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>
                   </button>
                 </div>
 
@@ -262,16 +259,12 @@ export default function BrowseDomainsPanel() {
 
                 {/* Registered */}
                 <div className="sm:col-span-3 text-sm text-foreground/80">
-                  {r.startTimestamp ? new Date(r.startTimestamp).toLocaleDateString() : '—'}
+                  {fmtDate(r.startTimestamp)}
                 </div>
 
                 {/* Expires */}
                 <div className="sm:col-span-2 text-sm text-foreground/80">
-                  {r.type === 'permabuy'
-                    ? 'Never'
-                    : r.endTimestamp
-                      ? `${daysRemaining(new Date(r.endTimestamp))}d`
-                      : '—'}
+                  {r.type === 'permabuy' ? 'Never' : fmtDate(r.endTimestamp)}
                 </div>
 
                 {/* Links */}
@@ -316,6 +309,15 @@ export default function BrowseDomainsPanel() {
             </button>
           </div>
         </div>
+      )}
+
+      {selected && (
+        <DomainDetailsModal
+          record={selected}
+          target={targets[selected.processId]}
+          resolveTarget={resolveTarget}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

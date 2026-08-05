@@ -38,7 +38,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   };
 
   return (
-    <div className="px-4 sm:px-6 max-w-3xl">
+    <div className="px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-start gap-3 mb-6">
         <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">

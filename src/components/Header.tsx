@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import CopyButton from './CopyButton';
+import DomainsNavFlyout from './DomainsNavFlyout';
 import { useStore } from '../store/useStore';
 import { formatWalletAddress, getTurboBalance } from '../utils';
 import { getWalletNetworkLabel } from '../utils/walletDisplay';
@@ -271,28 +272,13 @@ const Header = () => {
                 })}
                 <div className="border-t border-border/20 my-1" />
 
-                {/* Domains — ArNS name actions grouped into one cluster */}
-                <div className="px-4 py-2 text-xs font-semibold text-foreground/60 uppercase tracking-wider">Domains</div>
-                {domainServices.map((service) => {
-                  const isActive = location.pathname === `/${service.page}`;
-                  return (
-                    <Link
-                      key={service.page}
-                      to={`/${service.page}`}
-                      onClick={() => close()}
-                      className={`flex items-center gap-3 py-2 px-4 text-sm transition-colors ${
-                        isActive
-                          ? 'bg-primary/15 text-foreground font-medium'
-                          : 'text-foreground/80 hover:bg-primary/10 hover:text-foreground'
-                      }`}
-                    >
-                      <service.icon className={`w-4 h-4 ${
-                        isActive ? 'text-primary' : 'text-foreground/60'
-                      }`} />
-                      {service.name}
-                    </Link>
-                  );
-                })}
+                {/* Domains — ArNS actions collapsed into a second-level flyout
+                    (the flat list had grown long enough to dominate the panel) */}
+                <DomainsNavFlyout
+                  items={domainServices}
+                  currentPath={location.pathname}
+                  onNavigate={close}
+                />
                 <div className="border-t border-border/20 my-1" />
 
                 {/* Public Tools */}

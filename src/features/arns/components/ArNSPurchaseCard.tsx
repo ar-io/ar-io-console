@@ -109,9 +109,12 @@ export function ArNSPurchaseCard({
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
   // Only offer a credits top-up when SOL gas is sufficient — buying credits
-  // can't make the purchase succeed if SOL for rent is also short.
+  // can't make the purchase succeed if SOL for rent is also short. Gate on being
+  // signed in: a signed-out user has a 0 balance (so credits always read as
+  // short), and we want them to hit the connect/sign-in gate first — not a
+  // "Buy Turbo Credits" prompt for an account they haven't connected yet.
   const offerTopUp =
-    method === 'credits' && insufficientFunds && !insufficientSol;
+    !!address && method === 'credits' && insufficientFunds && !insufficientSol;
 
   return (
     <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">

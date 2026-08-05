@@ -258,6 +258,31 @@ export default function MyAccountPage() {
         </div>
       )}
 
+      {/* Domains, but no Solana access yet — never hide the section outright (that
+          reads as "Manage Domains is broken"). Prompt to link a Solana wallet,
+          since ArNS names are managed on Solana. */}
+      {!hasArNSAccess && (
+        <div className="mb-8">
+          <h2 className="font-heading font-bold text-xl text-foreground mb-4">Domains</h2>
+          <div className="rounded-2xl border border-border/20 bg-card p-6 text-center">
+            <Globe className="mx-auto mb-3 h-8 w-8 text-primary" />
+            <p className="font-semibold text-foreground">Manage your ArNS names</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-foreground/70">
+              ArNS names live on Solana. Link a Solana wallet to view, renew, and
+              manage the names you own — your other wallet stays your primary
+              sign-in.
+            </p>
+            <button
+              onClick={() => setShowLinkModal(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <Globe className="h-4 w-4" />
+              Link a Solana wallet
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Credit sharing — an advanced feature most users don't need, so it lives at
           the bottom. Hidden in x402-only mode. */}
       {paymentAvailable && (

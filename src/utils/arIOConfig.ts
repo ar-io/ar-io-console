@@ -80,55 +80,113 @@ const getSolanaRpcClients = () => {
   };
 };
 
+// --- Cached read clients (one per active network config) ---------------------
+// getARIO/getANT/getSolanaReadRpc/getANTRegistry used to rebuild a fresh
+// createSolanaRpc(...) + SDK client on EVERY call. Each new RPC attaches
+// listeners to shared Node-polyfilled emitters (abort signals, the @solana/rpc
+// coalescer), so a read-heavy page like /domains — header primary-name lookup +
+// registry index + per-keystroke availability fallbacks + lazy getANT() — blew
+// past the default 10-listener ceiling ("MaxListenersExceededWarning") and
+// churned redundant RPCs. Memoize a singleton per network-config signature: a
+// gateway/program-ID/RPC/mode change yields a new signature and rebuilds; within
+// a config everything reuses the SAME rpc + clients.
+
+/** Stable identity of the active Solana read config (RPC URL + program IDs). */
+const configSignature = () => {
+  const c = getCurrentConfig();
+  return [
+    getSolanaRpcUrl(),
+    c.coreProgramId ?? '',
+    c.garProgramId ?? '',
+    c.arnsProgramId ?? '',
+    c.antProgramId ?? '',
+  ].join('|');
+};
+
+let cachedSig: string | null = null;
+let cachedRpc: ReturnType<typeof createSolanaRpc> | null = null;
+let cachedArio: ReturnType<typeof ARIO.init> | null = null;
+let cachedRegistry: SolanaANTRegistryReadable | null = null;
+const antClientCache = new Map<string, ReturnType<typeof ANT.init>>();
+
+/** Drop every cached read client when the network config changes. No-op otherwise. */
+const syncConfigCache = () => {
+  const sig = configSignature();
+  if (sig !== cachedSig) {
+    cachedSig = sig;
+    cachedRpc = null;
+    cachedArio = null;
+    cachedRegistry = null;
+    antClientCache.clear();
+  }
+};
+
+/** The one shared read RPC for the active config (rebuilt only on config change). */
+const readRpc = () => {
+  syncConfigCache();
+  if (!cachedRpc) cachedRpc = createSolanaRpc(getSolanaRpcUrl());
+  return cachedRpc;
+};
+
 /**
  * A raw Solana read RPC bound to the active config's endpoint. For low-level
  * reads (e.g. the MPL Core owner-scan in ACL-drift detection) that the SDK
- * clients don't expose.
+ * clients don't expose. Shared singleton per config.
  */
-export const getSolanaReadRpc = () => createSolanaRpc(getSolanaRpcUrl());
+export const getSolanaReadRpc = () => readRpc();
 
 /**
  * ANT Registry read client bound to the active config's ANT program. Exposes
  * `accessControlList({ address })` → `{ Owned, Controlled }`, the wallet's
- * on-chain ACL used for ownership-drift detection.
+ * on-chain ACL used for ownership-drift detection. Cached per config.
  */
 export const getANTRegistry = () => {
-  const config = getCurrentConfig();
-  return new SolanaANTRegistryReadable({
-    rpc: createSolanaRpc(getSolanaRpcUrl()) as any,
-    antProgramId: config.antProgramId as Address | undefined,
-  });
+  syncConfigCache();
+  if (!cachedRegistry) {
+    const config = getCurrentConfig();
+    cachedRegistry = new SolanaANTRegistryReadable({
+      rpc: readRpc() as any,
+      antProgramId: config.antProgramId as Address | undefined,
+    });
+  }
+  return cachedRegistry;
 };
 
 /**
- * Get ARIO read-only client with dynamic Solana configuration.
+ * Get ARIO read-only client with dynamic Solana configuration. Cached per config.
  */
 export const getARIO = () => {
-  const config = getCurrentConfig();
-  const rpc = createSolanaRpc(getSolanaRpcUrl());
-
-  return ARIO.init({
-    rpc,
-    coreProgramId: config.coreProgramId as Address | undefined,
-    garProgramId: config.garProgramId as Address | undefined,
-    arnsProgramId: config.arnsProgramId as Address | undefined,
-    antProgramId: config.antProgramId as Address | undefined,
-  });
+  syncConfigCache();
+  if (!cachedArio) {
+    const config = getCurrentConfig();
+    cachedArio = ARIO.init({
+      rpc: readRpc(),
+      coreProgramId: config.coreProgramId as Address | undefined,
+      garProgramId: config.garProgramId as Address | undefined,
+      arnsProgramId: config.arnsProgramId as Address | undefined,
+      antProgramId: config.antProgramId as Address | undefined,
+    });
+  }
+  return cachedArio;
 };
 
 /**
  * Get ANT read-only client for a specific processId (ANT asset address on Solana).
+ * Cached per (config, processId) so repeated target resolutions reuse one client.
  * @param processId - The ANT process ID
  */
 export const getANT = async (processId: string) => {
+  syncConfigCache();
+  const existing = antClientCache.get(processId);
+  if (existing) return existing;
   const config = getCurrentConfig();
-  const rpc = createSolanaRpc(getSolanaRpcUrl());
-
-  return ANT.init({
+  const client = ANT.init({
     processId,
-    rpc,
+    rpc: readRpc(),
     antProgramId: config.antProgramId as Address | undefined,
   });
+  antClientCache.set(processId, client);
+  return client;
 };
 
 /**
