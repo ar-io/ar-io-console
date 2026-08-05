@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ArrowLeft, Globe, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Globe, ExternalLink, Flame } from 'lucide-react';
 
 import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
@@ -39,52 +40,74 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
-          <Globe className="w-5 h-5 text-primary" />
+      {/* Header — only during search. Once a name is selected the purchase card
+          headers with that name and the "Search a different name" link keeps
+          context, so this intro would just crowd the register/pay step. */}
+      {!selectedName && (
+        <div className="flex items-start gap-3 mb-6">
+          <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold font-heading text-foreground mb-1">
+              Register an ArNS Name
+            </h3>
+            <p className="text-sm text-foreground/80">
+              Search, price, and buy a name with Turbo Credits or your ARIO tokens
+              — no leaving the console.
+            </p>
+            <a
+              href="https://docs.ar.io/learn/arns"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              What is ArNS?
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">
-            Register an ArNS Name
-          </h3>
-          <p className="text-sm text-foreground/80">
-            Search, price, and buy a name with Turbo Credits or your ARIO tokens
-            — no leaving the console.
-          </p>
-          <a
-            href="https://docs.ar.io/learn/arns"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-          >
-            What is ArNS?
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-      </div>
+      )}
 
       {/* Search — collapses to a compact "change name" link once a name is
           chosen, so the register/pay flow isn't crowded by the full search box
           (the Register card below already headers with the selected name). */}
       {!selectedName ? (
-        <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6 mb-4">
-          <ArNSNameSearch
-            value={search}
-            onChange={(v) => {
-              setSearch(v);
-              if (selectedName && v !== selectedName) {
-                setSelectedName(undefined);
+        <>
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6 mb-4">
+            <ArNSNameSearch
+              value={search}
+              onChange={(v) => {
+                setSearch(v);
+                if (selectedName && v !== selectedName) {
+                  setSelectedName(undefined);
+                  buyState.reset();
+                }
+              }}
+              onSelect={(name) => {
+                setSelectedName(name);
                 buyState.reset();
-              }
-            }}
-            onSelect={(name) => {
-              setSelectedName(name);
-              buyState.reset();
-            }}
-            selectedName={selectedName}
-          />
-        </div>
+              }}
+              selectedName={selectedName}
+            />
+          </div>
+
+          {/* Cross-links to the other domain surfaces */}
+          <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            <Link
+              to="/domains"
+              className="inline-flex items-center gap-1.5 font-medium text-primary transition-opacity hover:opacity-80"
+            >
+              <Globe className="h-4 w-4" /> Browse all names
+            </Link>
+            <Link
+              to="/returned-names"
+              className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+            >
+              <Flame className="h-4 w-4" /> Returned-name auctions
+            </Link>
+          </div>
+        </>
       ) : (
         <button
           onClick={() => {

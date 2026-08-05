@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 import useDebounce from '../../../hooks/useDebounce';
 import { useArNSAvailability } from '../hooks/useArNSAvailability';
+import { useArNSPricing } from '../../../hooks/useArNSPricing';
 import { isValidArNSName } from '../utils';
 
 interface ArNSNameSearchProps {
@@ -31,6 +33,22 @@ export function ArNSNameSearch({
   const { data, isFetching, suggestions } = useArNSAvailability(debounced);
   const showResult = !!debounced && validName && !isFetching && !!data;
   const isSelected = selectedName === debounced;
+
+  // Starting (1-year lease) price for the typed name's length tier, so the user
+  // sees the cost BEFORE selecting — mirrors arns-react's DomainPriceList.
+  const { pricingTiers } = useArNSPricing();
+  const startPrice = useMemo(() => {
+    if (!validName || pricingTiers.length === 0) return undefined;
+    const bucket = debounced.length > 12 ? 13 : debounced.length;
+    const tier = pricingTiers.find((t) => t.characterLength === bucket);
+    if (!tier) return undefined;
+    const usd = tier.pricesInUSD?.year1;
+    const ario = tier.pricesInARIO?.year1;
+    return {
+      usd: typeof usd === 'number' && usd > 0 ? usd : undefined,
+      ario: typeof ario === 'number' && ario > 0 ? ario : undefined,
+    };
+  }, [validName, debounced, pricingTiers]);
 
   return (
     <div>
@@ -82,11 +100,30 @@ export function ArNSNameSearch({
         >
           {data.available ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
-                <span className="font-semibold text-foreground">
-                  "{debounced}.ar.io" is available
-                </span>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="font-semibold text-foreground">
+                    "{debounced}.ar.io" is available
+                  </span>
+                  {startPrice &&
+                    (startPrice.usd !== undefined || startPrice.ario !== undefined) && (
+                      <div className="text-sm text-foreground/60">
+                        Starting at{' '}
+                        {startPrice.usd !== undefined && (
+                          <span className="font-medium text-foreground/80">
+                            ~${startPrice.usd.toFixed(2)}/yr
+                          </span>
+                        )}
+                        {startPrice.usd !== undefined &&
+                          startPrice.ario !== undefined &&
+                          ' · '}
+                        {startPrice.ario !== undefined && (
+                          <span>{Math.round(startPrice.ario).toLocaleString()} ARIO</span>
+                        )}
+                      </div>
+                    )}
+                </div>
               </div>
               {isSelected ? (
                 <span className="text-sm text-primary font-medium">
