@@ -8,9 +8,10 @@ export const HeroBackground = memo(function HeroBackground() {
     <div className="absolute inset-0">
       {/* Static clouds background image */}
       <img
-        src="/cloud.png"
+        src="/cloud.webp"
         alt=""
         aria-hidden="true"
+        decoding="async"
         className="absolute inset-0 h-full w-full object-cover"
       />
       {/* White overlay for text readability */}

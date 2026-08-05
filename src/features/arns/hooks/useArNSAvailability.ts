@@ -24,10 +24,15 @@ type RegistryIndex = {
  * total — see `useAllArNSNames` for why the registry is fetched in one shot
  * rather than paged.
  */
-function useArNSRegistryIndex() {
+function useArNSRegistryIndex(enabled: boolean) {
   const configKey = useArNSConfigKey();
   return useQuery<RegistryIndex>({
     queryKey: ['arns-registry-index', configKey],
+    // Only pull the whole-registry index (~700KB + 2 RPCs) once the user is
+    // actually searching a name — not on every mount (e.g. the homepage, where
+    // the ArNS search box sits but is usually untouched). Typed lookups before
+    // the index warms are covered by the single-name `fallback` query below.
+    enabled,
     staleTime: 5 * 60_000,
     // The whole-registry index is a ~700KB single fetch — don't re-pull it on
     // every tab refocus; the 5-min staleTime + manual refresh cover freshness.
@@ -70,7 +75,8 @@ export function useArNSAvailability(name: string) {
   const enabled = normalized.length > 0 && isValidArNSName(normalized);
   const configKey = useArNSConfigKey();
 
-  const index = useArNSRegistryIndex();
+  // Defer the bulk index until the user is searching a valid name.
+  const index = useArNSRegistryIndex(enabled);
   const indexReady = !!index.data;
 
   // Only runs until the index becomes available.

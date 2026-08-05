@@ -877,7 +877,7 @@ const LandingPage = () => {
                 <div className="flex flex-col gap-2 w-full">
                   <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
                      className="flex items-center justify-center gap-1.5 bg-white text-primary rounded-lg px-3 py-2 hover:bg-white/90 transition-all text-xs font-medium">
-                    <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" className="w-4 h-4" />
+                    <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" loading="lazy" decoding="async" className="w-4 h-4" />
                     Discord
                   </a>
                   <a href="https://github.com/ar-io" target="_blank" rel="noopener noreferrer"
@@ -945,7 +945,7 @@ const LandingPage = () => {
                   <div className="flex gap-2">
                     <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
                        className="flex items-center gap-1.5 bg-white text-primary rounded-lg px-3 py-1.5 hover:bg-white/90 transition-all text-xs font-medium">
-                      <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" className="w-3.5 h-3.5" />
+                      <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" loading="lazy" decoding="async" className="w-3.5 h-3.5" />
                       Discord
                     </a>
                     <a href="https://github.com/ar-io" target="_blank" rel="noopener noreferrer"
@@ -968,7 +968,7 @@ const LandingPage = () => {
           horizontal strip so it reads as a footer cross-link, not a second
           feature card stacked under the dark agents section above. */}
       <section className="flex flex-col gap-4 rounded-2xl border border-border/20 bg-gradient-to-r from-primary/[0.06] to-card p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-        <img src="/ardrive-logo.png" alt="ArDrive" className="h-14 w-14 flex-shrink-0" />
+        <img src="/ardrive-logo.png" alt="ArDrive" loading="lazy" decoding="async" className="h-14 w-14 flex-shrink-0" />
         <div className="flex-1 text-center sm:text-left">
           <h3 className="font-heading text-lg font-bold text-foreground">Just want to store files?</h3>
           <p className="mt-1 text-sm leading-relaxed text-foreground/70">
