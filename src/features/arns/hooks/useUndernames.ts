@@ -148,6 +148,7 @@ export function useUndernameWrites() {
         )) as unknown as ANTUndernameWriteable;
         await ant.setUndernameRecord({ undername, ...record });
         setPhase('success');
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));
@@ -178,6 +179,7 @@ export function useUndernameWrites() {
         )) as unknown as ANTUndernameWriteable;
         await ant.transferRecord({ undername, recipient });
         setPhase('success');
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));
@@ -204,6 +206,7 @@ export function useUndernameWrites() {
         )) as unknown as ANTUndernameWriteable;
         await ant.removeUndernameRecord({ undername });
         setPhase('success');
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));

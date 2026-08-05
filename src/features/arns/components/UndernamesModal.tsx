@@ -359,8 +359,14 @@ export default function UndernamesModal({
         {/* Add undername */}
         {addOpen ? (
           <div className="mt-3 rounded-2xl border border-primary/30 bg-card p-4">
-            <label className="mb-1 block text-sm font-medium">Undername</label>
+            <label
+              htmlFor="new-undername-label"
+              className="mb-1 block text-sm font-medium"
+            >
+              Undername
+            </label>
             <input
+              id="new-undername-label"
               className={inputCls}
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}

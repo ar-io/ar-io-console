@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
-import { useArNSPricing } from '../../../hooks/useArNSPricing';
-import { useStore } from '../../../store/useStore';
+import { useArNSPricing } from '@/hooks/useArNSPricing';
+import { useStore } from '@/store/useStore';
 import { isValidArNSName, lowerCaseDomain } from '../utils';
 import {
   arnsUndernameFees,
@@ -48,7 +48,7 @@ export default function ArNSPriceTable() {
     <div className="mb-12 mx-auto max-w-4xl">
       {/* Header */}
       <div className="text-center mb-6">
-        <h2 className="font-heading font-bold text-2xl text-foreground mb-2">
+        <h2 className="font-heading font-extrabold text-2xl text-foreground mb-2">
           ArNS Name Prices
         </h2>
         <p className="text-foreground/80">

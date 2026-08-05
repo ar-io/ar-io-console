@@ -38,9 +38,14 @@ export default function ReleaseDomainModal({
   const [acknowledged, setAcknowledged] = useState(false);
   const { release, phase, error, txId, isBusy } = useReleaseName();
 
-  // Type the name (case-insensitive, with or without the .ar.io suffix) to arm.
+  // Type the name to arm (case-insensitive). Match the released identifier
+  // `domain.name` — and also accept `displayName` (its Unicode form for IDNs)
+  // since that's what the user sees — so the confirmation can never green-light
+  // releasing a different name than the one typed.
   const typedName = lowerCaseDomain(confirmText);
-  const nameMatches = typedName === lowerCaseDomain(domain.displayName);
+  const nameMatches =
+    typedName === lowerCaseDomain(domain.name) ||
+    typedName === lowerCaseDomain(domain.displayName);
   const canRelease = nameMatches && acknowledged && !isBusy;
 
   const handleRelease = async () => {

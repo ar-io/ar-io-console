@@ -48,6 +48,7 @@ export function useTransferArNSName() {
         const res = await ant.transfer({ target: target.trim() });
         setTxId(res?.id);
         setPhase('success');
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return res?.id;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));

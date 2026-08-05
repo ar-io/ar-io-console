@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getANT, getARIO } from '../../../utils';
-import { readArNSConfigSignature } from './useArNSConfigKey';
+import { readArNSConfigSignature, useArNSConfigKey } from './useArNSConfigKey';
 
 /**
  * Browse ALL ArNS names network-wide.
@@ -135,6 +135,7 @@ export function useAllArNSNames(options: UseAllArNSNamesOptions = {}) {
     expiringWithinDays,
   } = options;
 
+  const configKey = useArNSConfigKey();
   const [records, setRecords] = useState<AllArNSRecord[]>(() => registryCache?.records ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -158,9 +159,19 @@ export function useAllArNSNames(options: UseAllArNSNamesOptions = {}) {
     }
   }, []);
 
+  // Load on mount and whenever the network config changes. On a change, drop the
+  // prior-network records/targets from local state first (loadArNSRegistry evicts
+  // the module caches; this mirrors that so the table never shows another
+  // network's names while the fresh set loads).
+  const isFirstLoad = useRef(true);
   useEffect(() => {
+    if (!isFirstLoad.current) {
+      setRecords([]);
+      setTargets({});
+    }
+    isFirstLoad.current = false;
     load();
-  }, [load]);
+  }, [configKey, load]);
 
   // Resolve a single name's current target on demand (one ANT RPC, cached).
   const resolveTarget = useCallback(async (processId: string) => {

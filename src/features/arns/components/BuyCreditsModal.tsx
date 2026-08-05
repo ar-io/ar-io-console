@@ -41,7 +41,7 @@ export default function BuyCreditsModal({
               {shortfallCredits.toLocaleString(undefined, {
                 maximumFractionDigits: 2,
               })}{' '}
-              more credits to finish this purchase.
+              more credits to continue.
             </p>
           )}
         </div>

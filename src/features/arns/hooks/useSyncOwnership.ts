@@ -85,6 +85,9 @@ export function useSyncOwnership() {
       setPhase(synced === 0 && names.length > 0 ? 'error' : 'success');
       if (synced === 0 && names.length > 0) {
         setError(new Error('Could not sync the affected names. Please retry.'));
+      } else if (synced > 0) {
+        // syncAcl writes spend SOL gas — refresh balance-dependent UI.
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
       }
       return { synced, failed: failures };
     },

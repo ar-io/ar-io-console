@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getANT } from '../../../utils';
+import { getANT } from '@/utils';
 import { useArNSConfigKey } from './useArNSConfigKey';
 
 /** The editable metadata + base `@` record of an ANT, read for prefill. */

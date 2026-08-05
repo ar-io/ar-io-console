@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Globe,
   X,
@@ -33,7 +32,6 @@ export default function AssignDomainModal({
   existingUndername,
   onSuccess,
 }: AssignDomainModalProps) {
-  const navigate = useNavigate();
   const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails, updateArNSRecord } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, showLinkModal, setShowLinkModal, promptReconnect } = useLinkedSolanaWallet();
 
@@ -195,10 +193,11 @@ export default function AssignDomainModal({
                       back to assign it.
                     </div>
                     <button
-                      onClick={() => {
-                        onClose();
-                        navigate('/arns');
-                      }}
+                      onClick={() =>
+                        // New tab so this modal + its manifest context stay put;
+                        // register there, come back, and assign.
+                        window.open('/arns', '_blank', 'noopener,noreferrer')
+                      }
                       className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
                     >
                       Register a name

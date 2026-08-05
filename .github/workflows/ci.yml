@@ -35,8 +35,10 @@ jobs:
           node-version: 22
           cache: npm
 
-      # --legacy-peer-deps: Privy pulls a peer range that npm's strict resolver
-      # rejects; this matches how the project installs locally.
+      # legacy-peer-deps: @ar.io/sdk is pinned to a prerelease (4.1.0-alpha.6)
+      # required by the ArNS Solana features, but @ar.io/wayfinder-core's
+      # peerOptional @ar.io/sdk ">=4.0.0" won't accept a prerelease under npm's
+      # strict resolver. Also set in .npmrc, so the flag here is belt-and-braces.
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 

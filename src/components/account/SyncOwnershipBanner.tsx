@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide-react';
 
 import { useAclDrift } from '@/features/arns/hooks/useAclDrift';
 import { useSyncOwnership } from '@/features/arns/hooks/useSyncOwnership';
@@ -25,10 +25,15 @@ export default function SyncOwnershipBanner({
 }: SyncOwnershipBannerProps) {
   const queryClient = useQueryClient();
   const { data: drift } = useAclDrift(address);
-  const { syncNames, phase, progress, failed, isBusy } = useSyncOwnership();
+  const { syncNames, phase, progress, failed, error, isBusy } =
+    useSyncOwnership();
 
   const driftRecords = drift ?? [];
-  if (driftRecords.length === 0 && phase !== 'success') return null;
+  // Keep rendering on 'error' too, so a failed/aborted sync shows a reason
+  // instead of silently reverting to the idle prompt.
+  if (driftRecords.length === 0 && phase !== 'success' && phase !== 'error') {
+    return null;
+  }
 
   const handleSync = async () => {
     try {
@@ -64,6 +69,17 @@ export default function SyncOwnershipBanner({
   }
 
   const n = driftRecords.length;
+
+  // Error with nothing left to sync (e.g. no live signer) — show the reason.
+  if (n === 0 && phase === 'error') {
+    return (
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
+        <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
+        <span>{error?.message ?? 'Could not sync ownership. Please retry.'}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-4 rounded-2xl border border-warning/30 bg-warning/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -82,6 +98,12 @@ export default function SyncOwnershipBanner({
             <p className="mt-1 truncate font-mono text-xs text-foreground/50">
               {driftRecords.map((d) => `${d.name}.ar.io`).join(', ')}
             </p>
+            {phase === 'error' && error && (
+              <p className="mt-1 flex items-start gap-1.5 text-xs text-error">
+                <XCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                <span>{error.message}</span>
+              </p>
+            )}
           </div>
         </div>
         <button

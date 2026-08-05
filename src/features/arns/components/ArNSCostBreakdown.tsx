@@ -57,7 +57,7 @@ function Row({
 
 /**
  * Itemized cost for an ArNS action: the name price (Credits or ARIO) plus the
- * Solana network cost the wallet pays in SOL — a refundable rent deposit (which
+ * Solana network cost the wallet pays in SOL — the account-rent deposit (which
  * dominates) and the transaction fee. The SOL line is shown for BOTH payment
  * methods because every on-chain purchase creates accounts the wallet must fund
  * rent for, even when the name itself is paid with credits.
@@ -144,8 +144,8 @@ export function ArNSCostBreakdown({
             </span>
           </Row>
           <p className="flex items-center justify-end gap-1 pb-1 text-[11px] text-foreground/50">
-            <Info className="h-3 w-3" /> refundable rent, returned if the name is
-            released
+            <Info className="h-3 w-3" /> Solana account rent, held on-chain while
+            the name is registered
           </p>
           <Row label="Network fee">
             <span className="text-sm text-foreground/80">

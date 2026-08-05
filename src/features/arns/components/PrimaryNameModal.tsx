@@ -126,15 +126,17 @@ export default function PrimaryNameModal({
     }
   };
 
-  // Approve gate: we must own the request's base name to approve it.
+  // Approve gate: we must own the request's base name to approve it. Gate purely
+  // on actually owning that base name — a bare presetProcessId doesn't prove
+  // ownership of pendingRequest.name, so it must not enable approval on its own
+  // (the on-chain write would reject a non-owner anyway).
   const approveBaseOwned = useMemo(() => {
     if (!pendingRequest) return false;
     const { baseName } = parsePrimaryName(pendingRequest.name);
-    return (
-      ownedNames.some((n) => n.name === baseName || n.displayName === baseName) ||
-      !!presetProcessId
+    return ownedNames.some(
+      (n) => n.name === baseName || n.displayName === baseName,
     );
-  }, [pendingRequest, ownedNames, presetProcessId]);
+  }, [pendingRequest, ownedNames]);
 
   return (
     <BaseModal onClose={onClose} showCloseButton>

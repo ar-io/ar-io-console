@@ -20,9 +20,9 @@ recover the full amount:
 - The instructions that actually free the lamports (`closeAntRecord`,
   `closeAntRecordMetadataForOwner`, `closeAclPage`/`closeAclConfig`,
   `closeAntControllers`, `closeAntConfig`, then mpl-core `burnV1`) exist **only
-  as raw codama builders in `@ar.io/solana-contracts`** — a transitive,
-  **undeclared** dependency of the console. Using them means hand-assembling a
-  multi-instruction teardown.
+  as raw codama builders in `@ar.io/solana-contracts`** (now a directly-declared
+  dependency, `1.0.1`, as of the primary-name-remove work). Using them still
+  means hand-assembling a multi-instruction teardown.
 - **Only the ANT-side rent is user-reclaimable.** The `ArnsRecord` PDA rent is
   either consumed by `releaseName`'s new PDA or, on lease expiry/prune, refunded
   to **whoever cranks the prune — not the former owner**.
@@ -33,9 +33,9 @@ recover the full amount:
 - **A burned ANT is gone forever** — it can't be reused, reassigned, or
   re-pointed at a renewed name.
 
-**Verdict:** Feasible only by adding `@ar.io/solana-contracts` as a direct,
-version-pinned dependency and building a bespoke teardown transaction — with
-real irreversible-loss risk and unresolved on-chain permission questions. Not
+**Verdict:** Feasible only by building a bespoke teardown transaction on the
+now-declared `@ar.io/solana-contracts` raw builders — with real irreversible-loss
+risk and unresolved on-chain permission questions. Not
 worth shipping until the team confirms the questions below (ideally by hoisting
 a first-class `burnAnt`/`reclaimRent` method onto the SDK — reportedly a planned
 "Phase 7").
@@ -59,7 +59,7 @@ a first-class `burnAnt`/`reclaimRent` method onto the SDK — reportedly a plann
 
 ## If we proceed later (recommended shape)
 
-- Add `@ar.io/solana-contracts` as a direct, version-pinned dependency.
+- (`@ar.io/solana-contracts` is already a direct, version-pinned dependency.)
 - `useReclaimAntRent` hook: enumerate the ANT's records/ACL pages, emit the
   `close*` instructions, then `burnV1`, signed by the Solana wallet adapter.
   **Enforce PDA-close-before-burn ordering.**

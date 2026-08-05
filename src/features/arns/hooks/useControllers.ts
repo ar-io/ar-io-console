@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { getANT, getWritableANT } from '../../../utils';
+import { getANT, getWritableANT } from '@/utils';
 import { useArNSConfigKey } from './useArNSConfigKey';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 
@@ -90,6 +90,7 @@ export function useControllerWrites() {
         )) as unknown as ANTControllerWriteable;
         await ant.addController({ controller });
         setPhase('success');
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));
@@ -116,6 +117,7 @@ export function useControllerWrites() {
         )) as unknown as ANTControllerWriteable;
         await ant.removeController({ controller });
         setPhase('success');
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));

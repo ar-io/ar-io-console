@@ -81,9 +81,16 @@ export function useArNSAvailability(name: string) {
       try {
         const record = await ario.getArNSRecord({ name: normalized });
         return { name: normalized, available: !record };
-      } catch {
-        // No record / lookup miss ⇒ treat as available (legacy behaviour).
-        return { name: normalized, available: true };
+      } catch (err) {
+        // ONLY an explicit "record not found" means the name is available. Any
+        // other failure (gateway/RPC/network) must NOT be reported as available
+        // — rethrow so the query errors and the UI shows nothing rather than a
+        // false "available" that could send the user to buy a taken name.
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/not found|does not exist|no record|notfound/i.test(msg)) {
+          return { name: normalized, available: true };
+        }
+        throw err instanceof Error ? err : new Error(msg);
       }
     },
   });

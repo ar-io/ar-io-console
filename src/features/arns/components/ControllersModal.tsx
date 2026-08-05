@@ -145,10 +145,14 @@ export default function ControllersModal({
           </div>
         ) : addOpen ? (
           <div className="mt-3 rounded-2xl border border-primary/30 bg-card p-4">
-            <label className="mb-1 block text-sm font-medium">
+            <label
+              htmlFor="new-controller-address"
+              className="mb-1 block text-sm font-medium"
+            >
               Controller address
             </label>
             <input
+              id="new-controller-address"
               className={`${inputCls} font-mono`}
               value={newController}
               onChange={(e) => setNewController(e.target.value)}

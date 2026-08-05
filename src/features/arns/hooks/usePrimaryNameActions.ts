@@ -244,6 +244,7 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
         );
         setPhase('success');
         setStatusMessage(`Approved '${lowered}'.`);
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return res?.id;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));
@@ -269,6 +270,7 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
         const id = await removePrimaryName(lowered, signer.getSolanaSigner());
         setPhase('success');
         setStatusMessage(`Removed '${lowered}' as your primary name.`);
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return id;
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));

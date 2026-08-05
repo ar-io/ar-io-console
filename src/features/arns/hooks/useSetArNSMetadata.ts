@@ -141,7 +141,12 @@ export function useSetArNSMetadata() {
       setError(undefined);
       setCompleted([]);
       const ops = buildOps(changes);
-      if (ops.length === 0) return true; // nothing to do
+      if (ops.length === 0) {
+        // Nothing to do — clear any prior 'error' phase so the UI doesn't show a
+        // stale error state (error is already reset above).
+        setPhase('idle');
+        return true;
+      }
 
       if (!signer.isReady || !signer.walletAdapter) {
         const e = new Error(
@@ -170,6 +175,8 @@ export function useSetArNSMetadata() {
 
         setProgress({ done: ops.length, total: ops.length, label: '' });
         setPhase('success');
+        // ANT writes spend SOL gas — refresh balance-dependent UI.
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
         const base = err instanceof Error ? err.message : String(err);

@@ -169,7 +169,7 @@ export default function EditDetailsModal({
     if (description !== orig.description) c.description = description;
     if (!arraysEqual(keywords, orig.keywords)) c.keywords = keywords;
     // Logo can be changed but not cleared (setLogo requires a txId).
-    if (logo.trim() && logo.trim() !== orig.logo && isArweaveTxId(logo))
+    if (logo.trim() && logo.trim() !== orig.logo && isArweaveTxId(logo.trim()))
       c.logo = logo.trim();
     // Base record: whenever ANY record field changed, resend the FULL param
     // set (setBaseNameRecord requires transactionId + ttlSeconds every time).

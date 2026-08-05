@@ -147,7 +147,11 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return settlement;
       } catch (err) {
-        if (isInsufficientCredits(err)) {
+        // Only route to the Turbo-Credits Top-Up when paying WITH credits. On the
+        // ARIO path (balance/stakes/any) an insufficient-funds error is an ARIO
+        // shortfall, which buying Turbo Credits wouldn't resolve — surface it as
+        // a normal error instead.
+        if (fundFrom === 'turbo' && isInsufficientCredits(err)) {
           setInsufficientCredits(true);
           setPhase('error');
           setError(err instanceof Error ? err : new Error(String(err)));
