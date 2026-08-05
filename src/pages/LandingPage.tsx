@@ -16,7 +16,8 @@ import {
   ArrowRight, Zap, Github,
   CreditCard, Users, Upload, Globe2, Search, Check, CheckCircle, Copy, ChevronDown, Info,
   Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal,
-  Tag, Layers, KeyRound, Loader2, Lock, ExternalLink, XCircle
+  Tag, Layers, KeyRound, Loader2, Lock, ExternalLink, XCircle,
+  ChevronLeft, ChevronRight, RotateCw
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
 import useDebounce from '../hooks/useDebounce';
@@ -427,8 +428,17 @@ const LandingPage = () => {
                   type="submit"
                   className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  <Search className="h-4 w-4" />
-                  {validName && avail?.available ? 'Register' : 'Check availability'}
+                  {/* Availability is shown live below as you type, so the button
+                      is always the forward action — never a redundant "check". */}
+                  {validName ? (
+                    <>
+                      Register <ArrowRight className="h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4" /> Search names
+                    </>
+                  )}
                 </button>
               </form>
 
@@ -475,12 +485,17 @@ const LandingPage = () => {
 
             {/* RIGHT — browser-frame mockup of a resolved ArNS page */}
             <div className="overflow-hidden rounded-2xl border border-primary/15 bg-background shadow-xl">
-              {/* Title bar with traffic lights + live address bar */}
+              {/* Title bar: traffic lights + nav buttons + live address bar */}
               <div className="flex items-center gap-2 border-b border-border/10 bg-card px-4 py-2.5">
                 <div className="flex flex-shrink-0 items-center gap-1.5">
                   <span className="h-3 w-3 rounded-full bg-red-400" />
                   <span className="h-3 w-3 rounded-full bg-amber-400" />
                   <span className="h-3 w-3 rounded-full bg-green-400" />
+                </div>
+                <div className="hidden flex-shrink-0 items-center gap-1 text-foreground/30 sm:flex">
+                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" />
+                  <RotateCw className="h-3.5 w-3.5" />
                 </div>
                 <div className="flex flex-1 items-center gap-1.5 truncate rounded-full border border-border/20 bg-background px-3 py-1 text-xs font-mono text-foreground/70">
                   <Lock className="h-3 w-3 flex-shrink-0" />
@@ -492,29 +507,24 @@ const LandingPage = () => {
                   name (same renderPageHtml + iframe path as the Pages thumbnails).
                   Lazy-loaded AND deferred to idle (heroPreviewReady) so the
                   template-registry chunk never competes with the initial/critical
-                  render — it only fetches once the page is interactive. */}
-              {heroPreviewReady ? (
-                <Suspense
-                  fallback={
-                    <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
-                  }
-                >
-                  <ArNSResolvedPreview />
-                </Suspense>
-              ) : (
-                <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
-              )}
-
-              {/* Footer strip — verification + gateway provenance */}
-              <div className="flex items-center justify-between gap-2 border-t border-border/10 bg-card px-4 py-2 text-[10px] text-foreground/60">
-                <span className="inline-flex items-center gap-1 truncate">
-                  <CheckCircle className="h-3 w-3 flex-shrink-0 text-success" />
-                  Verified · permanent on Arweave
-                </span>
-                <span className="inline-flex flex-shrink-0 items-center gap-1">
-                  <Globe2 className="h-3 w-3 text-primary" />
-                  ar.io gateway
-                </span>
+                  render — it only fetches once the page is interactive. A
+                  decorative scrollbar sells it as a real, scrollable page. */}
+              <div className="relative">
+                {heroPreviewReady ? (
+                  <Suspense
+                    fallback={
+                      <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
+                    }
+                  >
+                    <ArNSResolvedPreview />
+                  </Suspense>
+                ) : (
+                  <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
+                )}
+                {/* Decorative scrollbar — thumb near the top (we show the top of the page) */}
+                <div className="pointer-events-none absolute bottom-1.5 right-1 top-1.5 w-1.5 rounded-full bg-foreground/[0.06]">
+                  <div className="h-1/3 w-full rounded-full bg-foreground/25" />
+                </div>
               </div>
             </div>
           </div>
