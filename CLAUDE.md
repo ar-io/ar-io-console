@@ -25,7 +25,7 @@ npm run preview      # Preview production build
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
-- BrowsePage is lazy-loaded (`React.lazy`) to isolate wayfinder dependencies
+- All route pages are lazy-loaded (`React.lazy`); Layout wraps `<Outlet>` in `<Suspense>` so the header/nav stay mounted while page chunks load
 - `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
 - `vite-plugin-pwa` (`VitePWA` in `vite.config.ts`) is configured in `injectManifest` mode purely to compile the Browse service worker (`src/features/browse/service-worker/service-worker.ts`) — `manifest: false`, no offline app caching. It is the build mechanism for the Browse verification SW, not a general PWA setup.
 
@@ -431,11 +431,21 @@ if (privyWallet) {
 
 ```typescript
 '/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share',
-'/account', '/domains', '/calculator', '/services-calculator', '/balances',
-'/settings', '/try', '/browse', '/verify', '/pages'
+'/account', '/pages', '/balances', '/settings', '/try', '/browse', '/verify',
+// ArNS / domains — flat, one purpose per route (no tabs):
+'/domains',        // Browse & search all registered names (BrowseDomainsPanel)
+'/arns',           // Register a name (ArNSBuyPanel; accepts ?q=)
+'/returned-names', // Auctions (ReturnedNamesPanel)
+'/pricing'         // Unified pricing: Storage + Domain Names (?type=domains seeds the tab)
 ```
 
 Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unknown routes redirect to home.
+
+**ArNS/domains IA (flat, no tabs):** `/domains` is the Browse page, `/arns` is Register, `/returned-names` is Auctions — each its own route. There is NO tabbed DomainsPage; don't reintroduce in-page tabs for these (the app convention is one page per route). Browse cross-links to `/arns` ("Register a name").
+
+**Pricing is unified at `/pricing`** (Storage calculator + Domain-name price table, chosen via a mode selector; `?type=domains` seeds the domains mode). The old pricing routes now **redirect** (kept alive): `/calculator`→`/pricing`, `/name-prices`→`/pricing?type=domains`, `/services-calculator`→`/pricing`. The operator-facing Services calculator + `PricingCalculator.tsx` were removed. `PricingCalculatorPanel` (storage) and `ArNSPriceTable` (domains) are reused by `PricingPage`; the panel's own header was hoisted out (the page provides it).
+
+**Stripe is NOT provided app-wide.** `<Elements>` lives in `StripeElementsProvider`, mounted only around payment surfaces (`TopUpPage`, `BuyCreditsModal`, `GiftPage`) so Stripe.js stays off the homepage/critical path. `getStripePromise()` is lazy+cached — never re-add an eager `STRIPE_PROMISE` at the app root, and any new component calling `useStripe`/`useElements` must render under `StripeElementsProvider`.
 
 **Deprecated/disabled routes:** `/gift` and `/redeem` are commented out in `App.tsx` (gifting was deprecated in favor of manual TX recovery on the top-up page). `GiftPage.tsx`/`RedeemPage.tsx` still exist but are not routed — don't wire them back up without checking why they were removed.
 

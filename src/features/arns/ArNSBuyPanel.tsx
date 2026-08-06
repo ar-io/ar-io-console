@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Globe, Wallet, Link2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Globe, ExternalLink, Flame } from 'lucide-react';
 
-import { useStore } from '../../store/useStore';
-import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
 import { ArNSPurchaseStatus } from './components/ArNSPurchaseStatus';
-import { useArNSTurboSigner } from './hooks/useArNSTurboSigner';
 import { useBuyArNSName } from './hooks/useBuyArNSName';
 import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
 
@@ -17,19 +15,8 @@ import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
  * status. Lease/permabuy + lease years are in scope; undername-count-at-purchase
  * and non-credit payment methods are deferred.
  */
-export function ArNSBuyPanel() {
-  const address = useStore((s) => s.address);
-  const signer = useArNSTurboSigner();
-  const {
-    needsLinking,
-    isPrimarySolana,
-    solanaWallets,
-    linkWallet,
-    isLinking,
-    linkError,
-  } = useLinkedSolanaWallet();
-
-  const [search, setSearch] = useState('');
+export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {}) {
+  const [search, setSearch] = useState(initialSearch ?? '');
   const [selectedName, setSelectedName] = useState<string | undefined>();
 
   const buyState = useBuyArNSName();
@@ -51,110 +38,95 @@ export function ArNSBuyPanel() {
     buyState.reset();
   };
 
-  const canBuy = signer.isReady;
-
   return (
-    <div className="px-4 sm:px-6 max-w-3xl">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
-          <Globe className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">
-            Register an ArNS Name
-          </h3>
-          <p className="text-sm text-foreground/80">
-            Search, price, and buy a permanent name with your Turbo Credits — no
-            leaving the console.
-          </p>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6 mb-4">
-        <ArNSNameSearch
-          value={search}
-          onChange={(v) => {
-            setSearch(v);
-            if (selectedName && v !== selectedName) {
-              setSelectedName(undefined);
-              buyState.reset();
-            }
-          }}
-          onSelect={(name) => {
-            setSelectedName(name);
-            buyState.reset();
-          }}
-          selectedName={selectedName}
-        />
-      </div>
-
-      {/* Wallet gate */}
-      {selectedName && !canBuy && (
-        <div className="bg-card rounded-2xl border border-border/20 p-5 mb-4">
-          {!address ? (
-            <div className="flex items-center gap-3">
-              <Wallet className="w-5 h-5 text-primary flex-shrink-0" />
-              <p className="text-sm text-foreground/80">
-                Connect a wallet to continue. ArNS names are paid for with Turbo
-                Credits from a Solana wallet.
-              </p>
-            </div>
-          ) : needsLinking ? (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Link2 className="w-5 h-5 text-primary flex-shrink-0" />
-                <p className="text-sm font-medium text-foreground">
-                  Link a Solana wallet to buy ArNS names
-                </p>
-              </div>
-              <p className="text-xs text-foreground/60 mb-3">
-                ArNS names live on Solana. Link a Solana wallet to sign the
-                purchase — your primary {address ? 'account' : 'session'} stays
-                the same.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {solanaWallets?.map((w) => (
-                  <button
-                    key={w.adapter.name}
-                    onClick={() => linkWallet(w.adapter.name)}
-                    disabled={isLinking}
-                    className="px-4 py-2 rounded-full border border-primary/40 bg-card text-sm font-medium hover:bg-primary/10 transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {w.adapter.icon && (
-                      <img
-                        src={w.adapter.icon}
-                        alt=""
-                        className="w-4 h-4 rounded"
-                      />
-                    )}
-                    {w.adapter.name}
-                  </button>
-                ))}
-              </div>
-              {linkError && (
-                <p className="mt-2 text-xs text-error">{linkError}</p>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Wallet className="w-5 h-5 text-warning flex-shrink-0" />
-              <p className="text-sm text-foreground/80">
-                {isPrimarySolana
-                  ? 'Reconnect your Solana wallet to sign this purchase.'
-                  : 'Reconnect your linked Solana wallet to sign this purchase.'}
-              </p>
-            </div>
-          )}
+    <div className="px-4 sm:px-6">
+      {/* Header — only during search. Once a name is selected the purchase card
+          headers with that name and the "Search a different name" link keeps
+          context, so this intro would just crowd the register/pay step. */}
+      {!selectedName && (
+        <div className="flex items-start gap-3 mb-6">
+          <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold font-heading text-foreground mb-1">
+              Register an ArNS Name
+            </h3>
+            <p className="text-sm text-foreground/80">
+              Search, price, and buy a name with Turbo Credits or your ARIO tokens
+              — no leaving the console.
+            </p>
+            <a
+              href="https://docs.ar.io/learn/arns"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              What is ArNS?
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
         </div>
       )}
 
-      {/* Configure + buy */}
+      {/* Search — collapses to a compact "change name" link once a name is
+          chosen, so the register/pay flow isn't crowded by the full search box
+          (the Register card below already headers with the selected name). */}
+      {!selectedName ? (
+        <>
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6 mb-4">
+            <ArNSNameSearch
+              value={search}
+              onChange={(v) => {
+                setSearch(v);
+                if (selectedName && v !== selectedName) {
+                  setSelectedName(undefined);
+                  buyState.reset();
+                }
+              }}
+              onSelect={(name) => {
+                setSelectedName(name);
+                buyState.reset();
+              }}
+              selectedName={selectedName}
+            />
+          </div>
+
+          {/* Cross-links to the other domain surfaces */}
+          <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            <Link
+              to="/domains"
+              className="inline-flex items-center gap-1.5 font-medium text-primary transition-opacity hover:opacity-80"
+            >
+              <Globe className="h-4 w-4" /> Browse all names
+            </Link>
+            <Link
+              to="/returned-names"
+              className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+            >
+              <Flame className="h-4 w-4" /> Returned-name auctions
+            </Link>
+          </div>
+        </>
+      ) : (
+        <button
+          onClick={() => {
+            setSelectedName(undefined);
+            buyState.reset();
+          }}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Search a different name
+        </button>
+      )}
+
+      {/* Configure + buy. The buy button itself gates on a Solana signer (via
+          SolanaGateButton), so the user configures freely and meets the wallet
+          step only at the moment of purchase — no upfront wall. */}
       {selectedName && buyState.phase === 'idle' && (
         <ArNSPurchaseCard
           name={selectedName}
-          canBuy={canBuy}
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
         />

@@ -217,7 +217,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             <button
               onClick={() => {
                 onComplete();
-                navigate('/domains');
+                navigate('/arns');
               }}
               className="flex items-center gap-3 p-3 bg-card hover:bg-card/80 transition-colors rounded-2xl border border-border/20 hover:border-primary/30 text-left"
             >

@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Search, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 import useDebounce from '../../../hooks/useDebounce';
 import { useArNSAvailability } from '../hooks/useArNSAvailability';
+import { useArNSPricing } from '@/hooks/useArNSPricing';
 import { isValidArNSName } from '../utils';
 
 interface ArNSNameSearchProps {
@@ -31,6 +33,35 @@ export function ArNSNameSearch({
   const { data, isFetching, suggestions } = useArNSAvailability(debounced);
   const showResult = !!debounced && validName && !isFetching && !!data;
   const isSelected = selectedName === debounced;
+
+  // Starting (1-year lease) price for the typed name's length tier, so the user
+  // sees the cost BEFORE selecting — mirrors arns-react's DomainPriceList.
+  const { pricingTiers } = useArNSPricing();
+
+  // 1-year lease USD for a name of a given length (character tier bucketed at
+  // 13+). Used for the main result AND each taken-name suggestion.
+  const usdForLength = (len: number): number | undefined => {
+    if (pricingTiers.length === 0) return undefined;
+    const bucket = len > 12 ? 13 : len;
+    const usd = pricingTiers.find((t) => t.characterLength === bucket)
+      ?.pricesInUSD?.year1;
+    return typeof usd === 'number' && usd > 0 ? usd : undefined;
+  };
+
+  // Starting (1-year lease) price for the typed name, so the user sees the cost
+  // BEFORE selecting — mirrors arns-react's DomainPriceList.
+  const startPrice = useMemo(() => {
+    if (!validName || pricingTiers.length === 0) return undefined;
+    const bucket = debounced.length > 12 ? 13 : debounced.length;
+    const tier = pricingTiers.find((t) => t.characterLength === bucket);
+    if (!tier) return undefined;
+    const usd = tier.pricesInUSD?.year1;
+    const ario = tier.pricesInARIO?.year1;
+    return {
+      usd: typeof usd === 'number' && usd > 0 ? usd : undefined,
+      ario: typeof ario === 'number' && ario > 0 ? ario : undefined,
+    };
+  }, [validName, debounced, pricingTiers]);
 
   return (
     <div>
@@ -82,11 +113,30 @@ export function ArNSNameSearch({
         >
           {data.available ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
-                <span className="font-semibold text-foreground">
-                  "{debounced}.ar.io" is available
-                </span>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="font-semibold text-foreground">
+                    "{debounced}.ar.io" is available
+                  </span>
+                  {startPrice &&
+                    (startPrice.usd !== undefined || startPrice.ario !== undefined) && (
+                      <div className="text-sm text-foreground/60">
+                        Starting at{' '}
+                        {startPrice.usd !== undefined && (
+                          <span className="font-medium text-foreground/80">
+                            ~${startPrice.usd.toFixed(2)}/yr
+                          </span>
+                        )}
+                        {startPrice.usd !== undefined &&
+                          startPrice.ario !== undefined &&
+                          ' · '}
+                        {startPrice.ario !== undefined && (
+                          <span>{Math.round(startPrice.ario).toLocaleString()} ARIO</span>
+                        )}
+                      </div>
+                    )}
+                </div>
               </div>
               {isSelected ? (
                 <span className="text-sm text-primary font-medium">
@@ -95,7 +145,7 @@ export function ArNSNameSearch({
               ) : (
                 <button
                   onClick={() => onSelect(debounced)}
-                  className="btn-primary whitespace-nowrap"
+                  className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   Select this name
                 </button>
@@ -113,15 +163,23 @@ export function ArNSNameSearch({
                 <div className="mt-3">
                   <p className="text-sm text-foreground/80 mb-2">Try one of these instead:</p>
                   <div className="flex flex-wrap gap-2">
-                    {suggestions.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => onChange(s)}
-                        className="px-3 py-1.5 rounded-full bg-card border border-primary/30 text-sm font-mono text-foreground hover:bg-primary/10 transition-colors"
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {suggestions.map((s) => {
+                      const usd = usdForLength(s.length);
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => onChange(s)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-primary/10"
+                        >
+                          <span className="font-mono">{s}</span>
+                          {usd !== undefined && (
+                            <span className="text-xs text-foreground/50">
+                              ~${usd.toFixed(2)}/yr
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

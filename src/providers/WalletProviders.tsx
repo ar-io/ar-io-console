@@ -4,8 +4,6 @@ import { mainnet, base, polygon, polygonAmoy } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { Elements } from '@stripe/react-stripe-js';
-import { STRIPE_PROMISE } from '../services/paymentService';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -83,9 +81,7 @@ export function WalletProviders({ children }: WalletProvidersProps) {
             <ConnectionProvider endpoint={import.meta.env.VITE_SOLANA_RPC || 'https://api.mainnet-beta.solana.com'}>
               <WalletProvider wallets={solanaWallets} autoConnect={false}>
                 <WalletModalProvider>
-                  <Elements stripe={STRIPE_PROMISE}>
-                    {children}
-                  </Elements>
+                  {children}
                 </WalletModalProvider>
               </WalletProvider>
             </ConnectionProvider>

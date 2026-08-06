@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { mARIOToken } from '@ar.io/sdk';
 import { useCreditsForFiat } from './useCreditsForFiat';
 import { getARIO } from '../utils';
+import { useArNSConfigKey } from '../features/arns/hooks/useArNSConfigKey';
 
 interface ArNSPricingTier {
   characterLength: number;
@@ -40,6 +41,8 @@ interface ArNSPricingCache {
   arioUSDPrice: number;
   timestamp: number;
   creditsPerUSDAtCache: number; // Store the conversion rate used for cache
+  /** ArNS network config the prices were fetched against (see arnsConfigSignature). */
+  signature: string;
 }
 
 interface ArNSAffordabilityOption {
@@ -101,7 +104,7 @@ function getCategoryForLength(length: number): {
 }
 
 // Cache management functions
-function getCachedPricing(): ArNSPricingCache | null {
+function getCachedPricing(signature: string): ArNSPricingCache | null {
   try {
     const cached = localStorage.getItem(ARNS_PRICING_CACHE_KEY);
     if (!cached) return null;
@@ -111,6 +114,12 @@ function getCachedPricing(): ArNSPricingCache | null {
     // Check if cache is still valid
     if (Date.now() - data.timestamp > CACHE_DURATION_MS) {
       localStorage.removeItem(ARNS_PRICING_CACHE_KEY);
+      return null;
+    }
+
+    // Prices are network-specific: ignore a cache from a different config
+    // (gateway/program-ID/RPC or config-mode change).
+    if (data.signature !== signature) {
       return null;
     }
 
@@ -138,6 +147,10 @@ export function useArNSPricing(): UseArNSPricingReturn {
 
   // Get conversion rate from USD to Turbo credits
   const [creditsPerUSD] = useCreditsForFiat(1, () => {});
+
+  // Active ArNS network config: prices are network-specific, so a change must
+  // bypass the cache and refetch (see the effect deps below).
+  const configKey = useArNSConfigKey();
 
   const getPriceForName = async (
     name: string,
@@ -222,6 +235,9 @@ export function useArNSPricing(): UseArNSPricingReturn {
   };
 
   useEffect(() => {
+    // Guard against a superseded config: if configKey/creditsPerUSD change while
+    // a load is in flight, the stale run must not commit its (old-network) result.
+    let cancelled = false;
     const loadPricing = async () => {
       if (!creditsPerUSD) return;
 
@@ -229,8 +245,8 @@ export function useArNSPricing(): UseArNSPricingReturn {
       setError(null);
 
       try {
-        // First, check if we have valid cached data
-        const cachedData = getCachedPricing();
+        // First, check if we have valid cached data (for the active network)
+        const cachedData = getCachedPricing(configKey);
 
         // If cache is valid and the credits conversion rate hasn't changed much (within 5%)
         if (cachedData && Math.abs(cachedData.creditsPerUSDAtCache - creditsPerUSD) / creditsPerUSD < 0.05) {
@@ -249,6 +265,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
             },
           }));
 
+          if (cancelled) return;
           setPricingTiers(updatedTiers);
           setDemandFactor(cachedData.demandFactor);
           setLoading(false);
@@ -260,6 +277,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
 
         // Get the current demand factor once
         const currentDemandFactor = await ario.getDemandFactor();
+        if (cancelled) return;
         setDemandFactor(currentDemandFactor);
 
         // Fetch ARIO price and registration fees in parallel
@@ -293,9 +311,14 @@ export function useArNSPricing(): UseArNSPricingReturn {
           const lease = fees[key].lease;
           const permabuy = fees[key].permabuy;
 
-          // Convert mARIO to ARIO, then to USD with demand factor
+          // Convert mARIO → ARIO → USD. Do NOT re-apply the demand factor:
+          // getRegistrationFees() already bakes it into `lease`/`permabuy`
+          // (SDK io-readable multiplies fees by currentDemandFactor). Multiplying
+          // again here double-counted it, inflating every price by a factor of
+          // DF (e.g. ~7× at DF 7.1). `currentDemandFactor` is still fetched for
+          // the display chip + cache signature.
           const formatPrice = (mARIO: number) => {
-            const ario = (mARIO / 1e6) * currentDemandFactor;
+            const ario = mARIO / 1e6;
             const usd = ario * arioUSDPrice;
             return { ario, usd };
           };
@@ -341,6 +364,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
           });
         }
 
+        if (cancelled) return;
         setPricingTiers(tiers);
 
         // Cache the pricing data for future use
@@ -350,19 +374,23 @@ export function useArNSPricing(): UseArNSPricingReturn {
           arioUSDPrice,
           timestamp: Date.now(),
           creditsPerUSDAtCache: creditsPerUSD,
+          signature: configKey,
         });
 
         console.log('ArNS pricing cached for 1 hour');
       } catch (err) {
         console.error('Failed to load ArNS pricing:', err);
-        setError('Failed to load ArNS pricing data');
+        if (!cancelled) setError('Failed to load ArNS pricing data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadPricing();
-  }, [creditsPerUSD]); // Re-run when credit conversion rate changes
+    return () => {
+      cancelled = true;
+    };
+  }, [creditsPerUSD, configKey]); // Re-run on rate change OR network-config change
 
   return {
     pricingTiers,

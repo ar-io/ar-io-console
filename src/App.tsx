@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useFreeUploadLimit } from './hooks/useFreeUploadLimit';
 import { useTheme } from './hooks/useTheme';
@@ -21,13 +21,14 @@ const ShareCreditsPage = lazy(() => import('./pages/ShareCreditsPage'));
 // DEPRECATED: Gifting/Redeem features disabled — routes below stay commented out.
 const DomainsPage = lazy(() => import('./pages/DomainsPage'));
 const ArNSPage = lazy(() => import('./pages/ArNSPage'));
-const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
-const ServicesCalculatorPage = lazy(() => import('./pages/ServicesCalculatorPage'));
+const ReturnedNamesPage = lazy(() => import('./pages/ReturnedNamesPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
 const BalanceCheckerPage = lazy(() => import('./pages/BalanceCheckerPage'));
 const GatewayInfoPage = lazy(() => import('./pages/GatewayInfoPage'));
 const DeploySitePage = lazy(() => import('./pages/DeploySitePage'));
 const RecentDeploymentsPage = lazy(() => import('./pages/RecentDeploymentsPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
+const MyDomainsPage = lazy(() => import('./pages/MyDomainsPage'));
 const TryItNowPage = lazy(() => import('./pages/TryItNowPage'));
 const VerifyPage = lazy(() => import('./pages/VerifyPage'));
 const PagesPage = lazy(() => import('./pages/PagesPage'));
@@ -116,10 +117,15 @@ function AppRoutes() {
           {/* <Route path="gift" element={<GiftPage />} /> */}
           <Route path="domains" element={<DomainsPage />} />
           <Route path="arns" element={<ArNSPage />} />
-          <Route path="calculator" element={<CalculatorPage />} />
-          <Route path="services-calculator" element={<ServicesCalculatorPage />} />
+          <Route path="returned-names" element={<ReturnedNamesPage />} />
+          <Route path="pricing" element={<PricingPage />} />
+          {/* Old pricing routes fold into the unified page (keep links alive). */}
+          <Route path="calculator" element={<Navigate to="/pricing" replace />} />
+          <Route path="name-prices" element={<Navigate to="/pricing?type=domains" replace />} />
+          <Route path="services-calculator" element={<Navigate to="/pricing" replace />} />
           <Route path="balances" element={<BalanceCheckerPage />} />
           <Route path="account" element={<AccountPage />} />
+          <Route path="my-domains" element={<MyDomainsPage />} />
           {/* <Route path="redeem" element={<RedeemPage />} /> */}
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />

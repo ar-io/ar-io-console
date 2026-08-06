@@ -1,18 +1,11 @@
 import { useCallback, useState } from 'react';
 
-import {
-  ArNSSettlementResult,
-  ArNSSettlementStatus,
-  InsufficientCreditsError,
-} from '../services/TurboArNSClient';
-import {
-  clearPendingArNSPurchase,
-  getPendingArNSPurchase,
-  savePendingArNSPurchase,
-} from '../services/arnsPurchaseResume';
+import { APP_NAME } from '../../../constants';
+import { getWritableARIO } from '../../../utils';
+import { ArNSSettlementResult } from '../services/TurboArNSClient';
 import { lowerCaseDomain } from '../utils';
-import { useTurboArNSClient } from './useTurboArNSClient';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
+import type { ArNSBuyFundFrom } from './useBuyArNSName';
 
 /** Lifecycle intents that operate on an already-owned name (no ANT spawn). */
 export type ManageIntent =
@@ -20,13 +13,7 @@ export type ManageIntent =
   | 'Upgrade-Name'
   | 'Increase-Undername-Limit';
 
-export type ManagePhase =
-  | 'idle'
-  | 'submitting'
-  | 'confirming'
-  | 'polling'
-  | 'success'
-  | 'error';
+export type ManagePhase = 'idle' | 'submitting' | 'success' | 'error';
 
 export interface ManageArNSInput {
   name: string;
@@ -35,6 +22,8 @@ export interface ManageArNSInput {
   years?: number;
   /** Undername slots to add — required for Increase-Undername-Limit. */
   increaseQty?: number;
+  /** Funding source for the ARIO price. Defaults to Turbo Credits. */
+  fundFrom?: ArNSBuyFundFrom;
 }
 
 export interface UseManageArNSNameResult {
@@ -44,10 +33,31 @@ export interface UseManageArNSNameResult {
   statusMessage: string;
   result: ArNSSettlementResult | undefined;
   error: Error | undefined;
-  /** True when the failure was a 402 — the UI should offer Top-Up. */
+  /** True when the failure was insufficient credits — the UI offers Top-Up. */
   insufficientCredits: boolean;
   isBusy: boolean;
 }
+
+/** Structural view of the ARIO writeable's lifecycle methods. */
+type ARIOManageWriteable = {
+  extendLease(p: {
+    name: string;
+    years: number;
+    fundFrom?: ArNSBuyFundFrom;
+    referrer?: string;
+  }): Promise<{ id: string }>;
+  upgradeRecord(p: {
+    name: string;
+    fundFrom?: ArNSBuyFundFrom;
+    referrer?: string;
+  }): Promise<{ id: string }>;
+  increaseUndernameLimit(p: {
+    name: string;
+    increaseCount: number;
+    fundFrom?: ArNSBuyFundFrom;
+    referrer?: string;
+  }): Promise<{ id: string }>;
+};
 
 const VERB: Record<ManageIntent, string> = {
   'Extend-Lease': 'Extending the lease for',
@@ -55,20 +65,28 @@ const VERB: Record<ManageIntent, string> = {
   'Increase-Undername-Limit': 'Adding undernames to',
 };
 
+export function isInsufficientCredits(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  // `\b402\b` (not a bare `402`) so unrelated digit runs — tx-signature
+  // fragments, program error codes, slot numbers — aren't misread as an
+  // insufficient-funds / HTTP-402 signal and swallowed as a top-up prompt.
+  return /insufficient|not enough|balance too low|underfunded|exceeds balance|\b402\b/i.test(
+    msg,
+  );
+}
+
 /**
  * Settle an ArNS **lifecycle** intent (extend lease, upgrade lease→permabuy,
- * increase undername limit) on an already-owned name with Turbo Credits.
+ * increase undername limit) on an already-owned name, on the ARIO contract rail
+ * with the chosen funding source (Turbo Credits or the wallet's ARIO).
  *
- * A simpler sibling of {@link useBuyArNSName}: these intents operate on an
- * existing registration, so there is NO ANT to spawn and no `processId` — just
- * the credit settlement + poll. The money-safety invariant is preserved: the
- * purchase nonce is persisted the instant it exists and a matching in-flight
- * attempt resumes (a pure status read) instead of re-submitting, so a retry or
- * reload can never double-debit. A 402 surfaces as `insufficientCredits` so the
- * caller can route to Top-Up. Solana (credit) path only — same as buy.
+ * A sibling of {@link useBuyArNSName}: these intents act on an existing
+ * registration, so there is no ANT to spawn — a single atomic contract write.
+ * `fundFrom` selects where the ARIO price is drawn from; the SOL rent/fee is
+ * paid by the signer regardless. Insufficient funds surface via the settle
+ * error and route to Top-Up.
  */
 export function useManageArNSName(): UseManageArNSNameResult {
-  const client = useTurboArNSClient();
   const signer = useArNSTurboSigner();
 
   const [phase, setPhase] = useState<ManagePhase>('idle');
@@ -91,6 +109,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
       intent,
       years,
       increaseQty,
+      fundFrom = 'turbo',
     }: ManageArNSInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
@@ -100,83 +119,63 @@ export function useManageArNSName(): UseManageArNSNameResult {
       const owner = signer.address;
       if (!signer.isReady || !owner || !signer.walletAdapter) {
         const e = new Error(
-          'Connect a Solana wallet with a live signer to pay with Turbo Credits.',
+          'Connect a Solana wallet with a live signer to pay for this change.',
         );
         setPhase('error');
         setError(e);
         throw e;
       }
 
-      // Resume a prior in-flight attempt for this exact name/owner/intent so a
-      // retry never re-submits a paid nonce (a pure status read, no re-debit).
-      const pending = getPendingArNSPurchase();
-      const resumeNonce =
-        pending &&
-        pending.owner === owner &&
-        lowerCaseDomain(pending.name) === lowered &&
-        pending.intent === intent
-          ? pending.nonce
-          : undefined;
-
       try {
-        const onStatus = (status: ArNSSettlementStatus) => {
-          if (
-            (status.phase === 'submitted' || status.phase === 'resumed') &&
-            status.nonce
-          ) {
-            // Persist the nonce the instant it exists so a reload/retry resumes.
-            savePendingArNSPurchase({
-              nonce: status.nonce,
-              intent,
+        setPhase('submitting');
+        setStatusMessage(`${VERB[intent]} '${lowered}'…`);
+
+        const ario = getWritableARIO(
+          signer.getSolanaSigner(),
+        ) as unknown as ARIOManageWriteable;
+
+        let res: { id: string };
+        switch (intent) {
+          case 'Extend-Lease':
+            res = await ario.extendLease({
               name: lowered,
-              owner,
-              savedAt: Date.now(),
+              years: years ?? 1,
+              fundFrom,
+              referrer: APP_NAME,
             });
-          }
-          switch (status.phase) {
-            case 'submitting':
-              setPhase('submitting');
-              setStatusMessage(`Paying with Turbo Credits for '${lowered}'…`);
-              break;
-            case 'submitted':
-            case 'resumed':
-              setPhase('confirming');
-              setStatusMessage(`${VERB[intent]} '${lowered}' on-chain…`);
-              break;
-            case 'polling':
-              setPhase('polling');
-              setStatusMessage(`Waiting for '${lowered}' to settle…`);
-              break;
-            case 'success':
-              setPhase('success');
-              setStatusMessage(`Done — '${lowered}' updated!`);
-              break;
-          }
+            break;
+          case 'Upgrade-Name':
+            res = await ario.upgradeRecord({
+              name: lowered,
+              fundFrom,
+              referrer: APP_NAME,
+            });
+            break;
+          case 'Increase-Undername-Limit':
+            res = await ario.increaseUndernameLimit({
+              name: lowered,
+              increaseCount: increaseQty ?? 1,
+              fundFrom,
+              referrer: APP_NAME,
+            });
+            break;
+        }
+
+        const settlement: ArNSSettlementResult = {
+          nonce: '',
+          messageId: res?.id ?? '',
+          receipt: {},
         };
-
-        const settlement = await client.executeArNSIntent({
-          intent,
-          name: lowered,
-          years: intent === 'Extend-Lease' ? years : undefined,
-          increaseQty:
-            intent === 'Increase-Undername-Limit' ? increaseQty : undefined,
-          tokenType: 'solana',
-          walletAdapter: signer.walletAdapter,
-          resumeNonce,
-          onStatus,
-        });
-
-        clearPendingArNSPurchase();
         setResult(settlement);
         setPhase('success');
-        // Credits were debited server-side — refresh the header balance.
+        setStatusMessage(`Done — '${lowered}' updated!`);
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return settlement;
       } catch (err) {
-        if (err instanceof InsufficientCreditsError) {
+        if (isInsufficientCredits(err)) {
           setInsufficientCredits(true);
           setPhase('error');
-          setError(err);
+          setError(err instanceof Error ? err : new Error(String(err)));
           return undefined;
         }
         const normalized = err instanceof Error ? err : new Error(String(err));
@@ -185,7 +184,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
         throw normalized;
       }
     },
-    [client, signer],
+    [signer],
   );
 
   return {
@@ -196,7 +195,6 @@ export function useManageArNSName(): UseManageArNSNameResult {
     result,
     error,
     insufficientCredits,
-    isBusy:
-      phase === 'submitting' || phase === 'confirming' || phase === 'polling',
+    isBusy: phase === 'submitting',
   };
 }

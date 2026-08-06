@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getARIO } from '../../../utils/arIOConfig';
 import { isValidArNSName, lowerCaseDomain } from '../utils';
 import { loadArNSRegistry } from './useAllArNSNames';
+import { useArNSConfigKey } from './useArNSConfigKey';
 
 export type ArNSAvailability = {
   available: boolean;
@@ -23,10 +24,19 @@ type RegistryIndex = {
  * total — see `useAllArNSNames` for why the registry is fetched in one shot
  * rather than paged.
  */
-function useArNSRegistryIndex() {
+function useArNSRegistryIndex(enabled: boolean) {
+  const configKey = useArNSConfigKey();
   return useQuery<RegistryIndex>({
-    queryKey: ['arns-registry-index'],
+    queryKey: ['arns-registry-index', configKey],
+    // Only pull the whole-registry index (~700KB + 2 RPCs) once the user is
+    // actually searching a name — not on every mount (e.g. the homepage, where
+    // the ArNS search box sits but is usually untouched). Typed lookups before
+    // the index warms are covered by the single-name `fallback` query below.
+    enabled,
     staleTime: 5 * 60_000,
+    // The whole-registry index is a ~700KB single fetch — don't re-pull it on
+    // every tab refocus; the 5-min staleTime + manual refresh cover freshness.
+    refetchOnWindowFocus: false,
     retry: false,
     queryFn: async () => {
       const ario = getARIO();
@@ -63,13 +73,15 @@ function useArNSRegistryIndex() {
 export function useArNSAvailability(name: string) {
   const normalized = lowerCaseDomain(name);
   const enabled = normalized.length > 0 && isValidArNSName(normalized);
+  const configKey = useArNSConfigKey();
 
-  const index = useArNSRegistryIndex();
+  // Defer the bulk index until the user is searching a valid name.
+  const index = useArNSRegistryIndex(enabled);
   const indexReady = !!index.data;
 
   // Only runs until the index becomes available.
   const fallback = useQuery<ArNSAvailability>({
-    queryKey: ['arns-availability', normalized],
+    queryKey: ['arns-availability', configKey, normalized],
     enabled: enabled && !indexReady,
     staleTime: 30_000,
     retry: false,
@@ -78,9 +90,16 @@ export function useArNSAvailability(name: string) {
       try {
         const record = await ario.getArNSRecord({ name: normalized });
         return { name: normalized, available: !record };
-      } catch {
-        // No record / lookup miss ⇒ treat as available (legacy behaviour).
-        return { name: normalized, available: true };
+      } catch (err) {
+        // ONLY an explicit "record not found" means the name is available. Any
+        // other failure (gateway/RPC/network) must NOT be reported as available
+        // — rethrow so the query errors and the UI shows nothing rather than a
+        // false "available" that could send the user to buy a taken name.
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/not found|does not exist|no record|notfound/i.test(msg)) {
+          return { name: normalized, available: true };
+        }
+        throw err instanceof Error ? err : new Error(msg);
       }
     },
   });

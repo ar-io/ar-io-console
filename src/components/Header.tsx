@@ -1,10 +1,11 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import CopyButton from './CopyButton';
+import DomainsNavFlyout from '@/components/DomainsNavFlyout';
 import { useStore } from '../store/useStore';
 import { formatWalletAddress, getTurboBalance } from '../utils';
 import { getWalletNetworkLabel } from '../utils/walletDisplay';
@@ -33,14 +34,21 @@ const accountServices = [
 
 // Public utility services
 const utilityServices = [
-  { name: 'Pricing Calculator', page: 'calculator' as const, icon: Calculator },
+  { name: 'Pricing', page: 'pricing' as const, icon: Calculator },
   { name: 'Check Balance', page: 'balances' as const, icon: Search },
   { name: 'Browse Data', page: 'browse' as const, icon: Compass },
   { name: 'Verify Data', page: 'verify' as const, icon: ShieldCheck },
-  { name: 'Search Domains', page: 'domains' as const, icon: Globe },
-  { name: 'Manage Domains', href: 'https://arns.ar.io/#/manage/names', icon: PencilLine, external: true },
   { name: 'Network Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
   { name: 'Developer Docs', href: 'https://docs.ar.io', icon: Code, external: true },
+];
+
+// ArNS / domain actions — grouped into a single labeled "Domains" cluster in the
+// mega-menu. None are payment-gated routes, so no x402/payment filtering applies.
+const domainServices = [
+  { name: 'Register a Name', page: 'arns' as const, icon: Globe },
+  { name: 'Browse Domains', page: 'domains' as const, icon: Search },
+  { name: 'Returned Names', page: 'returned-names' as const, icon: Flame },
+  { name: 'Manage Domains', page: 'my-domains' as const, icon: PencilLine },
 ];
 
 const Header = () => {
@@ -189,7 +197,7 @@ const Header = () => {
 
   // Filter services based on payment service availability (x402-only mode)
   // Payment service dependent routes: topup, share, gift, balances, redeem
-  // Note: calculator is NOT included - it works in x402-only mode with USDC pricing
+  // Note: pricing is NOT included - it works in x402-only mode with USDC pricing
   const paymentServiceRoutes = ['topup', 'share', 'balances']; // 'gift' and 'redeem' deprecated
   const filteredAccountServices = accountServices.filter(service =>
     isPaymentServiceAvailable() || !paymentServiceRoutes.includes(service.page)
@@ -261,6 +269,15 @@ const Header = () => {
                     </Link>
                   );
                 })}
+                <div className="border-t border-border/20 my-1" />
+
+                {/* Domains — ArNS actions collapsed into a second-level flyout
+                    (the flat list had grown long enough to dominate the panel) */}
+                <DomainsNavFlyout
+                  items={domainServices}
+                  currentPath={location.pathname}
+                  onNavigate={close}
+                />
                 <div className="border-t border-border/20 my-1" />
 
                 {/* Public Tools */}

@@ -187,15 +187,20 @@ export default function AssignDomainModal({
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-foreground/60 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-sm font-medium text-foreground mb-1">No domains yet</div>
+                    <div className="text-sm font-medium text-foreground mb-1">No names yet</div>
                     <div className="text-sm text-foreground/80 mb-3">
-                      Register a domain at arns.ar.io, then assign it here.
+                      Register an ArNS name right here in the console, then come
+                      back to assign it.
                     </div>
                     <button
-                      onClick={() => window.open('https://arns.ar.io', '_blank')}
+                      onClick={() =>
+                        // New tab so this modal + its manifest context stay put;
+                        // register there, come back, and assign.
+                        window.open('/arns', '_blank', 'noopener,noreferrer')
+                      }
                       className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
                     >
-                      Register a domain
+                      Register a name
                     </button>
                   </div>
                 </div>

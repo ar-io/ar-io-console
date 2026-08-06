@@ -1,7 +1,32 @@
-import { ARIO, ANT, type SolanaSigner } from '@ar.io/sdk/solana';
 import {
+  ARIO,
+  ANT,
+  SolanaANTRegistryReadable,
+  getPrimaryNamePDA,
+  getPrimaryNameReversePDA,
+  hashName,
+  type SolanaSigner,
+} from '@ar.io/sdk/solana';
+import {
+  getMigratePrimaryNameReverseInstruction,
+  getRemovePrimaryNameInstructionAsync,
+} from '@ar.io/solana-contracts/core';
+import {
+  getSetComputeUnitLimitInstruction,
+  getSetComputeUnitPriceInstruction,
+} from '@solana-program/compute-budget';
+import {
+  appendTransactionMessageInstructions,
   createSolanaRpc,
   createSolanaRpcSubscriptions,
+  createTransactionMessage,
+  fetchEncodedAccount,
+  getSignatureFromTransaction,
+  pipe,
+  sendAndConfirmTransactionFactory,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  signTransactionMessageWithSigners,
   address,
 } from '@solana/kit';
 import type {
@@ -55,35 +80,125 @@ const getSolanaRpcClients = () => {
   };
 };
 
+// --- Cached read clients (one per active network config) ---------------------
+// getARIO/getANT/getSolanaReadRpc/getANTRegistry used to rebuild a fresh
+// createSolanaRpc(...) + SDK client on EVERY call. Each new RPC attaches
+// listeners to shared Node-polyfilled emitters (abort signals, the @solana/rpc
+// coalescer), so a read-heavy page like /domains — header primary-name lookup +
+// registry index + per-keystroke availability fallbacks + lazy getANT() — blew
+// past the default 10-listener ceiling ("MaxListenersExceededWarning") and
+// churned redundant RPCs. Memoize a singleton per network-config signature: a
+// gateway/program-ID/RPC/mode change yields a new signature and rebuilds; within
+// a config everything reuses the SAME rpc + clients.
+
+/** Stable identity of the active Solana read config (RPC URL + program IDs). */
+const configSignature = () => {
+  const c = getCurrentConfig();
+  return [
+    getSolanaRpcUrl(),
+    c.coreProgramId ?? '',
+    c.garProgramId ?? '',
+    c.arnsProgramId ?? '',
+    c.antProgramId ?? '',
+  ].join('|');
+};
+
+let cachedSig: string | null = null;
+let cachedRpc: ReturnType<typeof createSolanaRpc> | null = null;
+let cachedArio: ReturnType<typeof ARIO.init> | null = null;
+let cachedRegistry: SolanaANTRegistryReadable | null = null;
+const antClientCache = new Map<string, ReturnType<typeof ANT.init>>();
+
+/** Drop every cached read client when the network config changes. No-op otherwise. */
+const syncConfigCache = () => {
+  const sig = configSignature();
+  if (sig !== cachedSig) {
+    cachedSig = sig;
+    cachedRpc = null;
+    cachedArio = null;
+    cachedRegistry = null;
+    antClientCache.clear();
+  }
+};
+
+/** The one shared read RPC for the active config (rebuilt only on config change). */
+const readRpc = () => {
+  syncConfigCache();
+  if (!cachedRpc) cachedRpc = createSolanaRpc(getSolanaRpcUrl());
+  return cachedRpc;
+};
+
 /**
- * Get ARIO read-only client with dynamic Solana configuration.
+ * A raw Solana read RPC bound to the active config's endpoint. For low-level
+ * reads (e.g. the MPL Core owner-scan in ACL-drift detection) that the SDK
+ * clients don't expose. Shared singleton per config.
+ */
+export const getSolanaReadRpc = () => readRpc();
+
+/**
+ * ANT Registry read client bound to the active config's ANT program. Exposes
+ * `accessControlList({ address })` → `{ Owned, Controlled }`, the wallet's
+ * on-chain ACL used for ownership-drift detection. Cached per config.
+ */
+export const getANTRegistry = () => {
+  syncConfigCache();
+  if (!cachedRegistry) {
+    const config = getCurrentConfig();
+    cachedRegistry = new SolanaANTRegistryReadable({
+      rpc: readRpc() as any,
+      antProgramId: config.antProgramId as Address | undefined,
+    });
+  }
+  return cachedRegistry;
+};
+
+/**
+ * Get ARIO read-only client with dynamic Solana configuration. Cached per config.
  */
 export const getARIO = () => {
-  const config = getCurrentConfig();
-  const rpc = createSolanaRpc(getSolanaRpcUrl());
-
-  return ARIO.init({
-    rpc,
-    coreProgramId: config.coreProgramId as Address | undefined,
-    garProgramId: config.garProgramId as Address | undefined,
-    arnsProgramId: config.arnsProgramId as Address | undefined,
-    antProgramId: config.antProgramId as Address | undefined,
-  });
+  syncConfigCache();
+  if (!cachedArio) {
+    const config = getCurrentConfig();
+    cachedArio = ARIO.init({
+      rpc: readRpc(),
+      coreProgramId: config.coreProgramId as Address | undefined,
+      garProgramId: config.garProgramId as Address | undefined,
+      arnsProgramId: config.arnsProgramId as Address | undefined,
+      antProgramId: config.antProgramId as Address | undefined,
+    });
+  }
+  return cachedArio;
 };
 
 /**
  * Get ANT read-only client for a specific processId (ANT asset address on Solana).
+ * Cached per (config, processId) so repeated target resolutions reuse one client.
  * @param processId - The ANT process ID
  */
-export const getANT = async (processId: string) => {
-  const config = getCurrentConfig();
-  const rpc = createSolanaRpc(getSolanaRpcUrl());
+const MAX_ANT_CLIENTS = 256; // bound the per-processId cache (browse/account can touch many names)
 
-  return ANT.init({
+export const getANT = async (processId: string) => {
+  syncConfigCache();
+  const existing = antClientCache.get(processId);
+  if (existing) {
+    // Refresh LRU position so hot ANTs survive eviction.
+    antClientCache.delete(processId);
+    antClientCache.set(processId, existing);
+    return existing;
+  }
+  const config = getCurrentConfig();
+  const client = ANT.init({
     processId,
-    rpc,
+    rpc: readRpc(),
     antProgramId: config.antProgramId as Address | undefined,
   });
+  // Evict the oldest entry when over the cap (Map preserves insertion order).
+  if (antClientCache.size >= MAX_ANT_CLIENTS) {
+    const oldest = antClientCache.keys().next().value;
+    if (oldest !== undefined) antClientCache.delete(oldest);
+  }
+  antClientCache.set(processId, client);
+  return client;
 };
 
 /**
@@ -124,6 +239,90 @@ export const getWritableANT = async (processId: string, signer: SolanaSigner) =>
     signer,
     antProgramId: config.antProgramId as Address | undefined,
   });
+};
+
+/**
+ * Remove the connected wallet's primary (reverse-resolution) name.
+ *
+ * There is no high-level SDK method for this on Solana — `ARIO.removePrimaryNames`
+ * throws "not applicable on Solana". So, like the arns-react app, we build the
+ * ario-core instructions directly and send them via `@solana/kit`:
+ *   1. `migrate_primary_name_reverse` — ONLY when the reverse PDA hasn't been
+ *      migrated to the current layout yet (older records); skipped otherwise.
+ *   2. `remove_primary_name` — clears the forward + reverse mapping.
+ *
+ * A single signature, gas-only (no ARIO price). The removed name still exists
+ * and is still owned — only the reverse (name → wallet) link is cleared.
+ */
+export const removePrimaryName = async (
+  name: string,
+  signer: SolanaSigner,
+): Promise<string> => {
+  const config = getCurrentConfig();
+  const { rpc, rpcSubscriptions } = getSolanaRpcClients();
+  const coreProgram = config.coreProgramId
+    ? (address(config.coreProgramId) as Address)
+    : undefined;
+
+  const [primaryNamePda] = coreProgram
+    ? await getPrimaryNamePDA(signer.address, coreProgram)
+    : await getPrimaryNamePDA(signer.address);
+  const [primaryNameReversePda] = coreProgram
+    ? await getPrimaryNameReversePDA(name, coreProgram)
+    : await getPrimaryNameReversePDA(name);
+
+  const ixs: any[] = [];
+
+  // The reverse PDA only needs migrating when it predates the current layout;
+  // if it already exists in the new form, skip the migrate ix.
+  const reverseAccount = await fetchEncodedAccount(rpc, primaryNameReversePda, {
+    commitment: 'confirmed',
+  });
+  if (!reverseAccount.exists) {
+    ixs.push(
+      getMigratePrimaryNameReverseInstruction(
+        { reverse: primaryNameReversePda, payer: signer as any },
+        coreProgram ? { programAddress: coreProgram } : undefined,
+      ),
+    );
+  }
+
+  ixs.push(
+    await getRemovePrimaryNameInstructionAsync(
+      {
+        primaryName: primaryNamePda,
+        primaryNameReverse: primaryNameReversePda,
+        owner: signer as any,
+        reverseLookupHash: hashName(name),
+      },
+      coreProgram ? { programAddress: coreProgram } : undefined,
+    ),
+  );
+
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+
+  const message = pipe(
+    createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(signer as any, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) =>
+      appendTransactionMessageInstructions(
+        [
+          getSetComputeUnitLimitInstruction({ units: 400_000 }),
+          getSetComputeUnitPriceInstruction({ microLamports: 0n }),
+          ...ixs,
+        ],
+        tx,
+      ),
+  );
+
+  const signedTx = await signTransactionMessageWithSigners(message);
+  const sendAndConfirm = sendAndConfirmTransactionFactory({
+    rpc: rpc as any,
+    rpcSubscriptions: rpcSubscriptions as any,
+  });
+  await sendAndConfirm(signedTx as any, { commitment: 'confirmed' });
+  return getSignatureFromTransaction(signedTx);
 };
 
 /**

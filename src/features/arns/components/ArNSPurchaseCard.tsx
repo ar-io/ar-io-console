@@ -1,13 +1,31 @@
 import { useMemo, useState } from 'react';
-import { Calendar, Infinity as InfinityIcon, Loader2, Wallet } from 'lucide-react';
+import {
+  Calendar,
+  CreditCard,
+  Infinity as InfinityIcon,
+  Loader2,
+  Wallet,
+} from 'lucide-react';
 
 import type { ArNSRegistrationType } from '../hooks/useArNSPrice';
 import { useArNSPrice } from '../hooks/useArNSPrice';
+import { useArNSCostDetails, type ArNSFundFrom } from '../hooks/useArNSCostDetails';
+import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
+import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
+import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
+import { useArNSPricing } from '@/hooks/useArNSPricing';
 import type { BuyArNSNameInput } from '../hooks/useBuyArNSName';
+import {
+  ArNSFundingSource,
+  ArNSPaymentMethod,
+  ArNSPaymentSelector,
+} from './ArNSPaymentSelector';
+import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import BuyCreditsModal from './BuyCreditsModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 
 interface ArNSPurchaseCardProps {
   name: string;
-  canBuy: boolean;
   isBusy: boolean;
   onBuy: (input: BuyArNSNameInput) => void;
 }
@@ -15,86 +33,219 @@ interface ArNSPurchaseCardProps {
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
 /**
- * Registration configurator for a selected name: lease vs permabuy, lease term,
- * live price in Turbo Credits (+ USD estimate), and the buy action. Undername
- * count at purchase is intentionally deferred (Phase 1) — names start with the
- * protocol-default undername allotment.
+ * Renders nothing — just mounts the two price queries for one lease term so its
+ * cost is already in the react-query cache before the user selects it. Keyed
+ * identically to the visible card's queries (same fundFrom/fromAddress), so a
+ * term switch reads from cache instead of firing a fresh Solana RPC.
+ */
+function PrefetchLeaseTerm({
+  name,
+  years,
+  fundFrom,
+  fromAddress,
+}: {
+  name: string;
+  years: number;
+  fundFrom: ArNSFundFrom;
+  fromAddress?: string;
+}) {
+  useArNSPrice({ name, type: 'lease', years });
+  useArNSCostDetails({
+    intent: 'Buy-Name',
+    name,
+    type: 'lease',
+    years,
+    fundFrom,
+    fromAddress,
+  });
+  return null;
+}
+
+/**
+ * Prefetch every lease term up front so switching 1↔5 years is instant. Fixed
+ * child count keeps hooks stable; the current term dedupes against the card's
+ * own query, so this adds the OTHER terms, not duplicate fetches.
+ */
+function LeaseTermPrefetcher(props: {
+  name: string;
+  fundFrom: ArNSFundFrom;
+  fromAddress?: string;
+}) {
+  return (
+    <>
+      {LEASE_YEAR_OPTIONS.map((y) => (
+        <PrefetchLeaseTerm key={y} years={y} {...props} />
+      ))}
+    </>
+  );
+}
+
+/**
+ * Registration configurator: lease vs permabuy + term, payment method (Turbo
+ * Credits or the wallet's ARIO — liquid / staked / any), an itemized cost
+ * breakdown (name price + the SOL rent/fee every buy pays), affordability
+ * gating, and the buy action.
  */
 export function ArNSPurchaseCard({
   name,
-  canBuy,
   isBusy,
   onBuy,
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
+  const [method, setMethod] = useState<ArNSPaymentMethod>('credits');
+  const [fundingSource, setFundingSource] =
+    useState<ArNSFundingSource>('balance');
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
+  const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
 
+  const signer = useArNSTurboSigner();
+  const address = signer.address ?? undefined;
+  const balances = useArNSPaymentBalances(address);
+
+  const fundFrom = method === 'credits' ? 'turbo' : fundingSource;
+
+  // Credits price (winc → credits) for the credits method display.
   const {
-    data: price,
-    isFetching: priceLoading,
-    error: priceError,
-  } = useArNSPrice({ name, type, years });
+    data: creditsPrice,
+    isFetching: creditsLoading,
+    error: creditsError,
+  } = useArNSPrice({ name, type, years, enabled: method === 'credits' });
 
-  const creditsLabel = useMemo(() => {
-    if (!price) return null;
-    return price.credits.toLocaleString(undefined, {
-      maximumFractionDigits: 4,
-    });
-  }, [price]);
+  // Cost details (ARIO price + SOL gas + affordability) for the selected source.
+  const {
+    data: cost,
+    isFetching: costLoading,
+    error: costError,
+  } = useArNSCostDetails({
+    intent: 'Buy-Name',
+    name,
+    type,
+    years,
+    fundFrom,
+    fromAddress: address,
+  });
 
-  const usdLabel = useMemo(() => {
-    if (!price?.usd) return null;
-    return price.usd.toLocaleString(undefined, {
-      style: 'currency',
-      currency: 'USD',
-    });
-  }, [price]);
+  const insufficientSol =
+    !!cost && !balances.loading && balances.sol < cost.gasTotalSol;
+  const insufficientFunds = useMemo(() => {
+    if (method === 'credits') {
+      return creditsPrice ? balances.credits < creditsPrice.credits : false;
+    }
+    return (cost?.shortfallMARIO ?? 0) > 0;
+  }, [method, creditsPrice, balances.credits, cost?.shortfallMARIO]);
+
+  const priceReady =
+    method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
+  // Every buy needs the SOL rent/gas estimate from useArNSCostDetails, even the
+  // credits path. If that query errored or resolved empty we have no estimate —
+  // don't let the user confirm against a missing (and cosmetically ~0) SOL cost.
+  const gasUnavailable = !!costError || (!cost && !costLoading);
+  const canPay =
+    priceReady &&
+    !gasUnavailable &&
+    !insufficientSol &&
+    !insufficientFunds &&
+    !isBusy;
+
+  // Credit shortfall → on-demand top-up (only offered for the credits method).
+  const creditShortfall =
+    method === 'credits' && creditsPrice
+      ? Math.max(0, creditsPrice.credits - balances.credits)
+      : 0;
+  const topUpUsd =
+    creditShortfall > 0 && creditsForOneUSD
+      ? Math.ceil(creditShortfall / creditsForOneUSD)
+      : undefined;
+  // Only offer a credits top-up when SOL gas is sufficient — buying credits
+  // can't make the purchase succeed if SOL for rent is also short. Gate on being
+  // signed in: a signed-out user has a 0 balance (so credits always read as
+  // short), and we want them to hit the connect/sign-in gate first — not a
+  // "Buy Turbo Credits" prompt for an account they haven't connected yet.
+  const offerTopUp =
+    !!address && method === 'credits' && insufficientFunds && !insufficientSol;
+
+  // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
+  // years = 1 + (permabuy − year1) / annualRenewal, where annualRenewal is the
+  // marginal (year2 − year1). Ratios cancel the length, so it's stable per name.
+  const { pricingTiers } = useArNSPricing();
+  const permabuyBreakEvenYears = useMemo(() => {
+    if (!name || pricingTiers.length === 0) return undefined;
+    const bucket = name.length > 12 ? 13 : name.length;
+    const tier = pricingTiers.find((t) => t.characterLength === bucket);
+    const y1 = tier?.pricesInARIO?.year1;
+    const y2 = tier?.pricesInARIO?.year2;
+    const perm = tier?.pricesInARIO?.permabuy;
+    if (
+      typeof y1 !== 'number' ||
+      typeof y2 !== 'number' ||
+      typeof perm !== 'number' ||
+      y1 <= 0 ||
+      y2 <= y1 ||
+      perm <= 0
+    )
+      return undefined;
+    return Math.round(1 + (perm - y1) / (y2 - y1));
+  }, [name, pricingTiers]);
 
   return (
-    <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-4 sm:p-6">
-      <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-lg font-bold font-heading text-foreground">
-          Register{' '}
-          <span className="font-mono text-primary">{name}.ar.io</span>
+    <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 sm:p-6">
+      {/* Warm every lease term's price so switching the term is instant (no
+          per-term RPC). Only while leasing; renders nothing. */}
+      {type === 'lease' && name && (
+        <LeaseTermPrefetcher name={name} fundFrom={fundFrom} fromAddress={address} />
+      )}
+      <div className="mb-4 flex items-baseline justify-between">
+        <h3 className="font-heading text-lg font-bold text-foreground">
+          Register <span className="break-all font-mono text-primary">{name}.ar.io</span>
         </h3>
       </div>
 
       {/* Lease vs permabuy */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="mb-4 grid grid-cols-2 gap-3">
         <button
           onClick={() => setType('lease')}
-          className={`flex items-center gap-2 p-3 rounded-2xl border transition-colors ${
+          className={`flex items-center gap-2 rounded-2xl border p-3 transition-colors ${
             type === 'lease'
               ? 'border-primary bg-primary/10 text-foreground'
               : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
           }`}
         >
-          <Calendar className="w-4 h-4" />
+          <Calendar className="h-4 w-4" />
           <span className="font-medium">Lease</span>
         </button>
         <button
           onClick={() => setType('permabuy')}
-          className={`flex items-center gap-2 p-3 rounded-2xl border transition-colors ${
+          className={`flex items-center gap-2 rounded-2xl border p-3 transition-colors ${
             type === 'permabuy'
               ? 'border-primary bg-primary/10 text-foreground'
               : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
           }`}
         >
-          <InfinityIcon className="w-4 h-4" />
+          <InfinityIcon className="h-4 w-4" />
           <span className="font-medium">Permabuy</span>
         </button>
       </div>
 
+      {/* Lease-vs-permabuy decision aid */}
+      {permabuyBreakEvenYears !== undefined && (
+        <p className="-mt-2 mb-4 text-xs text-foreground/60">
+          {type === 'permabuy'
+            ? `Own it forever — no renewals, ever. Roughly the cost of ${permabuyBreakEvenYears} years of leasing.`
+            : `Permabuy ≈ ${permabuyBreakEvenYears} years of leasing — own it forever, never renew.`}
+        </p>
+      )}
+
       {/* Lease term */}
       {type === 'lease' && (
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Lease term</label>
+          <label className="mb-2 block text-sm font-medium">Lease term</label>
           <div className="flex flex-wrap gap-2">
             {LEASE_YEAR_OPTIONS.map((y) => (
               <button
                 key={y}
                 onClick={() => setYears(y)}
-                className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                   years === y
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
@@ -107,53 +258,75 @@ export function ArNSPurchaseCard({
         </div>
       )}
 
-      {/* Price */}
-      <div className="bg-card rounded-2xl p-4 border border-border/20 mb-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-foreground/70">Cost</span>
-          {priceLoading ? (
-            <span className="flex items-center gap-2 text-sm text-foreground/70">
-              <Loader2 className="w-4 h-4 animate-spin" /> Fetching price…
-            </span>
-          ) : priceError ? (
-            <span className="text-sm text-error">Price unavailable</span>
-          ) : creditsLabel ? (
-            <div className="text-right">
-              <div className="text-lg font-bold text-foreground">
-                {creditsLabel} Credits
-              </div>
-              {usdLabel && (
-                <div className="text-xs text-foreground/60">≈ {usdLabel}</div>
-              )}
-            </div>
-          ) : (
-            <span className="text-sm text-foreground/50">—</span>
-          )}
-        </div>
+      {/* Payment method + source */}
+      <div className="mb-4">
+        <ArNSPaymentSelector
+          method={method}
+          fundingSource={fundingSource}
+          balances={balances}
+          onMethodChange={setMethod}
+          onSourceChange={setFundingSource}
+          disabled={isBusy}
+        />
       </div>
 
-      <button
-        onClick={() =>
-          onBuy({ name, type, years: type === 'lease' ? years : undefined })
-        }
-        disabled={!canBuy || isBusy || priceLoading || !price}
-        className="w-full px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        {isBusy ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" /> Processing…
-          </>
-        ) : (
-          <>
-            <Wallet className="w-4 h-4" /> Buy with Turbo Credits
-          </>
-        )}
-      </button>
+      {/* Cost breakdown */}
+      <div className="mb-4">
+        <ArNSCostBreakdown
+          method={method}
+          creditsPrice={creditsPrice?.credits}
+          arioPrice={cost?.arioCost}
+          priceLoading={method === 'credits' ? creditsLoading : costLoading}
+          priceError={!!(method === 'credits' ? creditsError : costError)}
+          gasTotalSol={cost?.gasTotalSol ?? 0}
+          gasRentSol={cost?.gasRentSol ?? 0}
+          gasFeeSol={cost?.gasFeeSol ?? 0}
+          gasLoading={costLoading}
+          gasError={gasUnavailable}
+          solBalance={balances.sol}
+          insufficientFunds={insufficientFunds}
+          insufficientSol={insufficientSol}
+        />
+      </div>
 
-      {!canBuy && (
-        <p className="mt-3 text-xs text-center text-foreground/60">
-          Connect a Solana wallet to pay with Turbo Credits.
-        </p>
+      {offerTopUp ? (
+        <button
+          onClick={() => setShowBuyCredits(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <CreditCard className="h-4 w-4" /> Buy Turbo Credits to continue
+        </button>
+      ) : (
+        <SolanaGateButton
+          onAction={() =>
+            onBuy({
+              name,
+              type,
+              years: type === 'lease' ? years : undefined,
+              fundFrom,
+            })
+          }
+          disabled={!canPay}
+          busy={isBusy}
+          actionVerb="buy this name"
+          busyLabel={
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Processing…
+            </>
+          }
+        >
+          <Wallet className="h-4 w-4" />{' '}
+          {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
+        </SolanaGateButton>
+      )}
+
+      {showBuyCredits && (
+        <BuyCreditsModal
+          initialUsdAmount={topUpUsd}
+          shortfallCredits={creditShortfall}
+          onClose={() => setShowBuyCredits(false)}
+          onComplete={() => setShowBuyCredits(false)}
+        />
       )}
     </div>
   );

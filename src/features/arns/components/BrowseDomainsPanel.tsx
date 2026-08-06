@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ArrowDown,
   ArrowUp,
@@ -6,21 +7,24 @@ import {
   ExternalLink,
   Globe,
   Loader2,
+  Plus,
   RefreshCw,
   Search,
 } from 'lucide-react';
-import { daysRemaining } from '../../../utils';
 import {
+  AllArNSRecord,
   AllArNSSortKey,
   SortOrder,
   useAllArNSNames,
 } from '../hooks/useAllArNSNames';
+import DomainDetailsModal from './DomainDetailsModal';
 import useDebounce from '../../../hooks/useDebounce';
 
 const PAGE_SIZE = 25;
 const EXPIRING_WINDOW_DAYS = 60;
 
-const shortId = (id: string) => (id.length > 12 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id);
+const fmtDate = (ms?: number) =>
+  ms ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
 
 export default function BrowseDomainsPanel() {
   const [searchInput, setSearchInput] = useState('');
@@ -29,6 +33,7 @@ export default function BrowseDomainsPanel() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [page, setPage] = useState(0);
   const [expiringOnly, setExpiringOnly] = useState(false);
+  const [selected, setSelected] = useState<AllArNSRecord | null>(null);
 
   // Reset to first page whenever the query or sort changes.
   const resetPage = () => setPage(0);
@@ -116,15 +121,25 @@ export default function BrowseDomainsPanel() {
             )}
           </p>
         </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          title="Refresh registry"
-          className="flex items-center gap-2 px-3 py-2 rounded-full bg-card border border-border/20 text-sm text-foreground/80 hover:bg-primary/10 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/arns"
+            title="Register a name"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Register a name</span>
+          </Link>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            title="Refresh registry"
+            className="flex items-center gap-2 px-3 py-2 rounded-full bg-card border border-border/20 text-sm text-foreground/80 hover:bg-primary/10 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -158,7 +173,7 @@ export default function BrowseDomainsPanel() {
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button
             onClick={() => expiringOnly && toggleExpiring()}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
               !expiringOnly
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
@@ -168,7 +183,7 @@ export default function BrowseDomainsPanel() {
           </button>
           <button
             onClick={() => !expiringOnly && toggleExpiring()}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
               expiringOnly
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
@@ -221,34 +236,29 @@ export default function BrowseDomainsPanel() {
           </div>
         ) : (
           items.map((r) => {
-            const target = targets[r.processId];
             return (
               <div
                 key={r.name}
                 className="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 px-4 py-3 border-b border-border/10 last:border-0 items-center hover:bg-primary/5 transition-colors"
               >
-                {/* Name */}
+                {/* Name — click to open details */}
                 <div className="col-span-2 sm:col-span-4 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="font-heading font-bold text-foreground truncate">{r.name}</span>
-                    <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>
-                  </div>
                   <button
-                    onClick={() => resolveTarget(r.processId)}
-                    className="mt-0.5 text-xs text-foreground/50 font-mono hover:text-primary transition-colors block truncate max-w-full"
-                    title="Resolve current target"
+                    onClick={() => setSelected(r)}
+                    title="View details"
+                    className="group flex items-center gap-2 min-w-0 text-left"
                   >
-                    {target === undefined
-                      ? `→ ${shortId(r.processId)} (resolve target)`
-                      : target === null
-                        ? '→ no target set'
-                        : `→ ${shortId(target)}`}
+                    <Globe className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="font-heading font-bold text-foreground truncate group-hover:text-primary group-hover:underline transition-colors">
+                      {r.name}
+                    </span>
+                    <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>
                   </button>
                 </div>
 
-                {/* Type */}
-                <div className="sm:col-span-2">
+                {/* Type — mobile: labeled row; sm+: bare pill in its column */}
+                <div className="col-span-2 flex items-center justify-between sm:col-span-2 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Type</span>
                   <span
                     className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                       r.type === 'permabuy'
@@ -261,27 +271,25 @@ export default function BrowseDomainsPanel() {
                 </div>
 
                 {/* Registered */}
-                <div className="sm:col-span-3 text-sm text-foreground/80">
-                  {r.startTimestamp ? new Date(r.startTimestamp).toLocaleDateString() : '—'}
+                <div className="col-span-2 flex items-center justify-between text-sm text-foreground/80 sm:col-span-3 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Registered</span>
+                  <span>{fmtDate(r.startTimestamp)}</span>
                 </div>
 
                 {/* Expires */}
-                <div className="sm:col-span-2 text-sm text-foreground/80">
-                  {r.type === 'permabuy'
-                    ? 'Never'
-                    : r.endTimestamp
-                      ? `${daysRemaining(new Date(r.endTimestamp))}d`
-                      : '—'}
+                <div className="col-span-2 flex items-center justify-between text-sm text-foreground/80 sm:col-span-2 sm:block">
+                  <span className="text-xs text-foreground/50 sm:hidden">Expires</span>
+                  <span>{r.type === 'permabuy' ? 'Never' : fmtDate(r.endTimestamp)}</span>
                 </div>
 
                 {/* Links */}
-                <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-2">
+                <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
                   <a
                     href={`https://${r.name}.ar.io`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Visit"
-                    className="p-2 rounded-full hover:bg-primary/10 text-foreground/70 hover:text-primary transition-colors"
+                    className="p-2.5 rounded-full hover:bg-primary/10 text-foreground/70 hover:text-primary transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
@@ -316,6 +324,15 @@ export default function BrowseDomainsPanel() {
             </button>
           </div>
         </div>
+      )}
+
+      {selected && (
+        <DomainDetailsModal
+          record={selected}
+          target={targets[selected.processId]}
+          resolveTarget={resolveTarget}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

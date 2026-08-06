@@ -2,6 +2,76 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.0.0] - 2026-08-06
+
+**ArNS goes native.** The whole domain lifecycle — search, register, manage,
+browse, and auctions — now lives inside the console, right next to your uploads,
+deploys, and Pages. Register a name and point it at a site without ever leaving
+the app, and pay however you like: Turbo Credits, your ARIO (liquid or staked),
+or a card.
+
+### Added
+- **Native ArNS registration** — search, price, and buy dot-anything names
+  without leaving the console. Prices are shown *before* you select; when a name
+  is taken, the suggested alternatives are priced too; and a lease-vs-permanent
+  break-even hint tells you roughly how many years of leasing equal owning it.
+- **Pay your way** — register and renew with Turbo Credits, your ARIO (liquid or
+  staked), or a card, with on-demand (just-in-time) credit top-up right in the
+  checkout, so you never have to pre-fund. A native ARIO payment rail spans the
+  whole lifecycle, not just the first purchase.
+- **The full lifecycle, in-console** — renew, upgrade a lease to permanent,
+  transfer or reassign (with brick-risk warnings), edit records (Arweave/IPFS
+  targets and metadata), manage undernames (nickname + description as first-class
+  fields), manage controllers (owner-vs-controller roles surfaced and gated), set
+  or remove your primary name, and release a permabuy name back into a
+  returned-name auction.
+- **Browse & search all names** (`/domains`) — a scannable table with an
+  expiring-soon filter and registry-backed availability; click any name for
+  details.
+- **Returned-name auctions** (`/returned-names`) — the aftermarket, with a
+  premium-decay chart on the buy modal so you can time a bid.
+- **Dedicated Domain Manager** (`/my-domains`) — your whole portfolio in one
+  place, with CSV export.
+- **Unified Pricing page** (`/pricing`) — a storage calculator and a domain-name
+  price table (USD/ARIO toggle) behind one mode selector.
+- **Sync Ownership** — detects and reconciles out-of-band ANT transfers so a name
+  you moved elsewhere stays accurate in the console.
+- **Logo upload UX** — client-side compression, drag-and-drop, live preview, and
+  row thumbnails.
+- **Atomic buyRecord** — eliminates the orphaned-ANT window, so a purchase can't
+  leave a half-registered name behind.
+- **Homepage ArNS spotlight** — a live, randomized Pages-template hero, a
+  capability explorer, and contextual docs links.
+
+### Changed
+- **Account is now billing-only** (wallet, credits, top-up history, sharing) —
+  all domain management moved to the dedicated `/my-domains` page.
+- **Flat domain routing** — `/domains` (browse), `/arns` (register),
+  `/returned-names` (auctions); pricing unified at `/pricing` (the old
+  `/calculator` and `/name-prices` now redirect).
+- **"permanent web" → "permanent cloud"** across the app; register/renew copy
+  de-jargoned; the domain price box says "no renewals" instead of "forever".
+- **Full mobile-friendliness pass** across the domain UX.
+- **Config-scoped ArNS caches** — a settings/network change now flows through
+  every ArNS read instead of serving stale data.
+
+### Fixed
+- **Name prices no longer double-count the demand factor** — they were inflating
+  well above the ArNS app on high-demand-factor networks.
+- **SOL balance reads the console-config cluster, not mainnet** — a Testnet/devnet
+  wallet now shows its real balance instead of a false 0 that blocked the buy.
+- **Registered the `/returned-names` route** (previously a dead nav link).
+- **Honest mid-flight purchase messaging** — no false "not charged" claims when
+  the outcome is unknown.
+- **Cached Solana RPC / ARIO / ANT clients** (bounded LRU) — fixes the
+  `MaxListenersExceededWarning` under repeated reads.
+
+### Performance
+- Prefetch every lease term's price so switching the term is instant (no
+  per-term RPC round-trip).
+- Gate the ~700 KB ArNS registry index behind an active search.
+- Defer the homepage hero preview to idle time to protect page-load performance.
+
 ## [3.0.0] - 2026-07-29
 
 The big launch: **Pages**, a no-code builder for permanent link-in-bio pages, plus a

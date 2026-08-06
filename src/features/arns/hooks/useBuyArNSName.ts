@@ -9,11 +9,16 @@ import type { ArNSRegistrationType } from './useArNSPrice';
 
 export type BuyPhase = 'idle' | 'submitting' | 'success' | 'error';
 
+/** Where the name's ARIO price is funded from. */
+export type ArNSBuyFundFrom = 'turbo' | 'balance' | 'stakes' | 'any';
+
 export interface BuyArNSNameInput {
   name: string;
   type: ArNSRegistrationType;
   /** Lease term in years (ignored for permabuy). */
   years?: number;
+  /** Funding source for the ARIO price. Defaults to Turbo Credits. */
+  fundFrom?: ArNSBuyFundFrom;
 }
 
 export interface UseBuyArNSNameResult {
@@ -36,7 +41,7 @@ type ARIOBuyWriteable = {
     years?: number;
     /** Omit to mint a fresh user-owned ANT atomically (Model B, no pre-spawn). */
     processId?: string;
-    fundFrom?: 'turbo';
+    fundFrom?: ArNSBuyFundFrom;
     referrer?: string;
   }): Promise<{ id: string; result?: { processId?: string } }>;
 };
@@ -48,7 +53,10 @@ type ARIOBuyWriteable = {
  */
 function isInsufficientCredits(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return /insufficient|not enough|balance too low|underfunded|exceeds balance|402/i.test(
+  // `\b402\b` (not a bare `402`) so unrelated digit runs — tx-signature
+  // fragments, program error codes, slot numbers — aren't misread as an
+  // insufficient-funds / HTTP-402 signal and swallowed as a top-up prompt.
+  return /insufficient|not enough|balance too low|underfunded|exceeds balance|\b402\b/i.test(
     msg,
   );
 }
@@ -87,6 +95,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       name,
       type,
       years,
+      fundFrom = 'turbo',
     }: BuyArNSNameInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
@@ -96,7 +105,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       const owner = signer.address;
       if (!signer.isReady || !owner || !signer.walletAdapter) {
         const e = new Error(
-          'Connect a Solana wallet with a live signer to pay with Turbo Credits.',
+          'Connect a Solana wallet with a live signer to pay with Turbo Credits or ARIO.',
         );
         setPhase('error');
         setError(e);
@@ -117,11 +126,13 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
 
         // Atomic: omit processId → buyRecord mints a fresh user-owned ANT and
         // assigns the name in ONE tx. No pre-spawn ⇒ no orphaned-ANT window.
+        // `fundFrom` selects where the ARIO price is drawn from (credits vs the
+        // wallet's ARIO balance/stakes); SOL rent is always paid by the signer.
         const res = await ario.buyRecord({
           name: lowered,
           type,
           ...(type === 'lease' && years ? { years } : {}),
-          fundFrom: 'turbo',
+          fundFrom,
           referrer: APP_NAME,
         });
 
@@ -132,11 +143,15 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         };
         setResult(settlement);
         setPhase('success');
-        // Credits were debited on-chain — refresh the header balance.
+        // The name price was debited (credits or ARIO) — refresh the balance.
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return settlement;
       } catch (err) {
-        if (isInsufficientCredits(err)) {
+        // Only route to the Turbo-Credits Top-Up when paying WITH credits. On the
+        // ARIO path (balance/stakes/any) an insufficient-funds error is an ARIO
+        // shortfall, which buying Turbo Credits wouldn't resolve — surface it as
+        // a normal error instead.
+        if (fundFrom === 'turbo' && isInsufficientCredits(err)) {
           setInsufficientCredits(true);
           setPhase('error');
           setError(err instanceof Error ? err : new Error(String(err)));

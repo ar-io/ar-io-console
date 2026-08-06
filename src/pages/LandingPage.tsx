@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+
+// Real Pages template rendered in the hero browser frame — lazy so the template
+// registry it pulls in doesn't weigh down the initial landing bundle.
+const ArNSResolvedPreview = lazy(() => import('../components/ArNSResolvedPreview'));
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../hooks/useTheme';
@@ -10,10 +14,16 @@ import { useCreditsForFiat } from '../hooks/useCreditsForFiat';
 import { useFreeUploadLimit, formatFreeLimit } from '../hooks/useFreeUploadLimit';
 import {
   ArrowRight, Zap, Github,
-  CreditCard, Users, Upload, Globe2, Search, Check, Copy, ChevronDown, Info,
-  Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal
+  CreditCard, Users, Upload, Globe2, Search, Check, CheckCircle, Copy, ChevronDown, Info,
+  Camera, BookOpen, Calculator, Compass, LayoutTemplate, Terminal,
+  Tag, Layers, KeyRound, Loader2, Lock, XCircle,
+  ChevronLeft, ChevronRight, RotateCw
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
+import useDebounce from '../hooks/useDebounce';
+import { useArNSAvailability } from '../features/arns/hooks/useArNSAvailability';
+import { isValidArNSName, lowerCaseDomain } from '../features/arns/utils';
+import { useArNSPricing } from '../hooks/useArNSPricing';
 
 const LandingPage = () => {
   const { address } = useStore();
@@ -35,6 +45,63 @@ const LandingPage = () => {
   };
   const [copied, setCopied] = useState(false);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
+  const [arnsQuery, setArnsQuery] = useState('');
+
+  // The ArNS handle shown in the preview's address bar — matches the template
+  // being rendered (reported up by ArNSResolvedPreview), so URL and content
+  // agree. Deliberately NOT tied to the search box.
+  const [heroName, setHeroName] = useState('yourname');
+
+  // Defer loading the hero template preview (and its template-registry chunk)
+  // until the browser is idle, so it never competes with the initial/critical
+  // render. Falls back to a short timeout where requestIdleCallback is absent.
+  const [heroPreviewReady, setHeroPreviewReady] = useState(false);
+  useEffect(() => {
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(() => setHeroPreviewReady(true), { timeout: 2500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(() => setHeroPreviewReady(true), 800);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  const handleArnsSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = arnsQuery.trim();
+    navigate(q ? `/arns?q=${encodeURIComponent(q)}` : '/arns');
+  };
+
+  // Live ArNS availability for the homepage search (debounced, index-backed).
+  const debounced = useDebounce(arnsQuery);
+  const normalized = lowerCaseDomain(debounced);
+  const validName = normalized.length > 0 && isValidArNSName(normalized);
+  const { data: avail, isFetching } = useArNSAvailability(debounced);
+  const { pricingTiers } = useArNSPricing();
+
+  // "from ~$X/yr" figure: first-year lease USD for the typed name's length tier
+  // (character length bucketed at 13+ to match the pricing tier structure).
+  const year1USD = useMemo(() => {
+    if (!validName || pricingTiers.length === 0) return undefined;
+    const bucket = normalized.length > 12 ? 13 : normalized.length;
+    const tier = pricingTiers.find((t) => t.characterLength === bucket);
+    const usd = tier?.pricesInUSD.year1;
+    return typeof usd === 'number' && usd > 0 ? usd : undefined;
+  }, [validName, normalized, pricingTiers]);
+
+  const formatUsd = (n: number) =>
+    n >= 100 ? `$${Math.round(n)}` : `$${n.toFixed(2)}`;
+
+  // Example ArNS domain price for the pricing section: an 8-character permabuy
+  // (own it forever). Falls back to a dash while pricing loads.
+  const domainPermabuyUSD = useMemo(() => {
+    const tier = pricingTiers.find((t) => t.characterLength === 8);
+    const usd = tier?.pricesInUSD?.permabuy;
+    return typeof usd === 'number' && usd > 0 ? usd : undefined;
+  }, [pricingTiers]);
 
   // Get pricing data (matches pricing calculator logic)
   const wincForOneGiB = useWincForOneGiB();
@@ -142,12 +209,12 @@ const LandingPage = () => {
     {
       name: 'Domains',
       icon: Globe2,
-      title: 'Search Available Domain Names',
-      description: 'Search for available ArNS domain names and check registration costs. No login required to browse available names.',
-      benefits: ['Search any name', 'Check availability', 'View pricing'],
+      title: 'Register & Manage ArNS Names',
+      description: 'Get a permanent, human-readable name — then do everything with it in-console: register and renew, point it at any content, add undernames, edit records, transfer or reassign, set it as your primary name, or grab one from a returned-name auction.',
+      benefits: ['Register, renew & upgrade', 'Undernames & records', 'Transfer & primary names', 'Returned-name auctions'],
       action: 'domains',
-      loginText: 'Search Domains',
-      connectText: 'Search Available Domains'
+      loginText: 'Explore Domains',
+      connectText: 'Explore Domains'
     },
     {
       name: 'Check Balance',
@@ -339,6 +406,189 @@ const LandingPage = () => {
         </div>
       </div>
 
+      {/* ArNS spotlight — dedicated, conversion-focused domain section */}
+      <div className="mb-12">
+        <div className="rounded-3xl bg-lavender p-6 sm:p-10 md:p-12">
+          {/* SPLIT: copy + live search on the left, resolved-page mockup on the right */}
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            {/* LEFT — headline, subhead, live availability search */}
+            <div>
+              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                ArNS · Domains
+              </div>
+              <h2 className="mb-3 font-heading text-3xl font-bold text-foreground sm:text-4xl">
+                One name. Every gateway.
+              </h2>
+              <p className="text-base leading-relaxed text-foreground/80 sm:text-lg">
+                A &ldquo;dot-anything&rdquo; name — no registrar, no ICANN. <span className="font-mono text-foreground">yourname.ar.io</span> resolves across every ar.io gateway to your content on Arweave (IPFS coming soon), and stays reachable by the same name even if a host goes offline. Point it at an app deployment, a Pages site, or any TX ID / CID.
+              </p>
+
+              {/* Live availability search (primary conversion action) */}
+              <form onSubmit={handleArnsSearch} className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <label htmlFor="arns-home-search" className="sr-only">Search for an ArNS name</label>
+                <div className="flex flex-1 items-center rounded-full border border-primary/30 bg-background pl-5 pr-3 transition-colors focus-within:border-primary">
+                  <input
+                    id="arns-home-search"
+                    type="text"
+                    value={arnsQuery}
+                    onChange={(e) => setArnsQuery(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="yourname"
+                    className="min-w-0 flex-1 bg-transparent py-3 text-foreground outline-none placeholder:text-foreground/40"
+                  />
+                  <span className="select-none pl-1 font-medium text-foreground/60">.ar.io</span>
+                </div>
+                {/* One button that IS the live status + action — availability and
+                    price are folded in, so there's no separate result row. */}
+                {!validName ? (
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    <Search className="h-4 w-4" /> Search names
+                  </button>
+                ) : isFetching || !avail ? (
+                  <button
+                    type="submit"
+                    disabled
+                    className="inline-flex cursor-wait items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary/60 px-6 py-3 font-semibold text-primary-foreground"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" /> Checking…
+                  </button>
+                ) : avail.available ? (
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    <CheckCircle className="h-4 w-4" /> Register
+                    {year1USD !== undefined && (
+                      <span className="font-normal opacity-90">· ~{formatUsd(year1USD)}/yr</span>
+                    )}
+                  </button>
+                ) : avail.reserved ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-full bg-foreground/10 px-6 py-3 font-semibold text-foreground/50"
+                  >
+                    Reserved
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-foreground/10 px-6 py-3 font-semibold text-foreground/80 transition-colors hover:bg-foreground/15"
+                  >
+                    <XCircle className="h-4 w-4 text-foreground/40" /> Taken · see options
+                  </button>
+                )}
+              </form>
+
+              {/* Screen-reader-only live status (the visual status lives in the button). */}
+              <span className="sr-only" aria-live="polite">
+                {validName && !isFetching && avail
+                  ? avail.available
+                    ? `${normalized}.ar.io is available`
+                    : avail.reserved
+                      ? `${normalized}.ar.io is reserved`
+                      : `${normalized}.ar.io is taken`
+                  : ''}
+              </span>
+            </div>
+
+            {/* RIGHT — browser-frame mockup of a resolved ArNS page */}
+            <div className="overflow-hidden rounded-2xl border border-primary/15 bg-background shadow-xl">
+              {/* Title bar: traffic lights + nav buttons + live address bar */}
+              <div className="flex items-center gap-2 border-b border-border/10 bg-card px-4 py-2.5">
+                <div className="flex flex-shrink-0 items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-red-400" />
+                  <span className="h-3 w-3 rounded-full bg-amber-400" />
+                  <span className="h-3 w-3 rounded-full bg-green-400" />
+                </div>
+                <div className="hidden flex-shrink-0 items-center gap-1 text-foreground/30 sm:flex">
+                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" />
+                  <RotateCw className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex flex-1 items-center gap-1.5 truncate rounded-full border border-border/20 bg-background px-3 py-1 text-xs font-mono text-foreground/70">
+                  <Lock className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{heroName}.ar.io</span>
+                </div>
+              </div>
+
+              {/* Body — a REAL Pages template rendered exactly as it resolves at a
+                  name (same renderPageHtml + iframe path as the Pages thumbnails).
+                  Lazy-loaded AND deferred to idle (heroPreviewReady) so the
+                  template-registry chunk never competes with the initial/critical
+                  render — it only fetches once the page is interactive. A
+                  decorative scrollbar sells it as a real, scrollable page. */}
+              <div className="relative">
+                {heroPreviewReady ? (
+                  <Suspense
+                    fallback={
+                      <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
+                    }
+                  >
+                    <ArNSResolvedPreview onHandle={setHeroName} />
+                  </Suspense>
+                ) : (
+                  <div className="h-[340px] animate-pulse bg-gradient-to-br from-primary/5 to-lavender/40" />
+                )}
+                {/* Decorative scrollbar — thumb near the top (we show the top of the page) */}
+                <div className="pointer-events-none absolute bottom-1.5 right-1 top-1.5 w-1.5 rounded-full bg-foreground/[0.06]">
+                  <div className="h-1/3 w-full rounded-full bg-foreground/25" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Value props — 2-col grid on sm+ */}
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
+            {[
+              { icon: Tag, label: 'Human-readable', copy: 'a name, not a 43-character TX ID or CID.' },
+              { icon: Layers, label: 'Arweave (IPFS soon)', copy: 'point it at your deployed app, your Pages site, or any file — IPFS support is on the way.' },
+              { icon: Globe2, label: 'Resolves everywhere', copy: 'served by every ar.io gateway, with cryptographic verification.' },
+              { icon: KeyRound, label: 'Own or lease', copy: 'you hold the ANT (an NFT you control); buy it outright or lease by the year.' },
+            ].map(({ icon: Icon, label, copy }) => (
+              <div key={label} className="flex items-start gap-3 rounded-2xl border border-primary/10 bg-background/60 p-4">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="font-semibold text-foreground">{label}</div>
+                  <div className="text-sm leading-snug text-foreground/70">{copy}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Use-case chips */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            {['A Pages site → yourname.ar.io', 'A deployed app → app.yourname.ar.io', "Your agent's dataset → agent.yourname.ar.io", 'One name across every ar.io app'].map((chip) => (
+              <span key={chip} className="inline-flex items-center rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80">
+                {chip}
+              </span>
+            ))}
+          </div>
+
+          {/* Secondary links */}
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <button
+              onClick={() => navigate('/pricing?type=domains')}
+              className="inline-flex items-center gap-1.5 font-semibold text-primary transition-opacity hover:opacity-80"
+            >
+              See name prices <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+            <a
+              href="https://docs.ar.io/learn/arns"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+            >
+              Learn about ArNS <BookOpen className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Pricing Section */}
       <div className="mb-12">
         <div className="text-center mb-8">
@@ -346,7 +596,7 @@ const LandingPage = () => {
           <p className="text-foreground/80">Pay-as-you-go storage with no subscriptions, now with x402</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:gap-6 max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6 max-w-4xl mx-auto">
           {/* Free Tier */}
           <div className="bg-card rounded-2xl border border-success/30 p-4 md:p-8 text-center">
             <div className="text-4xl font-heading font-bold text-success mb-2">FREE</div>
@@ -373,11 +623,27 @@ const LandingPage = () => {
             <div className="text-lg text-foreground font-medium mb-1">Per GiB</div>
             <div className="text-sm text-foreground/80 mb-4">Larger files & bulk storage</div>
             <button
-              onClick={() => navigate('/calculator')}
+              onClick={() => navigate('/pricing')}
               className="inline-flex items-center gap-1 text-sm text-foreground/80 hover:text-foreground font-medium group"
             >
               <Calculator className="w-3.5 h-3.5" />
               <span>Calculate your costs</span>
+            </button>
+          </div>
+
+          {/* Domain name example — an 8-char permabuy (own it forever) */}
+          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-8 text-center">
+            <div className="text-4xl font-heading font-bold text-primary mb-2">
+              {domainPermabuyUSD !== undefined ? formatUsd(domainPermabuyUSD) : '—'}
+            </div>
+            <div className="text-lg text-foreground font-medium mb-1">Domain name</div>
+            <div className="text-sm text-foreground/80 mb-4">8-character name, no renewals</div>
+            <button
+              onClick={() => navigate('/pricing?type=domains')}
+              className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium group"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span>See name prices</span>
             </button>
           </div>
         </div>
@@ -601,9 +867,9 @@ const LandingPage = () => {
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm shadow-md">
                   1
                 </div>
-                <p className="text-xs text-foreground/80 text-center mb-3 leading-snug">Learn the fundamentals of ar.io and Arweave</p>
+                <p className="text-xs text-foreground/80 text-center mb-3 leading-snug">Learn the fundamentals of ar.io</p>
                 <a
-                  href="https://docs.ar.io/learn/what-is-arweave/"
+                  href="https://docs.ar.io/learn/what-is-ario/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-1 bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary/90 transition-all text-xs font-medium w-full"
@@ -648,7 +914,7 @@ const LandingPage = () => {
                 <div className="flex flex-col gap-2 w-full">
                   <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
                      className="flex items-center justify-center gap-1.5 bg-white text-primary rounded-lg px-3 py-2 hover:bg-white/90 transition-all text-xs font-medium">
-                    <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" className="w-4 h-4" />
+                    <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" loading="lazy" decoding="async" className="w-4 h-4" />
                     Discord
                   </a>
                   <a href="https://github.com/ar-io" target="_blank" rel="noopener noreferrer"
@@ -670,13 +936,13 @@ const LandingPage = () => {
 
             <div className="space-y-3 relative" style={{ zIndex: 1 }}>
               {/* Mobile: Step 1 - Learn (special start box like desktop) */}
-              <a href="https://docs.ar.io/learn/what-is-arweave/" target="_blank" rel="noopener noreferrer" className="block group">
+              <a href="https://docs.ar.io/learn/what-is-ario/" target="_blank" rel="noopener noreferrer" className="block group">
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-xs shadow-md shrink-0">
                     1
                   </div>
                   <div className="flex-1 bg-white border-2 border-primary/30 rounded-lg px-3 py-3 group-hover:border-primary/50 transition-colors">
-                    <p className="text-xs text-foreground/80 mb-2"><strong className="text-foreground">Learn</strong> the fundamentals of ar.io and Arweave</p>
+                    <p className="text-xs text-foreground/80 mb-2"><strong className="text-foreground">Learn</strong> the fundamentals of ar.io</p>
                     <span className="inline-flex items-center justify-center gap-1 bg-primary text-white rounded-lg px-3 py-1.5 text-xs font-medium">
                       Get Started
                     </span>
@@ -716,7 +982,7 @@ const LandingPage = () => {
                   <div className="flex gap-2">
                     <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
                        className="flex items-center gap-1.5 bg-white text-primary rounded-lg px-3 py-1.5 hover:bg-white/90 transition-all text-xs font-medium">
-                      <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" className="w-3.5 h-3.5" />
+                      <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" loading="lazy" decoding="async" className="w-3.5 h-3.5" />
                       Discord
                     </a>
                     <a href="https://github.com/ar-io" target="_blank" rel="noopener noreferrer"
@@ -739,7 +1005,7 @@ const LandingPage = () => {
           horizontal strip so it reads as a footer cross-link, not a second
           feature card stacked under the dark agents section above. */}
       <section className="flex flex-col gap-4 rounded-2xl border border-border/20 bg-gradient-to-r from-primary/[0.06] to-card p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-        <img src="/ardrive-logo.png" alt="ArDrive" className="h-14 w-14 flex-shrink-0" />
+        <img src={`${import.meta.env.BASE_URL}ardrive-logo.png`} alt="ArDrive" loading="lazy" decoding="async" className="h-14 w-14 flex-shrink-0" />
         <div className="flex-1 text-center sm:text-left">
           <h3 className="font-heading text-lg font-bold text-foreground">Just want to store files?</h3>
           <p className="mt-1 text-sm leading-relaxed text-foreground/70">
