@@ -318,13 +318,12 @@ export default function ArNSAssociationPanel({
                 </div>
                 <Combobox
                   value={selectedName}
-                  onChange={async (name: string) => {
+                  onChange={async (name: string | null) => {
+                    if (!name) return;
                     onNameChange(name);
                     setNameQuery('');
                     // Fetch ANT details on-demand when name is selected
-                    if (name) {
-                      await fetchNameDetails(name);
-                    }
+                    await fetchNameDetails(name);
                   }}
                   disabled={loading}
                 >

@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Globe, ExternalLink, AlertTriangle } from 'lucide-react';
 import { ArNSName } from '@/types';
 import { daysUntil, isExpiringSoon } from '@/utils/domainExpiry';
+import { ManageDomainModal } from '@/features/arns';
 
-const manageUrl = (name: string) => `https://arns.ar.io/#/manage/names/${name}`;
 const visitUrl = (name: string) => `https://${name}.ar.io`;
 
 function StatusCell({ domain }: { domain: ArNSName }) {
@@ -24,8 +25,18 @@ function StatusCell({ domain }: { domain: ArNSName }) {
   );
 }
 
-export default function DomainsTable({ domains }: { domains: ArNSName[] }) {
+export default function DomainsTable({
+  domains,
+  onChanged,
+}: {
+  domains: ArNSName[];
+  /** Called after an in-app lifecycle change settles, so the caller can refetch. */
+  onChanged?: () => void;
+}) {
+  const [managing, setManaging] = useState<ArNSName | null>(null);
+
   return (
+    <>
     <div className="overflow-x-auto rounded-2xl border border-border/20 bg-card">
       <table className="w-full min-w-[36rem] text-sm">
         <thead>
@@ -61,14 +72,12 @@ export default function DomainsTable({ domains }: { domains: ArNSName[] }) {
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-3 whitespace-nowrap">
                     {expiringSoon && (
-                      <a
-                        href={manageUrl(domain.name)}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => setManaging(domain)}
                         className="font-medium text-warning hover:underline"
                       >
                         Renew
-                      </a>
+                      </button>
                     )}
                     <a
                       href={visitUrl(domain.name)}
@@ -79,14 +88,12 @@ export default function DomainsTable({ domains }: { domains: ArNSName[] }) {
                       Visit
                       <ExternalLink className="h-3 w-3" />
                     </a>
-                    <a
-                      href={manageUrl(domain.name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => setManaging(domain)}
                       className="text-foreground/70 hover:text-foreground hover:underline"
                     >
                       Manage
-                    </a>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -95,5 +102,13 @@ export default function DomainsTable({ domains }: { domains: ArNSName[] }) {
         </tbody>
       </table>
     </div>
+    {managing && (
+      <ManageDomainModal
+        domain={managing}
+        onClose={() => setManaging(null)}
+        onSuccess={onChanged}
+      />
+    )}
+    </>
   );
 }
