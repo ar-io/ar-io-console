@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Globe, ExternalLink, AlertTriangle } from 'lucide-react';
 import { ARIO_LOGO_TX_ID } from '@ar.io/sdk/solana';
 import { ArNSName } from '@/types';
@@ -120,9 +121,13 @@ export default function DomainsTable({
                       logo={summaries.get(domain.processId)?.logo}
                       gatewayUrl={arioGatewayUrl}
                     />
-                    <span className="truncate font-medium text-foreground" title={`${domain.displayName}.ar.io`}>
+                    <Link
+                      to={`/domains/${domain.name}`}
+                      className="truncate font-medium text-foreground hover:text-primary hover:underline"
+                      title={`View ${domain.displayName}.ar.io`}
+                    >
                       {domain.displayName}.ar.io
-                    </span>
+                    </Link>
                     {role === 'controller' && (
                       <span
                         className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
@@ -158,12 +163,12 @@ export default function DomainsTable({
                       Visit
                       <ExternalLink className="h-3 w-3" />
                     </a>
-                    <button
-                      onClick={() => setManaging(domain)}
+                    <Link
+                      to={`/domains/${domain.name}`}
                       className="py-1 text-foreground/70 hover:text-foreground hover:underline"
                     >
                       Manage
-                    </button>
+                    </Link>
                     <RowActionsMenu
                       actions={[
                         {

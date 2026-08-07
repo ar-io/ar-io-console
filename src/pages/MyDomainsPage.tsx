@@ -10,7 +10,6 @@ import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import DomainsTable from '@/components/account/DomainsTable';
 import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
-import PrimaryNameCard from '@/components/account/PrimaryNameCard';
 import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
 
 const DOMAINS_SHOWN = 10;
@@ -150,16 +149,6 @@ export default function MyDomainsPage() {
                   Renew
                 </button>
               </div>
-            </div>
-          )}
-
-          {arnsAddress && (
-            <div className="mb-4">
-              <PrimaryNameCard
-                address={arnsAddress}
-                ownedNames={ownedNames}
-                onChanged={() => fetchOwnedNames(true)}
-              />
             </div>
           )}
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowDown,
   ArrowUp,
@@ -12,12 +12,10 @@ import {
   Search,
 } from 'lucide-react';
 import {
-  AllArNSRecord,
   AllArNSSortKey,
   SortOrder,
   useAllArNSNames,
 } from '../hooks/useAllArNSNames';
-import DomainDetailsModal from './DomainDetailsModal';
 import useDebounce from '../../../hooks/useDebounce';
 
 const PAGE_SIZE = 25;
@@ -27,13 +25,13 @@ const fmtDate = (ms?: number) =>
   ms ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
 
 export default function BrowseDomainsPanel() {
+  const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
   const search = useDebounce(searchInput);
   const [sortBy, setSortBy] = useState<AllArNSSortKey>('startTimestamp');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [page, setPage] = useState(0);
   const [expiringOnly, setExpiringOnly] = useState(false);
-  const [selected, setSelected] = useState<AllArNSRecord | null>(null);
 
   // Reset to first page whenever the query or sort changes.
   const resetPage = () => setPage(0);
@@ -61,8 +59,6 @@ export default function BrowseDomainsPanel() {
     pageCount,
     loading,
     error,
-    targets,
-    resolveTarget,
     refresh,
   } = useAllArNSNames({
     search,
@@ -244,7 +240,7 @@ export default function BrowseDomainsPanel() {
                 {/* Name — click to open details */}
                 <div className="col-span-2 sm:col-span-4 min-w-0">
                   <button
-                    onClick={() => setSelected(r)}
+                    onClick={() => navigate(`/domains/${r.name}`)}
                     title="View details"
                     className="group flex items-center gap-2 min-w-0 text-left"
                   >
@@ -326,14 +322,6 @@ export default function BrowseDomainsPanel() {
         </div>
       )}
 
-      {selected && (
-        <DomainDetailsModal
-          record={selected}
-          target={targets[selected.processId]}
-          resolveTarget={resolveTarget}
-          onClose={() => setSelected(null)}
-        />
-      )}
     </div>
   );
 }

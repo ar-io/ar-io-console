@@ -20,6 +20,7 @@ const CapturePage = lazy(() => import('./pages/CapturePage'));
 const ShareCreditsPage = lazy(() => import('./pages/ShareCreditsPage'));
 // DEPRECATED: Gifting/Redeem features disabled — routes below stay commented out.
 const DomainsPage = lazy(() => import('./pages/DomainsPage'));
+const NameDetailPage = lazy(() => import('./pages/NameDetailPage'));
 const ArNSPage = lazy(() => import('./pages/ArNSPage'));
 const ReturnedNamesPage = lazy(() => import('./pages/ReturnedNamesPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
@@ -116,6 +117,7 @@ function AppRoutes() {
           {/* DEPRECATED: Gifting feature disabled */}
           {/* <Route path="gift" element={<GiftPage />} /> */}
           <Route path="domains" element={<DomainsPage />} />
+          <Route path="domains/:name" element={<NameDetailPage />} />
           <Route path="arns" element={<ArNSPage />} />
           <Route path="returned-names" element={<ReturnedNamesPage />} />
           <Route path="pricing" element={<PricingPage />} />
