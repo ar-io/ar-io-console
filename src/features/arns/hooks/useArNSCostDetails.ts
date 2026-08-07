@@ -149,7 +149,7 @@ export function useArNSCostDetails({
         (sum, d) => sum + (d.discountTotal ?? 0),
         0,
       );
-      const gas = cd.gasEstimate;
+      const gas = (cd as CostDetailsResult & { gasEstimate?: { totalLamports?: number; rentLamports?: number; feeLamports?: number } }).gasEstimate;
       return {
         arioCost: mARIO / M_ARIO_PER_ARIO,
         mARIO,
