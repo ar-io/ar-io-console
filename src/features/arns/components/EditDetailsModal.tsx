@@ -5,7 +5,6 @@ import {
   Info,
   Loader2,
   Save,
-  ShieldAlert,
   Tag,
   XCircle,
 } from 'lucide-react';
@@ -16,13 +15,11 @@ import BaseModal from '../../../components/modals/BaseModal';
 import {
   DEFAULT_TTL,
   isArweaveTxId,
-  isValidSolanaAddress,
   MAX_KEYWORDS,
   parseKeywords,
   TARGET_PROTOCOL,
 } from '../utils';
 import { useANTDetails } from '../hooks/useANTDetails';
-import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
 import {
   ArNSMetadataChanges,
   useSetArNSMetadata,
@@ -66,8 +63,7 @@ function explorerAddressUrl(address: string, configMode: string): string {
  * Edit an owned name's ANT metadata (nickname, ticker, description, keywords,
  * logo) and its base `@` target record. ANT-level fields are each a separate
  * write / wallet signature; the base record saves in ONE signature (all its
- * fields bundled); a record-ownership transfer is one more signature. The modal
- * saves only what changed and shows per-op progress.
+ * fields bundled). The modal saves only what changed and shows per-op progress.
  */
 export default function EditDetailsModal({
   domain,
@@ -76,7 +72,6 @@ export default function EditDetailsModal({
 }: EditDetailsModalProps) {
   const details = useANTDetails(domain.processId, true);
   const configMode = useStore((s) => s.configMode);
-  const signer = useArNSTurboSigner();
   const { apply, phase, progress, completed, error, isBusy } =
     useSetArNSMetadata();
 
@@ -98,9 +93,6 @@ export default function EditDetailsModal({
     keywordsRaw: '',
   }));
   const [origRecord, setOrigRecord] = useState<RecordFieldsState | null>(null);
-  // Record ownership transfer.
-  const [ownerOpen, setOwnerOpen] = useState(false);
-  const [recipient, setRecipient] = useState('');
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
@@ -145,18 +137,6 @@ export default function EditDetailsModal({
     );
   }, [record, origRecord]);
 
-  // Ownership: recipient must be a valid, changed Solana address.
-  const currentRecordOwner =
-    orig?.recordOwner ?? signer.address ?? undefined;
-  const recipientTrimmed = recipient.trim();
-  const recipientValid = isValidSolanaAddress(recipientTrimmed);
-  const recipientIsSelf =
-    recipientTrimmed !== '' &&
-    (recipientTrimmed === currentRecordOwner ||
-      recipientTrimmed === signer.address);
-  const ownershipChanged =
-    ownerOpen && recipientTrimmed !== '' && recipientValid && !recipientIsSelf;
-
   // Diff vs. the loaded state — only changed + valid fields are written.
   const changes: ArNSMetadataChanges = useMemo(() => {
     if (!orig) return {};
@@ -173,8 +153,6 @@ export default function EditDetailsModal({
     if (recordChanged && recordValidity.allValid) {
       c.baseRecord = toRecordChange(record);
     }
-    // Ownership transfer is its own op.
-    if (ownershipChanged) c.baseRecordOwner = recipientTrimmed;
     return c;
   }, [
     orig,
@@ -186,25 +164,14 @@ export default function EditDetailsModal({
     record,
     recordChanged,
     recordValidity.allValid,
-    ownershipChanged,
-    recipientTrimmed,
   ]);
 
   const changeCount = Object.keys(changes).length;
   // Block save if a touched-but-invalid field would silently drop.
   const antLevelValid = logoValid && keywordsValid;
   const recordBlocks = recordChanged && !recordValidity.allValid;
-  const ownershipBlocks =
-    ownerOpen &&
-    recipientTrimmed !== '' &&
-    (!recipientValid || recipientIsSelf);
   const canSave =
-    seeded &&
-    changeCount > 0 &&
-    antLevelValid &&
-    !recordBlocks &&
-    !ownershipBlocks &&
-    !isBusy;
+    seeded && changeCount > 0 && antLevelValid && !recordBlocks && !isBusy;
 
   const handleSave = async () => {
     try {
@@ -260,8 +227,8 @@ export default function EditDetailsModal({
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
               Each ANT-metadata field is a separate wallet approval; the record
-              saves in one approval (all its fields together); a record-ownership
-              transfer is one more. Free apart from a small SOL network fee.
+              saves in one approval (all its fields together). Free apart from a
+              small SOL network fee.
             </div>
 
             {/* Nickname */}
@@ -342,44 +309,6 @@ export default function EditDetailsModal({
               disabled={isBusy}
               idPrefix="base-record"
             />
-
-            {/* Record ownership */}
-            <div className="mt-4 rounded-2xl border border-error/20 bg-error/10 p-3">
-              <button
-                type="button"
-                onClick={() => setOwnerOpen((o) => !o)}
-                className="flex w-full items-center gap-2 text-left text-sm font-semibold text-error"
-              >
-                <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-                Transfer record ownership
-              </button>
-              {ownerOpen && (
-                <div className="mt-3">
-                  <p className="mb-2 text-xs text-error/90">
-                    Hand this record&apos;s ownership to another Solana wallet.
-                    This is a separate approval and cannot be undone by you.
-                  </p>
-                  <input
-                    className={`${inputCls} font-mono`}
-                    value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
-                    placeholder="Recipient Solana address"
-                    spellCheck={false}
-                    disabled={isBusy}
-                  />
-                  {recipientTrimmed !== '' && !recipientValid && (
-                    <p className="mt-1 text-xs text-error">
-                      Enter a valid Solana address.
-                    </p>
-                  )}
-                  {recipientIsSelf && (
-                    <p className="mt-1 text-xs text-error">
-                      This wallet already owns this record.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Progress / error */}
             {isBusy && (

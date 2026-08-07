@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Globe, RefreshCw, AlertTriangle, Download, Search, Flame } from 'lucide-react';
-import { getExpiringDomains, expiryLabel, expirySortKey } from '@/utils/domainExpiry';
+import { Globe, RefreshCw, AlertTriangle, Download } from 'lucide-react';
+import { getExpiringDomains, expiryLabel } from '@/utils/domainExpiry';
 import { downloadDomainsCsv } from '@/utils/domainCsv';
-import { ManageDomainModal } from '@/features/arns';
-import type { ArNSName } from '@/types';
 import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import DomainsTable from '@/components/account/DomainsTable';
@@ -27,7 +25,6 @@ export default function MyDomainsPage() {
   const { hasArNSAccess, arnsAddress } = useLinkedSolanaWallet();
   const { names: ownedNames, loading: loadingDomains, fetchOwnedNames } = useOwnedArNSNames();
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [renewDomain, setRenewDomain] = useState<ArNSName | null>(null);
   const [showAllDomains, setShowAllDomains] = useState(false);
 
   // Redirect to home if not logged in (declarative — never navigate during render)
@@ -37,7 +34,18 @@ export default function MyDomainsPage() {
 
   const now = Date.now();
   const expiringDomains = getExpiringDomains(ownedNames, now);
-  const sortedDomains = [...ownedNames].sort((a, b) => expirySortKey(a, now) - expirySortKey(b, now));
+  // Soonest-expiring first across ALL leases; permabuy (never expires) last.
+  const sortedDomains = [...ownedNames].sort((a, b) => {
+    const ka =
+      a.type === 'permabuy' || typeof a.endTimestamp !== 'number'
+        ? Infinity
+        : a.endTimestamp;
+    const kb =
+      b.type === 'permabuy' || typeof b.endTimestamp !== 'number'
+        ? Infinity
+        : b.endTimestamp;
+    return ka - kb;
+  });
 
   return (
     <div className="px-4 sm:px-6">
@@ -84,28 +92,6 @@ export default function MyDomainsPage() {
         )}
       </div>
 
-      {/* Cross-links to the other domain surfaces */}
-      <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-        <Link
-          to="/arns"
-          className="inline-flex items-center gap-1.5 font-medium text-primary transition-opacity hover:opacity-80"
-        >
-          <Search className="h-4 w-4" /> Register a name
-        </Link>
-        <Link
-          to="/domains"
-          className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
-        >
-          <Globe className="h-4 w-4" /> Browse all names
-        </Link>
-        <Link
-          to="/returned-names"
-          className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
-        >
-          <Flame className="h-4 w-4" /> Returned-name auctions
-        </Link>
-      </div>
-
       {hasArNSAccess ? (
         <div className="mb-8">
           {/* Expiry warning — spans the owned leases we've loaded (the 100 most recent
@@ -138,12 +124,9 @@ export default function MyDomainsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    const target = ownedNames.find(
-                      (n) => n.name === expiringDomains[0].name,
-                    );
-                    if (target) setRenewDomain(target);
-                  }}
+                  onClick={() =>
+                    navigate(`/domains/${expiringDomains[0].name}`)
+                  }
                   className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 >
                   Renew
@@ -186,7 +169,6 @@ export default function MyDomainsPage() {
                     ? sortedDomains
                     : sortedDomains.slice(0, DOMAINS_SHOWN)
                 }
-                onChanged={() => fetchOwnedNames(true)}
                 walletAddress={arnsAddress}
               />
 
@@ -227,14 +209,6 @@ export default function MyDomainsPage() {
 
       {showLinkModal && (
         <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
-      )}
-
-      {renewDomain && (
-        <ManageDomainModal
-          domain={renewDomain}
-          onClose={() => setRenewDomain(null)}
-          onSuccess={() => fetchOwnedNames(true)}
-        />
       )}
     </div>
   );

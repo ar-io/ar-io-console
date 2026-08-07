@@ -9,9 +9,11 @@ import {
   Layers,
   Loader2,
   Pencil,
+  Search,
   Shuffle,
   Send,
   Star,
+  Tag,
   Trash2,
   Users,
 } from 'lucide-react';
@@ -35,9 +37,10 @@ import {
   useControllersState,
   usePrimaryName,
 } from '@/features/arns';
+import type { UndernameRecord } from '@/features/arns';
 import { useArNSNameRecord } from '@/features/arns/hooks/useArNSNameRecord';
 import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
-import { deriveAntRole, isOwnerOnlyAllowed } from '@/features/arns/antRole';
+import { deriveAntRoleStrict } from '@/features/arns/antRole';
 import { isArweaveTxId, isValidIpfsCid, isValidArNSName } from '@/features/arns/utils';
 
 /** Which action modal is open, if any. */
@@ -120,6 +123,109 @@ function TargetValue({ target }: { target: string | null | undefined }) {
 }
 
 /**
+ * The name's records (`@` root + every undername) as a searchable, paginated
+ * table so it scales to names with many undernames — the piece the flat card
+ * list didn't handle.
+ */
+function RecordsSection({
+  apexTarget,
+  undernames,
+}: {
+  apexTarget: string | null | undefined;
+  undernames: UndernameRecord[] | undefined;
+}) {
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(0);
+  const PAGE = 10;
+
+  const rows = useMemo(() => {
+    const all: { key: string; label: string; sub?: string; target: string | null | undefined }[] = [
+      { key: '@', label: '@', sub: 'root', target: apexTarget },
+      ...(undernames ?? []).map((u) => ({
+        key: u.undername,
+        label: u.undername,
+        target: u.transactionId,
+      })),
+    ];
+    const needle = q.trim().toLowerCase();
+    if (!needle) return all;
+    return all.filter(
+      (r) =>
+        r.label.toLowerCase().includes(needle) ||
+        (r.target ?? '').toLowerCase().includes(needle),
+    );
+  }, [apexTarget, undernames, q]);
+
+  const total = 1 + (undernames?.length ?? 0);
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
+  const cur = Math.min(page, pageCount - 1);
+  const shown = rows.slice(cur * PAGE, cur * PAGE + PAGE);
+
+  return (
+    <div className="mt-4 rounded-2xl border border-border/20 bg-card p-5">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Globe className="h-4 w-4 text-primary" />
+          <h2 className="font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
+            Records <span className="text-foreground/40">({total})</span>
+          </h2>
+        </div>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground/40" />
+          <input
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Search records"
+            className="w-full rounded-full border border-border/20 bg-background py-1.5 pl-8 pr-3 text-sm focus:border-primary focus:outline-none sm:w-56"
+          />
+        </div>
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="py-2 text-xs text-foreground/50">No matching records.</p>
+      ) : (
+        <div className="divide-y divide-border/10">
+          {shown.map((r) => (
+            <div key={r.key} className="flex items-center justify-between gap-4 py-2.5">
+              <span className="min-w-0 truncate font-mono text-sm text-foreground">
+                {r.label}
+                {r.sub && <span className="text-foreground/40"> ({r.sub})</span>}
+              </span>
+              <TargetValue target={r.target} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {pageCount > 1 && (
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <button
+            onClick={() => setPage(cur - 1)}
+            disabled={cur === 0}
+            className="rounded-full border border-border/20 px-3 py-1 font-medium text-foreground/70 transition-colors hover:border-primary/40 disabled:opacity-40"
+          >
+            Prev
+          </button>
+          <span className="text-foreground/50">
+            Page {cur + 1} of {pageCount}
+          </span>
+          <button
+            onClick={() => setPage(cur + 1)}
+            disabled={cur >= pageCount - 1}
+            className="rounded-full border border-border/20 px-3 py-1 font-medium text-foreground/70 transition-colors hover:border-primary/40 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Name Detail (`/domains/:name`) — the single, deep-linkable page for one ArNS
  * name. Shows everything (resolved target, records/undernames, controllers,
  * owner + your role, primary-name status, on-chain details, registration/expiry)
@@ -160,8 +266,10 @@ export default function NameDetailPage() {
   const owner = summary?.owner ?? controllers?.owner;
   const { data: primary } = usePrimaryName(owner, !!owner);
 
-  const role = deriveAntRole(summary, arnsAddress);
-  const ownerOnly = isOwnerOnlyAllowed(role);
+  // STRICT role — the name may be one you don't own or control (public view),
+  // so there is NO optimistic "assume controller" fallback here.
+  const role = deriveAntRoleStrict(summary, arnsAddress);
+  const ownerOnly = role === 'owner';
   const canManage = role === 'owner' || role === 'controller';
   const isPrimary = !!primary?.current && primary.current.name === name;
 
@@ -305,7 +413,7 @@ export default function NameDetailPage() {
                       <Star className="h-3 w-3" /> Primary
                     </span>
                   )}
-                  {role !== 'unknown' && (
+                  {canManage && (
                     <span className="rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-medium capitalize text-foreground/80">
                       You: {role}
                     </span>
@@ -348,6 +456,49 @@ export default function NameDetailPage() {
               </InfoRow>
             </SectionCard>
 
+            {/* Details (ANT metadata) */}
+            <SectionCard title="Details" icon={Tag}>
+              {ant &&
+              (ant.name ||
+                ant.ticker ||
+                ant.description ||
+                (ant.keywords?.length ?? 0) > 0) ? (
+                <>
+                  {ant.name && (
+                    <InfoRow label="Nickname">
+                      <span className="break-words">{ant.name}</span>
+                    </InfoRow>
+                  )}
+                  {ant.ticker && <InfoRow label="Ticker">{ant.ticker}</InfoRow>}
+                  {ant.description && (
+                    <div className="py-2.5">
+                      <div className="text-sm text-foreground/60">Description</div>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
+                        {ant.description}
+                      </p>
+                    </div>
+                  )}
+                  {ant.keywords && ant.keywords.length > 0 && (
+                    <div className="py-2.5">
+                      <div className="text-sm text-foreground/60">Keywords</div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {ant.keywords.map((k) => (
+                          <span
+                            key={k}
+                            className="rounded-full bg-foreground/10 px-2 py-0.5 text-xs text-foreground/80"
+                          >
+                            {k}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="py-2 text-xs text-foreground/50">No details set.</p>
+              )}
+            </SectionCard>
+
             {/* On-chain */}
             <SectionCard title="On-chain" icon={Layers}>
               <InfoRow label="Name token (ANT)">
@@ -382,22 +533,6 @@ export default function NameDetailPage() {
               )}
             </SectionCard>
 
-            {/* Records */}
-            <SectionCard title="Records" icon={Globe}>
-              <InfoRow label="@ (root)">
-                <TargetValue target={target} />
-              </InfoRow>
-              {undernames && undernames.length > 0 ? (
-                undernames.map((u) => (
-                  <InfoRow key={u.undername} label={`${u.undername}`}>
-                    <TargetValue target={u.transactionId} />
-                  </InfoRow>
-                ))
-              ) : (
-                <p className="py-2 text-xs text-foreground/50">No undernames yet.</p>
-              )}
-            </SectionCard>
-
             {/* Controllers */}
             <SectionCard title="Controllers" icon={Users}>
               {controllers ? (
@@ -422,6 +557,10 @@ export default function NameDetailPage() {
               )}
             </SectionCard>
           </div>
+
+          {/* Records — full width + searchable + paginated so it scales to
+              names with many undernames. */}
+          <RecordsSection apexTarget={target} undernames={undernames} />
 
           {/* Actions (only for names you own or control) */}
           {canManage && (
