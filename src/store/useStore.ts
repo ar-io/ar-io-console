@@ -517,7 +517,8 @@ export const useStore = create<StoreState>()(
         const { linkedSolanaAddress: addr, ownedArnsCache } = get();
         // Remove cached ArNS names for the linked address to avoid stale data
         if (addr && ownedArnsCache[addr]) {
-          const { [addr]: _, ...rest } = ownedArnsCache;
+          const rest = { ...ownedArnsCache };
+          delete rest[addr];
           set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest });
         } else {
           set({ linkedSolanaAddress: null, linkedSolanaWalletName: null });

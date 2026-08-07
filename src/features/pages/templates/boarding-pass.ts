@@ -16,7 +16,6 @@ import type {
 import type { PagesTemplate, RenderCtx, RenderOutput } from '../render/renderPageHtml';
 import { safeHref } from '../render/escape';
 import {
-  avatarInitials,
   cssColor,
   cssFontFamily,
   dataArAttr,
