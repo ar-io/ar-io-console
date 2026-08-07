@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getARIO } from '../../../utils';
+import { getARIO } from '@/utils';
 import { useArNSConfigKey } from './useArNSConfigKey';
 
 /** One ArNS name's on-chain registration record (subset used by the detail page). */

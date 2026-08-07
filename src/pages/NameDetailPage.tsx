@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CalendarPlus,
@@ -82,7 +83,7 @@ function SectionCard({
     <div className="rounded-2xl border border-border/20 bg-card p-5">
       <div className="mb-3 flex items-center gap-2">
         <Icon className="h-4 w-4 text-primary" />
-        <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-foreground/70">
+        <h2 className="font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
           {title}
         </h2>
       </div>
@@ -133,6 +134,7 @@ export default function NameDetailPage() {
   const navigate = useNavigate();
   const configMode = useStore((s) => s.configMode);
   const { arnsAddress } = useLinkedSolanaWallet();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
 
   const name = (rawName ?? '').toLowerCase();
@@ -184,7 +186,24 @@ export default function NameDetailPage() {
       }`
     : undefined;
 
-  const refresh = () => refetchRecord();
+  // After any write, refetch the record AND invalidate every query scoped to
+  // this name's processId / name / owner (ANT details, undernames, controllers,
+  // ANT summaries, primary-name) — otherwise the page shows a stale target,
+  // records, ownership, or primary status after Edit/Primary/Transfer/Reassign/
+  // Release (those modals only call onSuccess).
+  const refresh = () => {
+    refetchRecord();
+    queryClient.invalidateQueries({
+      predicate: (q) => {
+        const key = JSON.stringify(q.queryKey);
+        return (
+          (!!processId && key.includes(processId)) ||
+          (!!owner && key.includes(owner)) ||
+          key.includes(name)
+        );
+      },
+    });
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6">
@@ -199,7 +218,7 @@ export default function NameDetailPage() {
       {!validName ? (
         <div className="rounded-2xl border border-border/20 bg-card p-8 text-center">
           <Globe className="mx-auto mb-3 h-10 w-10 text-foreground/30" />
-          <h1 className="mb-1 font-heading text-xl font-bold text-foreground">
+          <h1 className="mb-1 font-heading text-xl font-extrabold text-foreground">
             Not a valid name
           </h1>
           <p className="text-sm text-foreground/70">
@@ -216,7 +235,7 @@ export default function NameDetailPage() {
         </div>
       ) : recordError ? (
         <div className="rounded-2xl border border-error/20 bg-error/10 p-8 text-center">
-          <h1 className="mb-1 font-heading text-xl font-bold text-foreground">
+          <h1 className="mb-1 font-heading text-xl font-extrabold text-foreground">
             Couldn't load this name
           </h1>
           <p className="mb-4 text-sm text-foreground/70">
@@ -234,7 +253,7 @@ export default function NameDetailPage() {
         // Unregistered → offer to register.
         <div className="rounded-2xl border border-primary/30 bg-card p-8 text-center">
           <Globe className="mx-auto mb-3 h-10 w-10 text-primary/60" />
-          <h1 className="mb-1 font-heading text-2xl font-bold text-foreground">
+          <h1 className="mb-1 font-heading text-2xl font-extrabold text-foreground">
             <span className="font-mono">{name}</span>
             <span className="text-foreground/50">.ar.io</span> is available
           </h1>
@@ -267,7 +286,7 @@ export default function NameDetailPage() {
                 )}
               </div>
               <div className="min-w-0">
-                <h1 className="truncate font-heading text-2xl font-bold text-foreground">
+                <h1 className="truncate font-heading text-2xl font-extrabold text-foreground">
                   {name}
                   <span className="font-normal text-foreground/50">.ar.io</span>
                 </h1>
@@ -407,7 +426,7 @@ export default function NameDetailPage() {
           {/* Actions (only for names you own or control) */}
           {canManage && (
             <div className="mt-5 rounded-2xl border border-border/20 bg-card p-5">
-              <h2 className="mb-3 font-heading text-sm font-bold uppercase tracking-wide text-foreground/70">
+              <h2 className="mb-3 font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
                 Manage
               </h2>
               <div className="flex flex-wrap gap-2">
