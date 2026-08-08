@@ -27,6 +27,26 @@ export function deriveAntRole(
   return 'controller';
 }
 
+/**
+ * The wallet's EXACT relationship to a name, with no optimistic fallback:
+ * `none` means the wallet is neither owner nor controller. Use this anywhere a
+ * name is NOT guaranteed to be in the wallet's ACL — e.g. the public Name Detail
+ * page, where you can view any name. (The optimistic `deriveAntRole` above must
+ * only be used on owned-names surfaces, where every row IS in the ACL.)
+ */
+export type StrictAntRole = 'owner' | 'controller' | 'none' | 'unknown';
+
+export function deriveAntRoleStrict(
+  summary: AntSummary | undefined,
+  walletAddress: string | null | undefined,
+): StrictAntRole {
+  if (!summary || !summary.owner) return 'unknown'; // not loaded yet
+  if (!walletAddress) return 'none'; // no connected ArNS wallet
+  if (summary.owner === walletAddress) return 'owner';
+  if (summary.controllers.includes(walletAddress)) return 'controller';
+  return 'none';
+}
+
 /** Owner-only actions: shown ONLY once the wallet is confirmed the owner. */
 export function isOwnerOnlyAllowed(role: AntRole): boolean {
   // Strict: 'unknown' (summary still loading or lookup failed) and 'controller'

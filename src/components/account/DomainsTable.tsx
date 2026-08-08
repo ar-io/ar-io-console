@@ -1,24 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Globe, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Globe, ExternalLink, AlertTriangle, ArrowRight } from 'lucide-react';
 import { ARIO_LOGO_TX_ID } from '@ar.io/sdk/solana';
 import { ArNSName } from '@/types';
 import { daysUntil, isExpiringSoon } from '@/utils/domainExpiry';
-import {
-  ManageDomainModal,
-  TransferDomainModal,
-  ReassignDomainModal,
-  ReleaseDomainModal,
-  EditDetailsModal,
-  UndernamesModal,
-  ControllersModal,
-  PrimaryNameModal,
-} from '@/features/arns';
 import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
-import { deriveAntRole, isOwnerOnlyAllowed } from '@/features/arns/antRole';
+import { deriveAntRole } from '@/features/arns/antRole';
 import { useStore } from '@/store/useStore';
-import RowActionsMenu from './RowActionsMenu';
 
 const visitUrl = (name: string) => `https://${name}.ar.io`;
+
+const fmtDate = (ms: number) =>
+  new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' });
 
 /**
  * A name's ANT logo thumbnail, falling back to the Globe icon when there's no
@@ -43,45 +36,52 @@ function NameLogo({ logo, gatewayUrl }: { logo?: string; gatewayUrl: string }) {
   );
 }
 
-function StatusCell({ domain }: { domain: ArNSName }) {
+/**
+ * Explicit expiry: the actual end DATE, plus a days-remaining hint and — when a
+ * lease is within the warning window — a colored notifier so at-risk names read
+ * at a glance (they're also sorted to the top by the caller).
+ */
+function ExpiresCell({ domain }: { domain: ArNSName }) {
   if (domain.type === 'permabuy') {
-    return <span className="text-foreground/70">Permanent</span>;
+    return <span className="text-foreground/60">Permanent</span>;
   }
   if (typeof domain.endTimestamp !== 'number') {
-    return <span className="text-foreground/60">Leased</span>;
+    return <span className="text-foreground/50">—</span>;
   }
   const days = daysUntil(domain.endTimestamp, Date.now());
-  if (!isExpiringSoon(domain, Date.now())) {
-    return <span className="text-foreground/70">Expires in {days} days</span>;
+  const date = fmtDate(domain.endTimestamp);
+  if (isExpiringSoon(domain, Date.now())) {
+    return (
+      <span className="inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">
+          <AlertTriangle className="h-3 w-3" />
+          {days < 0 ? 'Expired' : days === 0 ? 'Today' : `${days}d`}
+        </span>
+        <span className="text-foreground/70">{date}</span>
+      </span>
+    );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">
-      <AlertTriangle className="h-3 w-3" />
-      {days < 0 ? 'Expired' : days === 0 ? 'Expires today' : `Expires in ${days}d`}
+    <span className="text-foreground/70">
+      {date} <span className="text-foreground/40">· {days}d left</span>
     </span>
   );
 }
 
+/**
+ * A scannable list of the ArNS names you own/control. Each row links into the
+ * canonical Name Detail page (`/domains/:name`) where all management happens —
+ * the table itself stays slim (name, explicit expiry, quick links). Rows the
+ * caller passes are expected sorted with soonest-expiring first.
+ */
 export default function DomainsTable({
   domains,
-  onChanged,
   walletAddress,
 }: {
   domains: ArNSName[];
-  /** Called after an in-app lifecycle change settles, so the caller can refetch. */
-  onChanged?: () => void;
-  /** Connected/linked Solana address — used to derive owner vs controller role. */
+  /** Connected/linked Solana address — used to label owner vs controller. */
   walletAddress?: string | null;
 }) {
-  const [managing, setManaging] = useState<ArNSName | null>(null);
-  const [transferring, setTransferring] = useState<ArNSName | null>(null);
-  const [reassigning, setReassigning] = useState<ArNSName | null>(null);
-  const [releasing, setReleasing] = useState<ArNSName | null>(null);
-  const [editing, setEditing] = useState<ArNSName | null>(null);
-  const [undernaming, setUndernaming] = useState<ArNSName | null>(null);
-  const [controlling, setControlling] = useState<ArNSName | null>(null);
-  const [settingPrimary, setSettingPrimary] = useState<ArNSName | null>(null);
-
   const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
   const processIds = useMemo(
     () => domains.map((d) => d.processId).filter(Boolean),
@@ -90,14 +90,12 @@ export default function DomainsTable({
   const summaries = useAntSummaries(processIds);
 
   return (
-    <>
     <div className="overflow-x-auto rounded-2xl border border-border/20 bg-card">
-      <table className="w-full min-w-[36rem] text-sm">
+      <table className="w-full min-w-[34rem] text-sm">
         <thead>
           <tr className="border-b border-border/20 text-left text-xs uppercase tracking-wider text-foreground/60">
             <th className="px-4 py-3 font-medium">Domain</th>
-            <th className="hidden px-4 py-3 font-medium md:table-cell">Registered</th>
-            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Expires</th>
             <th className="px-4 py-3 text-right font-medium">Actions</th>
           </tr>
         </thead>
@@ -108,7 +106,6 @@ export default function DomainsTable({
               summaries.get(domain.processId),
               walletAddress,
             );
-            const ownerActions = isOwnerOnlyAllowed(role);
             return (
               <tr
                 key={domain.name}
@@ -120,9 +117,13 @@ export default function DomainsTable({
                       logo={summaries.get(domain.processId)?.logo}
                       gatewayUrl={arioGatewayUrl}
                     />
-                    <span className="truncate font-medium text-foreground" title={`${domain.displayName}.ar.io`}>
+                    <Link
+                      to={`/domains/${domain.name}`}
+                      className="truncate font-medium text-foreground hover:text-primary hover:underline"
+                      title={`View ${domain.displayName}.ar.io`}
+                    >
                       {domain.displayName}.ar.io
-                    </span>
+                    </Link>
                     {role === 'controller' && (
                       <span
                         className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
@@ -133,22 +134,11 @@ export default function DomainsTable({
                     )}
                   </div>
                 </td>
-                <td className="hidden whitespace-nowrap px-4 py-3 text-foreground/70 md:table-cell">
-                  {domain.lastUpdated ? domain.lastUpdated.toLocaleDateString() : '—'}
-                </td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <StatusCell domain={domain} />
+                  <ExpiresCell domain={domain} />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-3 whitespace-nowrap">
-                    {expiringSoon && (
-                      <button
-                        onClick={() => setManaging(domain)}
-                        className="py-1 font-medium text-warning hover:underline"
-                      >
-                        Renew
-                      </button>
-                    )}
                     <a
                       href={visitUrl(domain.name)}
                       target="_blank"
@@ -158,64 +148,13 @@ export default function DomainsTable({
                       Visit
                       <ExternalLink className="h-3 w-3" />
                     </a>
-                    <button
-                      onClick={() => setManaging(domain)}
-                      className="py-1 text-foreground/70 hover:text-foreground hover:underline"
+                    <Link
+                      to={`/domains/${domain.name}`}
+                      className="inline-flex items-center gap-1 py-1 font-medium text-foreground/70 hover:text-foreground hover:underline"
                     >
                       Manage
-                    </button>
-                    <RowActionsMenu
-                      actions={[
-                        {
-                          label: 'Edit details',
-                          onClick: () => setEditing(domain),
-                        },
-                        {
-                          label: 'Undernames',
-                          onClick: () => setUndernaming(domain),
-                        },
-                        // Managing the controller set is owner-only.
-                        ...(ownerActions
-                          ? [
-                              {
-                                label: 'Controllers',
-                                onClick: () => setControlling(domain),
-                              },
-                            ]
-                          : []),
-                        {
-                          label: 'Set as primary name',
-                          onClick: () => setSettingPrimary(domain),
-                        },
-                        // Transfer / Reassign / Release change ownership or the
-                        // name→ANT mapping — owner-only; hidden for controllers.
-                        ...(ownerActions
-                          ? [
-                              {
-                                label: 'Transfer…',
-                                onClick: () => setTransferring(domain),
-                                danger: true,
-                              },
-                              {
-                                label: 'Reassign…',
-                                onClick: () => setReassigning(domain),
-                                danger: true,
-                              },
-                            ]
-                          : []),
-                        // Release only applies to permabuy names you own; leases
-                        // expire on their own, so there is nothing to release.
-                        ...(ownerActions && domain.type === 'permabuy'
-                          ? [
-                              {
-                                label: 'Release…',
-                                onClick: () => setReleasing(domain),
-                                danger: true,
-                              },
-                            ]
-                          : []),
-                      ]}
-                    />
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
                   </div>
                 </td>
               </tr>
@@ -224,65 +163,5 @@ export default function DomainsTable({
         </tbody>
       </table>
     </div>
-    {managing && (
-      <ManageDomainModal
-        domain={managing}
-        onClose={() => setManaging(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    {transferring && (
-      <TransferDomainModal
-        domain={transferring}
-        onClose={() => setTransferring(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    {reassigning && (
-      <ReassignDomainModal
-        domain={reassigning}
-        onClose={() => setReassigning(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    {releasing && (
-      <ReleaseDomainModal
-        domain={releasing}
-        onClose={() => setReleasing(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    {editing && (
-      <EditDetailsModal
-        domain={editing}
-        onClose={() => setEditing(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    {undernaming && (
-      <UndernamesModal
-        domain={undernaming}
-        onClose={() => setUndernaming(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    {controlling && (
-      <ControllersModal
-        domain={controlling}
-        onClose={() => setControlling(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    {settingPrimary && (
-      <PrimaryNameModal
-        mode="set"
-        ownedNames={domains}
-        presetName={settingPrimary.displayName}
-        presetProcessId={settingPrimary.processId}
-        onClose={() => setSettingPrimary(null)}
-        onSuccess={onChanged}
-      />
-    )}
-    </>
   );
 }
