@@ -35,7 +35,13 @@ const PRESET_CONFIGS = {
       'base-ario': 'https://mainnet.base.org',
       ethereum: 'https://ethereum.publicnode.com',
       'base-eth': 'https://mainnet.base.org',
-      solana: 'https://hardworking-restless-sea.solana-mainnet.quiknode.pro/44d938fae3eb6735ec30d8979551827ff70227f5/',
+      // Provider URL carries an auth token, so it is injected at build time rather
+      // than committed. Vite inlines this into the bundle — it is NOT a secret, it
+      // is merely un-committed. The endpoint is protected by referrer + method
+      // whitelists on the provider side; treat the published value as public.
+      // Same var as the wallet adapter (providers/WalletProviders.tsx) so both
+      // halves of the app talk to one RPC.
+      solana: import.meta.env.VITE_SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
       kyve: 'https://api.kyve.network',
       pol: 'https://polygon-bor-rpc.publicnode.com',
       usdc: 'https://cloudflare-eth.com',
