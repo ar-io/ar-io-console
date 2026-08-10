@@ -30,6 +30,7 @@ import {
 import PriceAmount from './PriceAmount';
 import PriceDisplayToggle from './PriceDisplayToggle';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
+import { toUnicodeName } from '../../../utils/punycode';
 
 const PAGE_SIZE = 25;
 
@@ -136,7 +137,7 @@ export default function ReturnedNamesPanel() {
   return (
     <div className="px-4 sm:px-6">
       {/* Header */}
-      <div className="mb-6 flex items-start gap-3">
+      <div className="mb-4 flex items-start gap-3">
         <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20">
           <Flame className="h-5 w-5 text-primary" />
         </div>
@@ -256,7 +257,7 @@ export default function ReturnedNamesPanel() {
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 flex-shrink-0 text-primary" />
                     <span className="truncate font-heading font-bold text-foreground">
-                      {r.name}
+                      {toUnicodeName(r.name)}
                     </span>
                     <span className="flex-shrink-0 text-sm text-foreground/50">
                       .ar.io

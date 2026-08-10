@@ -7,7 +7,7 @@ import { BrowseDomainsPanel } from '../features/arns';
  */
 export default function DomainsPage() {
   return (
-    <div className="py-6">
+    <div>
       <BrowseDomainsPanel />
     </div>
   );

@@ -17,6 +17,7 @@ import {
   useAllArNSNames,
 } from '../hooks/useAllArNSNames';
 import useDebounce from '../../../hooks/useDebounce';
+import { toUnicodeName } from '../../../utils/punycode';
 
 const PAGE_SIZE = 25;
 const EXPIRING_WINDOW_DAYS = 60;
@@ -101,7 +102,7 @@ export default function BrowseDomainsPanel() {
   return (
     <div className="px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-start gap-3 mb-6">
+      <div className="flex items-start gap-3 mb-4">
         <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
           <Globe className="w-5 h-5 text-primary" />
         </div>
@@ -138,9 +139,9 @@ export default function BrowseDomainsPanel() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-4">
-        <div className="flex items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors">
+      {/* Search + quick filters — single row on desktop */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex flex-1 items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors min-w-[180px]">
           <Search className="w-4 h-4 text-foreground/50 ml-3 flex-shrink-0" />
           <input
             type="text"
@@ -149,7 +150,7 @@ export default function BrowseDomainsPanel() {
               setSearchInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
               resetPage();
             }}
-            className="flex-1 p-3 bg-transparent text-foreground font-mono focus:outline-none min-w-0"
+            className="flex-1 p-2.5 bg-transparent text-foreground font-mono focus:outline-none min-w-0 text-sm"
             placeholder="Filter names…"
           />
           {searchInput && (
@@ -164,36 +165,32 @@ export default function BrowseDomainsPanel() {
             </button>
           )}
         </div>
-
-        {/* Quick filters */}
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          <button
-            onClick={() => expiringOnly && toggleExpiring()}
-            className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
-              !expiringOnly
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => !expiringOnly && toggleExpiring()}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
-              expiringOnly
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            Expiring soon
-          </button>
-          {expiringOnly && (
-            <span className="text-xs text-foreground/60">
-              Leases expiring within {EXPIRING_WINDOW_DAYS} days, soonest first
-            </span>
-          )}
-        </div>
+        <button
+          onClick={() => expiringOnly && toggleExpiring()}
+          className={`px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
+            !expiringOnly
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => !expiringOnly && toggleExpiring()}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border transition-colors ${
+            expiringOnly
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-card text-foreground/70 border-border/20 hover:bg-primary/10'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          Expiring soon
+        </button>
+        {expiringOnly && (
+          <span className="text-xs text-foreground/60">
+            Within {EXPIRING_WINDOW_DAYS} days
+          </span>
+        )}
       </div>
 
       {error && (
@@ -246,7 +243,7 @@ export default function BrowseDomainsPanel() {
                   >
                     <Globe className="w-4 h-4 text-primary flex-shrink-0" />
                     <span className="font-heading font-bold text-foreground truncate group-hover:text-primary group-hover:underline transition-colors">
-                      {r.name}
+                      {toUnicodeName(r.name)}
                     </span>
                     <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>
                   </button>
