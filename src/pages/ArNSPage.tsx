@@ -12,7 +12,7 @@ export function ArNSPage() {
     (searchParams.get('q') ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '') || undefined;
 
   return (
-    <div className="py-6">
+    <div>
       <ArNSBuyPanel initialSearch={initialSearch} />
     </div>
   );

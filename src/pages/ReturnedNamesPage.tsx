@@ -7,7 +7,7 @@ import { ReturnedNamesPanel } from '../features/arns';
  */
 export function ReturnedNamesPage() {
   return (
-    <div className="py-6">
+    <div>
       <ReturnedNamesPanel />
     </div>
   );

@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { ArNSName } from '@/types';
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
+import { toUnicodeName } from '@/utils/punycode';
 import type { BuyPhase } from '../hooks/useBuyArNSName';
 import EditDetailsModal from './EditDetailsModal';
 
@@ -75,7 +76,7 @@ export function ArNSPurchaseStatus({
       result.receipt as { processId?: string | null } | undefined
     )?.processId;
     const newDomain: ArNSName | undefined = newProcessId
-      ? { name, displayName: name, processId: newProcessId }
+      ? { name, displayName: toUnicodeName(name), processId: newProcessId }
       : undefined;
 
     return (
@@ -84,7 +85,7 @@ export function ArNSPurchaseStatus({
           <CheckCircle2 className="w-6 h-6 text-primary flex-shrink-0" />
           <div className="flex-1">
             <p className="font-semibold text-foreground">
-              Registered "{name}.ar.io"
+              Registered "{toUnicodeName(name)}.ar.io"
             </p>
             <p className="text-sm text-foreground/70 mt-1">
               The name is now yours and resolves across the ar.io network.

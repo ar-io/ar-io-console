@@ -23,6 +23,7 @@ import {
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import BuyCreditsModal from './BuyCreditsModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
+import { toUnicodeName } from '@/utils/punycode';
 
 interface ArNSPurchaseCardProps {
   name: string;
@@ -197,7 +198,7 @@ export function ArNSPurchaseCard({
       )}
       <div className="mb-4 flex items-baseline justify-between">
         <h3 className="font-heading text-lg font-bold text-foreground">
-          Register <span className="break-all font-mono text-primary">{name}.ar.io</span>
+          Register <span className="break-all font-mono text-primary">{toUnicodeName(name)}.ar.io</span>
         </h3>
       </div>
 

@@ -29,6 +29,7 @@ import { ArNSFundingSource, ArNSPaymentSelector } from './ArNSPaymentSelector';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import EditDetailsModal from './EditDetailsModal';
 import ReturnedNamePremiumChart from './ReturnedNamePremiumChart';
+import { toUnicodeName } from '@/utils/punycode';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -143,7 +144,7 @@ export default function ReturnedNameBuyModal({
 
   const newProcessId = buyState.result?.processId;
   const newDomain: ArNSName | undefined = newProcessId
-    ? { name, displayName: name, processId: newProcessId }
+    ? { name, displayName: toUnicodeName(name), processId: newProcessId }
     : undefined;
 
   return (
@@ -156,7 +157,7 @@ export default function ReturnedNameBuyModal({
           </div>
           <div className="min-w-0">
             <h3 className="font-heading text-xl font-bold text-foreground">
-              Buy <span className="break-all font-mono text-primary">{name}.ar.io</span>
+              Buy <span className="break-all font-mono text-primary">{toUnicodeName(name)}.ar.io</span>
             </h3>
             <p className="text-sm text-foreground/70">from the returned-name auction</p>
           </div>
@@ -364,7 +365,7 @@ export default function ReturnedNameBuyModal({
               <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-primary" />
               <div className="flex-1">
                 <p className="font-semibold text-foreground">
-                  Bought &quot;{name}.ar.io&quot;
+                  Bought &quot;{toUnicodeName(name)}.ar.io&quot;
                 </p>
                 <p className="mt-1 text-sm text-foreground/70">
                   The name is now yours and resolves across the ar.io network.

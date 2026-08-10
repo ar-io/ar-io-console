@@ -31,7 +31,7 @@ export default function PricingPage() {
   const [mode, setMode] = useState<PricingMode>(initial);
 
   return (
-    <div className="py-6">
+    <div>
       <div className="px-4 sm:px-6">
         {/* Header row — title/description on the left, mode selector top-right */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

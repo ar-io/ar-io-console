@@ -42,6 +42,7 @@ import { useArNSNameRecord } from '@/features/arns/hooks/useArNSNameRecord';
 import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
 import { deriveAntRoleStrict } from '@/features/arns/antRole';
 import { isArweaveTxId, isValidIpfsCid, isValidArNSName } from '@/features/arns/utils';
+import { toUnicodeName } from '@/utils/punycode';
 
 /** Which action modal is open, if any. */
 type OpenModal =
@@ -55,12 +56,16 @@ type OpenModal =
   | 'release'
   | null;
 
-// Guard against sentinel/garbage timestamps (some records carry a near-epoch
-// value) — anything before 2000 renders as unknown rather than "Jan 1970".
-const fmtDate = (ms?: number) =>
-  ms && ms >= 946684800000
+// Normalize timestamps that may arrive in seconds (Solana) or ms, then format.
+const fmtDate = (ts?: number) => {
+  if (!ts) return '—';
+  // Values below 1e12 are seconds (epoch seconds top out at ~1.7e9 through 2024);
+  // values above are already milliseconds.
+  const ms = ts < 1e12 ? ts * 1000 : ts;
+  return ms >= 946684800000
     ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' })
     : '—';
+};
 
 /** Classify a resolved target id so we can label it Arweave vs IPFS. */
 function targetKind(id: string): 'Arweave' | 'IPFS' | null {
@@ -83,8 +88,8 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-border/20 bg-card p-5">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="rounded-2xl border border-border/20 bg-card p-4">
+      <div className="mb-2 flex items-center gap-2">
         <Icon className="h-4 w-4 text-primary" />
         <h2 className="font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
           {title}
@@ -162,7 +167,7 @@ function RecordsSection({
   const shown = rows.slice(cur * PAGE, cur * PAGE + PAGE);
 
   return (
-    <div className="mt-4 rounded-2xl border border-border/20 bg-card p-5">
+    <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-primary" />
@@ -244,6 +249,7 @@ export default function NameDetailPage() {
   const [open, setOpen] = useState<OpenModal>(null);
 
   const name = (rawName ?? '').toLowerCase();
+  const displayName = toUnicodeName(name);
   const validName = isValidArNSName(name);
 
   const {
@@ -279,7 +285,7 @@ export default function NameDetailPage() {
     if (!record) return null;
     return {
       name: record.name,
-      displayName: record.name,
+      displayName,
       processId: record.processId,
       type: record.type,
       endTimestamp: record.endTimestamp,
@@ -338,7 +344,7 @@ export default function NameDetailPage() {
           <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-primary" />
           <p className="text-sm text-foreground/70">
             Loading{' '}
-            <span className="font-mono text-foreground">{name}.ar.io</span>…
+            <span className="font-mono text-foreground">{displayName}.ar.io</span>…
           </p>
         </div>
       ) : recordError ? (
@@ -362,7 +368,7 @@ export default function NameDetailPage() {
         <div className="rounded-2xl border border-primary/30 bg-card p-8 text-center">
           <Globe className="mx-auto mb-3 h-10 w-10 text-primary/60" />
           <h1 className="mb-1 font-heading text-2xl font-extrabold text-foreground">
-            <span className="font-mono">{name}</span>
+            <span className="font-mono">{displayName}</span>
             <span className="text-foreground/50">.ar.io</span> is available
           </h1>
           <p className="mb-5 text-sm text-foreground/70">
@@ -372,13 +378,13 @@ export default function NameDetailPage() {
             onClick={() => navigate(`/arns?q=${encodeURIComponent(name)}`)}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Register {name}.ar.io
+            Register {displayName}.ar.io
           </button>
         </div>
       ) : record && arnsName ? (
         <>
           {/* Header */}
-          <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-border/20 bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border/20 bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/15">
                 <Globe className="h-6 w-6 text-primary" />
@@ -395,7 +401,7 @@ export default function NameDetailPage() {
               </div>
               <div className="min-w-0">
                 <h1 className="truncate font-heading text-2xl font-extrabold text-foreground">
-                  {name}
+                  {displayName}
                   <span className="font-normal text-foreground/50">.ar.io</span>
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -431,7 +437,7 @@ export default function NameDetailPage() {
             </a>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {/* Overview */}
             <SectionCard title="Overview" icon={Globe}>
               <InfoRow label="Registered">{fmtDate(record.startTimestamp)}</InfoRow>
@@ -564,8 +570,8 @@ export default function NameDetailPage() {
 
           {/* Actions (only for names you own or control) */}
           {canManage && (
-            <div className="mt-5 rounded-2xl border border-border/20 bg-card p-5">
-              <h2 className="mb-3 font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
+            <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
+              <h2 className="mb-2 font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
                 Manage
               </h2>
               <div className="flex flex-wrap gap-2">
