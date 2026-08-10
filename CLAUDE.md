@@ -331,8 +331,13 @@ Network-specific settings in `constants.ts`:
 VITE_NODE_ENV=production        # Controls mainnet vs testnet
 VITE_PRIVY_APP_ID=...           # Required for email auth
 VITE_WALLETCONNECT_PROJECT_ID=...  # Optional
-VITE_SOLANA_RPC=...             # Optional, has default
+VITE_SOLANA_RPC=...             # Required for prod — full provider URL incl. token
 ```
+
+`VITE_SOLANA_RPC` is consumed by both `store/useStore.ts` (`tokenMap.solana`) and
+`providers/WalletProviders.tsx` (`ConnectionProvider`) so the app uses one RPC
+throughout. Never hardcode a provider URL with a token back into source — it ships
+in the bundle and, on Arweave, stays retrievable permanently.
 
 Service URLs managed by store's configuration system, overridable via Developer Resources panel.
 

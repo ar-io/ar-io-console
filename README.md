@@ -47,8 +47,15 @@ Create a `.env` file:
 VITE_NODE_ENV=production              # Controls mainnet vs testnet
 VITE_PRIVY_APP_ID=...                 # Required for email auth
 VITE_WALLETCONNECT_PROJECT_ID=...     # Optional
-VITE_SOLANA_RPC=...                   # Optional, has default
+VITE_SOLANA_RPC=...                   # Required for prod — full provider URL incl. token
 ```
+
+`VITE_SOLANA_RPC` is the single Solana RPC for both the store config and the wallet
+adapter. It falls back to public `api.mainnet-beta.solana.com`, which is fine for
+local work and heavily rate-limited for anything else — live deploys fail closed if
+it is unset. Vite inlines it into the bundle, so the provider token in it is public
+once shipped; the endpoint is protected by referrer and method whitelists on the
+provider side rather than by hiding the URL.
 
 ## Routes
 

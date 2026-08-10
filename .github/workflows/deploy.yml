@@ -42,10 +42,24 @@ jobs:
       - name: Validate inputs
         env:
           UNDERNAME: ${{ inputs.undername }}
+          # Presence check only — the value is never echoed.
+          SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
         run: |
           if [[ "$UNDERNAME" != "@" && ! "$UNDERNAME" =~ ^[a-z0-9][a-z0-9_-]{0,59}$ ]]; then
             echo "::error::Invalid undername '$UNDERNAME' — use '@' or a label of [a-z0-9_-], max 60 chars."
             exit 1
+          fi
+
+          # VITE_SOLANA_RPC falls back to public api.mainnet-beta.solana.com when
+          # unset. That fallback is rate-limited and will fail under real traffic,
+          # but it fails *silently* at build time — so a missing secret ships a
+          # broken live console that looks fine in CI. Refuse rather than publish it.
+          if [[ "$UNDERNAME" == "@" && -z "$SOLANA_RPC" ]]; then
+            echo "::error::secrets.VITE_SOLANA_RPC is empty — a live deploy would fall back to public mainnet-beta RPC. Set the secret before publishing to '@'."
+            exit 1
+          fi
+          if [[ -z "$SOLANA_RPC" ]]; then
+            echo "::warning::secrets.VITE_SOLANA_RPC is empty — this build falls back to public mainnet-beta RPC and will be heavily rate-limited."
           fi
 
       - name: Checkout
@@ -66,10 +80,12 @@ jobs:
         run: npm run build:prod
         env:
           VITE_NODE_ENV: production
-          # Optional overrides — each falls back to an in-source default if unset, so none are required.
+          # Optional overrides — each falls back to an in-source default if unset.
           VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
           VITE_WALLETCONNECT_PROJECT_ID: ${{ secrets.VITE_WALLETCONNECT_PROJECT_ID }}
-          VITE_SOLANA_RPC: ${{ vars.VITE_SOLANA_RPC }}
+          # NOT optional for a live deploy — see the guard above. Carries an auth
+          # token, so it lives in secrets (masked in logs), not vars.
+          VITE_SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
 
       - name: Deploy to Arweave + update ArNS
         id: deploy
