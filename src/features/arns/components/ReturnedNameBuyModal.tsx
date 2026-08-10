@@ -29,7 +29,7 @@ import { ArNSFundingSource, ArNSPaymentSelector } from './ArNSPaymentSelector';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import EditDetailsModal from './EditDetailsModal';
 import ReturnedNamePremiumChart from './ReturnedNamePremiumChart';
-import { toUnicodeName } from '../../../utils/punycode';
+import { toUnicodeName } from '@/utils/punycode';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 

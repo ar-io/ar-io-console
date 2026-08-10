@@ -17,7 +17,7 @@ import {
   useAllArNSNames,
 } from '../hooks/useAllArNSNames';
 import useDebounce from '../../../hooks/useDebounce';
-import { toUnicodeName } from '../../../utils/punycode';
+import { toUnicodeName } from '@/utils/punycode';
 
 const PAGE_SIZE = 25;
 const EXPIRING_WINDOW_DAYS = 60;

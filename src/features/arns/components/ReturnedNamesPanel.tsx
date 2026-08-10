@@ -30,7 +30,7 @@ import {
 import PriceAmount from './PriceAmount';
 import PriceDisplayToggle from './PriceDisplayToggle';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
-import { toUnicodeName } from '../../../utils/punycode';
+import { toUnicodeName } from '@/utils/punycode';
 
 const PAGE_SIZE = 25;
 

@@ -23,7 +23,7 @@ import {
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import BuyCreditsModal from './BuyCreditsModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
-import { toUnicodeName } from '../../../utils/punycode';
+import { toUnicodeName } from '@/utils/punycode';
 
 interface ArNSPurchaseCardProps {
   name: string;

@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { ArNSName } from '@/types';
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
-import { toUnicodeName } from '../../../utils/punycode';
+import { toUnicodeName } from '@/utils/punycode';
 import type { BuyPhase } from '../hooks/useBuyArNSName';
 import EditDetailsModal from './EditDetailsModal';
 
