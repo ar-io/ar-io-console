@@ -192,16 +192,25 @@ export default function AssignDomainModal({
                       Register an ArNS name right here in the console, then come
                       back to assign it.
                     </div>
-                    <button
-                      onClick={() =>
-                        // New tab so this modal + its manifest context stay put;
-                        // register there, come back, and assign.
-                        window.open('/arns', '_blank', 'noopener,noreferrer')
-                      }
-                      className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
-                    >
-                      Register a name
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          // New tab so this modal + its manifest context stay put;
+                          // register there, come back, and assign.
+                          window.open('/arns', '_blank', 'noopener,noreferrer')
+                        }
+                        className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
+                      >
+                        Register a name
+                      </button>
+                      <button
+                        onClick={() => fetchOwnedNames(true)}
+                        className="px-3 py-1.5 border border-border/20 text-foreground/80 rounded-full text-xs hover:bg-card transition-colors flex items-center gap-1"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Refresh
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

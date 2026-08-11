@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getARIO, getANT, getWritableANT, createWalletAdapterTransactionSendingSigner } from '../utils';
@@ -35,6 +35,9 @@ export function useOwnedArNSNames() {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
+  // Monotonic request counter — only the latest fetchOwnedNames call may
+  // update state, preventing a slow earlier request from overwriting a newer one.
+  const fetchSeqRef = useRef(0);
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const { connection: solanaConnection } = useConnection();
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction } = useWallet();
@@ -62,6 +65,9 @@ export function useOwnedArNSNames() {
           return arnsNames;
         }
       }
+
+      const seq = ++fetchSeqRef.current;
+      const isCurrent = () => seq === fetchSeqRef.current;
 
       setLoading(true);
       setFetchError(false);
@@ -112,17 +118,19 @@ export function useOwnedArNSNames() {
           endTimestamp: name.endTimestamp,
         }));
 
-        // Cache the results
-        setOwnedArNSNames(arnsAddress!, cacheData);
-        setNames(processedNames);
+        // Cache the results — only if this is still the latest request
+        if (isCurrent()) {
+          setOwnedArNSNames(arnsAddress!, cacheData);
+          setNames(processedNames);
+        }
         return processedNames;
       } catch (error) {
         console.error('Failed to fetch owned ArNS names:', error);
-        setFetchError(true);
+        if (isCurrent()) setFetchError(true);
 
         // If fetch fails, still try to use any cached data
         const cached = getOwnedArNSNames(arnsAddress!);
-        if (cached) {
+        if (cached && isCurrent()) {
           const fallbackNames: ArNSName[] = cached.map((cached) => ({
             name: cached.name,
             displayName: decodePunycode(cached.name),
@@ -139,7 +147,7 @@ export function useOwnedArNSNames() {
 
         return [];
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
