@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { address as toSolanaAddress } from '@solana/kit';
 
@@ -49,13 +49,21 @@ export function useArNSPaymentBalances(
   // Refetch the ARIO + SOL balances the moment any payment/write dispatches
   // 'refresh-balance', instead of waiting out the 30s staleTime — otherwise an
   // ARIO-funded ArNS action leaves the balance panel stale until it goes cold.
+  // Debounced at 150ms to collapse rapid-fire dispatches (multi-item uploads).
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const onRefresh = () => {
-      queryClient.invalidateQueries({ queryKey: ['arns-ario-balances'] });
-      queryClient.invalidateQueries({ queryKey: ['arns-sol-balance'] });
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['arns-ario-balances'] });
+        queryClient.invalidateQueries({ queryKey: ['arns-sol-balance'] });
+      }, 150);
     };
     window.addEventListener('refresh-balance', onRefresh);
-    return () => window.removeEventListener('refresh-balance', onRefresh);
+    return () => {
+      window.removeEventListener('refresh-balance', onRefresh);
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
   }, [queryClient]);
 
   const arioQ = useQuery({
