@@ -32,7 +32,7 @@ export default function AssignDomainModal({
   existingUndername,
   onSuccess,
 }: AssignDomainModalProps) {
-  const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails, updateArNSRecord } = useOwnedArNSNames();
+  const { names, loading, fetchError, loadingDetails, fetchOwnedNames, fetchNameDetails, updateArNSRecord } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, showLinkModal, setShowLinkModal, promptReconnect } = useLinkedSolanaWallet();
 
   const [selectedArnsName, setSelectedArnsName] = useState(existingArnsName || '');
@@ -54,10 +54,10 @@ export default function AssignDomainModal({
 
   // Auto-fetch names when modal opens
   useEffect(() => {
-    if (names.length === 0 && !loading) {
+    if (names.length === 0 && !loading && !fetchError) {
       fetchOwnedNames();
     }
-  }, [names.length, loading, fetchOwnedNames]);
+  }, [names.length, loading, fetchError, fetchOwnedNames]);
 
   // Auto-update undername mode based on selection
   useEffect(() => {
