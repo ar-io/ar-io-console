@@ -7,13 +7,13 @@ import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
 
-// Route pages are lazy-loaded so each ships in its own chunk rather than the
-// entry bundle. Previously only BrowsePage was split, so a visitor landing on
-// any route downloaded every page (all 17 routes + the 32 Pages templates) up
-// front (~2.5 MB gzip main chunk). Layout wraps <Outlet> in <Suspense>, so the
-// header/nav stay mounted while a page chunk loads. BrowsePage stays split for
-// the additional reason of isolating its wayfinder dependencies.
-const LandingPage = lazy(() => import('./pages/LandingPage'));
+// The homepage is eagerly loaded — it's the primary entry point, so lazy-loading
+// it just trades a smaller bundle for a visible spinner on every first visit.
+import LandingPage from './pages/LandingPage';
+
+// Other route pages are lazy-loaded so each ships in its own chunk rather than
+// the entry bundle. Layout wraps <Outlet> in <Suspense>, so the header/nav stay
+// mounted while a page chunk loads.
 const TopUpPage = lazy(() => import('./pages/TopUpPage'));
 const UploadPage = lazy(() => import('./pages/UploadPage'));
 const CapturePage = lazy(() => import('./pages/CapturePage'));
