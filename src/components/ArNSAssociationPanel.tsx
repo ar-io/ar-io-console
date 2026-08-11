@@ -37,7 +37,7 @@ export default function ArNSAssociationPanel({
   onCustomTTLChange,
   bare = false,
 }: ArNSAssociationPanelProps) {
-  const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
+  const { names, loading, fetchError, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, promptReconnect, showLinkModal, setShowLinkModal } = useLinkedSolanaWallet();
   const address = useStore((s) => s.address);
   const [internalShowUndername, setInternalShowUndername] = useState(false);
@@ -89,10 +89,10 @@ export default function ArNSAssociationPanel({
   };
 
   useEffect(() => {
-    if (enabled && names.length === 0 && !loading) {
+    if (enabled && names.length === 0 && !loading && !fetchError) {
       fetchOwnedNames();
     }
-  }, [enabled, names.length, loading, fetchOwnedNames]);
+  }, [enabled, names.length, loading, fetchError, fetchOwnedNames]);
 
   // Auto-enable undername if selectedUndername exists
   useEffect(() => {

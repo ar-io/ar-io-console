@@ -18,6 +18,7 @@ export function useOwnedArNSNames() {
   const arnsAddress = getArNSAddress();
   const [names, setNames] = useState<ArNSName[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const { connection: solanaConnection } = useConnection();
@@ -48,6 +49,7 @@ export function useOwnedArNSNames() {
       }
 
       setLoading(true);
+      setFetchError(false);
       try {
         // Use AR.IO SDK to get owned names with custom CU
         const ario = getARIO();
@@ -101,6 +103,7 @@ export function useOwnedArNSNames() {
         return processedNames;
       } catch (error) {
         console.error('Failed to fetch owned ArNS names:', error);
+        setFetchError(true);
 
         // If fetch fails, still try to use any cached data
         const cached = getOwnedArNSNames(arnsAddress!);
@@ -485,6 +488,7 @@ export function useOwnedArNSNames() {
   return {
     names,
     loading,
+    fetchError,
     updating,
     loadingDetails,
     fetchOwnedNames,
