@@ -144,11 +144,16 @@ export function useFreeStatus(): FreeStatus {
       }
     };
     fetchStatus();
-    const onRefresh = () => fetchStatus();
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const onRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => fetchStatus(), 150);
+    };
     window.addEventListener('refresh-balance', onRefresh);
     return () => {
       cancelled = true;
       window.removeEventListener('refresh-balance', onRefresh);
+      if (refreshTimer) clearTimeout(refreshTimer);
     };
   }, [address, paymentServiceUrl]);
 

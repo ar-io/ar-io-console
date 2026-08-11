@@ -1,13 +1,13 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import CopyButton from './CopyButton';
 import DomainsNavFlyout from '@/components/DomainsNavFlyout';
 import { useStore } from '../store/useStore';
-import { formatWalletAddress, getTurboBalance } from '../utils';
+import { formatWalletAddress } from '../utils';
 import { getWalletNetworkLabel } from '../utils/walletDisplay';
 import ArioLogo from './ArioLogo';
 import WalletSelectionModal from './modals/WalletSelectionModal';
@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePrivyWallet } from '../hooks/usePrivyWallet';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
+import { useCreditBalance } from '../hooks/useCreditBalance';
 import { clearEthereumTurboClientCache } from '../hooks/useEthereumTurboClient';
 import { clearX402SignerCache } from '../hooks/useX402Upload';
 
@@ -54,7 +55,7 @@ const domainServices = [
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { address, walletType, clearAddress, clearAllPaymentState, setCreditBalance, configMode, isPaymentServiceAvailable, linkedSolanaAddress, clearLinkedSolanaWallet } = useStore();
+  const { address, walletType, clearAddress, clearAllPaymentState, configMode, isPaymentServiceAvailable, linkedSolanaAddress, clearLinkedSolanaWallet } = useStore();
   const { isPrivyUser, privyLogout } = usePrivyWallet();
   const { exportWallet } = usePrivy();
   const { disconnectAsync } = useDisconnect(); // RainbowKit/Wagmi disconnect
@@ -62,117 +63,34 @@ const Header = () => {
   const arnsAddress = useStore((s) => s.getArNSAddress());
   const { arnsName, profile, loading: loadingArNS } = usePrimaryArNSName(arnsAddress);
 
-  const [credits, setCredits] = useState<string>('0');
-  const [creditsNumeric, setCreditsNumeric] = useState<number>(0);
-  const [loadingBalance, setLoadingBalance] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const wincForOneGiB = useWincForOneGiB();
+  const { credits: creditsNumeric, isLoading: loadingBalance, isFetching: isRefreshing, refetch: handleRefresh } = useCreditBalance();
 
-  // Fetch actual credit balance from Turbo API
-  const fetchBalance = useCallback(async () => {
-    // Don't fetch balance if payment service is unavailable (x402-only mode)
-    if (!isPaymentServiceAvailable()) {
-      setCredits('0');
-      setCreditsNumeric(0);
-      return;
-    }
-
-    if (!address || !walletType) {
-      setCredits('0');
-      setCreditsNumeric(0);
-      return;
-    }
-
-    setLoadingBalance(true);
-    try {
-      // Use utility function that properly handles all wallet types
-      const balance = await getTurboBalance(address, walletType);
-
-      // Use effectiveBalance (owned + received shared credits) for the spendable amount.
-      // Fall back to winc (owned only) if effectiveBalance isn't returned.
-      const spendableWinc = balance.effectiveBalance ?? balance.winc;
-      const creditsAmount = Number(spendableWinc) / 1e12;
-      setCreditBalance(creditsAmount);
-      setCreditsNumeric(creditsAmount);
-
-      // Smart formatting for different credit amounts
-      let formattedCredits;
-      if (creditsAmount >= 1) {
-        // Normal amounts: show 2 decimal places
-        formattedCredits = new Intl.NumberFormat('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(creditsAmount);
-      } else if (creditsAmount >= 0.01) {
-        // Medium amounts (0.01 - 0.99): show 2-4 decimals
-        formattedCredits = new Intl.NumberFormat('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 4,
-        }).format(creditsAmount);
-      } else if (creditsAmount > 0) {
-        // Very small amounts (< 0.01): show up to 6 decimals to avoid showing 0
-        formattedCredits = new Intl.NumberFormat('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 6,
-        }).format(creditsAmount);
-      } else {
-        formattedCredits = '0';
-      }
-
-      setCredits(formattedCredits);
-    } catch (error) {
-      // Balance fetch failed
-      if (error instanceof Error && error.message.includes('Invalid')) {
-        // Address format may not be supported for balance checking
-        setCredits('0');
-        setCreditsNumeric(0);
-      } else {
-        setCredits('---');
-        setCreditsNumeric(0);
-      }
-    } finally {
-      setLoadingBalance(false);
-      setIsRefreshing(false);
-    }
-  }, [address, walletType, setCreditBalance, isPaymentServiceAvailable]);
-
+  // Any CTA anywhere can open the sign-in (wallet) modal by dispatching
+  // `open-signin` (see promptSignIn in utils). The Header owns the one modal.
+  // Guard on address so a stray event can't stack the connect modal over a
+  // live session.
   useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
-
-  // Refresh balance when configuration changes
-  useEffect(() => {
-    if (address) {
-      fetchBalance();
-    }
-  }, [configMode, address, fetchBalance]);
-
-  // Listen for balance refresh events from payment success
-  useEffect(() => {
-    const handleRefreshBalance = () => {
-      fetchBalance();
-    };
-    // Any CTA anywhere can open the sign-in (wallet) modal by dispatching
-    // `open-signin` (see promptSignIn in utils). The Header owns the one modal.
-    // Guard on address so a stray event can't stack the connect modal over a
-    // live session.
     const handleOpenSignIn = () => {
       if (!useStore.getState().address) setShowWalletModal(true);
     };
-
-    window.addEventListener('refresh-balance', handleRefreshBalance);
     window.addEventListener('open-signin', handleOpenSignIn);
-    return () => {
-      window.removeEventListener('refresh-balance', handleRefreshBalance);
-      window.removeEventListener('open-signin', handleOpenSignIn);
-    };
-  }, [fetchBalance]);
+    return () => window.removeEventListener('open-signin', handleOpenSignIn);
+  }, []);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchBalance();
+  // Format credits for display
+  const formatCredits = (amount: number): string => {
+    if (amount >= 1) {
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+    } else if (amount >= 0.01) {
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(amount);
+    } else if (amount > 0) {
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(amount);
+    }
+    return '0';
   };
+  const credits = formatCredits(creditsNumeric);
 
   // Calculate storage capacity from credits
   const formatStorageCapacity = (credits: number): string => {

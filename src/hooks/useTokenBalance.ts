@@ -11,6 +11,7 @@ import {
   BASE_ARIO_CONFIG,
 } from '../constants';
 import { getSolanaConnection } from '../utils/solanaConnection';
+import { getARIO } from '../utils';
 import { useAccount, useConfig } from 'wagmi';
 import { getConnectorClient, switchChain } from 'wagmi/actions';
 import { useWallets } from '@privy-io/react-auth';
@@ -126,6 +127,7 @@ export function useTokenBalance(
   // Cache the provider to avoid recreating on every fetch
   const ethProviderRef = useRef<any>(null);
   const providerSourceRef = useRef<string | null>(null);
+  const browserProviderRef = useRef<{ raw: any; provider: ethers.BrowserProvider } | null>(null);
 
   /**
    * Get the Ethereum provider from the correct source:
@@ -170,6 +172,23 @@ export function useTokenBalance(
 
     throw new Error('No Ethereum wallet found. Please connect a wallet first.');
   }, [privyWallets, ethAccount.isConnected, ethAccount.connector, wagmiConfig]);
+
+  /**
+   * Get a cached ethers.BrowserProvider. Reuses the same instance as long as
+   * the underlying EIP-1193 provider object hasn't changed (which happens on
+   * wallet switch or chain switch). Avoids creating a new BrowserProvider —
+   * which internally calls eth_chainId — on every balance poll.
+   */
+  const getBrowserProvider = useCallback(async () => {
+    const ethProvider = await getEthereumProvider();
+    const cached = browserProviderRef.current;
+    if (cached && cached.raw === ethProvider) {
+      return cached.provider;
+    }
+    const provider = new ethers.BrowserProvider(ethProvider);
+    browserProviderRef.current = { raw: ethProvider, provider };
+    return provider;
+  }, [getEthereumProvider]);
 
   /**
    * Ensure the wallet is on the correct network, switching automatically if needed.
@@ -301,20 +320,9 @@ export function useTokenBalance(
   const fetchArioBalance = useCallback(
     async (arweaveAddress: string): Promise<{ readable: number; smallest: number }> => {
       try {
-        // Import Solana AR.IO SDK + kit dynamically
-        const [{ ARIO }, { createSolanaRpc }] = await Promise.all([import('@ar.io/sdk/solana'), import('@solana/kit')]);
-
-        const config = getCurrentConfig();
-        const rpcUrl = config.tokenMap?.solana || 'https://api.mainnet-beta.solana.com';
-        const rpc = createSolanaRpc(rpcUrl);
-
-        const ario = ARIO.init({
-          rpc,
-          coreProgramId: config.coreProgramId as any,
-          garProgramId: config.garProgramId as any,
-          arnsProgramId: config.arnsProgramId as any,
-          antProgramId: config.antProgramId as any,
-        });
+        // Use the cached ARIO read client (singleton per config in arIOConfig.ts)
+        // instead of creating a fresh ARIO.init() + createSolanaRpc() on every call.
+        const ario = getARIO();
 
         // Get ARIO token balance for the wallet address
         const balanceInSmallest = await ario.getBalance({
@@ -333,7 +341,7 @@ export function useTokenBalance(
         throw new Error('Unable to fetch ARIO balance. Please try again.');
       }
     },
-    [getCurrentConfig]
+    []
   );
 
   /**
@@ -440,9 +448,8 @@ export function useTokenBalance(
         // Automatically switch to correct network if needed
         await ensureCorrectNetwork(expectedChainId, networkName);
 
-        // Now get provider (after potential network switch)
-        const ethProvider = await getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethProvider);
+        // Reuse cached BrowserProvider (rebuilt only when underlying provider changes)
+        const provider = await getBrowserProvider();
 
         const balanceInWei = await provider.getBalance(ethAddress);
         const balanceInEth = Number(ethers.formatEther(balanceInWei));
@@ -457,7 +464,7 @@ export function useTokenBalance(
         throw err; // Re-throw to preserve error message
       }
     },
-    [configMode, getEthereumProvider, ensureCorrectNetwork]
+    [configMode, getBrowserProvider, ensureCorrectNetwork]
   );
 
   /**
@@ -474,9 +481,8 @@ export function useTokenBalance(
         // Automatically switch to correct network if needed
         await ensureCorrectNetwork(expectedChainId, networkName);
 
-        // Now get provider (after potential network switch)
-        const ethProvider = await getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethProvider);
+        // Reuse cached BrowserProvider (rebuilt only when underlying provider changes)
+        const provider = await getBrowserProvider();
 
         // Get USDC contract address for current network
         const usdcAddress =
@@ -499,7 +505,7 @@ export function useTokenBalance(
         throw err; // Re-throw to preserve error message
       }
     },
-    [configMode, getEthereumProvider, ensureCorrectNetwork]
+    [configMode, getBrowserProvider, ensureCorrectNetwork]
   );
 
   /**
@@ -517,9 +523,8 @@ export function useTokenBalance(
         // Automatically switch to correct network if needed
         await ensureCorrectNetwork(expectedChainId, networkName);
 
-        // Now get provider (after potential network switch)
-        const ethProvider = await getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethProvider);
+        // Reuse cached BrowserProvider (rebuilt only when underlying provider changes)
+        const provider = await getBrowserProvider();
 
         // Get Base ARIO contract address for current network
         const arioAddress =
@@ -544,7 +549,7 @@ export function useTokenBalance(
         throw err; // Re-throw to preserve error message
       }
     },
-    [configMode, getEthereumProvider, ensureCorrectNetwork]
+    [configMode, getBrowserProvider, ensureCorrectNetwork]
   );
 
   /**
@@ -561,9 +566,8 @@ export function useTokenBalance(
         // Automatically switch to correct network if needed
         await ensureCorrectNetwork(expectedChainId, networkName);
 
-        // Now get provider (after potential network switch)
-        const ethProvider = await getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethProvider);
+        // Reuse cached BrowserProvider (rebuilt only when underlying provider changes)
+        const provider = await getBrowserProvider();
 
         const balanceInWei = await provider.getBalance(ethAddress);
         const balanceInEth = Number(ethers.formatEther(balanceInWei));
@@ -578,7 +582,7 @@ export function useTokenBalance(
         throw err; // Re-throw to preserve error message
       }
     },
-    [configMode, getEthereumProvider, ensureCorrectNetwork]
+    [configMode, getBrowserProvider, ensureCorrectNetwork]
   );
 
   /**
@@ -595,9 +599,8 @@ export function useTokenBalance(
         // Automatically switch to correct network if needed
         await ensureCorrectNetwork(expectedChainId, networkName);
 
-        // Now get provider (after potential network switch)
-        const ethProvider = await getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethProvider);
+        // Reuse cached BrowserProvider (rebuilt only when underlying provider changes)
+        const provider = await getBrowserProvider();
 
         const balanceInWei = await provider.getBalance(ethAddress);
         const balanceInPol = Number(ethers.formatEther(balanceInWei));
@@ -612,7 +615,7 @@ export function useTokenBalance(
         throw err; // Re-throw to preserve error message
       }
     },
-    [configMode, getEthereumProvider, ensureCorrectNetwork]
+    [configMode, getBrowserProvider, ensureCorrectNetwork]
   );
 
   /**
@@ -629,9 +632,8 @@ export function useTokenBalance(
         // Automatically switch to correct network if needed
         await ensureCorrectNetwork(expectedChainId, networkName);
 
-        // Now get provider (after potential network switch)
-        const ethProvider = await getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethProvider);
+        // Reuse cached BrowserProvider (rebuilt only when underlying provider changes)
+        const provider = await getBrowserProvider();
 
         // Get USDC contract address for current network
         const usdcAddress =
@@ -656,7 +658,7 @@ export function useTokenBalance(
         throw err; // Re-throw to preserve error message
       }
     },
-    [configMode, getEthereumProvider, ensureCorrectNetwork]
+    [configMode, getBrowserProvider, ensureCorrectNetwork]
   );
 
   /**
@@ -673,9 +675,8 @@ export function useTokenBalance(
         // Automatically switch to correct network if needed
         await ensureCorrectNetwork(expectedChainId, networkName);
 
-        // Now get provider (after potential network switch)
-        const ethProvider = await getEthereumProvider();
-        const provider = new ethers.BrowserProvider(ethProvider);
+        // Reuse cached BrowserProvider (rebuilt only when underlying provider changes)
+        const provider = await getBrowserProvider();
 
         // Get USDC contract address for current network
         const usdcAddress =
@@ -700,7 +701,7 @@ export function useTokenBalance(
         throw err; // Re-throw to preserve error message
       }
     },
-    [configMode, getEthereumProvider, ensureCorrectNetwork]
+    [configMode, getBrowserProvider, ensureCorrectNetwork]
   );
 
   /**
