@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { getARIO, getANT, getWritableANT, WRITE_OPTIONS, createWalletAdapterTransactionSendingSigner } from '../utils';
+import { getARIO, getANT, getWritableANT, createWalletAdapterTransactionSendingSigner } from '../utils';
 import { ArNSName } from '@/types';
 // Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
 // URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
@@ -12,6 +12,21 @@ interface ArNSUpdateResult {
   transactionId?: string;
   error?: string;
 }
+
+/** Structural view of the ANT writeable's record setters (v4.1.1 API). */
+type ANTRecordWriteable = {
+  setBaseNameRecord(p: {
+    transactionId: string;
+    ttlSeconds: number;
+    targetProtocol: number;
+  }): Promise<{ id: string }>;
+  setUndernameRecord(p: {
+    undername: string;
+    transactionId: string;
+    ttlSeconds: number;
+    targetProtocol: number;
+  }): Promise<{ id: string }>;
+};
 
 export function useOwnedArNSNames() {
   const { setOwnedArNSNames, getOwnedArNSNames, getArNSAddress } = useStore();
@@ -158,7 +173,7 @@ export function useOwnedArNSNames() {
           solanaSignTransaction
         );
 
-        const ant = (await getWritableANT(nameRecord.processId, signer)) as any;
+        const ant = await getWritableANT(nameRecord.processId, signer) as unknown as ANTRecordWriteable;
 
         // Determine TTL to use: custom > existing > default (600)
         let ttlToUse: number;
@@ -179,24 +194,19 @@ export function useOwnedArNSNames() {
         let result;
         if (undername) {
           // Update undername record
-          result = await ant.setRecord(
-            {
-              undername,
-              transactionId: manifestId,
-              ttlSeconds: ttlToUse,
-            },
-            WRITE_OPTIONS
-          );
+          result = await ant.setUndernameRecord({
+            undername,
+            transactionId: manifestId,
+            ttlSeconds: ttlToUse,
+            targetProtocol: 0, // Arweave
+          });
         } else {
           // Update base name record (@)
-          result = await ant.setRecord(
-            {
-              undername: '@',
-              transactionId: manifestId,
-              ttlSeconds: ttlToUse,
-            },
-            WRITE_OPTIONS
-          );
+          result = await ant.setBaseNameRecord({
+            transactionId: manifestId,
+            ttlSeconds: ttlToUse,
+            targetProtocol: 0, // Arweave
+          });
         }
 
         // Refresh only the updated name's state for efficiency
