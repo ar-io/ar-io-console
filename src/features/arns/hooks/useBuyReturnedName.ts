@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import type { SolanaARIOWriteable } from '@ar.io/sdk/solana';
 
 import { APP_NAME } from '../../../constants';
 import { useStore } from '../../../store/useStore';
@@ -40,18 +41,6 @@ export interface BuyReturnedNameResult {
   processId: string;
 }
 
-/** Structural view of the ARIO writeable's returned-name buy. */
-type ARIOReturnedNameWriteable = {
-  buyReturnedName(params: {
-    name: string;
-    type: 'lease' | 'permabuy';
-    years?: number;
-    processId: string;
-    fundFrom?: ArNSBuyFundFrom;
-    referrer?: string;
-    paidBy?: string | string[];
-  }): Promise<{ id: string; result?: { processId?: string } }>;
-};
 
 /**
  * buyReturnedName rejects when the wallet can't cover the price. Same defensive
@@ -187,9 +176,12 @@ export function useBuyReturnedName() {
 
         // ── Step 2/2 — buy the name from the auction ────────────────────────
         setProgress({ done: 1, total: 2, label: 'Buying from auction' });
+        // buyReturnedName is a Solana-specific method on the concrete class,
+        // not on the generic ARIOWrite interface — safe cast since ARIO.init
+        // with a signer always returns a SolanaARIOWriteable.
         const ario = getWritableARIO(
           signer.getSolanaSigner(),
-        ) as unknown as ARIOReturnedNameWriteable;
+        ) as unknown as SolanaARIOWriteable;
 
         const res = await ario.buyReturnedName({
           name: lowered,
@@ -202,7 +194,7 @@ export function useBuyReturnedName() {
 
         const settlement: BuyReturnedNameResult = {
           messageId: res?.id ?? '',
-          processId: res?.result?.processId ?? processId,
+          processId: String(res?.result?.processId ?? processId),
         };
         setResult(settlement);
         setProgress({ done: 2, total: 2, label: '' });

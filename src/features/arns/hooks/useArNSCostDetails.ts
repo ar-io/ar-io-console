@@ -1,25 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
-import type { CostDetailsResult } from '@ar.io/sdk/solana';
+import type { FundFrom, Intent } from '@ar.io/sdk/solana';
 
 import { getARIO } from '../../../utils';
 import { useArNSConfigKey } from './useArNSConfigKey';
 import { lowerCaseDomain } from '../utils';
 
 /** ArNS intents that carry a cost. */
-export type ArNSCostIntent =
-  | 'Buy-Name'
-  | 'Extend-Lease'
-  | 'Increase-Undername-Limit'
-  | 'Upgrade-Name';
+export type ArNSCostIntent = Extract<
+  Intent,
+  'Buy-Name' | 'Extend-Lease' | 'Increase-Undername-Limit' | 'Upgrade-Name'
+>;
 
 /**
- * Funding source for the name's ARIO price.
- *  - 'turbo'   → Turbo Credits (credits balance covers the mARIO price)
- *  - 'balance' → wallet's liquid ARIO
- *  - 'stakes'  → active delegations only (SDK funding-planner)
- *  - 'any'     → liquid + delegations + vaults (SDK funding-planner)
+ * Funding source for the name's ARIO price. Re-exports the SDK's `FundFrom`
+ * union; 'turbo' is mapped to 'balance' before calling getCostDetails (the SDK
+ * doesn't handle 'turbo' for gas estimates).
  */
-export type ArNSFundFrom = 'turbo' | 'balance' | 'stakes' | 'any';
+export type ArNSFundFrom = FundFrom;
 
 const M_ARIO_PER_ARIO = 1e6; // mARIO has 6 decimals
 const LAMPORTS_PER_SOL = 1e9;
@@ -43,25 +40,6 @@ export interface ArNSCostDetails {
   /** Transaction-fee portion (SOL). */
   gasFeeSol: number;
 }
-
-/**
- * Structural view of the readable ARIO client's getCostDetails. The return type
- * is the SDK's published `CostDetailsResult` (not a hand-rolled all-optional
- * shape) so any drift in `tokenCost`, `fundingPlan.shortfall`, or the
- * `gasEstimate.*Lamports` fields surfaces as a compile error here instead of
- * silently casting to 0 and letting the affordability gate pass.
- */
-type ARIOCostReadable = {
-  getCostDetails(params: {
-    intent: ArNSCostIntent;
-    name: string;
-    type?: 'lease' | 'permabuy';
-    years?: number;
-    quantity?: number;
-    fundFrom?: ArNSFundFrom;
-    fromAddress?: string;
-  }): Promise<CostDetailsResult>;
-};
 
 /**
  * Live cost + affordability + SOL-gas for an ArNS action, via the ARIO
@@ -125,7 +103,7 @@ export function useArNSCostDetails({
     staleTime: 60_000,
     retry: 1,
     queryFn: async () => {
-      const ario = getARIO() as unknown as ARIOCostReadable;
+      const ario = getARIO();
       // 'turbo' is a UI-only funding source (pay with Turbo Credits). The SDK's
       // funding planner only accepts balance|stakes|any, so map it to 'balance'
       // for the SOL-gas/price estimate; the wallet-ARIO shortfall it computes is
@@ -149,7 +127,7 @@ export function useArNSCostDetails({
         (sum, d) => sum + (d.discountTotal ?? 0),
         0,
       );
-      const gas = (cd as CostDetailsResult & { gasEstimate?: { totalLamports?: number; rentLamports?: number; feeLamports?: number } }).gasEstimate;
+      const gas = cd.gasEstimate;
       return {
         arioCost: mARIO / M_ARIO_PER_ARIO,
         mARIO,
