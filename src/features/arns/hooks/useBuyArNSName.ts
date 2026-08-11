@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 
+import type { FundFrom } from '@ar.io/sdk/solana';
+
 import { APP_NAME } from '../../../constants';
 import { getWritableARIO } from '../../../utils';
 import { ArNSSettlementResult } from '../services/TurboArNSClient';
@@ -10,7 +12,7 @@ import type { ArNSRegistrationType } from './useArNSPrice';
 export type BuyPhase = 'idle' | 'submitting' | 'success' | 'error';
 
 /** Where the name's ARIO price is funded from. */
-export type ArNSBuyFundFrom = 'turbo' | 'balance' | 'stakes' | 'any';
+export type ArNSBuyFundFrom = FundFrom;
 
 export interface BuyArNSNameInput {
   name: string;
@@ -32,19 +34,6 @@ export interface UseBuyArNSNameResult {
   insufficientCredits: boolean;
   isBusy: boolean;
 }
-
-/** Structural view of the ARIO writeable's atomic `buyRecord`. */
-type ARIOBuyWriteable = {
-  buyRecord(params: {
-    name: string;
-    type: ArNSRegistrationType;
-    years?: number;
-    /** Omit to mint a fresh user-owned ANT atomically (Model B, no pre-spawn). */
-    processId?: string;
-    fundFrom?: ArNSBuyFundFrom;
-    referrer?: string;
-  }): Promise<{ id: string; result?: { processId?: string } }>;
-};
 
 /**
  * buyRecord rejects when the wallet lacks Turbo Credits. Unlike the old bundler
@@ -120,9 +109,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             : `Registering '${lowered}' and creating its ANT…`,
         );
 
-        const ario = getWritableARIO(
-          signer.getSolanaSigner(),
-        ) as unknown as ARIOBuyWriteable;
+        const ario = getWritableARIO(signer.getSolanaSigner());
 
         // Atomic: omit processId → buyRecord mints a fresh user-owned ANT and
         // assigns the name in ONE tx. No pre-spawn ⇒ no orphaned-ANT window.

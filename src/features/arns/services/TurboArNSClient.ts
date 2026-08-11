@@ -249,15 +249,10 @@ export class TurboArNSClient {
         };
     }
 
-    // The alpha SDK exposes getArNSPriceForName on the unauthenticated client.
-    const price = await (
-      turbo as unknown as {
-        getArNSPriceForName: (
-          p: Record<string, unknown>,
-        ) => Promise<TurboArNSIntentPriceResponse>;
-      }
-    ).getArNSPriceForName(params);
-    return price;
+    const price = await turbo.getArNSPriceForName(
+      params as Parameters<typeof turbo.getArNSPriceForName>[0],
+    );
+    return price as TurboArNSIntentPriceResponse;
   }
 
   /** Poll target for a submitted purchase (`GET /v1/arns/purchase/:nonce`). */
