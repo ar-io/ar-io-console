@@ -8,6 +8,7 @@ import {
   Tag,
   XCircle,
 } from 'lucide-react';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 
 import { ArNSName } from '@/types';
 import { useStore } from '../../../store/useStore';
@@ -326,24 +327,23 @@ export default function EditDetailsModal({
               </div>
             )}
 
-            <button
-              onClick={handleSave}
+            <SolanaGateButton
+              onAction={handleSave}
               disabled={!canSave}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
+              busy={isBusy}
+              busyLabel={
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Saving…
                 </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  {changeCount > 0
-                    ? `Save ${changeCount} ${changeCount === 1 ? 'change' : 'changes'}`
-                    : 'No changes'}
-                </>
-              )}
-            </button>
+              }
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="edit this name"
+            >
+              <Save className="h-4 w-4" />
+              {changeCount > 0
+                ? `Save ${changeCount} ${changeCount === 1 ? 'change' : 'changes'}`
+                : 'No changes'}
+            </SolanaGateButton>
 
             {/* On-chain details — the ArNS name is controlled by an ANT (a
                 Metaplex Core NFT on Solana); expose its address for devs. */}

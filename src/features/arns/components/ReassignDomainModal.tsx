@@ -9,6 +9,7 @@ import {
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useReassignArNSName } from '../hooks/useReassignArNSName';
 
@@ -144,21 +145,20 @@ export default function ReassignDomainModal({
               </div>
             )}
 
-            <button
-              onClick={handleReassign}
+            <SolanaGateButton
+              onAction={handleReassign}
               disabled={!canReassign}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
+              busy={isBusy}
+              busyLabel={
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Reassigning…
                 </>
-              ) : (
-                <>
-                  <Shuffle className="h-4 w-4" /> Reassign name
-                </>
-              )}
-            </button>
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="reassign this name"
+            >
+              <Shuffle className="h-4 w-4" /> Reassign name
+            </SolanaGateButton>
           </>
         )}
       </div>

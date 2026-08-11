@@ -9,6 +9,7 @@ import {
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useTransferArNSName } from '../hooks/useTransferArNSName';
 
@@ -137,21 +138,20 @@ export default function TransferDomainModal({
               </div>
             )}
 
-            <button
-              onClick={handleTransfer}
+            <SolanaGateButton
+              onAction={handleTransfer}
               disabled={!canTransfer}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
+              busy={isBusy}
+              busyLabel={
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Transferring…
                 </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" /> Transfer name
-                </>
-              )}
-            </button>
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="transfer this name"
+            >
+              <Send className="h-4 w-4" /> Transfer name
+            </SolanaGateButton>
           </>
         )}
       </div>

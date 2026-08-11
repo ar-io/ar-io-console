@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useStore } from '../store/useStore';
 
@@ -10,8 +10,9 @@ import { useStore } from '../store/useStore';
  * without changing the primary session identity.
  *
  * Read-only ArNS lookups work with just the persisted address.
- * Write operations (assign/update domain) require a live signer
- * (wallet must be reconnected if session was refreshed).
+ * Write operations (assign/update domain) require a live signer.
+ * On page load, if a linked wallet name is persisted the hook
+ * auto-reconnects it so the signer is ready without manual intervention.
  */
 export function useLinkedSolanaWallet() {
   const { walletType, linkedSolanaAddress, linkedSolanaWalletName, setLinkedSolanaWallet, clearLinkedSolanaWallet, getArNSAddress } = useStore();
@@ -32,6 +33,30 @@ export function useLinkedSolanaWallet() {
   const isSolanaConnected = isPrimarySolana
     ? !!solanaPublicKey
     : !!solanaPublicKey && !!linkedSolanaAddress && solanaPublicKey.toString() === linkedSolanaAddress;
+
+  // Auto-reconnect linked Solana wallet on page load.
+  // With autoConnect=false on the WalletProvider, the adapter never reconnects
+  // on its own. If we have a persisted linkedSolanaWalletName, select + connect
+  // it so the signer is seamlessly ready without manual reconnection.
+  const autoReconnectAttempted = useRef(false);
+  useEffect(() => {
+    if (autoReconnectAttempted.current) return;
+    if (isPrimarySolana) return;             // primary Solana handled elsewhere
+    if (!linkedSolanaAddress || !linkedSolanaWalletName) return; // nothing to reconnect
+    if (isSolanaConnected) return;           // already live
+
+    // Only attempt if the adapter is available in the wallet list
+    const adapterExists = solanaWallets.some(
+      (w) => w.adapter.name === linkedSolanaWalletName,
+    );
+    if (!adapterExists) return;
+
+    autoReconnectAttempted.current = true;
+    console.log('[LinkedSolana] Auto-reconnecting linked wallet:', linkedSolanaWalletName);
+    (window as any).__SOLANA_SWITCHING__ = true;
+    solanaSelect(linkedSolanaWalletName as any);
+    setPendingLink(true);
+  }, [isPrimarySolana, linkedSolanaAddress, linkedSolanaWalletName, isSolanaConnected, solanaWallets, solanaSelect]);
 
   // After select(), wait for the adapter to be ready, then connect and save
   useEffect(() => {

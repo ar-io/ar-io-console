@@ -11,6 +11,7 @@ import {
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import { lowerCaseDomain } from '../utils';
 import { useReleaseName } from '../hooks/useReleaseName';
 
@@ -169,21 +170,20 @@ export default function ReleaseDomainModal({
               </div>
             )}
 
-            <button
-              onClick={handleRelease}
+            <SolanaGateButton
+              onAction={handleRelease}
               disabled={!canRelease}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-error px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
+              busy={isBusy}
+              busyLabel={
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Releasing…
                 </>
-              ) : (
-                <>
-                  <Flame className="h-4 w-4" /> Release name to auction
-                </>
-              )}
-            </button>
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-error px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="release this name"
+            >
+              <Flame className="h-4 w-4" /> Release name to auction
+            </SolanaGateButton>
           </>
         )}
       </div>

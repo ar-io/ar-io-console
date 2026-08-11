@@ -11,6 +11,7 @@ import {
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import { DEFAULT_TTL, isValidSolanaAddress, isValidUndername } from '../utils';
 import { useControllersState } from '../hooks/useControllers';
 import {
@@ -292,13 +293,20 @@ export default function UndernamesModal({
                         idPrefix={`edit-${r.undername}`}
                         promoteIdentity
                       />
-                      <button
-                        onClick={() => handleSaveEdit(r.undername)}
+                      <SolanaGateButton
+                        onAction={() => handleSaveEdit(r.undername)}
                         disabled={!canSaveEdit}
+                        busy={rowBusy}
+                        busyLabel={
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                          </>
+                        }
                         className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                        actionVerb="edit undernames"
                       >
                         Save
-                      </button>
+                      </SolanaGateButton>
                     </div>
                   ) : (
                     <>
@@ -344,13 +352,20 @@ export default function UndernamesModal({
                               This wallet already owns this record.
                             </p>
                           )}
-                          <button
-                            onClick={() => handleTransfer(r)}
+                          <SolanaGateButton
+                            onAction={() => handleTransfer(r)}
                             disabled={!canTransfer}
+                            busy={rowBusy}
+                            busyLabel={
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" /> Transferring…
+                              </>
+                            }
                             className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            actionVerb="transfer undername ownership"
                           >
                             Transfer ownership
-                          </button>
+                          </SolanaGateButton>
                         </div>
                       )}
                     </>
@@ -410,21 +425,20 @@ export default function UndernamesModal({
             </div>
 
             <div className="mt-4 flex items-center gap-2">
-              <button
-                onClick={handleAdd}
+              <SolanaGateButton
+                onAction={handleAdd}
                 disabled={!canAdd}
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busyKey === newLabel.trim() ? (
+                busy={busyKey === newLabel.trim()}
+                busyLabel={
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" /> Adding…
                   </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" /> Add undername
-                  </>
-                )}
-              </button>
+                }
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                actionVerb="add undernames"
+              >
+                <Plus className="h-4 w-4" /> Add undername
+              </SolanaGateButton>
               <button
                 onClick={() => setAddOpen(false)}
                 disabled={isBusy}
