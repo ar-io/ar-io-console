@@ -427,7 +427,7 @@ export default function ShareCreditsPanel() {
       {/* Active Approvals */}
       {givenApprovals.length > 0 && (
         <div className="mt-8 pt-8 border-t border-border/20">
-          <h4 className="font-semibold mb-4">Active Approvals</h4>
+          <h4 className="mb-4">Active Approvals</h4>
           <div className="space-y-3">
             {givenApprovals.map((approval: Approval) => (
               <div key={approval.approvedAddress} className="bg-card rounded-2xl p-3">
@@ -480,7 +480,7 @@ export default function ShareCreditsPanel() {
 
       {/* Resource Links */}
       <div className="mt-8">
-        <h4 className="font-semibold mb-4">Learn More</h4>
+        <h4 className="mb-4">Learn More</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Documentation */}
           <a

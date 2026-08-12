@@ -664,7 +664,7 @@ export default function CryptoConfirmationPanel({
 
             {/* Wallet Balance Section */}
             <div className="bg-card rounded-2xl p-4 border border-border/20 mb-6">
-              <h4 className="font-heading font-medium text-foreground mb-3">Wallet Balance</h4>
+              <h4 className="text-foreground mb-3">Wallet Balance</h4>
 
               {balanceLoading ? (
                 <div className="flex items-center gap-2 p-2 bg-card/50 rounded border border-border/20">
@@ -738,7 +738,7 @@ export default function CryptoConfirmationPanel({
                   <CheckCircle className="w-4 h-4 text-info" />
                 </div>
                 <div>
-                  <h4 className="font-heading font-medium text-foreground mb-1">Payment Method</h4>
+                  <h4 className="text-foreground mb-1">Payment Method</h4>
                   <p className="text-sm text-foreground/80">
                     {(() => {
                       // Extract just the token name without network qualifier (e.g., "ARIO" from "ARIO (Base)")

@@ -77,7 +77,7 @@ export function VerificationBlockedModal({
           </div>
 
           {/* Stats */}
-          <div className="bg-card rounded-xl p-4 border border-border/20">
+          <div className="bg-card rounded-2xl p-4 border border-border/20">
             <div className="text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-foreground/60">Resources Checked:</span>
@@ -132,7 +132,7 @@ export function VerificationBlockedModal({
 
           {/* Proceed Anyway Section */}
           {showConfirmProceed && (
-            <div className="bg-card border border-border/30 rounded-xl p-4">
+            <div className="bg-card border border-border/30 rounded-2xl p-4">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"

@@ -180,7 +180,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
 
         {/* Next Steps - Call to Actions */}
         <div className="bg-card rounded-2xl p-4 mb-6">
-          <h5 className="font-heading font-medium text-foreground mb-4">What's Next?</h5>
+          <h5 className="text-foreground mb-4">What's Next?</h5>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => {

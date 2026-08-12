@@ -458,7 +458,7 @@ const LandingPage = () => {
                     value={arnsQuery}
                     onChange={(e) => setArnsQuery(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                     placeholder="yourname"
-                    className="min-w-0 flex-1 bg-transparent py-3 text-foreground outline-none placeholder:text-foreground/40"
+                    className="min-w-0 flex-1 bg-transparent py-3 text-foreground placeholder:text-foreground/40"
                   />
                   <span className="select-none pl-1 font-medium text-foreground/60">.ar.io</span>
                 </div>
@@ -951,7 +951,7 @@ const LandingPage = () => {
                   className="group justify-self-center"
                   style={{ transform: `translate(${step.xOffset}px, ${step.yOffset}px)` }}
                 >
-                  <div className="w-24 h-24 bg-card border-2 border-primary/20 rounded-xl p-3 transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary group-hover:shadow-lg relative flex items-center justify-center">
+                  <div className="w-24 h-24 bg-card border-2 border-primary/20 rounded-2xl p-3 transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary group-hover:shadow-lg relative flex items-center justify-center">
                     <div className="absolute -top-2.5 -left-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-extrabold text-xs shadow-md">
                       {step.num}
                     </div>

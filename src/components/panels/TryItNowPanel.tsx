@@ -535,7 +535,7 @@ export default function TryItNowPanel() {
           <div className="w-12 h-12 bg-foreground/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Upload className="w-6 h-6 text-foreground/80" />
           </div>
-          <h4 className="text-lg font-semibold font-heading text-foreground mb-2">Free Uploads Not Available</h4>
+          <h4 className="text-lg text-foreground mb-2">Free Uploads Not Available</h4>
           <p className="text-sm text-foreground/80 max-w-md mx-auto">
             The current bundler doesn't support free uploads. Sign in to purchase credits,
             or try a different gateway that offers free uploads.

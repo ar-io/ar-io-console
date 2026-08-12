@@ -96,7 +96,7 @@ export function RoutingLoadingScreen({
             />
           </svg>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg text-foreground">
               {isCheckingHealth
                 ? "Checking Gateway Health"
                 : "Resolving Content"}
@@ -106,7 +106,7 @@ export function RoutingLoadingScreen({
         </div>
 
         {/* Status */}
-        <div className="bg-card rounded-xl p-4 border border-border/20 mb-4">
+        <div className="bg-card rounded-2xl p-4 border border-border/20 mb-4">
           <div className="flex items-center justify-center gap-2 text-sm text-foreground/80">
             <LoadingSpinner size="sm" />
             <span>

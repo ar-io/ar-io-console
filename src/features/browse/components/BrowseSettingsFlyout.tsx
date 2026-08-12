@@ -102,7 +102,7 @@ export function BrowseSettingsFlyout({
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
               <Compass className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg text-foreground">
               Browse Settings
             </h2>
           </div>

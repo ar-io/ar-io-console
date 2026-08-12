@@ -191,7 +191,7 @@ export function VerificationBadge({
       </button>
 
       {isExpanded && (
-        <div className="absolute top-full right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-card border border-border/20 rounded-xl shadow-lg p-4 z-50">
+        <div className="absolute top-full right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-card border border-border/20 rounded-2xl shadow-lg p-4 z-50">
           <div className="text-sm text-foreground mb-3">
             <div className="font-semibold mb-2">Verification Details</div>
 

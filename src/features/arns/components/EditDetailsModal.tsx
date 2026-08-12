@@ -297,9 +297,9 @@ export default function EditDetailsModal({
             <div className="my-4 border-t border-border/20" />
 
             {/* Base @ record */}
-            <h4 className="mb-1 text-sm font-semibold text-foreground">
+            <div className="mb-1 text-sm font-semibold text-foreground">
               Target (base <span className="font-mono">@</span> record)
-            </h4>
+            </div>
             <p className="mb-3 text-xs text-foreground/60">
               Where {domain.displayName}.ar.io resolves. Choose the storage
               protocol, then enter the target.

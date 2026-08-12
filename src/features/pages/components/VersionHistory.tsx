@@ -100,7 +100,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
 
       {/* Rollback context banners */}
       {!hasDomain && (
-        <div className="mb-4 rounded-xl border border-border/20 bg-card p-3">
+        <div className="mb-4 rounded-2xl border border-border/20 bg-card p-3">
           <p className="text-xs text-foreground/70">
             Roll back needs a domain. Assign one to this page to point it at any previous
             version. Each version's transaction link below is always permanent and copyable.

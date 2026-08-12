@@ -152,7 +152,7 @@ export default function PublishModal({
         </div>
 
         {/* Summary */}
-        <div className="mb-3 rounded-xl bg-card p-3 text-sm">
+        <div className="mb-3 rounded-2xl bg-card p-3 text-sm">
           <div className="space-y-2">
             <Row label="Page" value={def.title || def.profile.displayName || 'Untitled'} />
             {domainLabel ? (
@@ -183,20 +183,20 @@ export default function PublishModal({
               onChange={(e) => onNoteChange(e.target.value)}
               disabled={publishing}
               placeholder="e.g. Updated links and header"
-              className="w-full rounded-xl border border-border/20 bg-card px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary/50 disabled:opacity-60"
+              className="w-full rounded-xl border border-border/20 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-primary/50 disabled:opacity-60"
             />
             <p className="mt-1 text-xs text-foreground/50">Kept with this version's permanent history.</p>
           </div>
         )}
         {/* First-version note passthrough (read-only, if one was set in the editor) */}
         {note && (!nextVersion || nextVersion < 2) && (
-          <div className="mb-3 rounded-xl bg-card p-3 text-sm">
+          <div className="mb-3 rounded-2xl bg-card p-3 text-sm">
             <Row label="Note" value={note} />
           </div>
         )}
 
         {/* Cost */}
-        <div className="mb-4 rounded-xl border border-border/20 bg-card p-4">
+        <div className="mb-4 rounded-2xl border border-border/20 bg-card p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs text-foreground/70">Cost</span>
             {free ? (

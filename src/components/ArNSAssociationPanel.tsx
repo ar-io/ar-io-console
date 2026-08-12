@@ -158,7 +158,7 @@ export default function ArNSAssociationPanel({
             checked={enabled}
             onChange={(e) => onEnabledChange(e.target.checked)}
             disabled={!canUseArNS}
-            className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+            className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
           />
           <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
             Add a domain
@@ -177,7 +177,7 @@ export default function ArNSAssociationPanel({
                 checked={enabled}
                 onChange={(e) => onEnabledChange(e.target.checked)}
                 disabled={!canUseArNS}
-                className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+                className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
               />
               <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
                 Add a domain
@@ -422,7 +422,7 @@ export default function ArNSAssociationPanel({
                         onUndernameChange('');
                       }
                     }}
-                    className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   />
                   <span className="text-sm text-foreground">Use undername (subdomain)</span>
                 </label>

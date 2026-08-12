@@ -1954,7 +1954,7 @@ export default function DeploySitePanel() {
           </div>
         ) : (
           /* Selected Folder Card - replaces drop zone */
-          <div className="bg-card rounded-xl border border-primary/20 p-4">
+          <div className="bg-card rounded-2xl border border-primary/20 p-4">
               {/* Folder Header Row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2388,7 +2388,7 @@ export default function DeploySitePanel() {
 
       {/* Rich Success Display */}
       {deploySuccessInfo && (
-        <div className="border border-success rounded-xl p-6 bg-card">
+        <div className="border border-success rounded-2xl p-6 bg-card">
 
 
           {/* Site Details */}

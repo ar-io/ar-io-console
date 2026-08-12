@@ -96,7 +96,7 @@ export default function ProvenanceChain({ result }: { result: VerificationResult
 
   return (
     <div className="rounded-2xl border border-border/20 bg-card p-5">
-      <h3 className="mb-3 text-sm font-medium text-foreground/50">Provenance</h3>
+      <div className="mb-3 text-sm font-medium text-foreground/50">Provenance</div>
       <div className="flex items-start gap-0">
         {steps.map((step, i) => (
           <div key={step.label} className="flex flex-1 flex-col items-center text-center">

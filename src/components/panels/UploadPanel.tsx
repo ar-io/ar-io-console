@@ -790,7 +790,7 @@ export default function UploadPanel() {
           {files.length > 0 && (
             <div>
               <div className="mb-3 flex justify-between items-center">
-                <h4 className="font-medium">Selected Files ({files.length})</h4>
+                <div className="font-medium">Selected Files ({files.length})</div>
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="file-upload-add"

@@ -34,7 +34,7 @@ export function ErrorDisplay({
           </svg>
         </div>
 
-        <h3 className="text-lg font-semibold text-foreground mb-2">
+        <h3 className="text-lg text-foreground mb-2">
           {isAutoRetrying ? "Retrying..." : "Error Loading Content"}
         </h3>
 

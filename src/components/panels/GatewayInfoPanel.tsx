@@ -552,7 +552,7 @@ export default function GatewayInfoPanel() {
           {/* Pricing */}
           {pricingInfo && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Free Tier</div>
@@ -602,9 +602,9 @@ export default function GatewayInfoPanel() {
           {/* Access Pricing (x402) */}
           {gatewayInfo?.x402?.enabled && gatewayInfo.x402.dataEgress?.pricing && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">
                 Access Pricing (x402)
-              </h5>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Min Price</div>
@@ -648,7 +648,7 @@ export default function GatewayInfoPanel() {
           {/* Network Status */}
           {arIOGatewayInfo && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">ar.io Network</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">ar.io Network</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Status</div>
@@ -687,7 +687,7 @@ export default function GatewayInfoPanel() {
 
           {arweaveNodeInfo && (
             <div>
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Arweave Network</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Arweave Network</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Block Height</div>
@@ -740,7 +740,7 @@ export default function GatewayInfoPanel() {
             {/* Service Wallets */}
             {uploadServiceInfo && (
               <div className="mb-6">
-                <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Service Wallets</h5>
+                <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Service Wallets</div>
                 <div className="grid md:grid-cols-2 gap-3">
                   {Object.entries(uploadServiceInfo.addresses).map(([chain, address]) => (
                     <div
@@ -760,7 +760,7 @@ export default function GatewayInfoPanel() {
 
             {/* API & Documentation Links */}
             <div>
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">API & Documentation</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">API & Documentation</div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <a
                   href={`${(currentConfig.arioGatewayUrl ?? '').replace(/\/$/, '')}/ar-io/info`}
@@ -770,7 +770,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Server className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Gateway Info</h5>
+                    <div className="font-medium text-foreground mb-1">Gateway Info</div>
                     <p className="text-xs text-foreground/80">Gateway configuration data</p>
                   </div>
                 </a>
@@ -784,7 +784,7 @@ export default function GatewayInfoPanel() {
                   >
                     <Globe className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <div>
-                      <h5 className="font-medium text-foreground mb-1">Gateway Settings</h5>
+                      <div className="font-medium text-foreground mb-1">Gateway Settings</div>
                       <p className="text-xs text-foreground/80">Network configurations for this gateway</p>
                     </div>
                   </a>
@@ -798,7 +798,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Upload className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Upload API</h5>
+                    <div className="font-medium text-foreground mb-1">Upload API</div>
                     <p className="text-xs text-foreground/80">Storing data and confirming availability</p>
                   </div>
                 </a>
@@ -811,7 +811,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Payments API</h5>
+                    <div className="font-medium text-foreground mb-1">Payments API</div>
                     <p className="text-xs text-foreground/80">Rates, credits, and account management</p>
                   </div>
                 </a>
@@ -824,7 +824,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Server className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Access API</h5>
+                    <div className="font-medium text-foreground mb-1">Access API</div>
                     <p className="text-xs text-foreground/80">Data access and domain name resolution</p>
                   </div>
                 </a>
@@ -837,7 +837,7 @@ export default function GatewayInfoPanel() {
                 >
                   <ExternalLink className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Full Documentation</h5>
+                    <div className="font-medium text-foreground mb-1">Full Documentation</div>
                     <p className="text-xs text-foreground/80">Complete ar.io developer documentation</p>
                   </div>
                 </a>

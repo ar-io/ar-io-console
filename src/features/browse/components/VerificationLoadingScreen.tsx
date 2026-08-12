@@ -109,7 +109,7 @@ export function VerificationLoadingScreen({
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg text-foreground">
               {isSingleFile ? "Verifying Content" : "Verifying Application"}
             </h2>
             <p className="text-foreground/60 font-mono text-sm">{identifier}</p>
@@ -117,7 +117,7 @@ export function VerificationLoadingScreen({
         </div>
 
         {/* Phase Indicators */}
-        <div className="bg-card rounded-xl p-4 mb-4 border border-border/20">
+        <div className="bg-card rounded-2xl p-4 mb-4 border border-border/20">
           <PhaseRow
             status={getPhaseStatus("resolving")}
             label="Resolve identifier"
@@ -150,7 +150,7 @@ export function VerificationLoadingScreen({
 
         {/* Resource Log */}
         {!isSingleFile && recentResources.length > 0 && (
-          <div className="bg-card rounded-xl p-4 mb-4 border border-border/20">
+          <div className="bg-card rounded-2xl p-4 mb-4 border border-border/20">
             <div className="text-xs text-foreground/60 mb-2 uppercase tracking-wide">
               Recent Activity
             </div>

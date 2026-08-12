@@ -84,7 +84,7 @@ export default function InfoPanel() {
 
       {/* Resources */}
       <div className="mt-8 pt-8 border-t border-border/20">
-        <h3 className="font-semibold mb-4">Resources</h3>
+        <h3 className="mb-4">Resources</h3>
         <div className="space-y-2">
           <a
             href="https://docs.ardrive.io/docs/turbo/turbo-sdk/"
