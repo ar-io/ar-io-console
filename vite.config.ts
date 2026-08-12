@@ -11,7 +11,7 @@ const packageJson = JSON.parse(
 );
 
 export default defineConfig({
-  base: './', // Relative paths for Arweave subpath compatibility
+  base: '/', // Absolute paths — required so nested routes (/domains/:name) resolve assets correctly on direct navigation
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version),
     // Use date only (not full timestamp) to avoid cache-busting on every build

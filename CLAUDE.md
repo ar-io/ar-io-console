@@ -21,9 +21,9 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is intentionally narrow — pure logic only: `src/utils/topupDeepLink.test.ts` plus the Pages suites under `src/features/pages/` (`schema.test.ts`, `render/renderPageHtml.test.ts`, `publish/*.test.ts`, and `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts`, which auto-run over every template). Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. 37 suites in three clusters: `src/utils/` (7 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry), `src/features/pages/` (19 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/features/arns/` (11 — ANT roles, price tables, record fields, returned-name pricing, image compression, plus hook-level logic tests). Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
-- Vite `base: './'` — all asset paths are relative for Arweave subpath compatibility
+- Vite `base: '/'` — absolute asset paths, required so nested routes (`/domains/:name`) resolve assets on direct navigation. This trades away Arweave *subpath* compatibility (the old `'./'` value): the build assumes it is served from a domain root (`console.ar.io`, or an ArNS name root), not from `gateway/<txid>/`. Don't flip it back without re-checking nested-route deep links.
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
 - All route pages are lazy-loaded (`React.lazy`); Layout wraps `<Outlet>` in `<Suspense>` so the header/nav stay mounted while page chunks load
 - `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
@@ -172,6 +172,29 @@ Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit p
 
 **Adaptive editor controls:** `render/themeSupport.ts` empirically probes which theme axes a template honors (render seed vs. poisoned-axis, diff the island-stripped output) and whether it renders link emoji icons; `ThemeControls`/`BlocksControls` show only live controls, no dead sliders. Results cache per template id and auto-appear if a template later gains support for an axis.
 
+### ArNS Feature (`src/features/arns/`)
+
+The largest feature in the repo (~75 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
+
+**ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet. That's why the capability matrix says Solana-only for ArNS updates.
+
+**Custody models** (`services/custodyStrategy.ts`):
+- **Model B (user-owned)** — Solana identities. The *client* spawns the ANT with the user's Solana signer (`services/antSpawn.ts`), so the user self-owns it from the first block; the bundler only settles (debits credits, writes the record). **This is the only model wired.**
+- **Model A (custodial)** — Arweave/Ethereum identities; bundler spawns and custodies the ANT. Not implemented; the branch point is kept so it can slot in.
+- There is no hybrid: a transfer wipes controllers and a spawn can't seed owner+controllers together, so a name is either fully user-owned or fully custodial.
+
+**Linked Solana wallet** (`hooks/useLinkedSolanaWallet.ts`): Arweave/Ethereum users link a **secondary** Solana wallet for ArNS without changing their primary session identity. `linkedSolanaAddress` + `linkedSolanaWalletName` persist in the store, and `getArNSAddress()` returns the primary address for Solana sessions or the linked address otherwise. Read-only lookups work from the persisted address alone; **writes need a live signer**, so the hook auto-reconnects the named adapter on page load (the Solana `WalletProvider` runs `autoConnect=false`). `hooks/useArNSTurboSigner.ts` turns that into the two things writes need: a `walletAdapter` for `TurboFactory.authenticated` and a `@solana/kit` `SolanaSigner` for `ANT.spawn`.
+
+**Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): an ANT spawn costs real SOL (~0.02) and a submitted purchase has already debited credits. Both `processId` (spawned ANT) and `nonce` (server idempotency + status key) are persisted the instant they exist. On retry, **reuse the persisted `processId` instead of spawning again** — otherwise every failed attempt bleeds SOL and orphans an ANT. Resuming by `nonce` is a pure read (`GET /v1/arns/purchase/:nonce`), so it can never double-debit.
+
+**Owner vs. controller gating** (`antRole.ts`): `getArNSRecordsForAddress` returns `Owned ∪ Controlled`, so a name in "your names" may be one the wallet only *controls*. Controllers can edit records/metadata/undernames; **transfer, reassign, release, and controller changes are owner-only**. Use `deriveAntRole` (optimistic — `unknown` treated leniently) only on owned-name surfaces where every row is in the ACL; use `deriveAntRoleStrict` (`none` is a real answer) anywhere a name isn't guaranteed to be the wallet's, such as the public Name Detail page. `isOwnerOnlyAllowed` denies both `unknown` and `controller` so destructive actions never flash before ownership is confirmed.
+
+**ACL drift** (`services/aclDrift.ts`): the on-chain ANT ACL is an eventually-consistent index powering "your names". A **raw Metaplex Core transfer** (direct send or NFT-marketplace sale) moves the asset but does *not* update the ACL, so a newly-owned name goes missing until `syncAcl` is called. Drift is detected by scanning MPL Core assets by owner and diffing against the ACL owner set.
+
+**Service layer** (`services/TurboArNSClient.ts`): framework-agnostic (plain `fetch` + turbo-sdk), holds no React state, and takes **signers injected per call** rather than reading `window.solana`. Intents: `Buy-Name`, `Extend-Lease`, `Increase-Undername-Limit`, `Upgrade-Name`.
+
+`features/arns/index.ts` is the public surface — import from there, not via deep relative paths.
+
 ### Configuration System
 
 Three modes via `configMode` in store (`ConfigMode = 'production' | 'development' | 'custom'`):
@@ -179,7 +202,7 @@ Three modes via `configMode` in store (`ConfigMode = 'production' | 'development
 - **development**: Testnet/devnet endpoints, test Stripe key. Note: the store value is still `'development'`, but the UI labels it **"Testnet"** (Header shows `TESTNET MODE`, GatewayInfoPanel shows a testnet faucet link). Don't rename the enum expecting the label to follow.
 - **custom**: User-defined for testing
 
-Config includes: `paymentServiceUrl`, `uploadServiceUrl`, `captureServiceUrl`, `verifyApiUrl`, `arioGatewayUrl`, `stripeKey`, `processId`, `tokenMap`.
+Config includes: `paymentServiceUrl`, `uploadServiceUrl`, `captureServiceUrl`, `verifyApiUrl`, `arioGatewayUrl`, `stripeKey`, `processId`, `tokenMap`, plus the four **Solana program IDs** the ArNS feature reads: `coreProgramId`, `garProgramId`, `arnsProgramId`, `antProgramId` (mainnet constants in production, `DEVNET_PROGRAM_IDS` in development). `processId` is the legacy AO field — it is empty on devnet and unused by the Solana ArNS paths.
 
 Access via `useTurboConfig(tokenType)` hook or `getCurrentConfig()` from store.
 
@@ -341,6 +364,14 @@ in the bundle and, on Arweave, stays retrievable permanently.
 
 Service URLs managed by store's configuration system, overridable via Developer Resources panel.
 
+## CI & Deployment
+
+**`.github/workflows/ci.yml`** — runs on every PR and on pushes to `main`/`develop`: `npm ci --legacy-peer-deps` → `type-check` → `lint` → `test` → `build`. All four must pass, so run them locally before pushing.
+
+**`.github/workflows/deploy.yml`** — manual-only (`workflow_dispatch`) permaweb deploy: builds the production bundle, publishes it to Arweave via Turbo, then repoints the `console` ArNS name's ANT record at the new manifest. The `undername` input **defaults to `staging`** (→ `staging_console.ar.io`); `@` publishes live `console.ar.io`. A live `@` deploy hard-fails if `secrets.VITE_SOLANA_RPC` is empty, because the public mainnet-beta fallback fails *silently* at build time and would ship a broken console that looks fine in CI. One Solana wallet fills both roles (`DEPLOY_KEY` pays the upload, `ARNS_KEY` controls the name).
+
+**`.npmrc` sets `legacy-peer-deps=true`.** Its comment says it exists because `@ar.io/sdk` was pinned to a prerelease that `@ar.io/wayfinder-core`'s `peerOptional ">=4.0.0"` rejected. That is now **stale** — the repo is on `@ar.io/sdk` 4.1.1 stable, which satisfies the peer range, so the flag (and the matching CI comment) can likely be dropped. Verify with a clean `npm ci` before removing.
+
 ## ESLint Configuration
 
 Notable relaxed rules in `eslint.config.js`:
@@ -354,6 +385,8 @@ Notable relaxed rules in `eslint.config.js`:
 
 ## Styling
 
+Tracks the ar.io brand kit (`https://ar.io/brand-kit/agents.json`, version 2026-08-07). `docs/STYLE_GUIDE.md` is the long form; the rules below are the ones that get silently broken.
+
 ### ar.io Brand Colors (Light Mode)
 
 | Color | Hex | CSS Variable | Usage |
@@ -362,13 +395,35 @@ Notable relaxed rules in `eslint.config.js`:
 | Lavender | #DFD6F7 | `--color-lavender` | Gradients, backgrounds, footer |
 | Black | #23232D | `--color-foreground` | Primary text, dark elements |
 | White | #FFFFFF | `--color-background` | Page background |
-| Card Surface | #F0F0F0 | `--color-card` | Card backgrounds |
+| Card Surface | #F0F0F0 | `--color-card` | Cards only — **never** a full-page/section background |
+
+**Extended palette:** `deep-dark` (#0e0a1c), `accent-lavender` (#D4C6FF), `lavender-wash` (#f1ecff), `warm-neutral` (#F6F4EF), `subtle-border` (#E6E4EF). Deep Dark and Accent Lavender are a pair — Primary only reaches ~1.9:1 on the dark washes, so accents *and focus rings* on dark surfaces must use `#D4C6FF` (add the `on-dark` class). `subtle-border` is for dividers on white; on a #F0F0F0 card it's invisible, so those keep `border-border/20`.
+
+**Mute text with opacity, never another gray** (`/80` secondary, `/70` body, `/60` captions). `#4A4A58` "Body Gray" is retired.
 
 ### Typography
 
-- **Headings**: Besley (font-heading), weight 800 (extra bold)
+- **Headings**: Besley, weight **800** — applied globally to `h1`–`h6` in `globals.css`. Adding `font-bold` to a heading tag **downgrades it to 700**; that's the most common drift. Use `font-heading font-extrabold` only on non-heading elements.
 - **Body text**: Plus Jakarta Sans (font-body)
 - Both fonts loaded via `@fontsource-variable`
+
+### Modals
+
+All modal chrome lives in `components/modals/BaseModal.tsx` (~20 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
+
+- `showCloseButton` defaults to **true**. A dismiss affordance is opt-out, not opt-in.
+- Modals **nest** (`WalletSelectionModal` renders `BlockingMessageModal` inside its own `BaseModal`), so BaseModal keeps a module-level stack: only the topmost instance answers Escape and traps Tab, and the scroll lock lifts only when the last one closes. Preserve that if you touch it.
+- Pass `dismissible={false}` for a modal that must not be cancelled mid-operation (Escape *and* backdrop-click are disabled). `BlockingMessageModal` uses this.
+
+`FormEntry` has a matching contract: it renders `<label htmlFor={name}>`, so **the child control must set `id={name}`** or the association silently dangles.
+
+### Focus & motion (do not re-implement per component)
+
+`globals.css` supplies a global `:focus-visible` **outline** (2px solid primary, 2px offset — an outline, not a box-shadow, so it follows border-radius) and a global `prefers-reduced-motion` kill switch. In components: **don't** add `focus:outline-none` (it defeats the global rule) and **don't** add `focus:ring-*` (square-cornered, and now double-paints). The sole exception is Headless UI popup *containers* (`Listbox.Options`, `ComboboxOptions`, `MenuItems`, `PopoverPanel`), which keep `focus:outline-none`.
+
+### Radii & rail
+
+`rounded-2xl` is redefined to **20px** (brand cards are 20–24px), plus `rounded-3xl` (24px), `rounded-panel` (2rem), `rounded-hero` (2.5rem). Page containers use the `max-w-site` token (**1400px**) — not `max-w-7xl` (1280px) and not a hard-coded `max-w-[1400px]`.
 
 ### Key Files
 
@@ -439,6 +494,8 @@ if (privyWallet) {
 '/account', '/pages', '/balances', '/settings', '/try', '/browse', '/verify',
 // ArNS / domains — flat, one purpose per route (no tabs):
 '/domains',        // Browse & search all registered names (BrowseDomainsPanel)
+'/domains/:name',  // Deep-linkable public Name Detail page (NameDetailPage)
+'/my-domains',     // Names the connected wallet owns or controls (MyDomainsPage)
 '/arns',           // Register a name (ArNSBuyPanel; accepts ?q=)
 '/returned-names', // Auctions (ReturnedNamesPanel)
 '/pricing'         // Unified pricing: Storage + Domain Names (?type=domains seeds the tab)
@@ -452,7 +509,7 @@ Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unk
 
 **Stripe is NOT provided app-wide.** `<Elements>` lives in `StripeElementsProvider`, mounted only around payment surfaces (`TopUpPage`, `BuyCreditsModal`, `GiftPage`) so Stripe.js stays off the homepage/critical path. `getStripePromise()` is lazy+cached — never re-add an eager `STRIPE_PROMISE` at the app root, and any new component calling `useStripe`/`useElements` must render under `StripeElementsProvider`.
 
-**Deprecated/disabled routes:** `/gift` and `/redeem` are commented out in `App.tsx` (gifting was deprecated in favor of manual TX recovery on the top-up page). `GiftPage.tsx`/`RedeemPage.tsx` still exist but are not routed — don't wire them back up without checking why they were removed.
+**Deprecated/removed routes:** `/gift` and `/redeem` are gone (gifting was deprecated in favor of manual TX recovery on the top-up page). As of 4.1.0 the whole tree was **deleted** — `GiftPage`, `RedeemPage`, `GiftPanel`, `RedeemPanel`, the three `GiftPayment*Panel` components, and `getGiftPaymentIntent` in `paymentService.ts`. It had been unrouted and unreachable for some time, so it survived greps and audits while rendering nowhere. Recover from git history if it's ever needed.
 
 URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx), `?tx=<txId>` (deep link for Verify page)
 

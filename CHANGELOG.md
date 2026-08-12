@@ -2,6 +2,74 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.1.0] - 2026-08-12
+
+**On brand, and keyboard-complete.** The console now tracks the ar.io brand kit
+(2026-08-07) rather than an older snapshot of it: real Besley 800 headings, the
+extended surface palette, and a homepage that alternates full-width section bands
+instead of floating everything on a page-wide gradient. Alongside that, every
+modal in the app gained the keyboard behaviour it was missing.
+
+### Added
+- **Extended brand palette** — Deep Dark (`#0e0a1c`), Dark Accent Lavender
+  (`#D4C6FF`), Lavender Wash (`#f1ecff`), Warm Neutral (`#F6F4EF`) and Subtle
+  Border (`#E6E4EF`) are now tokens, alongside a `max-w-site` (1400px) rail and
+  the brand radii scale (`rounded-panel`, `rounded-hero`).
+- **Global focus indicator** — a `:focus-visible` outline (2px primary, 2px
+  offset) applied once in `globals.css`. It's an outline rather than a
+  box-shadow, so it follows border-radius. On dark surfaces the `on-dark` class
+  switches it to accent lavender, which primary can't match for contrast there.
+- **Escape closes any modal**, plus a Tab focus trap, `role="dialog"`,
+  `aria-modal`, body scroll lock and focus restore — all added once in
+  `BaseModal` and inherited by ~20 modals. Nested modals are handled via a modal
+  stack, so one Escape closes only the topmost.
+- **`dismissible` prop on `BaseModal`** for modals that must not be cancelled
+  mid-operation, such as the wallet-connection spinner.
+- **Full-bleed section bands** on the homepage: the ArNS spotlight, pricing,
+  Builder's Journey and the AI-agents section are now section backgrounds rather
+  than cards, alternating so no two adjacent bands share a colour.
+- **A closing call to action** anchoring the homepage.
+
+### Changed
+- **Headings render at Besley 800**, applied globally to `h1`–`h6`. Previously a
+  `font-bold` utility was silently downgrading them to 700 in 143 places.
+- **Homepage hero** is the brand's framed dark treatment, with the clouds
+  composited into it rather than replaced.
+- **Page background is white.** The viewport-fixed white→lavender gradient is
+  gone; colour now comes from section bands. Because the old gradient was
+  anchored to the viewport rather than the document, every card and band had a
+  backdrop that shifted while scrolling — which is also why the footer had no
+  visible edge against it.
+- **Pricing reads as rules, not boxes** — border-divided rows instead of a
+  three-card grid. The figures are unchanged and still live-bound.
+- **Card radius is 20px** (was 16px), matching the kit's 20–24px range.
+- **Every animation respects `prefers-reduced-motion`** via a global guard.
+- **Status colours documented as tokens.** `docs/STYLE_GUIDE.md` previously
+  instructed developers to write `text-green-600` and friends, which bypassed the
+  `--color-success`/`error`/`warning`/`info` tokens entirely.
+
+### Fixed
+- **Five modals had no visible close button** — including the Upload, Deploy and
+  Capture confirmations — because `showCloseButton` defaulted to `false`. It now
+  defaults to `true`.
+- **Modal content taller than 90vh was clipped and unreachable**; the panel now
+  scrolls.
+- **Labels in the card-checkout form pointed at nothing.** `FormEntry` renders
+  `htmlFor={name}` but its inputs never set a matching `id`, so the association
+  dangled on every field. Same fix applied across the gateway settings panel.
+- **Close buttons announced as just "button"** — five icon-only buttons had no
+  accessible name.
+- **Three Discord icons were fetched from `ar.io/icons` at runtime.** On a
+  permanent deploy that's a live dependency that can break long after publish;
+  all are now inlined. Brand assets also now resolve through `BASE_URL`.
+- **Code blocks in gateway settings** used `bg-black` and a hardcoded gray
+  instead of the existing `--color-code-surface` token.
+
+### Removed
+- **The gift/redeem feature tree** — 7 unreachable components plus
+  `getGiftPaymentIntent`. Both routes had been commented out since gifting was
+  deprecated, leaving ~1,300 lines that rendered nowhere.
+
 ## [4.0.0] - 2026-08-06
 
 **ArNS goes native.** The whole domain lifecycle — search, register, manage,
