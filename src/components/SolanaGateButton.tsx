@@ -23,6 +23,19 @@ interface SolanaGateButtonProps {
   className?: string;
   /** Short verb phrase for the gate copy, e.g. "buy this name", "manage this name". */
   actionVerb?: string;
+  /**
+   * `block` (default) — a full-width primary CTA with a hint line beneath. The
+   * gate state deliberately drops `className` so a destructive action's red
+   * styling never bleeds into the "link wallet" step.
+   *
+   * `inline` — for a control that lives inside a row (a small icon button in a
+   * list). Here the caller's `className` IS preserved in both states, because
+   * the point is that the row looks unchanged; only the click target differs.
+   * No hint line — there is nowhere to put one in a row.
+   */
+  variant?: 'block' | 'inline';
+  /** Accessible name, needed when `children` is icon-only (inline variant). */
+  ariaLabel?: string;
 }
 
 const PRIMARY_BTN =
@@ -47,6 +60,8 @@ export default function SolanaGateButton({
   busyLabel,
   className,
   actionVerb = 'continue',
+  variant = 'block',
+  ariaLabel,
 }: SolanaGateButtonProps) {
   const address = useStore((s) => s.address);
   const signer = useArNSTurboSigner();
@@ -60,6 +75,7 @@ export default function SolanaGateButton({
       <button
         onClick={onAction}
         disabled={disabled || busy}
+        aria-label={ariaLabel}
         className={className ?? PRIMARY_BTN}
       >
         {busy ? (
@@ -107,10 +123,26 @@ export default function SolanaGateButton({
 
   return (
     <>
-      <button onClick={open} className={PRIMARY_BTN}>
-        <Icon className="h-4 w-4" /> {label}
-      </button>
-      <p className="mt-2 text-center text-xs text-foreground/60">{hint}</p>
+      {variant === 'inline' ? (
+        // Same look, same slot in the row — only the action changes. `disabled`
+        // is still honoured so an in-flight row can't be re-triggered.
+        <button
+          onClick={open}
+          disabled={disabled || busy}
+          aria-label={ariaLabel ? `${ariaLabel} (connect wallet first)` : label}
+          title={hint}
+          className={className}
+        >
+          {children}
+        </button>
+      ) : (
+        <>
+          <button onClick={open} className={PRIMARY_BTN}>
+            <Icon className="h-4 w-4" /> {label}
+          </button>
+          <p className="mt-2 text-center text-xs text-foreground/60">{hint}</p>
+        </>
+      )}
 
       {showWalletModal && (
         <WalletSelectionModal onClose={() => setShowWalletModal(false)} />
