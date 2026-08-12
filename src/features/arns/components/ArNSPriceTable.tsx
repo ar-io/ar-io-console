@@ -59,7 +59,7 @@ export default function ArNSPriceTable() {
               onChange={(e) => setNameQuery(e.target.value)}
               placeholder="Enter a name to see its price"
               aria-label="Enter a name to see its price"
-              className="w-full rounded-full border border-border/20 bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-foreground/40 outline-none focus:border-primary"
+              className="w-full rounded-full border border-border/20 bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary"
             />
           </div>
           {validQuery && highlightIndex >= 0 && (

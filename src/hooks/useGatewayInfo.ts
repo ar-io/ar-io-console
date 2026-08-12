@@ -267,7 +267,7 @@ export function useGatewayInfo() {
             });
             setArIOGatewayInfo(arIOData);
           } catch (err) {
-            console.warn('Gateway not found in AR.IO network or lookup failed:', err);
+            console.warn('Gateway not found in ar.io network or lookup failed:', err);
             // This is expected for some gateways - they might not be registered in AR.IO
           }
         }
@@ -422,7 +422,7 @@ export function useGatewayInfo() {
           });
           setArIOGatewayInfo(arIOData);
         } catch (err) {
-          console.warn('Gateway not found in AR.IO network or lookup failed:', err);
+          console.warn('Gateway not found in ar.io network or lookup failed:', err);
           // This is expected for some gateways - they might not be registered in AR.IO
         }
       }

@@ -514,8 +514,9 @@ export const useStore = create<StoreState>()(
           creditBalance: 0,
           arnsNamesCache: {},
           ownedArnsCache: {},
-          linkedSolanaAddress: null,
-          linkedSolanaWalletName: null,
+          // linkedSolanaAddress and linkedSolanaWalletName are intentionally
+          // preserved so users don't have to re-link every session. Use
+          // clearLinkedSolanaWallet() to explicitly unlink.
         }),
       setLinkedSolanaWallet: (address, walletName) =>
         set({ linkedSolanaAddress: address, linkedSolanaWalletName: walletName }),

@@ -83,7 +83,7 @@ export const tokenLabels: Record<SupportedTokenType, string> = {
 // Detailed network labels for UI contexts
 export const tokenNetworkLabels: Record<SupportedTokenType, string> = {
   arweave: 'Arweave Network',
-  ario: 'AR.IO Network',
+  ario: 'ar.io Network',
   'base-ario': 'the Base Network',
   ethereum: 'Ethereum Mainnet',
   'base-eth': 'the Base Network',

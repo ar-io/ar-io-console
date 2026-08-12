@@ -5,7 +5,7 @@
 export default function ArioLogo() {
   return (
     <img
-      src="/brand/ario-full-black.svg"
+      src={`${import.meta.env.BASE_URL}brand/ario-full-black.svg`}
       alt="ar.io"
       className="h-8"
     />

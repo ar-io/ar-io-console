@@ -130,7 +130,11 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         fontSize: '16px',
         fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
         '::placeholder': {
-          color: '#6C6C87', // text-foreground/80
+          // Stripe's iframe can't read our CSS vars, so this is the literal
+          // composite of foreground (#23232D) at 70% over white — the brand's
+          // "body" text level. Brand kit retires standalone grays, so never
+          // reach for an unrelated gray here.
+          color: '#65656C',
         },
       },
     },
@@ -203,7 +207,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <CreditCard className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Payment Details</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Payment Details</h3>
           <p className="text-sm text-foreground/80">We do not save credit card information. See our T&C for more info.</p>
         </div>
       </div>
@@ -277,8 +281,9 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         <div className="space-y-6">
           <FormEntry name="name" label="Name on Card *" errorText={nameError}>
             <input
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
               type="text"
+              id="name"
               name="name"
               value={name}
               onChange={(e) => {
@@ -304,7 +309,8 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
 
           <FormEntry name="country" label="Country *" errorText={countryError}>
             <select
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+              id="country"
+              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
               value={country}
               onChange={(e) => {
                 setCountry(e.target.value);
@@ -365,8 +371,9 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
             <FormEntry name="promoCode" label="Promo Code" errorText={promoCodeError}>
               <div className="relative">
                 <input
-                  className="peer w-full bg-card border border-border/20 px-4 py-3 pr-16 text-foreground rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="peer w-full bg-card border border-border/20 px-4 py-3 pr-16 text-foreground rounded-2xl"
                   type="text"
+                  id="promoCode"
                   name="promoCode"
                   value={localPromoCode}
                   onChange={(e) => {
@@ -414,7 +421,8 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="email" label="Email (optional - for receipt)" errorText={emailError}>
             <input
               type="email"
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              id="email"
               name="email"
               value={email}
               onChange={(e) => {
@@ -434,7 +442,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
               <input
                 disabled={!email}
                 type="checkbox"
-                className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors mr-2"
+                className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white transition-colors mr-2"
                 id="keepMeUpdatedCheckbox"
                 checked={keepMeUpdated}
                 onChange={(e) => setKeepMeUpdated(e.target.checked)}

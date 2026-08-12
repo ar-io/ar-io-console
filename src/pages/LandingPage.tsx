@@ -20,6 +20,7 @@ import {
   ChevronLeft, ChevronRight, RotateCw
 } from 'lucide-react';
 import { HeroBackground } from '../components/HeroBackground';
+import { DiscordIcon } from '../components/DiscordIcon';
 import useDebounce from '../hooks/useDebounce';
 import { useArNSAvailability } from '../features/arns/hooks/useArNSAvailability';
 import { isValidArNSName, lowerCaseDomain } from '../features/arns/utils';
@@ -241,47 +242,57 @@ const LandingPage = () => {
   return (
     <div className="space-y-12 px-4 sm:px-0">
       {/* Hero Section */}
-      <div className="relative flex w-full flex-col items-center rounded-2xl border border-border/20 bg-card px-8 sm:px-12 py-10 overflow-hidden">
+      {/*
+        Brand kit `framed-dark-hero`: deep-dark frame at 2.5rem radius, white
+        copy, lavender emphasis, media, pill CTAs. `on-dark` switches the global
+        focus outline to accent lavender — primary only reaches ~1.9:1 here.
+      */}
+      {/* rounded-panel on mobile: a 2.5rem radius on a ~340px-wide frame eats
+          the corners and crowds the headline. Full 2.5rem from sm up. */}
+      <div className="on-dark relative flex w-full flex-col items-center rounded-panel sm:rounded-hero bg-deep-dark px-6 sm:px-12 py-14 sm:py-20 overflow-hidden">
         {/* Memoized background to prevent flickering from parent re-renders */}
         <HeroBackground />
-        {/* Main headline with gradient */}
-        <h1 className="relative z-10 font-heading font-bold text-3xl sm:text-4xl lg:text-5xl text-center max-w-5xl leading-tight">
-          <span className="text-foreground">Scale on a </span>
-          <span className="text-primary">permanent</span>
-          <span className="text-foreground"> cloud</span>
+        {/* Main headline */}
+        <h1 className="relative z-10 font-heading font-extrabold text-3xl sm:text-4xl lg:text-5xl text-center max-w-5xl leading-tight text-white">
+          Scale on a <span className="italic text-accent-lavender">permanent</span> cloud
         </h1>
 
         {/* Subheadline */}
-        <p className="relative z-10 mt-5 text-base sm:text-lg text-center max-w-3xl text-foreground/80 leading-relaxed">
+        <p className="relative z-10 mt-5 text-base sm:text-lg text-center max-w-3xl text-white/75 leading-relaxed">
           Enterprise-grade storage, deployments, and domains for devs and teams.
         </p>
 
         {/* CTA Section */}
         <div className="relative z-10 mt-7 flex flex-col sm:flex-row items-center gap-4">
+          {/* Pill CTAs, brand kit `primary_dark` / `secondary_dark`. Copy uses
+              the kit's approved labels — "Read the documentation" is on its
+              do-not-use list. */}
           <button
             onClick={() => navigate('/try')}
-            className="group relative rounded-full bg-primary px-8 py-4 font-bold text-white hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2 text-lg cursor-pointer"
+            className="group relative rounded-full bg-white px-8 py-4 font-bold text-foreground hover:opacity-90 transition-opacity shadow-lg flex items-center gap-2 text-lg cursor-pointer"
           >
             <Upload className="w-5 h-5" />
-            <span>Try it Out</span>
+            <span>Try the app</span>
           </button>
 
           <a
-            href="https://docs.ar.io/build/upload/bundling-services"
+            href="https://docs.ar.io/build/"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-border/20 px-8 py-4 font-medium flex items-center gap-2 hover:bg-card hover:border-foreground transition-all group"
+            className="rounded-full border border-white/25 bg-white/10 px-8 py-4 font-medium text-white flex items-center gap-2 hover:bg-white/20 transition-colors group"
           >
             <BookOpen className="w-5 h-5" />
-            <span>Read the Docs</span>
+            <span>Read docs</span>
           </a>
         </div>
 
-        {/* Terminal snippet - more integrated */}
+        {/* Terminal snippet - more integrated. On the deep-dark hero, bg-code-surface
+            (#23232D) sits too close to the ground, so the panel is a tinted black
+            with a white hairline instead. */}
         <div className="relative z-10 mt-8 w-full max-w-2xl">
-          <div className="text-xs text-foreground/80 uppercase tracking-wider mb-2 text-center">Quick Start</div>
-          <div className="bg-code-surface border border-border/20 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between bg-code-surface px-3 py-2 border-b border-border/20">
+          <div className="text-xs text-white/60 uppercase tracking-wider mb-2 text-center">Quick Start</div>
+          <div className="bg-black/40 border border-white/15 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-error/80"></div>
                 <div className="w-3 h-3 rounded-full bg-warning/80"></div>
@@ -332,9 +343,9 @@ const LandingPage = () => {
       {/* How it Works */}
       <div className="mb-12">
         <div className="text-center mb-12">
-          <h2 className="font-heading font-bold text-2xl mb-2 text-foreground">How does it work?</h2>
+          <h2 className="font-heading font-extrabold text-2xl mb-2 text-foreground">How does it work?</h2>
           <p className="text-lg text-foreground/80 max-w-3xl mx-auto">
-            Ar.io handles the complexity so you don't have to. Fund instantly, upload seamlessly, and access your permanent data through a decentralized CDN.
+            Ar.io handles the complexity so you don't have to. Fund instantly, upload in one step, and access your permanent data through a decentralized CDN.
           </p>
         </div>
 
@@ -343,7 +354,7 @@ const LandingPage = () => {
           <div className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-foreground">1.</div>
-              <h3 className="font-heading font-bold text-xl text-foreground">Fund</h3>
+              <h3 className="font-heading font-extrabold text-xl text-foreground">Fund</h3>
             </div>
             <p className="text-sm text-foreground/80">
               Buy Credits instantly with a card or crypto like ETH, SOL, ARIO, Stablecoins (via x402), and more — ready to upload in seconds.
@@ -354,7 +365,7 @@ const LandingPage = () => {
           <div className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-foreground">2.</div>
-              <h3 className="font-heading font-bold text-xl text-foreground">Upload</h3>
+              <h3 className="font-heading font-extrabold text-xl text-foreground">Upload</h3>
             </div>
             <p className="text-sm text-foreground/80">
               Use your favorite Arweave, Ethereum, or Solana wallet to cryptographically sign and upload data.
@@ -365,7 +376,7 @@ const LandingPage = () => {
           <div className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-foreground">3.</div>
-              <h3 className="font-heading font-bold text-xl text-foreground">Settle</h3>
+              <h3 className="font-heading font-extrabold text-xl text-foreground">Settle</h3>
             </div>
             <p className="text-sm text-foreground/80">
               Your files are bundled and permanently stored on Arweave — timestamped, tamper-proof, and verifiable forever.
@@ -376,7 +387,7 @@ const LandingPage = () => {
           <div className="bg-card border border-border/20 rounded-2xl p-6 hover:border-primary/50 transition-colors group">
             <div className="flex items-center gap-3 mb-3">
               <div className="text-2xl font-bold text-foreground">4.</div>
-              <h3 className="font-heading font-bold text-xl text-foreground">Access</h3>
+              <h3 className="font-heading font-extrabold text-xl text-foreground">Access</h3>
             </div>
             <p className="text-sm text-foreground/80">
               Access your data instantly with CDN-level performance via the ar.io network.
@@ -406,9 +417,23 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* ArNS spotlight — dedicated, conversion-focused domain section */}
-      <div className="mb-12">
-        <div className="rounded-3xl bg-lavender p-6 sm:p-10 md:p-12">
+      {/*
+        Consecutive bands are wrapped as ONE child of the page root so they abut.
+        The root uses `space-y-12`, which puts margin-top on every sibling after
+        the first — between two full-bleed bands that renders as a white stripe
+        cutting across them. Grouping them means space-y sees a single child and
+        the lavender and warm-neutral bands meet edge to edge, which is the point
+        of the kit's section rhythm. Note a plain `-mt-12` would NOT fix this:
+        space-y's `.space-y-12 > :not([hidden]) ~ :not([hidden])` selector
+        outranks a single utility class.
+      */}
+      <div>
+      {/* ArNS spotlight — dedicated, conversion-focused domain section.
+          Brand kit `lavender-wash-section`: a SECTION BACKGROUND, so it runs
+          edge to edge rather than floating as a rounded card. (The hero is the
+          opposite case — `framed-dark-hero` is deliberately inset at 2.5rem.) */}
+      <div className="full-bleed bg-lavender-wash py-14 sm:py-20">
+        <div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8">
           {/* SPLIT: copy + live search on the left, resolved-page mockup on the right */}
           <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
             {/* LEFT — headline, subhead, live availability search */}
@@ -416,7 +441,7 @@ const LandingPage = () => {
               <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                 ArNS · Domains
               </div>
-              <h2 className="mb-3 font-heading text-3xl font-bold text-foreground sm:text-4xl">
+              <h2 className="mb-3 font-heading text-3xl font-extrabold text-foreground sm:text-4xl">
                 One name. Every gateway.
               </h2>
               <p className="text-base leading-relaxed text-foreground/80 sm:text-lg">
@@ -433,7 +458,7 @@ const LandingPage = () => {
                     value={arnsQuery}
                     onChange={(e) => setArnsQuery(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                     placeholder="yourname"
-                    className="min-w-0 flex-1 bg-transparent py-3 text-foreground outline-none placeholder:text-foreground/40"
+                    className="min-w-0 flex-1 bg-transparent py-3 text-foreground placeholder:text-foreground/40"
                   />
                   <span className="select-none pl-1 font-medium text-foreground/60">.ar.io</span>
                 </div>
@@ -499,9 +524,9 @@ const LandingPage = () => {
               {/* Title bar: traffic lights + nav buttons + live address bar */}
               <div className="flex items-center gap-2 border-b border-border/10 bg-card px-4 py-2.5">
                 <div className="flex flex-shrink-0 items-center gap-1.5">
-                  <span className="h-3 w-3 rounded-full bg-red-400" />
-                  <span className="h-3 w-3 rounded-full bg-amber-400" />
-                  <span className="h-3 w-3 rounded-full bg-green-400" />
+                  <span className="h-3 w-3 rounded-full bg-error" />
+                  <span className="h-3 w-3 rounded-full bg-warning" />
+                  <span className="h-3 w-3 rounded-full bg-success" />
                 </div>
                 <div className="hidden flex-shrink-0 items-center gap-1 text-foreground/30 sm:flex">
                   <ChevronLeft className="h-4 w-4" />
@@ -540,11 +565,10 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Value props — 2-col grid on sm+ */}
+          {/* Value props — 3 compact cards + a "host anything" card */}
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
             {[
               { icon: Tag, label: 'Human-readable', copy: 'a name, not a 43-character TX ID or CID.' },
-              { icon: Layers, label: 'Arweave (IPFS soon)', copy: 'point it at your deployed app, your Pages site, or any file — IPFS support is on the way.' },
               { icon: Globe2, label: 'Resolves everywhere', copy: 'served by every ar.io gateway, with cryptographic verification.' },
               { icon: KeyRound, label: 'Own or lease', copy: 'you hold the ANT (an NFT you control); buy it outright or lease by the year.' },
             ].map(({ icon: Icon, label, copy }) => (
@@ -558,15 +582,30 @@ const LandingPage = () => {
                 </div>
               </div>
             ))}
-          </div>
 
-          {/* Use-case chips */}
-          <div className="mt-6 flex flex-wrap gap-2">
-            {['A Pages site → yourname.ar.io', 'A deployed app → app.yourname.ar.io', "Your agent's dataset → agent.yourname.ar.io", 'One name across every ar.io app'].map((chip) => (
-              <span key={chip} className="inline-flex items-center rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80">
-                {chip}
-              </span>
-            ))}
+            {/* What you can host — replaces the old use-case pills */}
+            <div className="rounded-2xl border border-primary/10 bg-background/60 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Layers className="h-5 w-5 text-primary" />
+                </div>
+                <div className="font-semibold text-foreground">Point it at anything</div>
+              </div>
+              <ul className="space-y-2 text-sm leading-snug text-foreground/70">
+                <li className="flex items-baseline gap-2">
+                  <span className="font-mono text-xs text-primary/80">yourname.ar.io</span>
+                  <span className="text-foreground/40">—</span> a Pages site
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="font-mono text-xs text-primary/80">app.yourname.ar.io</span>
+                  <span className="text-foreground/40">—</span> a deployed app
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="font-mono text-xs text-primary/80">agent.yourname.ar.io</span>
+                  <span className="text-foreground/40">—</span> your agent&rsquo;s dataset
+                </li>
+              </ul>
+            </div>
           </div>
 
           {/* Secondary links */}
@@ -589,71 +628,91 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Pricing Section */}
-      <div className="mb-12">
+      {/* Pricing Section — Warm Neutral band (#F6F4EF). The kit files this
+          surface under "softer explanatory sections and transitions between
+          high-contrast bands", which is exactly this slot: it sits between the
+          lavender-wash ArNS band and the white feature explorer. Content is
+          unchanged; only the band around it is new. */}
+      <div className="full-bleed bg-warm-neutral py-14 sm:py-20">
+        <div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Transparent Pricing</h2>
+          <h2 className="font-heading font-extrabold text-2xl text-foreground mb-2">Transparent Pricing</h2>
           <p className="text-foreground/80">Pay-as-you-go storage with no subscriptions, now with x402</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6 max-w-4xl mx-auto">
-          {/* Free Tier */}
-          <div className="bg-card rounded-2xl border border-success/30 p-4 md:p-8 text-center">
-            <div className="text-4xl font-heading font-bold text-success mb-2">FREE</div>
-            <div className="text-lg text-foreground font-medium mb-1">
-              {freeUploadLimitBytes > 0 ? `Up to ${formatFreeLimit(freeUploadLimitBytes)} per file` : 'Small files'}
-            </div>
-            <div className="text-sm text-foreground/80 mb-4">
-              {freeTier.lifetimeBytes > 0
-                ? `${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit`
-                : 'No wallet or credits required'}
+        {/*
+          Border-divided rows rather than a 3-card grid. Brand kit: "Prefer rules
+          and dividers over cards. Border-divided rows read as editorial; boxes
+          in a grid read as generated." Rows sit on the warm-neutral band, a
+          light surface, so the divider is the brand's Subtle Border rather than
+          border-border/20.
+        */}
+        <div className="mx-auto max-w-4xl border-t border-subtle-border">
+          {/* Free tier */}
+          <div className="grid grid-cols-1 items-baseline gap-x-6 gap-y-1 border-b border-subtle-border py-6 sm:grid-cols-[minmax(9rem,11rem)_1fr_auto]">
+            <div className="font-heading text-4xl font-extrabold leading-none text-success">FREE</div>
+            <div>
+              <div className="font-semibold text-foreground">
+                {freeUploadLimitBytes > 0 ? `Up to ${formatFreeLimit(freeUploadLimitBytes)} per file` : 'Small files'}
+              </div>
+              <div className="text-sm text-foreground/70">
+                {freeTier.lifetimeBytes > 0
+                  ? `${formatFreeLimit(freeTier.lifetimeBytes)} lifetime limit`
+                  : 'No wallet or credits required'}
+              </div>
             </div>
             <button
               onClick={() => navigate('/try')}
-              className="inline-flex items-center gap-1 text-sm text-success hover:text-success/80 font-medium group"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-success transition-opacity hover:opacity-80 justify-self-start sm:justify-self-end"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="h-3.5 w-3.5" />
               <span>Try it now</span>
             </button>
           </div>
 
-          {/* Per GiB Pricing */}
-          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-8 text-center">
-            <div className="text-4xl font-heading font-bold text-primary mb-2">${pricePerGiB}</div>
-            <div className="text-lg text-foreground font-medium mb-1">Per GiB</div>
-            <div className="text-sm text-foreground/80 mb-4">Larger files & bulk storage</div>
+          {/* Per GiB */}
+          <div className="grid grid-cols-1 items-baseline gap-x-6 gap-y-1 border-b border-subtle-border py-6 sm:grid-cols-[minmax(9rem,11rem)_1fr_auto]">
+            <div className="font-heading text-4xl font-extrabold leading-none tabular-nums text-primary">${pricePerGiB}</div>
+            <div>
+              <div className="font-semibold text-foreground">Per GiB</div>
+              <div className="text-sm text-foreground/70">Larger files &amp; bulk storage</div>
+            </div>
             <button
               onClick={() => navigate('/pricing')}
-              className="inline-flex items-center gap-1 text-sm text-foreground/80 hover:text-foreground font-medium group"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-foreground/80 transition-colors hover:text-foreground justify-self-start sm:justify-self-end"
             >
-              <Calculator className="w-3.5 h-3.5" />
+              <Calculator className="h-3.5 w-3.5" />
               <span>Calculate your costs</span>
             </button>
           </div>
 
-          {/* Domain name example — an 8-char permabuy (own it forever) */}
-          <div className="bg-card rounded-2xl border border-border/20 p-4 md:p-8 text-center">
-            <div className="text-4xl font-heading font-bold text-primary mb-2">
+          {/* Domain name — an 8-char permabuy (own it forever) */}
+          <div className="grid grid-cols-1 items-baseline gap-x-6 gap-y-1 border-b border-subtle-border py-6 sm:grid-cols-[minmax(9rem,11rem)_1fr_auto]">
+            <div className="font-heading text-4xl font-extrabold leading-none tabular-nums text-primary">
               {domainPermabuyUSD !== undefined ? formatUsd(domainPermabuyUSD) : '—'}
             </div>
-            <div className="text-lg text-foreground font-medium mb-1">Domain name</div>
-            <div className="text-sm text-foreground/80 mb-4">8-character name, no renewals</div>
+            <div>
+              <div className="font-semibold text-foreground">Domain name</div>
+              <div className="text-sm text-foreground/70">8-character name, no renewals</div>
+            </div>
             <button
               onClick={() => navigate('/pricing?type=domains')}
-              className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium group"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-primary transition-opacity hover:opacity-80 justify-self-start sm:justify-self-end"
             >
-              <Tag className="w-3.5 h-3.5" />
+              <Tag className="h-3.5 w-3.5" />
               <span>See name prices</span>
             </button>
           </div>
         </div>
+        </div>
       </div>
+      </div>{/* end grouped ArNS + Pricing bands */}
 
       {/* Interactive Feature Explorer */}
       <div className="mb-12">
         {/* Section Header */}
         <div className="text-center mb-6">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">What's in the Console</h2>
+          <h2 className="font-heading font-extrabold text-2xl text-foreground mb-2">What's in the Console</h2>
           <p className="text-foreground/80">Explore what you can do within the ar.io console</p>
         </div>
 
@@ -689,7 +748,7 @@ const LandingPage = () => {
                   const Icon = features[selectedFeatureIndex].icon;
                   return <Icon className={`w-16 h-16 ${getFeatureColor().text} mx-auto mb-4`} />;
                 })()}
-                <h3 className="font-heading font-bold text-xl text-foreground mb-2">{features[selectedFeatureIndex].title}</h3>
+                <h3 className="font-heading font-extrabold text-xl text-foreground mb-2">{features[selectedFeatureIndex].title}</h3>
                 <p className="text-foreground/80 mb-6 max-w-md mx-auto">
                   {features[selectedFeatureIndex].description}
                 </p>
@@ -778,7 +837,7 @@ const LandingPage = () => {
                   const Icon = features[selectedFeatureIndex].icon;
                   return <Icon className={`w-16 h-16 ${getFeatureColor().text} mx-auto mb-4`} />;
                 })()}
-                <h3 className="font-heading font-bold text-xl text-foreground mb-2">{features[selectedFeatureIndex].title}</h3>
+                <h3 className="font-heading font-extrabold text-xl text-foreground mb-2">{features[selectedFeatureIndex].title}</h3>
                 <p className="text-foreground/80 mb-6">
                   {features[selectedFeatureIndex].description}
                 </p>
@@ -817,10 +876,20 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Builder's Journey Section */}
-      <section className="mb-12">
+      {/* Builder's Journey Section — Lavender Wash band (#f1ecff), the kit's
+          surface for "system diagrams" and how-it-works content, which is
+          exactly what the snake-line grid is. The diagram, its cells, the SVG
+          path and every interaction are untouched; the cells are already
+          bg-white, so they read as the kit's "white cards on lavender wash"
+          without any change. This band also breaks up what would otherwise be
+          three consecutive white sections (pricing → explorer → journey). */}
+      {/* Grouped with the charcoal agents band below so the two abut — see the
+          note on the ArNS + Pricing group for why space-y-12 forces this. */}
+      <div>
+      <section className="full-bleed bg-lavender-wash py-14 sm:py-20">
+        <div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
-          <h2 className="font-heading font-bold text-2xl text-foreground mb-2">Builder's Journey</h2>
+          <h2 className="font-heading font-extrabold text-2xl text-foreground mb-2">Builder's Journey</h2>
           <p className="text-foreground/80">Follow the path from first upload to running your own infrastructure. Click any step to explore.</p>
         </div>
 
@@ -864,7 +933,7 @@ const LandingPage = () => {
             <div className="grid grid-cols-3 gap-x-12 gap-y-8 relative" style={{ zIndex: 2 }}>
               {/* Cell 1: Learn - special start box (larger) */}
               <div className="h-36 bg-white border-2 border-primary/30 rounded-xl p-4 relative flex flex-col items-center justify-center shadow-md">
-                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-sm shadow-md">
+                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-heading font-extrabold text-sm shadow-md">
                   1
                 </div>
                 <p className="text-xs text-foreground/80 text-center mb-3 leading-snug">Learn the fundamentals of ar.io</p>
@@ -896,8 +965,8 @@ const LandingPage = () => {
                   className="group justify-self-center"
                   style={{ transform: `translate(${step.xOffset}px, ${step.yOffset}px)` }}
                 >
-                  <div className="w-24 h-24 bg-card border-2 border-primary/20 rounded-xl p-3 transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary group-hover:shadow-lg relative flex items-center justify-center">
-                    <div className="absolute -top-2.5 -left-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-xs shadow-md">
+                  <div className="w-24 h-24 bg-card border-2 border-primary/20 rounded-2xl p-3 transition-all duration-200 group-hover:-translate-y-1 group-hover:border-primary group-hover:shadow-lg relative flex items-center justify-center">
+                    <div className="absolute -top-2.5 -left-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-extrabold text-xs shadow-md">
                       {step.num}
                     </div>
                     <p className="text-[11px] text-foreground/70 leading-snug text-center">{step.desc}</p>
@@ -907,14 +976,14 @@ const LandingPage = () => {
 
               {/* Cell 9: Join Community - solid purple background (larger) */}
               <div className="h-36 bg-primary rounded-xl p-4 relative flex flex-col items-center justify-center shadow-lg">
-                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center font-heading font-bold text-sm shadow-md">
+                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center font-heading font-extrabold text-sm shadow-md">
                   9
                 </div>
                 <p className="text-xs text-white/90 text-center mb-3 leading-snug">Join the ar.io open source community</p>
                 <div className="flex flex-col gap-2 w-full">
                   <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
                      className="flex items-center justify-center gap-1.5 bg-white text-primary rounded-lg px-3 py-2 hover:bg-white/90 transition-all text-xs font-medium">
-                    <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" loading="lazy" decoding="async" className="w-4 h-4" />
+                    <DiscordIcon className="w-4 h-4" />
                     Discord
                   </a>
                   <a href="https://github.com/ar-io" target="_blank" rel="noopener noreferrer"
@@ -938,7 +1007,7 @@ const LandingPage = () => {
               {/* Mobile: Step 1 - Learn (special start box like desktop) */}
               <a href="https://docs.ar.io/learn/what-is-ario/" target="_blank" rel="noopener noreferrer" className="block group">
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-xs shadow-md shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-extrabold text-xs shadow-md shrink-0">
                     1
                   </div>
                   <div className="flex-1 bg-white border-2 border-primary/30 rounded-lg px-3 py-3 group-hover:border-primary/50 transition-colors">
@@ -962,7 +1031,7 @@ const LandingPage = () => {
               ].map((step) => (
                 <a key={step.num} href={step.href} target="_blank" rel="noopener noreferrer" className="block group">
                   <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-bold text-xs shadow-md shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-heading font-extrabold text-xs shadow-md shrink-0">
                       {step.num}
                     </div>
                     <div className="flex-1 bg-card border border-primary/20 rounded-lg px-3 py-2 group-hover:border-primary/50 transition-colors">
@@ -974,7 +1043,7 @@ const LandingPage = () => {
 
               {/* Mobile: Join Community - solid purple like desktop */}
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-full bg-white text-primary flex items-center justify-center font-heading font-bold text-xs shadow-md shrink-0">
+                <div className="w-7 h-7 rounded-full bg-white text-primary flex items-center justify-center font-heading font-extrabold text-xs shadow-md shrink-0">
                   9
                 </div>
                 <div className="flex-1 bg-primary rounded-lg px-3 py-3">
@@ -982,7 +1051,7 @@ const LandingPage = () => {
                   <div className="flex gap-2">
                     <a href="https://discord.com/invite/HGG52EtTc2" target="_blank" rel="noopener noreferrer"
                        className="flex items-center gap-1.5 bg-white text-primary rounded-lg px-3 py-1.5 hover:bg-white/90 transition-all text-xs font-medium">
-                      <img src="https://ar.io/icons/discord-icon.svg" alt="Discord" loading="lazy" decoding="async" className="w-3.5 h-3.5" />
+                      <DiscordIcon className="w-3.5 h-3.5" />
                       Discord
                     </a>
                     <a href="https://github.com/ar-io" target="_blank" rel="noopener noreferrer"
@@ -996,10 +1065,12 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
+        </div>
       </section>
 
-      {/* For AI agents & LLMs */}
+      {/* For AI agents & LLMs — full-bleed charcoal band */}
       <AgentDocsSection />
+      </div>{/* end grouped Journey + agents bands */}
 
       {/* ArDrive — sibling consumer app for permanent file storage. A compact
           horizontal strip so it reads as a footer cross-link, not a second
@@ -1007,7 +1078,7 @@ const LandingPage = () => {
       <section className="flex flex-col gap-4 rounded-2xl border border-border/20 bg-gradient-to-r from-primary/[0.06] to-card p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
         <img src={`${import.meta.env.BASE_URL}ardrive-logo.png`} alt="ArDrive" loading="lazy" decoding="async" className="h-14 w-14 flex-shrink-0" />
         <div className="flex-1 text-center sm:text-left">
-          <h3 className="font-heading text-lg font-bold text-foreground">Just want to store files?</h3>
+          <h3 className="font-heading text-lg font-extrabold text-foreground">Just want to store files?</h3>
           <p className="mt-1 text-sm leading-relaxed text-foreground/70">
             ArDrive is a permanent file drive — drag, drop, organize, and share files and
             folders that last forever. All the permanence of the permaweb, in a friendly app
@@ -1023,6 +1094,49 @@ const LandingPage = () => {
           Try ArDrive
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </a>
+      </section>
+
+      {/*
+        Final CTA — brand kit `dark-radial-section`: deep dark ground, white
+        copy, lavender accents, radial purple glow, pill CTAs, and extra vertical
+        breathing room. Anchors the page so it doesn't trail off on the ArDrive
+        cross-link.
+      */}
+      <section className="on-dark relative overflow-hidden rounded-panel sm:rounded-hero bg-deep-dark px-5 py-16 text-center sm:px-10 sm:py-24">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(55% 60% at 50% 0%, rgb(84 39 200 / 0.5), transparent 70%)',
+          }}
+        />
+        <div className="relative z-10">
+          <h2 className="mx-auto max-w-[18ch] font-heading text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl">
+            Put something permanent on the network
+          </h2>
+          <p className="mx-auto mt-5 max-w-xl text-base text-white/75 sm:text-lg">
+            Your first upload is free. No wallet required.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <button
+              onClick={() => navigate('/try')}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-lg font-bold text-foreground transition-opacity hover:opacity-90"
+            >
+              <Upload className="h-5 w-5" />
+              <span>Try the app</span>
+            </button>
+            <a
+              href="https://docs.ar.io/build/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-8 py-4 font-medium text-white transition-colors hover:bg-white/20"
+            >
+              <Terminal className="h-5 w-5" />
+              <span>Start building</span>
+            </a>
+          </div>
+        </div>
       </section>
 
     </div>
@@ -1048,8 +1162,15 @@ function AgentDocsSection() {
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-foreground/20 bg-foreground text-white shadow-lg">
-      <div className="grid items-center gap-8 p-6 sm:p-10 lg:grid-cols-2">
+    /*
+     * Charcoal (#23232D) is one of the kit's `section_backgrounds` — "trust,
+     * proof, and high-emphasis sections" — so this is a full-bleed BAND, not a
+     * dark card floating on white. Same reasoning as the ArNS lavender band.
+     * `on-dark` switches the global focus outline to accent lavender, since
+     * primary doesn't clear contrast on this ground.
+     */
+    <section className="full-bleed on-dark bg-foreground text-white">
+      <div className="mx-auto grid w-full max-w-site items-center gap-8 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2 lg:px-8">
         {/* Pitch */}
         <div>
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1">
@@ -1058,7 +1179,7 @@ function AgentDocsSection() {
               For AI agents &amp; LLMs
             </span>
           </div>
-          <h2 className="mb-3 font-heading text-2xl font-bold sm:text-3xl">Point your agent at ar.io</h2>
+          <h2 className="mb-3 font-heading text-2xl font-extrabold sm:text-3xl">Point your agent at ar.io</h2>
           <p className="mb-5 max-w-md text-sm leading-relaxed text-white/70 sm:text-base">
             The entire ar.io documentation as one plain-text file — sized for LLM context
             windows and autonomous agents. Then give your agent a permanent home it owns:

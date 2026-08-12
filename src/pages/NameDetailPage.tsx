@@ -184,7 +184,7 @@ function RecordsSection({
               setPage(0);
             }}
             placeholder="Search records"
-            className="w-full rounded-full border border-border/20 bg-background py-1.5 pl-8 pr-3 text-sm focus:border-primary focus:outline-none sm:w-56"
+            className="w-full rounded-full border border-border/20 bg-background py-1.5 pl-8 pr-3 text-sm focus:border-primary sm:w-56"
           />
         </div>
       </div>
@@ -290,7 +290,10 @@ export default function NameDetailPage() {
       type: record.type,
       endTimestamp: record.endTimestamp,
     };
-  }, [record]);
+    // displayName is derived from `name` (a plain string), so including it just
+    // recomputes when the route's name changes — without it the memo could pair
+    // a new record with the previous name's unicode rendering.
+  }, [record, displayName]);
 
   const target = ant?.target;
   const logoTxId = ant?.logo && isArweaveTxId(ant.logo) ? ant.logo : undefined;

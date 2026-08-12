@@ -294,7 +294,7 @@ export default function PricingCalculatorPanel() {
             <div>
               {inputType === 'storage' ? (
                 <div className="flex flex-col h-full">
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Storage Amount</h4>
+                  <h4 className="text-lg font-extrabold font-heading text-foreground mb-4">Enter Storage Amount</h4>
                   <div className="bg-card rounded-2xl p-6 flex-1 flex flex-col">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much data do you need to store?
@@ -330,7 +330,7 @@ export default function PricingCalculatorPanel() {
                             setStorageAmount(numValue);
                           }
                         }}
-                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none"
+                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary"
                         placeholder="Enter amount"
                       />
                       <Listbox
@@ -338,7 +338,7 @@ export default function PricingCalculatorPanel() {
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
-                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary cursor-pointer text-left">
                             <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
@@ -411,7 +411,7 @@ export default function PricingCalculatorPanel() {
                 </div>
               ) : (
                 <div className="flex flex-col h-full">
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Your Budget</h4>
+                  <h4 className="text-lg font-extrabold font-heading text-foreground mb-4">Enter Your Budget</h4>
                   <div className="bg-card rounded-2xl p-6 flex-1 flex flex-col">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much do you want to spend?
@@ -449,7 +449,7 @@ export default function PricingCalculatorPanel() {
                             setDollarAmount(numValue);
                           }
                         }}
-                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none"
+                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary"
                         placeholder="Enter amount"
                       />
                       <Listbox
@@ -457,7 +457,7 @@ export default function PricingCalculatorPanel() {
                         onChange={(currency) => setSelectedCurrency(currency.value)}
                       >
                         <div className="relative w-full sm:w-48">
-                          <Listbox.Button className="relative w-full rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary cursor-pointer text-left">
                             <span className="block truncate">{selectedCurrencyInfo.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
@@ -566,7 +566,7 @@ export default function PricingCalculatorPanel() {
 
             {/* Results Side */}
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-bold font-heading text-foreground mb-4">
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-4">
                 {inputType === 'storage' ? 'Cost Breakdown' : 'Storage Breakdown'}
               </h4>
 
@@ -581,7 +581,7 @@ export default function PricingCalculatorPanel() {
                         onChange={(currency) => setSelectedCurrency(currency.value)}
                       >
                         <div className="relative">
-                          <Listbox.Button className="relative rounded-2xl border border-border/20 bg-card pl-3 pr-10 py-1 text-sm font-medium text-foreground hover:bg-card focus:border-primary focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative rounded-2xl border border-border/20 bg-card pl-3 pr-10 py-1 text-sm font-medium text-foreground hover:bg-card focus:border-primary cursor-pointer text-left">
                             <span className="block truncate">{selectedCurrencyInfo.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                               <ChevronDown className="h-4 w-4 text-foreground/80" aria-hidden="true" />
@@ -711,7 +711,7 @@ export default function PricingCalculatorPanel() {
           {!address ? (
             // Not logged in - show connect wallet CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">Ready to store your data permanently?</h4>
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-3">Ready to store your data permanently?</h4>
               <p className="text-foreground/80 mb-4">Sign in to top up credits and start uploading.</p>
               <button
                 onClick={promptSignIn}
@@ -723,7 +723,7 @@ export default function PricingCalculatorPanel() {
           ) : creditBalance > 0 ? (
             // Logged in with credits - show upload/ArNS CTAs
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You have {creditBalance.toFixed(2)} credits ready to use!</h4>
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-3">You have {creditBalance.toFixed(2)} credits ready to use!</h4>
               <p className="text-foreground/80 mb-4">Start uploading files or register an ArNS domain name to use your credits.</p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
@@ -745,7 +745,7 @@ export default function PricingCalculatorPanel() {
           ) : (
             // Logged in but no credits - show top up CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You need credits to store data permanently</h4>
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-3">You need credits to store data permanently</h4>
               <p className="text-foreground/80 mb-4">Top up your account with credits to start uploading files or registering ArNS names.</p>
               <Link
                 to="/topup"

@@ -41,7 +41,7 @@ export default function ImportPageModal({ ctx, onClose, onImported }: ImportPage
             <DownloadCloud className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-heading text-lg font-bold text-foreground">Edit an existing page</h3>
+            <h3 className="font-heading text-lg font-extrabold text-foreground">Edit an existing page</h3>
             <p className="text-xs text-foreground/70">
               Load a page you already published — even on a new device.
             </p>
@@ -65,7 +65,7 @@ export default function ImportPageModal({ ctx, onClose, onImported }: ImportPage
           }}
           placeholder="myname.ar.io  ·  or a 43-character transaction id"
           disabled={loading}
-          className="w-full rounded-xl border border-border/20 bg-card px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary/50 disabled:opacity-60"
+          className="w-full rounded-xl border border-border/20 bg-card px-3 py-2.5 text-sm text-foreground transition-colors focus:border-primary/50 disabled:opacity-60"
         />
 
         <p className="mt-2 flex items-start gap-1.5 text-xs text-foreground/60">

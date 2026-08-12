@@ -50,7 +50,7 @@ export default function Faq() {
 
   return (
     <div className="mt-8">
-      <h3 className="text-xl font-bold mb-6">Frequently Asked Questions</h3>
+      <h3 className="text-xl font-extrabold mb-6">Frequently Asked Questions</h3>
       <div className="space-y-3">
         {faqData.map((item, index) => (
           <div 

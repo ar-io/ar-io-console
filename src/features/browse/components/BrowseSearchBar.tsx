@@ -100,8 +100,8 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
                   setError("");
                 }}
                 placeholder="name or tx ID..."
-                className={`w-full pl-12 pr-7 py-1.5 bg-background border text-foreground placeholder:text-foreground/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm ${
-                  error ? "border-red-500" : "border-border/20"
+                className={`w-full pl-12 pr-7 py-1.5 bg-background border text-foreground placeholder:text-foreground/30 rounded-lg font-mono text-sm ${
+                  error ? "border-error" : "border-border/20"
                 }`}
               />
               {input && (
@@ -144,7 +144,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
             </button>
           </div>
 
-          {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+          {error && <p className="text-error text-sm mt-1">{error}</p>}
         </form>
       </div>
     );
@@ -159,7 +159,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
           <Compass className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-xl font-heading font-bold text-foreground">
+          <h3 className="text-xl font-heading font-extrabold text-foreground">
             Browse Data
           </h3>
           <p className="text-sm text-foreground/60">
@@ -186,8 +186,8 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
                     setError("");
                   }}
                   placeholder="Enter name or transaction ID..."
-                  className={`w-full pl-[4.5rem] pr-4 py-3 bg-background border text-foreground placeholder:text-foreground/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-base ${
-                    error ? "border-red-500" : "border-border/20"
+                  className={`w-full pl-[4.5rem] pr-4 py-3 bg-background border text-foreground placeholder:text-foreground/40 rounded-xl font-mono text-base ${
+                    error ? "border-error" : "border-border/20"
                   }`}
                 />
               </div>
@@ -208,7 +208,7 @@ export const BrowseSearchBar = memo(function BrowseSearchBar({
                 <Settings className="w-5 h-5" />
               </button>
             </div>
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-error text-sm">{error}</p>}
           </div>
 
           <div className="mt-4 pt-3 border-t border-border/20">

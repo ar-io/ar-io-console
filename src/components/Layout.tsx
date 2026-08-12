@@ -48,29 +48,42 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
 export function Layout() {
   const { pathname } = useLocation();
   return (
-    <div
-      className="min-h-screen text-foreground flex flex-col"
-      style={{
-        // Page background: white fading to lavender (matches ar.io public site).
-        // Anchored to the viewport (fixed) so growing/expanding content doesn't
-        // restretch the gradient — the white band and lavender stay put.
-        background: 'linear-gradient(to bottom, rgb(255 255 255) 0%, rgb(255 255 255) 33%, rgb(223 214 247) 66%, rgb(223 214 247) 100%)',
-        backgroundAttachment: 'fixed',
-      }}
-    >
+    /*
+     * Page ground is plain white — deliberately, not by omission.
+     *
+     * The brand kit has no full-page gradient. Its model is a white ground with
+     * colour carried by SECTION BANDS (`section_backgrounds` + `section_rhythm`:
+     * deep dark, charcoal, white, lavender wash, warm neutral, alternating and
+     * never repeating adjacently). The old white→lavender viewport-fixed fade
+     * predates that and actively fought it: because it was anchored to the
+     * viewport rather than the document, every band and card had a backdrop that
+     * changed as you scrolled, so nothing could hold a stable edge — the ArNS
+     * band needed a border to survive it, and the lavender footer had no visible
+     * boundary at all.
+     *
+     * If a page wants colour, give it a `.full-bleed` band, not a page tint.
+     *
+     * overflow-x-clip absorbs the scrollbar-width overhang from `.full-bleed`
+     * bands. `clip` NOT `hidden`: hidden would turn this into a scroll container
+     * and break the sticky header below.
+     */
+    <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-clip">
       {/* Announcement Banner */}
       <Banner />
 
       {/* Fixed Header */}
-      <div className="sticky top-0 z-50 bg-background border-b border-border/20">
-        <div className="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8 w-full">
+      {/* Header sits on white, so the brand's Subtle Border (#E6E4EF) is the
+          correct divider here. Inside #F0F0F0 cards it would be near-invisible —
+          those keep border-border/20. */}
+      <div className="sticky top-0 z-50 bg-background border-b border-subtle-border">
+        <div className="max-w-site mx-auto px-1 sm:px-6 lg:px-8 w-full">
           <Header />
         </div>
       </div>
 
       {/* Main Content with proper spacing */}
       <div className="flex-1">
-        <div className="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8 w-full">
+        <div className="max-w-site mx-auto px-1 sm:px-6 lg:px-8 w-full">
           <div className="pt-6 sm:pt-8 pb-3 sm:pb-4 mb-6 sm:mb-8">
             <RouteErrorBoundary key={pathname}>
               <Suspense fallback={<PageFallback />}>

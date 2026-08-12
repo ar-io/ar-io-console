@@ -65,7 +65,7 @@ export default function MyAccountPage() {
         )}
 
         <div>
-          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-foreground mb-1 break-words">
+          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-foreground mb-1 break-words">
             {arnsName ? `${makePossessive(arnsName)} Account` : 'My Account'}
           </h1>
           <p className="text-sm text-foreground/80">

@@ -81,7 +81,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-success" />
           </div>
-          <h4 className="text-2xl font-heading font-bold text-success mb-2">Payment Complete!</h4>
+          <h4 className="text-2xl font-heading font-extrabold text-success mb-2">Payment Complete!</h4>
           <p className="text-foreground/80">
             {isCryptoPayment && tokenType === 'arweave'
               ? 'Your account will be credited in 15-30 minutes.'
@@ -180,7 +180,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
 
         {/* Next Steps - Call to Actions */}
         <div className="bg-card rounded-2xl p-4 mb-6">
-          <h5 className="font-heading font-medium text-foreground mb-4">What's Next?</h5>
+          <h5 className="text-foreground mb-4">What's Next?</h5>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => {

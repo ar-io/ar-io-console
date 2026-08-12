@@ -35,7 +35,7 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-xl font-heading font-bold text-foreground">
+            <h3 className="text-xl font-heading font-extrabold text-foreground">
               {isReconnect ? 'Reconnect Solana Wallet' : 'Link Solana Wallet'}
             </h3>
             <p className="text-sm text-foreground/80 mt-1">
@@ -44,7 +44,7 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
                 : 'Connect a Solana wallet to manage your ArNS domains'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-card rounded-lg transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-2 hover:bg-card rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>

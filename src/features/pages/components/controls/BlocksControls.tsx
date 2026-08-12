@@ -163,7 +163,7 @@ function SocialBlockFields({
             type="button"
             onClick={() => removeItem(i)}
             aria-label={`Remove ${item.platform || 'social'} link`}
-            className="mb-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-border/20 text-foreground/60 transition-colors hover:text-error focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="mb-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-border/20 text-foreground/60 transition-colors hover:text-error focus-visible:ring-2 focus-visible:ring-primary"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -320,7 +320,7 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : id)}
                   aria-expanded={expanded}
-                  className="min-w-0 flex-1 truncate text-left text-sm font-medium text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="min-w-0 flex-1 truncate text-left text-sm font-medium text-foreground focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   {blockTitle(block)}
                 </button>
@@ -331,7 +331,7 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
                     onClick={() => move(index, index - 1)}
                     disabled={index === 0}
                     aria-label={`Move ${meta.label} up`}
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <ChevronDown className="h-4 w-4 rotate-180" />
                   </button>
@@ -340,7 +340,7 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
                     onClick={() => move(index, index + 1)}
                     disabled={index === blocks.length - 1}
                     aria-label={`Move ${meta.label} down`}
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <ChevronDown className="h-4 w-4" />
                   </button>
@@ -348,7 +348,7 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
                     type="button"
                     onClick={() => remove(id)}
                     aria-label={`Delete ${meta.label}`}
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/50 transition-colors hover:bg-error/10 hover:text-error focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/50 transition-colors hover:bg-error/10 hover:text-error focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -367,12 +367,12 @@ export default function BlocksControls({ def, update, ctx }: ControlProps) {
 
       {/* Add-block menu */}
       <Menu as="div" className="relative">
-        <Menu.Button className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <Menu.Button className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary">
           <Plus className="h-4 w-4" /> Add block
         </Menu.Button>
         <Menu.Items
           anchor="bottom start"
-          className="z-30 max-h-72 w-[var(--button-width)] overflow-auto rounded-xl border border-border/20 bg-card p-1 shadow-lg focus:outline-none [--anchor-gap:6px]"
+          className="z-30 max-h-72 w-[var(--button-width)] overflow-auto rounded-xl border border-border/20 bg-card p-1 shadow-lg [--anchor-gap:6px]"
         >
           {BLOCK_MENU.map((m) => {
             const Icon = m.icon;

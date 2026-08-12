@@ -32,7 +32,7 @@ function OwnerRow({ owner }: { owner: VerificationResult['owner'] }) {
 export default function AuthenticitySection({ authenticity, owner }: Props) {
   return (
     <div className="flex flex-col rounded-2xl border border-border/20 bg-card p-5">
-      <h3 className="mb-3 text-sm font-medium text-foreground/50">Is this data authentic?</h3>
+      <div className="mb-3 text-sm font-medium text-foreground/50">Is this data authentic?</div>
 
       {authenticity.status === 'signature_verified' ? (
         <div className="space-y-3">

@@ -107,7 +107,7 @@ export default function BrowseDomainsPanel() {
           <Globe className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Browse Domains</h3>
+          <h3 className="text-2xl font-extrabold font-heading text-foreground mb-1">Browse Domains</h3>
           <p className="text-sm text-foreground/80">
             Explore every ArNS name registered on the ar.io network
             {totalItems > 0 && (
@@ -150,7 +150,7 @@ export default function BrowseDomainsPanel() {
               setSearchInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
               resetPage();
             }}
-            className="flex-1 p-2.5 bg-transparent text-foreground font-mono focus:outline-none min-w-0 text-sm"
+            className="flex-1 p-2.5 bg-transparent text-foreground font-mono min-w-0 text-sm"
             placeholder="Filter names…"
           />
           {searchInput && (
@@ -242,7 +242,7 @@ export default function BrowseDomainsPanel() {
                     className="group flex items-center gap-2 min-w-0 text-left"
                   >
                     <Globe className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="font-heading font-bold text-foreground truncate group-hover:text-primary group-hover:underline transition-colors">
+                    <span className="font-heading font-extrabold text-foreground truncate group-hover:text-primary group-hover:underline transition-colors">
                       {toUnicodeName(r.name)}
                     </span>
                     <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>

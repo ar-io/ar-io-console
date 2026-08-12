@@ -179,6 +179,7 @@ export default function PageEditor(props: PageEditorProps) {
 
           <Section icon={<Globe className="h-4 w-4" />} title="Domain (ArNS)" subtitle="Point a domain at your page">
             <DomainControls
+              suggestedName={def.title || def.profile?.displayName}
               enabled={props.arnsEnabled}
               onEnabledChange={props.onArnsEnabledChange}
               selectedName={props.arnsName}

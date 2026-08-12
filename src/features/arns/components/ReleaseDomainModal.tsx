@@ -11,6 +11,7 @@ import {
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import { lowerCaseDomain } from '../utils';
 import { useReleaseName } from '../hooks/useReleaseName';
 
@@ -61,7 +62,7 @@ export default function ReleaseDomainModal({
     <BaseModal onClose={onClose} showCloseButton>
       <div className="max-h-[88vh] w-[92vw] max-w-md overflow-y-auto p-6">
         <div className="mb-5">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-xl font-extrabold text-foreground">
             Release{' '}
             <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
@@ -142,7 +143,7 @@ export default function ReleaseDomainModal({
               spellCheck={false}
               autoComplete="off"
               disabled={isBusy}
-              className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
+              className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary disabled:opacity-50"
             />
             {confirmText.trim() && !nameMatches && (
               <p className="mb-2 text-xs text-error">
@@ -169,21 +170,20 @@ export default function ReleaseDomainModal({
               </div>
             )}
 
-            <button
-              onClick={handleRelease}
+            <SolanaGateButton
+              onAction={handleRelease}
               disabled={!canRelease}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-error px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
+              busy={isBusy}
+              busyLabel={
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Releasing…
                 </>
-              ) : (
-                <>
-                  <Flame className="h-4 w-4" /> Release name to auction
-                </>
-              )}
-            </button>
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-error px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="release this name"
+            >
+              <Flame className="h-4 w-4" /> Release name to auction
+            </SolanaGateButton>
           </>
         )}
       </div>

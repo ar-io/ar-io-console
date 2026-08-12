@@ -34,6 +34,30 @@ The ar.io brand uses a refined, minimal color palette:
 | **White** | `#FFFFFF` | `--color-background` | Page background, light text on dark |
 | **Card Surface** | `#F0F0F0` | `--color-card` | Card backgrounds, elevated surfaces |
 
+**Rule:** `#F0F0F0` is a *card or contained surface* — never a full-page or
+full-section background.
+
+### Extended Palette (brand kit 2026-08-07)
+
+| Color | Hex | Tailwind | Usage |
+|-------|-----|----------|-------|
+| **Deep Dark** | `#0e0a1c` | `bg-deep-dark` | Heroes, final CTAs, dark radial sections |
+| **Dark Accent Lavender** | `#D4C6FF` | `text-accent-lavender` | Labels, icons, emphasis **on dark surfaces** |
+| **Lavender Wash** | `#f1ecff` | `bg-lavender-wash` | Product / how-it-works / proof sections |
+| **Warm Neutral** | `#F6F4EF` | `bg-warm-neutral` | Softer explanatory + transitional sections |
+| **Subtle Border** | `#E6E4EF` | `border-subtle-border` | Section dividers, list rows, quiet card borders |
+
+Deep Dark and Dark Accent Lavender are a **pair**: on `#0e0a1c`, Primary only
+reaches ~1.9:1, so accents and focus rings there must use `#D4C6FF`.
+
+`border-subtle-border` is for dividers on **light** (white / warm-neutral)
+surfaces. On a `#F0F0F0` card it is nearly invisible — those keep
+`border-border/20`.
+
+**Section rhythm:** alternate backgrounds deliberately; never place two sections
+with the same background next to each other, and vary section *shape*, not only
+colour.
+
 ### Semantic Color Tokens
 
 Define these in `globals.css` and reference in `tailwind.config.js`:
@@ -94,21 +118,32 @@ Use opacity modifiers to create visual hierarchy without introducing new colors:
 
 ### Status Colors
 
-For success, error, warning, and info states, use standard semantic colors:
+Use the **semantic tokens**, not raw Tailwind palette colors. The tokens are
+defined in `globals.css` (`--color-success` / `--color-error` /
+`--color-warning` / `--color-info`) and exposed through `tailwind.config.js`, so
+they support opacity modifiers like any other brand color:
 
 ```css
 /* Success */
-text-green-600, bg-green-500/10, border-green-500/20
+text-success, bg-success/10, border-success/20
 
 /* Error */
-text-red-600, bg-red-500/10, border-red-500/20
+text-error, bg-error/10, border-error/20
 
 /* Warning */
-text-amber-600, bg-amber-500/10, border-amber-500/20
+text-warning, bg-warning/10, border-warning/20
 
 /* Info */
-text-blue-600, bg-blue-500/10, border-blue-500/20
+text-info, bg-info/10, border-info/20
 ```
+
+> **This section previously told you to use `text-green-600`, `bg-red-500/10`
+> and friends.** That advice bypassed the token layer entirely and is why raw
+> palette colors are still scattered through the app: a status color can never
+> be retuned in one place while call sites hardcode `green-600`. Prefer the
+> tokens in all new code, and convert raw palette colors when you're already
+> editing a file. Semantic status color is deliberately separate from the brand
+> accent — it signals state, and does not count as an accent color.
 
 ### Color Usage Guidelines
 
@@ -227,14 +262,25 @@ Or download the variable font files:
 - **700 (Bold)**: Subheadings
 - **800 (Extra Bold)**: Headings (Besley only)
 
+> **Heading weight is global — don't restate it.** `globals.css` gives every
+> `h1`–`h6` Besley 800. Adding `font-bold` to a heading tag **downgrades it to
+> 700**, which is the single most common way this drifts. Use
+> `font-heading font-extrabold` only on non-heading elements that need the
+> display face.
+
 ---
 
 ## Spacing & Layout
 
 ### Container System
+
+The brand site rail is **1400px**, available as the `max-w-site` token. Use it
+for page-level containers — don't hard-code `max-w-[1400px]` or fall back to
+`max-w-7xl` (1280px), which silently narrows the rail.
+
 ```jsx
 {/* Page-level max-width container */}
-<div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+<div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8">
   {/* Content */}
 </div>
 
@@ -278,12 +324,17 @@ gap-12 (48px)  /* Page section dividers */
 
 ### Border Radius Standards
 
-ar.io uses generous, rounded corners:
+ar.io uses generous, rounded corners. The brand kit specifies cards at
+**20–24px**, large panels at **2rem**, framed heroes at **2.5rem**, pills at
+**9999px** — so `rounded-2xl` is redefined in `tailwind.config.js` from
+Tailwind's default 16px to **20px**:
 
 ```css
-rounded-full   /* Pills, buttons, badges, avatars */
-rounded-3xl    /* Large hero sections (1.5rem) */
-rounded-2xl    /* Cards, modals, dropdowns (1rem) */
+rounded-full   /* Pills, buttons, badges, avatars (9999px) */
+rounded-hero   /* Framed hero frames (2.5rem) */
+rounded-panel  /* Large panels (2rem) */
+rounded-3xl    /* Top of the brand card range (1.5rem / 24px) */
+rounded-2xl    /* Cards, modals, dropdowns (1.25rem / 20px) */
 rounded-xl     /* Smaller cards, inputs (0.75rem) */
 rounded-lg     /* Buttons, small elements (0.5rem) */
 ```
@@ -293,6 +344,41 @@ rounded-lg     /* Buttons, small elements (0.5rem) */
 - `rounded-2xl` - Cards, modal dialogs, dropdown menus
 - `rounded-xl` - Input fields, secondary buttons, nested cards
 - `rounded-lg` - Small interactive elements
+
+---
+
+### Focus States (accessibility — non-negotiable)
+
+Brand kit: *"Keyboard focus uses `:focus-visible` with an outline, not a
+box-shadow, so the ring follows border-radius"* and *"Never apply
+`focus:outline-none` without supplying a replacement indicator."*
+
+`globals.css` supplies this globally for links, buttons, inputs, selects,
+textareas, summary, and anything with a real `tabindex`:
+
+```css
+outline: 2px solid rgb(var(--color-primary));  /* #5427C8 */
+outline-offset: 2px;
+```
+
+**So in components: add nothing.** Specifically:
+- ❌ Don't add `focus:outline-none` — it defeats the global rule.
+- ❌ Don't add `focus:ring-*` — a box-shadow ring is square-cornered and now
+  double-paints on top of the outline.
+- ✅ On a deep-dark surface, add `on-dark` to switch the outline to
+  `#D4C6FF` — Primary only reaches ~1.9:1 against the dark washes.
+
+The one legitimate exception is a Headless UI popup **container**
+(`Listbox.Options`, `ComboboxOptions`, `MenuItems`, `PopoverPanel`), which takes
+programmatic focus and should not paint a ring around the popup itself. Those
+keep `focus:outline-none`.
+
+### Motion
+
+Brand duration scale — 150ms colour/opacity, 200ms transforms/shadows/reveals,
+300ms panels/modals. Every animated class must be disabled under
+`prefers-reduced-motion`; `globals.css` carries a global kill switch, so new
+components inherit compliance and can't regress it.
 
 ---
 

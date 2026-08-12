@@ -5,6 +5,7 @@ import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from './modals/LinkSolanaWalletModal';
 import { sanitizeUndername, hasInvalidCharacters } from '../utils/undernames';
+import ArNSGetNameLinks from './ArNSGetNameLinks';
 import { useStore } from '../store/useStore';
 import { promptSignIn } from '../utils';
 
@@ -22,6 +23,10 @@ interface ArNSAssociationPanelProps {
   /** Render without the gradient card wrapper + icon/subtitle — for hosts (e.g.
    *  the Pages editor) that already provide a section card + heading. */
   bare?: boolean;
+  /** What the user is already naming (site name, page title). Prefills the
+   *  register search via ?q= so "get a name" lands on a live availability check
+   *  rather than an empty box. */
+  suggestedName?: string;
 }
 
 export default function ArNSAssociationPanel({
@@ -36,6 +41,7 @@ export default function ArNSAssociationPanel({
   customTTL: _customTTL, // eslint-disable-line @typescript-eslint/no-unused-vars
   onCustomTTLChange,
   bare = false,
+  suggestedName,
 }: ArNSAssociationPanelProps) {
   const { names, loading, fetchError, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, promptReconnect, showLinkModal, setShowLinkModal } = useLinkedSolanaWallet();
@@ -158,7 +164,7 @@ export default function ArNSAssociationPanel({
             checked={enabled}
             onChange={(e) => onEnabledChange(e.target.checked)}
             disabled={!canUseArNS}
-            className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+            className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
           />
           <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
             Add a domain
@@ -177,7 +183,7 @@ export default function ArNSAssociationPanel({
                 checked={enabled}
                 onChange={(e) => onEnabledChange(e.target.checked)}
                 disabled={!canUseArNS}
-                className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+                className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
               />
               <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
                 Add a domain
@@ -281,19 +287,7 @@ export default function ArNSAssociationPanel({
                 </li>
               </ul>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <button
-                  onClick={() =>
-                    // Open the in-console register in a new tab so the caller's
-                    // deploy/capture/pages form state (files, URL, selections)
-                    // isn't lost to a route change. Register there, come back,
-                    // and the new name appears here after a refresh.
-                    window.open('/arns', '_blank', 'noopener,noreferrer')
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
-                >
-                  <Globe className="h-4 w-4" />
-                  Find a name
-                </button>
+                <ArNSGetNameLinks suggestedName={suggestedName} variant="empty" />
                 {/* Registered elsewhere and came back? Pull the fresh list. */}
                 <button
                   onClick={() => fetchOwnedNames(true)}
@@ -336,7 +330,7 @@ export default function ArNSAssociationPanel({
                   <div className="relative">
                     <div className="relative w-full">
                       <Combobox.Input
-                        className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 pr-10"
+                        className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary disabled:opacity-50 pr-10"
                         displayValue={(name: string) => {
                           if (!name) return '';
                           const found = names.find(n => n.name === name);
@@ -405,6 +399,11 @@ export default function ArNSAssociationPanel({
                     </Combobox.Options>
                   </div>
                 </Combobox>
+
+                {/* The case the empty state never covers: you already own names,
+                    but want a NEW one for this particular deploy/page. Quiet by
+                    design — it must not compete with the picker above. */}
+                <ArNSGetNameLinks suggestedName={suggestedName} variant="inline" />
               </div>
 
               {/* Undername Option */}
@@ -422,7 +421,7 @@ export default function ArNSAssociationPanel({
                         onUndernameChange('');
                       }
                     }}
-                    className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   />
                   <span className="text-sm text-foreground">Use undername (subdomain)</span>
                 </label>
@@ -485,10 +484,10 @@ export default function ArNSAssociationPanel({
                           }
                         }}
                         placeholder="my_blog, docs, app..."
-                        className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground focus:ring-2 text-sm transition-colors ${
+                        className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground text-sm transition-colors ${
                           selectedUndername && hasInvalidCharacters(selectedUndername)
-                            ? 'border-warning focus:ring-warning'
-                            : 'border-border/20 focus:ring-primary'
+                            ? 'border-warning'
+                            : 'border-border/20'
                         }`}
                       />
                       <p className="text-xs mt-1">
@@ -611,7 +610,7 @@ export default function ArNSAssociationPanel({
                                       max="86400"
                                       value={customTTLInput}
                                       onChange={(e) => setCustomTTLInput(e.target.value)}
-                                      className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                      className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary"
                                       placeholder="600"
                                     />
                                     <span className="px-3 py-2 bg-card/50 border border-border/20 rounded-2xl text-foreground/80 text-sm flex items-center">
@@ -659,7 +658,7 @@ export default function ArNSAssociationPanel({
                         {/* Help Text */}
                         <div className="mt-3 text-xs text-foreground/80 bg-primary/10 rounded p-3 border border-primary/30">
                           <div className="font-medium text-foreground mb-1">What is TTL?</div>
-                          TTL controls how long AR.IO gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
+                          TTL controls how long ar.io gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
                         </div>
                       </div>
                     </div>

@@ -109,7 +109,7 @@ export function VerificationLoadingScreen({
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg text-foreground">
               {isSingleFile ? "Verifying Content" : "Verifying Application"}
             </h2>
             <p className="text-foreground/60 font-mono text-sm">{identifier}</p>
@@ -117,7 +117,7 @@ export function VerificationLoadingScreen({
         </div>
 
         {/* Phase Indicators */}
-        <div className="bg-card rounded-xl p-4 mb-4 border border-border/20">
+        <div className="bg-card rounded-2xl p-4 mb-4 border border-border/20">
           <PhaseRow
             status={getPhaseStatus("resolving")}
             label="Resolve identifier"
@@ -150,7 +150,7 @@ export function VerificationLoadingScreen({
 
         {/* Resource Log */}
         {!isSingleFile && recentResources.length > 0 && (
-          <div className="bg-card rounded-xl p-4 mb-4 border border-border/20">
+          <div className="bg-card rounded-2xl p-4 mb-4 border border-border/20">
             <div className="text-xs text-foreground/60 mb-2 uppercase tracking-wide">
               Recent Activity
             </div>
@@ -294,7 +294,7 @@ function ResourceRow({ path, status }: ResourceRowProps) {
       )}
       {status === "failed" && (
         <svg
-          className="w-3.5 h-3.5 text-red-600 flex-shrink-0"
+          className="w-3.5 h-3.5 text-error flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -309,7 +309,7 @@ function ResourceRow({ path, status }: ResourceRowProps) {
       )}
       {status === "verifying" && <LoadingSpinner size="sm" />}
       <span
-        className={`font-mono truncate ${status === "failed" ? "text-red-600" : "text-foreground/60"}`}
+        className={`font-mono truncate ${status === "failed" ? "text-error" : "text-foreground/60"}`}
       >
         {path}
       </span>

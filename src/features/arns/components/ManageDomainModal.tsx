@@ -183,7 +183,7 @@ export default function ManageDomainModal({
       <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
         {/* Header */}
         <div className="mb-5">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-xl font-extrabold text-foreground">
             Manage{' '}
             <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io

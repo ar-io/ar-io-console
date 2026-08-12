@@ -119,34 +119,6 @@ export const submitCryptoTransaction = async (
   return res.json();
 };
 
-export const getGiftPaymentIntent = async ({
-  amount,
-  recipientEmail,
-  giftMessage,
-}: {
-  amount: number;
-  recipientEmail: string;
-  giftMessage?: string;
-}) => {
-  const config = getPaymentServiceConfig();
-  const url = `${config.paymentServiceUrl}/v1/top-up/payment-intent/${recipientEmail}/usd/${amount * 100}`;
-
-  const queryParams = new URLSearchParams({
-    destinationAddressType: 'email',
-    ...(giftMessage && { giftMessage }),
-  });
-
-  const res = await fetch(`${url}?${queryParams}`);
-
-  if (!res.ok) {
-    throw new Error('Failed to create gift payment intent');
-  }
-
-  return res.json() as Promise<{
-    topUpQuote: { quotedPaymentAmount: number };
-    paymentSession: PaymentIntent;
-  }>;
-};
 
 export const getCheckoutSessionUrl = async ({
   amount,

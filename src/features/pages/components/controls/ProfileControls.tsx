@@ -54,7 +54,7 @@ export default function ProfileControls({ def, update, ctx }: ControlProps) {
           {avatarSrc ? (
             <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
           ) : (
-            <span className="font-heading text-lg font-bold text-primary">
+            <span className="font-heading text-lg font-extrabold text-primary">
               {initialsOf(profile.displayName)}
             </span>
           )}

@@ -144,7 +144,7 @@ export default function CryptoManualPaymentPanel({
           <Copy className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Submit Transactions</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Submit Transactions</h3>
           <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to ar.io</p>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function CryptoManualPaymentPanel({
               {transferTransactionResult ? '✓' : '1'}
             </div>
             <div>
-              <h4 className="font-heading font-medium text-foreground">
+              <h4 className="text-foreground">
                 Send {tokenLabels[tokenType]} to ar.io
               </h4>
               <p className="text-sm text-foreground/80">
@@ -296,7 +296,7 @@ export default function CryptoManualPaymentPanel({
                 {transactionSubmitted ? '✓' : '2'}
               </div>
               <div>
-                <h4 className="font-heading font-medium text-foreground">Submit Transaction to ar.io</h4>
+                <h4 className="text-foreground">Submit Transaction to ar.io</h4>
                 <p className="text-sm text-foreground/80">
                   Confirm your transaction with ar.io's payment service
                 </p>

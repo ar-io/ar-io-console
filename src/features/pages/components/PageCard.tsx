@@ -203,7 +203,7 @@ export default function PageCard({
       <div className="flex flex-1 flex-col p-4">
         {/* Title + template + version */}
         <div className="mb-1 flex items-start justify-between gap-2">
-          <h4 className="min-w-0 flex-1 truncate font-heading text-base font-bold text-foreground" title={page.title}>
+          <h4 className="min-w-0 flex-1 truncate font-heading text-base font-extrabold text-foreground" title={page.title}>
             {page.title || 'Untitled Page'}
           </h4>
           <span className="flex-shrink-0 rounded-full bg-card px-2 py-0.5 text-[11px] font-medium text-foreground/70 ring-1 ring-border/20">
@@ -288,7 +288,7 @@ export default function PageCard({
 
           <div className="ml-auto">
             <Popover className="relative">
-              <PopoverButton className="p-1.5 text-foreground/70 transition-colors hover:text-foreground focus:outline-none">
+              <PopoverButton className="p-1.5 text-foreground/70 transition-colors hover:text-foreground">
                 <MoreVertical className="h-4 w-4" />
               </PopoverButton>
               <PopoverPanel

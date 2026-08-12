@@ -246,7 +246,7 @@ export function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:outline-none focus:border-foreground"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:border-foreground"
                   />
                   <span className="text-xs text-foreground/80">%</span>
                 </div>

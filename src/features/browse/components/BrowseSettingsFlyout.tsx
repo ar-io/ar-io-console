@@ -102,12 +102,13 @@ export function BrowseSettingsFlyout({
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
               <Compass className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg text-foreground">
               Browse Settings
             </h2>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-1.5 text-foreground/60 hover:text-foreground hover:bg-card rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
@@ -143,7 +144,7 @@ export function BrowseSettingsFlyout({
                     onChange={() =>
                       updateDraft({ routingStrategy: option.value })
                     }
-                    className="mt-1 text-primary focus:ring-primary"
+                    className="mt-1 text-primary"
                   />
                   <div>
                     <div className="font-medium text-foreground">
@@ -196,7 +197,7 @@ export function BrowseSettingsFlyout({
                 onChange={(e) =>
                   updateDraft({ verificationEnabled: e.target.checked })
                 }
-                className="w-5 h-5 text-primary rounded focus:ring-primary"
+                className="w-5 h-5 text-primary rounded"
               />
             </label>
 
@@ -218,7 +219,7 @@ export function BrowseSettingsFlyout({
                     onChange={(e) =>
                       updateDraft({ strictVerification: e.target.checked })
                     }
-                    className="w-5 h-5 text-primary rounded focus:ring-primary"
+                    className="w-5 h-5 text-primary rounded"
                   />
                 </label>
 
@@ -267,10 +268,11 @@ export function BrowseSettingsFlyout({
 
                 {/* Gateway Consensus Count */}
                 <div>
-                  <label className="block text-sm text-foreground/60 mb-2">
+                  <label htmlFor="browse-gateway-consensus" className="block text-sm text-foreground/60 mb-2">
                     Gateway Consensus: {draftConfig.trustedGatewayCount}
                   </label>
                   <input
+                    id="browse-gateway-consensus"
                     type="range"
                     min="2"
                     max="10"
@@ -293,11 +295,12 @@ export function BrowseSettingsFlyout({
 
                 {/* Concurrency */}
                 <div>
-                  <label className="block text-sm text-foreground/60 mb-2">
+                  <label htmlFor="browse-verification-concurrency" className="block text-sm text-foreground/60 mb-2">
                     Verification Concurrency:{" "}
                     {draftConfig.verificationConcurrency}
                   </label>
                   <input
+                    id="browse-verification-concurrency"
                     type="range"
                     min="1"
                     max="20"

@@ -88,12 +88,13 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
               <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-lg sm:text-xl font-bold">Upload Receipt</h3>
+              <h3 className="text-lg sm:text-xl font-extrabold">Upload Receipt</h3>
               <p className="text-xs sm:text-sm text-foreground/80">Transaction status and details</p>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 hover:bg-card rounded transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5" />
@@ -163,10 +164,10 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
 
               {/* File Information */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <div className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <FileText className="w-4 h-4 text-primary" />
                   File Information
-                </h4>
+                </div>
 
                 <div className="bg-card rounded-2xl p-4 space-y-3">
                   {/* File Size & Type */}
@@ -214,10 +215,10 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
 
               {/* Transaction IDs - Collapsible for cleaner look */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <div className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Archive className="w-4 h-4 text-primary" />
                   Transaction Details
-                </h4>
+                </div>
 
                 <div className="space-y-3">
                   {/* Data Item ID */}
@@ -274,7 +275,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
               {/* Receipt JSON */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-foreground">Upload Receipt</h4>
+                  <div className="text-sm font-semibold text-foreground">Upload Receipt</div>
                   <CopyButton textToCopy={JSON.stringify(receipt, null, 2)} />
                 </div>
                 <div className="bg-card rounded-2xl p-3 border border-border/20">
@@ -288,7 +289,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
               {currentStatus && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-foreground">Status Response</h4>
+                    <div className="text-sm font-semibold text-foreground">Status Response</div>
                     <CopyButton textToCopy={JSON.stringify(currentStatus, null, 2)} />
                   </div>
                   <div className="bg-card rounded-2xl p-3 border border-border/20">

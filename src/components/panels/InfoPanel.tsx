@@ -35,7 +35,7 @@ export default function InfoPanel() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-2">Your Account</h2>
+        <h2 className="text-2xl font-extrabold mb-2">Your Account</h2>
         <p className="text-foreground/80">Manage credits, upload files, and more</p>
       </div>
 
@@ -84,7 +84,7 @@ export default function InfoPanel() {
 
       {/* Resources */}
       <div className="mt-8 pt-8 border-t border-border/20">
-        <h3 className="font-semibold mb-4">Resources</h3>
+        <h3 className="mb-4">Resources</h3>
         <div className="space-y-2">
           <a
             href="https://docs.ardrive.io/docs/turbo/turbo-sdk/"

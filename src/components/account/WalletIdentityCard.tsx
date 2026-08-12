@@ -41,8 +41,8 @@ export default function WalletIdentityCard({
           <Wallet className="h-5 w-5 text-foreground" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-foreground">Wallet</h3>
-          <p className="text-sm text-foreground/80">The account you’re signed in as</p>
+          <h3 className="text-lg font-extrabold text-foreground">Primary Wallet</h3>
+          <p className="text-sm text-foreground/80">Used for credits, uploads, and billing</p>
         </div>
       </div>
 
@@ -80,10 +80,12 @@ export default function WalletIdentityCard({
       {/* Linked Solana wallet (for ArNS) — only when the primary isn't Solana */}
       {!isPrimarySolana && (
         <div className="border-t border-border/20 pt-3">
-          <div className="mb-2 text-xs text-foreground/60">Linked wallet</div>
+          <div className="mb-1 text-xs font-medium text-foreground/70">ArNS Wallet</div>
+          <div className="mb-2 text-xs text-foreground/50">
+            Signs domain transactions on Solana
+          </div>
           {linkedAddress ? (
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-              {/* Matches the header profile dropdown: name + address + copy + unlink */}
               <div className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-sm font-medium text-foreground">
                   {getWalletNetworkLabel('solana')}
@@ -95,9 +97,13 @@ export default function WalletIdentityCard({
               </div>
               <div className="flex flex-shrink-0 items-center gap-3 text-xs">
                 {isSolanaConnected ? (
-                  <span className="text-success">Connected</span>
+                  <span className="text-success" title="Ready to sign ArNS transactions">Connected</span>
                 ) : (
-                  <button onClick={onLink} className="text-primary hover:underline">
+                  <button
+                    onClick={onLink}
+                    className="text-primary hover:underline"
+                    title="Reconnect to sign ArNS transactions — viewing still works"
+                  >
                     Reconnect
                   </button>
                 )}
@@ -120,7 +126,7 @@ export default function WalletIdentityCard({
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-sm text-foreground/80">
-                Link a Solana wallet to manage ArNS domains
+                Link a Solana wallet to register and manage ArNS domains
               </span>
               <button
                 onClick={onLink}

@@ -317,7 +317,7 @@ export default function BalanceCheckerPanel() {
           <Search className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Check Balance</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Check Balance</h3>
           <p className="text-sm text-foreground/80">
             Check credit balance of any wallet address (Arweave, Ethereum, or Solana)
           </p>
@@ -339,7 +339,7 @@ export default function BalanceCheckerPanel() {
                 onChange={(e) => setWalletAddress(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Paste wallet address here..."
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-primary focus:outline-none transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-primary transition-colors"
                 disabled={loading}
               />
             </div>
@@ -425,7 +425,7 @@ export default function BalanceCheckerPanel() {
           {/* Address Info */}
           <div className="p-4 rounded-2xl bg-card border border-border/20">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-bold font-heading text-foreground flex items-center gap-2">
+              <h4 className="font-extrabold font-heading text-foreground flex items-center gap-2">
                 <Wallet className="w-5 h-5" />
                 Wallet Details
               </h4>
@@ -580,7 +580,7 @@ export default function BalanceCheckerPanel() {
               >
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-foreground/80" />
-                  <h4 className="font-bold font-heading text-foreground">Credit Sharing Details</h4>
+                  <h4 className="font-extrabold font-heading text-foreground">Credit Sharing Details</h4>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-foreground/80 transition-transform ${showSharingDetails ? 'rotate-180' : ''}`} />
               </button>

@@ -214,15 +214,15 @@ export function GatewayCombobox({
               }
             }}
             placeholder="https://my-gateway.example.com"
-            className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary ${
-              customUrlError ? "border-red-500" : "border-border/20"
+            className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground ${
+              customUrlError ? "border-error" : "border-border/20"
             }`}
             autoFocus
           />
         </div>
 
         {customUrlError && (
-          <div className="flex items-center gap-1.5 text-xs text-red-500">
+          <div className="flex items-center gap-1.5 text-xs text-error">
             <AlertCircle className="w-3.5 h-3.5" />
             {customUrlError}
           </div>
@@ -255,7 +255,7 @@ export function GatewayCombobox({
       <div className="relative">
         <div className="relative">
           <ComboboxInput
-            className="w-full px-3 py-2 pr-10 bg-card border border-border/20 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3 py-2 pr-10 bg-card border border-border/20 rounded-lg text-foreground"
             displayValue={() => displayValue}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={

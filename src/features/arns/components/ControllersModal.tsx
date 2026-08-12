@@ -21,7 +21,7 @@ interface ControllersModalProps {
 }
 
 const inputCls =
-  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
+  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
 /**
  * View, add, and remove ANT controllers for an owned name. Controllers can
@@ -83,7 +83,7 @@ export default function ControllersModal({
     <BaseModal onClose={onClose} showCloseButton>
       <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
         <div className="mb-4">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-xl font-extrabold text-foreground">
             Controllers for{' '}
             <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io

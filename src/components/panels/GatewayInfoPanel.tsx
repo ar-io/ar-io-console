@@ -79,7 +79,7 @@ export default function GatewayInfoPanel() {
           <Settings className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Settings</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Settings</h3>
           <p className="text-sm text-foreground/80">Configure endpoints and view live service status</p>
         </div>
         <button
@@ -117,7 +117,7 @@ export default function GatewayInfoPanel() {
           <div className="flex items-center gap-3">
             <Settings className="w-5 h-5 text-primary" />
             <div>
-              <h4 className="text-lg font-bold font-heading text-foreground">Endpoint Configuration</h4>
+              <h4 className="text-lg font-extrabold font-heading text-foreground">Endpoint Configuration</h4>
               <p className="text-sm text-foreground/80">
                 {configMode === 'production' ? 'Production' : configMode === 'development' ? 'Testnet' : 'Custom'}{' '}
                 environment
@@ -207,7 +207,7 @@ export default function GatewayInfoPanel() {
             <div className="space-y-4 mb-4 sm:mb-6">
               {/* Payment Service URL */}
               <div className={x402OnlyMode ? 'opacity-40' : ''}>
-                <label className="block text-sm font-medium text-foreground/80 mb-2">
+                <label htmlFor="cfg-paymentServiceUrl" className="block text-sm font-medium text-foreground/80 mb-2">
                   Payment Service URL
                   {x402OnlyMode && (
                     <span className="ml-2 text-xs text-foreground/60">(disabled in x402-only mode)</span>
@@ -215,15 +215,16 @@ export default function GatewayInfoPanel() {
                 </label>
                 {configMode === 'custom' ? (
                   <input
+                    id="cfg-paymentServiceUrl"
                     type="text"
                     value={currentConfig.paymentServiceUrl}
                     onChange={(e) => updateCustomConfig('paymentServiceUrl', e.target.value)}
                     disabled={x402OnlyMode}
-                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm disabled:cursor-not-allowed"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono truncate">
+                    <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono truncate">
                       {currentConfig.paymentServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.paymentServiceUrl} />
@@ -239,7 +240,7 @@ export default function GatewayInfoPanel() {
                     <span className="text-xs text-foreground/80">X402-Only</span>
                     <button
                       onClick={() => setX402OnlyMode(!x402OnlyMode)}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card ${
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                         x402OnlyMode ? 'bg-primary' : 'bg-background border border-border/20'
                       }`}
                     >
@@ -250,7 +251,7 @@ export default function GatewayInfoPanel() {
                       />
                     </button>
                     <Popover className="relative">
-                      <PopoverButton className="text-foreground/80 hover:text-foreground transition-colors focus:outline-none">
+                      <PopoverButton className="text-foreground/80 hover:text-foreground transition-colors">
                         <Info className="w-4 h-4" />
                       </PopoverButton>
                       <PopoverPanel className="absolute right-0 z-10 mt-2 w-72 rounded-2xl bg-card border border-border/20 shadow-lg p-3">
@@ -268,14 +269,15 @@ export default function GatewayInfoPanel() {
                 </div>
                 {configMode === 'custom' ? (
                   <input
+                    id="cfg-uploadServiceUrl"
                     type="text"
                     value={currentConfig.uploadServiceUrl}
                     onChange={(e) => updateCustomConfig('uploadServiceUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono truncate">
+                    <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono truncate">
                       {currentConfig.uploadServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.uploadServiceUrl} />
@@ -285,17 +287,18 @@ export default function GatewayInfoPanel() {
 
               {/* Capture Service URL */}
               <div>
-                <label className="block text-sm font-medium text-foreground/80 mb-2">Capture Service URL</label>
+                <label htmlFor="cfg-captureServiceUrl" className="block text-sm font-medium text-foreground/80 mb-2">Capture Service URL</label>
                 {configMode === 'custom' ? (
                   <input
+                    id="cfg-captureServiceUrl"
                     type="text"
                     value={currentConfig.captureServiceUrl}
                     onChange={(e) => updateCustomConfig('captureServiceUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono truncate">
+                    <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono truncate">
                       {currentConfig.captureServiceUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.captureServiceUrl} />
@@ -305,17 +308,18 @@ export default function GatewayInfoPanel() {
 
               {/* Verification Service URL */}
               <div>
-                <label className="block text-sm font-medium text-foreground/80 mb-2">Verification Service URL</label>
+                <label htmlFor="cfg-verifyApiUrl" className="block text-sm font-medium text-foreground/80 mb-2">Verification Service URL</label>
                 {configMode === 'custom' ? (
                   <input
+                    id="cfg-verifyApiUrl"
                     type="text"
                     value={currentConfig.verifyApiUrl}
                     onChange={(e) => updateCustomConfig('verifyApiUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono truncate">
+                    <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono truncate">
                       {currentConfig.verifyApiUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.verifyApiUrl} />
@@ -325,17 +329,18 @@ export default function GatewayInfoPanel() {
 
               {/* AR.IO Gateway URL */}
               <div>
-                <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO Gateway URL</label>
+                <label htmlFor="cfg-arioGatewayUrl" className="block text-sm font-medium text-foreground/80 mb-2">ar.io Gateway URL</label>
                 {configMode === 'custom' ? (
                   <input
+                    id="cfg-arioGatewayUrl"
                     type="text"
                     value={currentConfig.arioGatewayUrl}
                     onChange={(e) => updateCustomConfig('arioGatewayUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono truncate">
+                    <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono truncate">
                       {currentConfig.arioGatewayUrl}
                     </code>
                     <CopyButton textToCopy={currentConfig.arioGatewayUrl} />
@@ -352,17 +357,18 @@ export default function GatewayInfoPanel() {
               <div className="space-y-4 p-4 bg-background/50 rounded-2xl">
                 {/* Stripe Key */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-2">Stripe Publishable Key</label>
+                  <label htmlFor="cfg-stripeKey" className="block text-sm font-medium text-foreground/80 mb-2">Stripe Publishable Key</label>
                   {configMode === 'custom' ? (
                     <input
+                    id="cfg-stripeKey"
                       type="text"
                       value={currentConfig.stripeKey}
                       onChange={(e) => updateCustomConfig('stripeKey', e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono">
+                      <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono">
                         {currentConfig.stripeKey.substring(0, 20)}
                         ...
                         {currentConfig.stripeKey.substring(currentConfig.stripeKey.length - 4)}
@@ -374,17 +380,18 @@ export default function GatewayInfoPanel() {
 
                 {/* Solana Program IDs */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO Core Program ID</label>
+                  <label htmlFor="cfg-coreProgramId" className="block text-sm font-medium text-foreground/80 mb-2">ar.io Core Program ID</label>
                   {configMode === 'custom' ? (
                     <input
+                    id="cfg-coreProgramId"
                       type="text"
                       value={currentConfig.coreProgramId}
                       onChange={(e) => updateCustomConfig('coreProgramId', e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                      <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono break-all overflow-hidden">
                         {currentConfig.coreProgramId}
                       </code>
                       <CopyButton textToCopy={currentConfig.coreProgramId} />
@@ -393,17 +400,18 @@ export default function GatewayInfoPanel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO GAR Program ID</label>
+                  <label htmlFor="cfg-garProgramId" className="block text-sm font-medium text-foreground/80 mb-2">ar.io GAR Program ID</label>
                   {configMode === 'custom' ? (
                     <input
+                    id="cfg-garProgramId"
                       type="text"
                       value={currentConfig.garProgramId}
                       onChange={(e) => updateCustomConfig('garProgramId', e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                      <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono break-all overflow-hidden">
                         {currentConfig.garProgramId}
                       </code>
                       <CopyButton textToCopy={currentConfig.garProgramId} />
@@ -412,17 +420,18 @@ export default function GatewayInfoPanel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO ArNS Program ID</label>
+                  <label htmlFor="cfg-arnsProgramId" className="block text-sm font-medium text-foreground/80 mb-2">ar.io ArNS Program ID</label>
                   {configMode === 'custom' ? (
                     <input
+                    id="cfg-arnsProgramId"
                       type="text"
                       value={currentConfig.arnsProgramId}
                       onChange={(e) => updateCustomConfig('arnsProgramId', e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                      <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono break-all overflow-hidden">
                         {currentConfig.arnsProgramId}
                       </code>
                       <CopyButton textToCopy={currentConfig.arnsProgramId} />
@@ -431,17 +440,18 @@ export default function GatewayInfoPanel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-2">AR.IO ANT Program ID</label>
+                  <label htmlFor="cfg-antProgramId" className="block text-sm font-medium text-foreground/80 mb-2">ar.io ANT Program ID</label>
                   {configMode === 'custom' ? (
                     <input
+                    id="cfg-antProgramId"
                       type="text"
                       value={currentConfig.antProgramId}
                       onChange={(e) => updateCustomConfig('antProgramId', e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-black rounded-2xl text-sm text-gray-100 font-mono break-all overflow-hidden">
+                      <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono break-all overflow-hidden">
                         {currentConfig.antProgramId}
                       </code>
                       <CopyButton textToCopy={currentConfig.antProgramId} />
@@ -457,17 +467,18 @@ export default function GatewayInfoPanel() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                     {Object.entries(currentConfig.tokenMap).map(([token, url]) => (
                       <div key={token}>
-                        <label className="block text-xs font-medium text-foreground/80 mb-1 uppercase">{token}</label>
+                        <label htmlFor={`cfg-token-${token}`} className="block text-xs font-medium text-foreground/80 mb-1 uppercase">{token}</label>
                         {configMode === 'custom' ? (
                           <input
+                            id={`cfg-token-${token}`}
                             type="text"
                             value={url}
                             onChange={(e) => updateTokenMap(token as any, e.target.value)}
-                            className="w-full px-2 py-1 bg-background border border-border/20 rounded text-foreground text-xs focus:ring-1 focus:ring-primary focus:border-transparent"
+                            className="w-full px-2 py-1 bg-background border border-border/20 rounded text-foreground text-xs"
                           />
                         ) : (
                           <div className="flex items-center gap-2">
-                            <code className="flex-1 px-2 py-1 bg-black rounded text-xs text-gray-100 font-mono truncate">
+                            <code className="flex-1 px-2 py-1 bg-code-surface rounded text-xs text-white/90 font-mono truncate">
                               {url}
                             </code>
                             <CopyButton textToCopy={url} />
@@ -515,7 +526,7 @@ export default function GatewayInfoPanel() {
           {/* Status Header */}
           <div className="flex items-center gap-2 mb-4 sm:mb-6">
             <Globe className="w-5 h-5 text-primary" />
-            <h4 className="text-lg font-bold font-heading text-foreground">Service Status</h4>
+            <h4 className="text-lg font-extrabold font-heading text-foreground">Service Status</h4>
           </div>
 
           {/* Overview Cards */}
@@ -527,7 +538,7 @@ export default function GatewayInfoPanel() {
               </div>
 
               <div className="bg-background rounded-2xl p-4">
-                <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">AR.IO Peers</div>
+                <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Peers</div>
                 <div className="text-lg font-bold text-foreground">{peersInfo?.gatewayCount ?? '—'}</div>
               </div>
 
@@ -541,7 +552,7 @@ export default function GatewayInfoPanel() {
           {/* Pricing */}
           {pricingInfo && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Free Tier</div>
@@ -591,9 +602,9 @@ export default function GatewayInfoPanel() {
           {/* Access Pricing (x402) */}
           {gatewayInfo?.x402?.enabled && gatewayInfo.x402.dataEgress?.pricing && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">
                 Access Pricing (x402)
-              </h5>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Min Price</div>
@@ -637,7 +648,7 @@ export default function GatewayInfoPanel() {
           {/* Network Status */}
           {arIOGatewayInfo && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">AR.IO Network</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">ar.io Network</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Status</div>
@@ -676,7 +687,7 @@ export default function GatewayInfoPanel() {
 
           {arweaveNodeInfo && (
             <div>
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Arweave Network</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Arweave Network</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Block Height</div>
@@ -715,7 +726,7 @@ export default function GatewayInfoPanel() {
           <div className="flex items-center gap-3">
             <Code className="w-5 h-5 text-primary" />
             <div>
-              <h4 className="text-lg font-bold font-heading text-foreground">Developer Resources</h4>
+              <h4 className="text-lg font-extrabold font-heading text-foreground">Developer Resources</h4>
               <p className="text-sm text-foreground/80">Service wallets, API documentation, and tools</p>
             </div>
           </div>
@@ -729,7 +740,7 @@ export default function GatewayInfoPanel() {
             {/* Service Wallets */}
             {uploadServiceInfo && (
               <div className="mb-6">
-                <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Service Wallets</h5>
+                <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Service Wallets</div>
                 <div className="grid md:grid-cols-2 gap-3">
                   {Object.entries(uploadServiceInfo.addresses).map(([chain, address]) => (
                     <div
@@ -749,7 +760,7 @@ export default function GatewayInfoPanel() {
 
             {/* API & Documentation Links */}
             <div>
-              <h5 className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">API & Documentation</h5>
+              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">API & Documentation</div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <a
                   href={`${(currentConfig.arioGatewayUrl ?? '').replace(/\/$/, '')}/ar-io/info`}
@@ -759,7 +770,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Server className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Gateway Info</h5>
+                    <div className="font-medium text-foreground mb-1">Gateway Info</div>
                     <p className="text-xs text-foreground/80">Gateway configuration data</p>
                   </div>
                 </a>
@@ -773,7 +784,7 @@ export default function GatewayInfoPanel() {
                   >
                     <Globe className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <div>
-                      <h5 className="font-medium text-foreground mb-1">Gateway Settings</h5>
+                      <div className="font-medium text-foreground mb-1">Gateway Settings</div>
                       <p className="text-xs text-foreground/80">Network configurations for this gateway</p>
                     </div>
                   </a>
@@ -787,7 +798,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Upload className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Upload API</h5>
+                    <div className="font-medium text-foreground mb-1">Upload API</div>
                     <p className="text-xs text-foreground/80">Storing data and confirming availability</p>
                   </div>
                 </a>
@@ -800,7 +811,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Wallet className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Payments API</h5>
+                    <div className="font-medium text-foreground mb-1">Payments API</div>
                     <p className="text-xs text-foreground/80">Rates, credits, and account management</p>
                   </div>
                 </a>
@@ -813,7 +824,7 @@ export default function GatewayInfoPanel() {
                 >
                   <Server className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Access API</h5>
+                    <div className="font-medium text-foreground mb-1">Access API</div>
                     <p className="text-xs text-foreground/80">Data access and domain name resolution</p>
                   </div>
                 </a>
@@ -826,7 +837,7 @@ export default function GatewayInfoPanel() {
                 >
                   <ExternalLink className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-medium text-foreground mb-1">Full Documentation</h5>
+                    <div className="font-medium text-foreground mb-1">Full Documentation</div>
                     <p className="text-xs text-foreground/80">Complete ar.io developer documentation</p>
                   </div>
                 </a>

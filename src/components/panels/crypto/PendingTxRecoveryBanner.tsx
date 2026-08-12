@@ -273,12 +273,12 @@ export default function PendingTxRecoveryBanner() {
                 value={manualTxId}
                 onChange={(e) => { setManualTxId(e.target.value); setManualMessage(null); }}
                 placeholder="Transaction hash (e.g. 0x...)"
-                className="flex-1 px-3 py-2 text-sm font-mono bg-background border border-border/20 rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
+                className="flex-1 px-3 py-2 text-sm font-mono bg-background border border-border/20 rounded-xl text-foreground focus:border-primary transition-colors"
               />
               <select
                 value={manualTokenType}
                 onChange={(e) => setManualTokenType(e.target.value)}
-                className="px-3 py-2 text-sm bg-background border border-border/20 rounded-xl text-foreground focus:outline-none focus:border-primary transition-colors"
+                className="px-3 py-2 text-sm bg-background border border-border/20 rounded-xl text-foreground focus:border-primary transition-colors"
               >
                 {recoverableTokens.map((t) => (
                   <option key={t.value} value={t.value}>

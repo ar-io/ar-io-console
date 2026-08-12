@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useTurboCapture } from '../../hooks/useTurboCapture';
@@ -80,6 +80,20 @@ export default function CapturePanel() {
 
   // Capture state
   const [urlInput, setUrlInput] = useState('');
+
+  // Suggestion for the "get a name" link: the hostname of the page being
+  // captured, minus www/TLD — capturing example.com/blog suggests "example".
+  // Derived, never auto-selected; the user still chooses.
+  const suggestedArnsName = useMemo(() => {
+    const raw = urlInput.trim();
+    if (!raw) return undefined;
+    try {
+      const host = new URL(raw.startsWith('http') ? raw : `https://${raw}`).hostname;
+      return host.replace(/^www\./, '').split('.')[0] || undefined;
+    } catch {
+      return undefined;
+    }
+  }, [urlInput]);
   const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const { capture, isCapturing, error: captureError, result: captureResult, captureFile } = useTurboCapture();
 
@@ -442,7 +456,7 @@ export default function CapturePanel() {
           <Camera className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Capture Page</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Capture Page</h3>
           <p className="text-sm text-foreground/80">Capture and permanently archive any webpage to Arweave</p>
         </div>
       </div>
@@ -486,7 +500,7 @@ export default function CapturePanel() {
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="https://example.com"
-              className="w-full px-4 py-3 bg-card border border-border/20 rounded-2xl text-foreground placeholder-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
+              className="w-full px-4 py-3 bg-card border border-border/20 rounded-2xl text-foreground placeholder-foreground/50 focus:border-primary/50 transition-colors"
               disabled={isCapturing}
             />
             <p className="mt-2 text-xs text-foreground/80">
@@ -499,6 +513,7 @@ export default function CapturePanel() {
       {/* ArNS Association Panel - Show for Solana wallets when not uploading and URL is valid */}
       {!uploading && hasValidUrl && hasArNSAccess && (
         <ArNSAssociationPanel
+          suggestedName={suggestedArnsName}
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
           selectedName={selectedArnsName}
@@ -916,6 +931,7 @@ export default function CapturePanel() {
       {/* Assign Domain Modal */}
       {showAssignDomainModal && (
         <AssignDomainModal
+          suggestedName={suggestedArnsName}
           onClose={() => setShowAssignDomainModal(null)}
           manifestId={showAssignDomainModal}
           onSuccess={(arnsName: string, undername?: string, transactionId?: string) => {
@@ -941,7 +957,7 @@ export default function CapturePanel() {
                 <Camera className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
-                <h3 className="text-lg font-heading font-bold text-foreground">Ready to Upload</h3>
+                <h3 className="text-lg font-heading font-extrabold text-foreground">Ready to Upload</h3>
                 <p className="text-xs text-foreground/80">Confirm screenshot upload details</p>
               </div>
             </div>

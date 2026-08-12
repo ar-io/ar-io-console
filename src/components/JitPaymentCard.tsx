@@ -221,10 +221,11 @@ export function JitPaymentCard({
           {showAdvanced && (
             <div className="mt-2 pt-2 border-t border-border/20">
               <div>
-                <label className="text-xs text-foreground/80 block mb-1">
+                <label htmlFor="jit-max-token" className="text-xs text-foreground/80 block mb-1">
                   Max {tokenLabel}:
                 </label>
                 <input
+                  id="jit-max-token"
                   type="number"
                   step={tokenType === 'ario' ? '0.1' : '0.001'}
                   min="0"
@@ -233,7 +234,7 @@ export function JitPaymentCard({
                     const value = parseFloat(e.target.value) || 0;
                     onMaxTokenAmountChange(value);
                   }}
-                  className="w-full px-2.5 py-1.5 bg-card rounded border border-border/20 text-xs text-foreground focus:border-foreground focus:outline-none"
+                  className="w-full px-2.5 py-1.5 bg-card rounded border border-border/20 text-xs text-foreground focus:border-foreground"
                 />
                 <div className="text-xs text-foreground/80 mt-0.5">
                   Auto-calculated spending limit (adjustable)

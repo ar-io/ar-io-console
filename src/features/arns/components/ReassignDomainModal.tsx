@@ -9,6 +9,7 @@ import {
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useReassignArNSName } from '../hooks/useReassignArNSName';
 
@@ -51,7 +52,7 @@ export default function ReassignDomainModal({
     <BaseModal onClose={onClose} showCloseButton>
       <div className="max-h-[88vh] w-[92vw] max-w-md overflow-y-auto p-6">
         <div className="mb-5">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-xl font-extrabold text-foreground">
             Reassign{' '}
             <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
@@ -108,7 +109,7 @@ export default function ReassignDomainModal({
               placeholder="Address of an ANT you own"
               spellCheck={false}
               disabled={isBusy}
-              className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
+              className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary disabled:opacity-50"
             />
             <p className="mb-1 text-xs text-foreground/50">
               Every ArNS name is controlled by a token (an ANT) that holds its
@@ -144,21 +145,20 @@ export default function ReassignDomainModal({
               </div>
             )}
 
-            <button
-              onClick={handleReassign}
+            <SolanaGateButton
+              onAction={handleReassign}
               disabled={!canReassign}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
+              busy={isBusy}
+              busyLabel={
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Reassigning…
                 </>
-              ) : (
-                <>
-                  <Shuffle className="h-4 w-4" /> Reassign name
-                </>
-              )}
-            </button>
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="reassign this name"
+            >
+              <Shuffle className="h-4 w-4" /> Reassign name
+            </SolanaGateButton>
           </>
         )}
       </div>

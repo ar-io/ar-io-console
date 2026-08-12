@@ -96,7 +96,7 @@ export function RoutingLoadingScreen({
             />
           </svg>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg text-foreground">
               {isCheckingHealth
                 ? "Checking Gateway Health"
                 : "Resolving Content"}
@@ -106,7 +106,7 @@ export function RoutingLoadingScreen({
         </div>
 
         {/* Status */}
-        <div className="bg-card rounded-xl p-4 border border-border/20 mb-4">
+        <div className="bg-card rounded-2xl p-4 border border-border/20 mb-4">
           <div className="flex items-center justify-center gap-2 text-sm text-foreground/80">
             <LoadingSpinner size="sm" />
             <span>
@@ -118,7 +118,7 @@ export function RoutingLoadingScreen({
 
           {inputType === "arnsName" && !isCheckingHealth && (
             <p className="text-xs text-foreground/50 mt-2">
-              Looking up ArNS name on AR.IO Network
+              Looking up ArNS name on ar.io Network
             </p>
           )}
         </div>
@@ -130,8 +130,8 @@ export function RoutingLoadingScreen({
 
         {/* Slow Warning */}
         {isSlow && !isTimedOut && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-            <p className="text-sm text-amber-800">
+          <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 mb-4">
+            <p className="text-sm text-warning">
               Taking longer than expected. Gateway may be slow.
             </p>
           </div>
@@ -140,8 +140,8 @@ export function RoutingLoadingScreen({
         {/* Timeout / Retry */}
         {isTimedOut && !isAutoRetrying && (
           <div className="space-y-3">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-800">
+            <div className="bg-error/10 border border-error/20 rounded-lg p-3">
+              <p className="text-sm text-error">
                 Connection timed out after {maxRetries} attempts.
               </p>
             </div>

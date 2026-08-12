@@ -32,7 +32,7 @@ export default function BuyCreditsModal({
         <div className="mb-5">
           <div className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" />
-            <h3 className="font-heading text-xl font-bold text-foreground">
+            <h3 className="font-heading text-xl font-extrabold text-foreground">
               Buy Turbo Credits
             </h3>
           </div>

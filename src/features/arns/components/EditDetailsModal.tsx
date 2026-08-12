@@ -8,6 +8,7 @@ import {
   Tag,
   XCircle,
 } from 'lucide-react';
+import SolanaGateButton from '../../../components/SolanaGateButton';
 
 import { ArNSName } from '@/types';
 import { useStore } from '../../../store/useStore';
@@ -183,13 +184,13 @@ export default function EditDetailsModal({
   };
 
   const inputCls =
-    'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
+    'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
       <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
         <div className="mb-4">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-xl font-extrabold text-foreground">
             Edit details{' '}
             <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
@@ -296,9 +297,9 @@ export default function EditDetailsModal({
             <div className="my-4 border-t border-border/20" />
 
             {/* Base @ record */}
-            <h4 className="mb-1 text-sm font-semibold text-foreground">
+            <div className="mb-1 text-sm font-semibold text-foreground">
               Target (base <span className="font-mono">@</span> record)
-            </h4>
+            </div>
             <p className="mb-3 text-xs text-foreground/60">
               Where {domain.displayName}.ar.io resolves. Choose the storage
               protocol, then enter the target.
@@ -326,24 +327,23 @@ export default function EditDetailsModal({
               </div>
             )}
 
-            <button
-              onClick={handleSave}
+            <SolanaGateButton
+              onAction={handleSave}
               disabled={!canSave}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isBusy ? (
+              busy={isBusy}
+              busyLabel={
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" /> Saving…
                 </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  {changeCount > 0
-                    ? `Save ${changeCount} ${changeCount === 1 ? 'change' : 'changes'}`
-                    : 'No changes'}
-                </>
-              )}
-            </button>
+              }
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              actionVerb="edit this name"
+            >
+              <Save className="h-4 w-4" />
+              {changeCount > 0
+                ? `Save ${changeCount} ${changeCount === 1 ? 'change' : 'changes'}`
+                : 'No changes'}
+            </SolanaGateButton>
 
             {/* On-chain details — the ArNS name is controlled by an ANT (a
                 Metaplex Core NFT on Solana); expose its address for devs. */}

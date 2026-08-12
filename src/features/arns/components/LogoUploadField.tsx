@@ -13,7 +13,7 @@ import { IMAGE_ACCEPT, validateLogoFile } from '../logoUpload';
 import { compressImage } from '../imageCompress';
 
 const inputCls =
-  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
+  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
 interface LogoUploadFieldProps {
   value: string;
@@ -245,7 +245,7 @@ export default function LogoUploadField({
             />
             {isDefaultLogo && !previewUrl && (
               <span className="rounded-full bg-card px-2 py-0.5 text-[10px] font-medium text-foreground/50">
-                Default (AR.IO logo)
+                Default (ar.io logo)
               </span>
             )}
           </div>

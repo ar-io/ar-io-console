@@ -131,7 +131,7 @@ export default function VerifyPanel() {
 
           {/* Verification evidence */}
           <div>
-            <h3 className="mb-3 font-heading text-base font-bold text-foreground/70">
+            <h3 className="mb-3 font-heading text-base font-extrabold text-foreground/70">
               Verification evidence
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
@@ -142,9 +142,9 @@ export default function VerifyPanel() {
 
               {/* Existence card */}
               <div className="flex flex-col rounded-2xl border border-border/20 bg-card p-5">
-                <h3 className="mb-3 text-sm font-medium text-foreground/50">
+                <div className="mb-3 text-sm font-medium text-foreground/50">
                   Is this data on Arweave?
-                </h3>
+                </div>
 
                 <div className="flex items-start gap-2">
                   <StatusIcon
@@ -215,7 +215,7 @@ export default function VerifyPanel() {
           {/* Image preview */}
           {result.metadata.contentType?.startsWith('image/') && (
             <div>
-              <h3 className="mb-3 font-heading text-base font-bold text-foreground/70">
+              <h3 className="mb-3 font-heading text-base font-extrabold text-foreground/70">
                 Data preview
               </h3>
               <div className="rounded-2xl border border-border/20 bg-card p-4 overflow-hidden">
@@ -232,7 +232,7 @@ export default function VerifyPanel() {
           {/* File comparison */}
           {dataHash && (
             <div>
-              <h3 className="mb-3 font-heading text-base font-bold text-foreground/70">
+              <h3 className="mb-3 font-heading text-base font-extrabold text-foreground/70">
                 Compare local file
               </h3>
               <div
@@ -314,14 +314,14 @@ export default function VerifyPanel() {
 
           {/* Details & gateway signals */}
           <div>
-            <h3 className="mb-3 font-heading text-base font-bold text-foreground/70">
+            <h3 className="mb-3 font-heading text-base font-extrabold text-foreground/70">
               Details
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-border/20 bg-card p-5">
-                <h3 className="mb-3 text-sm font-medium text-foreground/50">
+                <div className="mb-3 text-sm font-medium text-foreground/50">
                   Metadata
-                </h3>
+                </div>
                 {result.metadata.dataSize !== null && (
                   <p className="text-sm text-foreground/70">
                     <span className="font-medium">Size:</span>{' '}
@@ -361,9 +361,9 @@ export default function VerifyPanel() {
                 result.gatewayAssessment.hops !== null ||
                 result.gatewayAssessment.verified !== null) && (
                 <div className="rounded-2xl border border-border/20 bg-card p-5">
-                  <h3 className="mb-3 text-sm font-medium text-foreground/50">
+                  <div className="mb-3 text-sm font-medium text-foreground/50">
                     Gateway signals
-                  </h3>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {result.gatewayAssessment.trusted !== null && (
                       <span
@@ -417,7 +417,7 @@ export default function VerifyPanel() {
           <ShieldCheck className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-heading text-2xl font-bold text-foreground mb-1">
+          <h3 className="font-heading text-2xl font-extrabold text-foreground mb-1">
             Verify Data
           </h3>
           <p className="text-sm text-foreground/80">
@@ -444,7 +444,7 @@ export default function VerifyPanel() {
               e.key === 'Enter' && !isVerifying && handleVerify()
             }
             placeholder="Enter a 43-character Arweave transaction ID"
-            className="w-full rounded-2xl border border-border/20 bg-card px-4 py-3 font-mono text-sm focus:border-primary focus:outline-none"
+            className="w-full rounded-2xl border border-border/20 bg-card px-4 py-3 font-mono text-sm focus:border-primary"
             disabled={isVerifying}
           />
         </div>

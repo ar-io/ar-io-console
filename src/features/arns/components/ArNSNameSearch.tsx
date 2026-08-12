@@ -79,7 +79,7 @@ export function ArNSNameSearch({
                   .replace(/[^a-z0-9-]/g, '');
                 onChange(cleaned);
               }}
-              className="flex-1 p-3 bg-transparent text-foreground font-mono focus:outline-none min-w-0"
+              className="flex-1 p-3 bg-transparent text-foreground font-mono min-w-0"
               placeholder="my-awesome-app"
               spellCheck={false}
             />
