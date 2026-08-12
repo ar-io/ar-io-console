@@ -271,14 +271,20 @@ export default function UndernamesModal({
                           >
                             Edit
                           </button>
-                          <button
-                            onClick={() => handleRemove(r.undername)}
+                          {/* Gated like every other write in this modal. Remove
+                              was the one action still on a native button, so
+                              without a Solana signer it failed with an error
+                              instead of offering connect/link/reconnect. */}
+                          <SolanaGateButton
+                            variant="inline"
+                            onAction={() => handleRemove(r.undername)}
                             disabled={isBusy}
-                            aria-label={`Remove undername ${r.undername}`}
+                            ariaLabel={`Remove undername ${r.undername}`}
+                            actionVerb="remove this undername"
                             className="inline-flex items-center gap-1 text-error hover:underline disabled:opacity-50"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          </SolanaGateButton>
                         </>
                       )}
                     </div>
