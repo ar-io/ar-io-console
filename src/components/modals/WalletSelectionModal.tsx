@@ -344,11 +344,11 @@ const WalletSelectionModal = ({
         {/* Header with logo and title */}
         <div className="mb-6 sm:mb-8 text-center">
           <img
-            src="/brand/ario-full-black.svg"
+            src={`${import.meta.env.BASE_URL}brand/ario-full-black.svg`}
             alt="ar.io"
             className="h-8 sm:h-10 mx-auto mb-4"
           />
-          <h2 className="text-xl sm:text-2xl font-heading font-bold text-foreground">
+          <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-foreground">
             Sign in to your account
           </h2>
         </div>

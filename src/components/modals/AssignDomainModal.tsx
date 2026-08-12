@@ -152,7 +152,7 @@ export default function AssignDomainModal({
               <Globe className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-foreground">
+              <h3 className="text-xl font-extrabold text-foreground">
                 {existingArnsName ? 'Change Domain' : 'Assign Domain'}
               </h3>
               <p className="text-sm text-foreground/80">
@@ -162,7 +162,7 @@ export default function AssignDomainModal({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-card rounded transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-2 hover:bg-card rounded transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -246,7 +246,7 @@ export default function AssignDomainModal({
                     disabled={loading}
                   >
                     <div className="relative">
-                      <Listbox.Button className="relative w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary focus:outline-none disabled:opacity-50 text-left cursor-pointer">
+                      <Listbox.Button className="relative w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary disabled:opacity-50 text-left cursor-pointer">
                         <span className="block truncate">
                           {selectedArnsName ? (
                             names.find((n) => n.name === selectedArnsName)?.displayName !== selectedArnsName ? (
@@ -387,10 +387,10 @@ export default function AssignDomainModal({
                             }
                           }}
                           placeholder="my_blog, docs, app..."
-                          className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground focus:ring-2 text-sm transition-colors ${
+                          className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground text-sm transition-colors ${
                             selectedUndername && hasInvalidCharacters(selectedUndername)
-                              ? 'border-warning focus:ring-warning'
-                              : 'border-border/20 focus:ring-primary'
+                              ? 'border-warning'
+                              : 'border-border/20'
                           }`}
                         />
                         <p className="text-xs mt-1">
@@ -501,7 +501,7 @@ export default function AssignDomainModal({
                                         max="86400"
                                         value={customTTLInput}
                                         onChange={(e) => setCustomTTLInput(e.target.value)}
-                                        className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                        className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary"
                                         placeholder="600"
                                       />
                                       <span className="px-3 py-2 bg-card/50 border border-border/20 rounded-2xl text-foreground/80 text-sm flex items-center">
@@ -549,7 +549,7 @@ export default function AssignDomainModal({
                           {/* Help Text */}
                           <div className="mt-3 text-xs text-foreground/80 bg-primary/5 rounded p-3 border border-primary/20">
                             <div className="font-medium text-foreground mb-1">What is TTL?</div>
-                            TTL controls how long AR.IO gateways cache your content before checking for updates. Lower
+                            TTL controls how long ar.io gateways cache your content before checking for updates. Lower
                             values (5-10 min) are better for frequently updated content, while higher values (1 hour+)
                             work well for static sites and reduce network requests.
                           </div>

@@ -88,12 +88,13 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
               <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-lg sm:text-xl font-bold">Upload Receipt</h3>
+              <h3 className="text-lg sm:text-xl font-extrabold">Upload Receipt</h3>
               <p className="text-xs sm:text-sm text-foreground/80">Transaction status and details</p>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 hover:bg-card rounded transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5" />
