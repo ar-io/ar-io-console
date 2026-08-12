@@ -36,6 +36,32 @@ export default {
         success: 'rgb(var(--color-success) / <alpha-value>)',
         warning: 'rgb(var(--color-warning) / <alpha-value>)',
         info: 'rgb(var(--color-info) / <alpha-value>)',
+
+        // Extended brand palette (brand kit 2026-08-07)
+        'deep-dark': 'rgb(var(--color-deep-dark) / <alpha-value>)',
+        'accent-lavender': 'rgb(var(--color-accent-lavender) / <alpha-value>)',
+        'lavender-wash': 'rgb(var(--color-lavender-wash) / <alpha-value>)',
+        'warm-neutral': 'rgb(var(--color-warm-neutral) / <alpha-value>)',
+        'subtle-border': 'rgb(var(--color-subtle-border) / <alpha-value>)',
+      },
+
+      /*
+       * Brand radii. The kit specifies cards at 20-24px, large panels at 2rem,
+       * framed heroes at 2.5rem, pills at 9999px. `rounded-2xl` is this app's
+       * de-facto card radius (540+ usages), so it is redefined from Tailwind's
+       * default 16px to 20px — the bottom of the brand range — which brings
+       * every existing card into spec without touching 540 call sites.
+       */
+      borderRadius: {
+        '2xl': '1.25rem', // 20px - cards (overrides Tailwind's 1rem)
+        '3xl': '1.5rem',  // 24px - top of the brand card range
+        panel: '2rem',    // 32px - large panels
+        hero: '2.5rem',   // 40px - framed hero frames
+      },
+
+      // Brand site rail.
+      maxWidth: {
+        site: '1400px',
       },
     },
   },
