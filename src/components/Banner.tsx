@@ -44,7 +44,7 @@ export default function Banner() {
           : 'bg-primary text-white'
       }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 relative">
+      <div className="max-w-site mx-auto flex items-center justify-center gap-3 relative">
         <p className={`text-sm text-center pr-8 ${isSubtle ? 'font-medium' : 'font-semibold'}`}>
           {BANNER_CONFIG.message}
           {BANNER_CONFIG.link && (
