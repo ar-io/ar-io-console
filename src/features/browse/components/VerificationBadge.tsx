@@ -123,7 +123,7 @@ export function VerificationBadge({
               />
             </svg>
           ),
-          bgColor: "bg-red-600",
+          bgColor: "bg-error",
           textColor: "text-white",
           label: "Verification Failed",
           description: `${stats.failed} of ${stats.total} failed`,
@@ -145,7 +145,7 @@ export function VerificationBadge({
               />
             </svg>
           ),
-          bgColor: "bg-amber-500",
+          bgColor: "bg-warning",
           textColor: "text-white",
           label: "Partial Verification",
           description: `${stats.verified} verified, ${stats.failed} failed`,
@@ -217,7 +217,7 @@ export function VerificationBadge({
               {stats.failed > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-foreground/60">Failed:</span>
-                  <span className="font-mono text-red-600">{stats.failed}</span>
+                  <span className="font-mono text-error">{stats.failed}</span>
                 </div>
               )}
             </div>
@@ -233,7 +233,7 @@ export function VerificationBadge({
                       }}
                     />
                     <div
-                      className="bg-red-600 transition-all duration-300"
+                      className="bg-error transition-all duration-300"
                       style={{
                         width: `${Math.min((stats.failed / stats.total) * 100, 100 - Math.min((stats.verified / stats.total) * 100, 100))}%`,
                       }}
@@ -266,7 +266,7 @@ export function VerificationBadge({
                       className="flex items-center gap-1.5 text-xs"
                     >
                       <svg
-                        className="w-3 h-3 text-red-600 flex-shrink-0"
+                        className="w-3 h-3 text-error flex-shrink-0"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -279,7 +279,7 @@ export function VerificationBadge({
                         />
                       </svg>
                       <span
-                        className="font-mono text-red-600 truncate"
+                        className="font-mono text-error truncate"
                         title={path}
                       >
                         {path}
@@ -292,7 +292,7 @@ export function VerificationBadge({
 
             {strictMode && state === "failed" && (
               <div className="mt-3 pt-3 border-t border-border/20">
-                <div className="text-xs text-red-600">
+                <div className="text-xs text-error">
                   Content blocked due to strict mode. Verification must pass to
                   view content.
                 </div>
@@ -301,7 +301,7 @@ export function VerificationBadge({
 
             {!strictMode && state === "failed" && (
               <div className="mt-3 pt-3 border-t border-border/20">
-                <div className="text-xs text-amber-600">
+                <div className="text-xs text-warning">
                   Content displayed despite verification failure. Enable strict
                   mode in settings for maximum security.
                 </div>

@@ -524,9 +524,9 @@ const LandingPage = () => {
               {/* Title bar: traffic lights + nav buttons + live address bar */}
               <div className="flex items-center gap-2 border-b border-border/10 bg-card px-4 py-2.5">
                 <div className="flex flex-shrink-0 items-center gap-1.5">
-                  <span className="h-3 w-3 rounded-full bg-red-400" />
-                  <span className="h-3 w-3 rounded-full bg-amber-400" />
-                  <span className="h-3 w-3 rounded-full bg-green-400" />
+                  <span className="h-3 w-3 rounded-full bg-error" />
+                  <span className="h-3 w-3 rounded-full bg-warning" />
+                  <span className="h-3 w-3 rounded-full bg-success" />
                 </div>
                 <div className="hidden flex-shrink-0 items-center gap-1 text-foreground/30 sm:flex">
                   <ChevronLeft className="h-4 w-4" />
@@ -565,11 +565,10 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Value props — 2-col grid on sm+ */}
+          {/* Value props — 3 compact cards + a "host anything" card */}
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
             {[
               { icon: Tag, label: 'Human-readable', copy: 'a name, not a 43-character TX ID or CID.' },
-              { icon: Layers, label: 'Arweave (IPFS soon)', copy: 'point it at your deployed app, your Pages site, or any file — IPFS support is on the way.' },
               { icon: Globe2, label: 'Resolves everywhere', copy: 'served by every ar.io gateway, with cryptographic verification.' },
               { icon: KeyRound, label: 'Own or lease', copy: 'you hold the ANT (an NFT you control); buy it outright or lease by the year.' },
             ].map(({ icon: Icon, label, copy }) => (
@@ -583,15 +582,30 @@ const LandingPage = () => {
                 </div>
               </div>
             ))}
-          </div>
 
-          {/* Use-case chips */}
-          <div className="mt-6 flex flex-wrap gap-2">
-            {['A Pages site → yourname.ar.io', 'A deployed app → app.yourname.ar.io', "Your agent's dataset → agent.yourname.ar.io", 'One name across every ar.io app'].map((chip) => (
-              <span key={chip} className="inline-flex items-center rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground/80">
-                {chip}
-              </span>
-            ))}
+            {/* What you can host — replaces the old use-case pills */}
+            <div className="rounded-2xl border border-primary/10 bg-background/60 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Layers className="h-5 w-5 text-primary" />
+                </div>
+                <div className="font-semibold text-foreground">Point it at anything</div>
+              </div>
+              <ul className="space-y-2 text-sm leading-snug text-foreground/70">
+                <li className="flex items-baseline gap-2">
+                  <span className="font-mono text-xs text-primary/80">yourname.ar.io</span>
+                  <span className="text-foreground/40">—</span> a Pages site
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="font-mono text-xs text-primary/80">app.yourname.ar.io</span>
+                  <span className="text-foreground/40">—</span> a deployed app
+                </li>
+                <li className="flex items-baseline gap-2">
+                  <span className="font-mono text-xs text-primary/80">agent.yourname.ar.io</span>
+                  <span className="text-foreground/40">—</span> your agent&rsquo;s dataset
+                </li>
+              </ul>
+            </div>
           </div>
 
           {/* Secondary links */}

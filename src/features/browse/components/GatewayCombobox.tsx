@@ -215,14 +215,14 @@ export function GatewayCombobox({
             }}
             placeholder="https://my-gateway.example.com"
             className={`w-full px-3 py-2 bg-card border rounded-lg text-foreground ${
-              customUrlError ? "border-red-500" : "border-border/20"
+              customUrlError ? "border-error" : "border-border/20"
             }`}
             autoFocus
           />
         </div>
 
         {customUrlError && (
-          <div className="flex items-center gap-1.5 text-xs text-red-500">
+          <div className="flex items-center gap-1.5 text-xs text-error">
             <AlertCircle className="w-3.5 h-3.5" />
             {customUrlError}
           </div>

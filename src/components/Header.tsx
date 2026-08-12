@@ -288,17 +288,17 @@ const Header = () => {
                 />
                 <div className={`fallback-indicator hidden size-2 rounded-full ${
                   walletType === 'arweave' ? 'bg-primary' :
-                  walletType === 'ethereum' ? 'bg-blue-500' :
+                  walletType === 'ethereum' ? 'bg-info' :
                   walletType === 'solana' ? 'bg-purple-500' :
-                  'bg-green-500'
+                  'bg-success'
                 }`} />
               </div>
             ) : (
               <div className={`size-2 rounded-full ${
                 walletType === 'arweave' ? 'bg-primary' :
-                walletType === 'ethereum' ? 'bg-blue-500' :
+                walletType === 'ethereum' ? 'bg-info' :
                 walletType === 'solana' ? 'bg-purple-500' :
-                'bg-green-500'
+                'bg-success'
               }`} />
             )}
             <div className="text-foreground flex items-center gap-1">
@@ -328,21 +328,24 @@ const Header = () => {
                 <CopyButton textToCopy={address} />
               </div>
               {linkedSolanaAddress && walletType !== 'solana' && (
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-foreground/40">{getWalletNetworkLabel('solana')}</span>
-                    <span className="font-mono text-xs text-foreground/60">{formatWalletAddress(linkedSolanaAddress, 6)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CopyButton textToCopy={linkedSolanaAddress} />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); clearLinkedSolanaWallet(); }}
-                      className="p-1 text-foreground/30 hover:text-error transition-colors"
-                      title="Unlink wallet"
-                      aria-label="Unlink Solana wallet"
-                    >
-                      <Unlink className="w-3 h-3" />
-                    </button>
+                <div className="mt-2 pt-2 border-t border-border/10">
+                  <div className="text-[10px] text-foreground/40 mb-1">ArNS wallet</div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-foreground/40">{getWalletNetworkLabel('solana')}</span>
+                      <span className="font-mono text-xs text-foreground/60">{formatWalletAddress(linkedSolanaAddress, 6)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <CopyButton textToCopy={linkedSolanaAddress} />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); clearLinkedSolanaWallet(); }}
+                        className="p-1 text-foreground/30 hover:text-error transition-colors"
+                        title="Unlink Solana wallet"
+                        aria-label="Unlink Solana wallet"
+                      >
+                        <Unlink className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

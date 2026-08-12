@@ -915,9 +915,9 @@ function BrowsePanelContent({
       return (
         <div className="w-full h-full flex items-center justify-center bg-card">
           <div className="text-center p-8">
-            <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-xl flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-warning/10 rounded-xl flex items-center justify-center">
               <svg
-                className="w-8 h-8 text-amber-600"
+                className="w-8 h-8 text-warning"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -953,9 +953,9 @@ function BrowsePanelContent({
           <div className="text-center p-8 max-w-sm">
             {verificationError ? (
               <>
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-error/10 flex items-center justify-center">
                   <svg
-                    className="w-6 h-6 text-red-600"
+                    className="w-6 h-6 text-error"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1044,9 +1044,9 @@ function BrowsePanelContent({
           {shouldBlockContent && (
             <div className="w-full h-full flex items-center justify-center bg-card">
               <div className="text-center p-8">
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-xl flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-error/10 rounded-xl flex items-center justify-center">
                   <svg
-                    className="w-8 h-8 text-red-600"
+                    className="w-8 h-8 text-error"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

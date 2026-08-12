@@ -294,7 +294,7 @@ function ResourceRow({ path, status }: ResourceRowProps) {
       )}
       {status === "failed" && (
         <svg
-          className="w-3.5 h-3.5 text-red-600 flex-shrink-0"
+          className="w-3.5 h-3.5 text-error flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -309,7 +309,7 @@ function ResourceRow({ path, status }: ResourceRowProps) {
       )}
       {status === "verifying" && <LoadingSpinner size="sm" />}
       <span
-        className={`font-mono truncate ${status === "failed" ? "text-red-600" : "text-foreground/60"}`}
+        className={`font-mono truncate ${status === "failed" ? "text-error" : "text-foreground/60"}`}
       >
         {path}
       </span>

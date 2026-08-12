@@ -18,9 +18,9 @@ export function ErrorDisplay({
   return (
     <div className="flex items-center justify-center h-full">
       <div className="max-w-md w-full mx-4 p-6 bg-card rounded-2xl border border-border/20 shadow-sm text-center">
-        <div className="w-12 h-12 mx-auto mb-4 bg-red-100 rounded-xl flex items-center justify-center">
+        <div className="w-12 h-12 mx-auto mb-4 bg-error/10 rounded-xl flex items-center justify-center">
           <svg
-            className="w-6 h-6 text-red-600"
+            className="w-6 h-6 text-error"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BaseModal from "@/components/modals/BaseModal";
 
 interface VerificationBlockedModalProps {
   identifier: string;
@@ -31,12 +32,12 @@ export function VerificationBlockedModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4">
-      <div className="bg-background border border-red-200 rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
+    <BaseModal onClose={onGoBack} dismissible={false} showCloseButton={false}>
+      <div className="bg-background border border-error/20 rounded-2xl max-w-lg w-full overflow-hidden">
         {/* Header */}
-        <div className="bg-red-50 px-6 py-4 border-b border-red-200">
+        <div className="bg-error/10 px-6 py-4 border-b border-error/20">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-600 rounded-xl">
+            <div className="p-2 bg-error rounded-xl">
               <svg
                 className="w-6 h-6 text-white"
                 fill="none"
@@ -55,7 +56,7 @@ export function VerificationBlockedModal({
               <h2 className="text-xl font-extrabold text-foreground">
                 Verification Failed
               </h2>
-              <p className="text-sm text-red-600">
+              <p className="text-sm text-error">
                 Content integrity could not be verified
               </p>
             </div>
@@ -85,12 +86,12 @@ export function VerificationBlockedModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-foreground/60">Failed Verification:</span>
-                <span className="text-red-600 font-mono">{failedCount}</span>
+                <span className="text-error font-mono">{failedCount}</span>
               </div>
               {errorMessage && (
                 <div className="pt-2 border-t border-border/20">
                   <span className="text-foreground/60 text-xs">Error: </span>
-                  <span className="text-red-600 text-xs font-mono">
+                  <span className="text-error text-xs font-mono">
                     {errorMessage}
                   </span>
                 </div>
@@ -99,10 +100,10 @@ export function VerificationBlockedModal({
           </div>
 
           {/* Security Warning */}
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="bg-error/10 border border-error/20 rounded-xl p-4">
             <div className="flex gap-3">
               <svg
-                className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
+                className="w-5 h-5 text-error flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -115,7 +116,7 @@ export function VerificationBlockedModal({
                 />
               </svg>
               <div className="text-sm">
-                <div className="font-semibold text-red-600 mb-1">
+                <div className="font-semibold text-error mb-1">
                   Security Risk
                 </div>
                 <div className="text-foreground">
@@ -138,7 +139,7 @@ export function VerificationBlockedModal({
                   type="checkbox"
                   checked={acknowledged}
                   onChange={(e) => setAcknowledged(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-red-600 rounded accent-red-600"
+                  className="mt-1 w-4 h-4 text-error rounded accent-error"
                 />
                 <span className="text-sm text-foreground">
                   I understand the risks. I acknowledge that this content failed
@@ -174,7 +175,7 @@ export function VerificationBlockedModal({
               className={`w-full px-4 py-2 text-sm rounded-full transition-colors ${
                 showConfirmProceed && !acknowledged
                   ? "text-foreground/40 bg-card cursor-not-allowed"
-                  : "text-red-600 hover:bg-red-50 border border-red-200"
+                  : "text-error hover:bg-error/10 border border-error/20"
               }`}
             >
               {showConfirmProceed
@@ -197,6 +198,6 @@ export function VerificationBlockedModal({
           </div>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }
