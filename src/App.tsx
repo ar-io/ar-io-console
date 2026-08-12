@@ -115,7 +115,6 @@ function AppRoutes() {
           <Route path="pages" element={<PagesPage />} />
           <Route path="share" element={<ShareCreditsPage />} />
           {/* DEPRECATED: Gifting feature disabled */}
-          {/* <Route path="gift" element={<GiftPage />} /> */}
           <Route path="domains" element={<DomainsPage />} />
           <Route path="domains/:name" element={<NameDetailPage />} />
           <Route path="arns" element={<ArNSPage />} />
@@ -128,7 +127,6 @@ function AppRoutes() {
           <Route path="balances" element={<BalanceCheckerPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="my-domains" element={<MyDomainsPage />} />
-          {/* <Route path="redeem" element={<RedeemPage />} /> */}
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
           <Route path="verify" element={<VerifyPage />} />
