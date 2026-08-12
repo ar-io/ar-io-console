@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Globe,
   X,
@@ -10,12 +10,13 @@ import {
   ExternalLink,
   ChevronRight,
 } from 'lucide-react';
-import { Listbox } from '@headlessui/react';
+import { Combobox } from '@headlessui/react';
 import BaseModal from './BaseModal';
 import LinkSolanaWalletModal from './LinkSolanaWalletModal';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { sanitizeUndername, hasInvalidCharacters } from '../../utils/undernames';
+import ArNSGetNameLinks from '../ArNSGetNameLinks';
 
 interface AssignDomainModalProps {
   onClose: () => void;
@@ -23,6 +24,8 @@ interface AssignDomainModalProps {
   existingArnsName?: string;
   existingUndername?: string;
   onSuccess: (arnsName: string, undername?: string, transactionId?: string) => void;
+  /** Context to prefill the register search with — see ArNSGetNameLinks. */
+  suggestedName?: string;
 }
 
 export default function AssignDomainModal({
@@ -31,6 +34,7 @@ export default function AssignDomainModal({
   existingArnsName,
   existingUndername,
   onSuccess,
+  suggestedName,
 }: AssignDomainModalProps) {
   const { names, loading, fetchError, loadingDetails, fetchOwnedNames, fetchNameDetails, updateArNSRecord } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, showLinkModal, setShowLinkModal, promptReconnect } = useLinkedSolanaWallet();
@@ -44,6 +48,20 @@ export default function AssignDomainModal({
         : 'new'
       : 'none'
   );
+  const [nameQuery, setNameQuery] = useState('');
+  // Client-side filter over the already-fetched list. useMemo so a re-render
+  // (or a keystroke) never re-walks the array needlessly, and never refetches:
+  // typing here costs no RPC at all.
+  const filteredNames = useMemo(() => {
+    if (!nameQuery) return names;
+    const q = nameQuery.toLowerCase();
+    return names.filter(
+      (n) =>
+        n.name.toLowerCase().includes(q) ||
+        n.displayName.toLowerCase().includes(q),
+    );
+  }, [names, nameQuery]);
+
   const [isAssigning, setIsAssigning] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -193,16 +211,7 @@ export default function AssignDomainModal({
                       back to assign it.
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          // New tab so this modal + its manifest context stay put;
-                          // register there, come back, and assign.
-                          window.open('/arns', '_blank', 'noopener,noreferrer')
-                        }
-                        className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
-                      >
-                        Register a name
-                      </button>
+                      <ArNSGetNameLinks suggestedName={suggestedName} variant="empty" />
                       <button
                         onClick={() => fetchOwnedNames(true)}
                         className="px-3 py-1.5 border border-border/20 text-foreground/80 rounded-full text-xs hover:bg-card transition-colors flex items-center gap-1"
@@ -231,10 +240,20 @@ export default function AssignDomainModal({
                     </button>
                   </div>
 
-                  <Listbox
+                  {/*
+                    Combobox, not Listbox — this mirrors the pre-flight picker in
+                    ArNSAssociationPanel so choosing a name feels identical
+                    whether you do it before deploying or after. Filtering is
+                    purely client-side over the already-loaded `names` array, so
+                    typing costs ZERO network calls; the only on-demand fetch is
+                    fetchNameDetails() on an actual selection, which is unchanged.
+                  */}
+                  <Combobox
                     value={selectedArnsName}
-                    onChange={async (name) => {
+                    onChange={async (name: string) => {
                       setSelectedArnsName(name);
+                      // Clear the query so the list is whole again next open.
+                      setNameQuery('');
                       // Clear undername when switching names
                       setSelectedUndername('');
                       setUndernameMode('none');
@@ -246,66 +265,81 @@ export default function AssignDomainModal({
                     disabled={loading}
                   >
                     <div className="relative">
-                      <Listbox.Button className="relative w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary disabled:opacity-50 text-left cursor-pointer">
-                        <span className="block truncate">
-                          {selectedArnsName ? (
-                            names.find((n) => n.name === selectedArnsName)?.displayName !== selectedArnsName ? (
-                              `${names.find((n) => n.name === selectedArnsName)?.displayName} (${selectedArnsName})`
-                            ) : (
-                              selectedArnsName
-                            )
-                          ) : (
-                            <span className="text-foreground/80">Choose a name...</span>
-                          )}
-                        </span>
-                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                      <div className="relative w-full">
+                        <Combobox.Input
+                          className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary disabled:opacity-50 pr-10"
+                          displayValue={(name: string) => {
+                            if (!name) return '';
+                            const found = names.find((n) => n.name === name);
+                            return found?.displayName !== found?.name
+                              ? `${found?.displayName} (${name})`
+                              : name;
+                          }}
+                          onChange={(e) => setNameQuery(e.target.value)}
+                          placeholder="Type to search or click to browse..."
+                        />
+                        <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
                           {loadingDetails[selectedArnsName] ? (
                             <Loader2 className="h-4 w-4 text-foreground/80 animate-spin" aria-hidden="true" />
                           ) : (
                             <ChevronDown className="h-4 w-4 text-foreground/80" aria-hidden="true" />
                           )}
-                        </span>
-                      </Listbox.Button>
-                      <Listbox.Options className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-2xl bg-card border border-border/20 shadow-lg focus:outline-none">
-                        <Listbox.Option
-                          value=""
-                          className={({ active }) =>
-                            `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
-                              active ? 'bg-card text-foreground' : 'text-foreground/80'
-                            }`
-                          }
-                        >
-                          <span className="block truncate">Choose a name...</span>
-                        </Listbox.Option>
-                        {names.map((name) => (
-                          <Listbox.Option
-                            key={name.name}
-                            value={name.name}
-                            className={({ active }) =>
-                              `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
-                                active ? 'bg-card text-foreground' : 'text-foreground'
-                              }`
-                            }
-                          >
-                            {({ selected }) => (
-                              <>
-                                <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                  {name.displayName !== name.name
-                                    ? `${name.displayName} (${name.name})`
-                                    : name.displayName}
-                                </span>
-                                {selected && (
-                                  <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-primary">
-                                    <Check className="h-4 w-4" aria-hidden="true" />
-                                  </span>
-                                )}
-                              </>
+                        </Combobox.Button>
+                      </div>
+                      <Combobox.Options className="absolute z-[9999] mt-1 max-h-60 w-full overflow-auto rounded-2xl bg-card border border-border/20 shadow-lg focus:outline-none">
+                        {filteredNames.length === 0 && nameQuery !== '' ? (
+                          <div className="relative cursor-default select-none py-3 px-4 text-sm text-foreground/80">
+                            No names found matching &quot;{nameQuery}&quot;
+                          </div>
+                        ) : (
+                          <>
+                            {!nameQuery && (
+                              <Combobox.Option
+                                value=""
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
+                                    active ? 'bg-card text-foreground' : 'text-foreground/80'
+                                  }`
+                                }
+                              >
+                                <span className="block truncate">Choose a name...</span>
+                              </Combobox.Option>
                             )}
-                          </Listbox.Option>
-                        ))}
-                      </Listbox.Options>
+                            {filteredNames.map((name) => (
+                              <Combobox.Option
+                                key={name.name}
+                                value={name.name}
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
+                                    active ? 'bg-card text-foreground' : 'text-foreground'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <>
+                                    <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                      {name.displayName !== name.name
+                                        ? `${name.displayName} (${name.name})`
+                                        : name.displayName}
+                                    </span>
+                                    {selected && (
+                                      <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-primary">
+                                        <Check className="h-4 w-4" aria-hidden="true" />
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                              </Combobox.Option>
+                            ))}
+                          </>
+                        )}
+                      </Combobox.Options>
                     </div>
-                  </Listbox>
+                  </Combobox>
+
+                  {/* Already own names but want a new one for this deployment —
+                      the case the empty state above never reaches. */}
+                  <ArNSGetNameLinks suggestedName={suggestedName} variant="inline" />
                 </div>
 
                 {/* Compact Undername Selection - Only show after ArNS name is selected */}

@@ -10,6 +10,9 @@ interface DomainControlsProps {
   onUndernameChange: (v: string) => void;
   showUndername: boolean;
   onShowUndernameChange: (v: boolean) => void;
+  /** Page title, used to prefill the register search when the user goes to get
+   *  a name. See ArNSGetNameLinks. */
+  suggestedName?: string;
 }
 
 /**
@@ -27,6 +30,7 @@ export default function DomainControls({
   onUndernameChange,
   showUndername,
   onShowUndernameChange,
+  suggestedName,
 }: DomainControlsProps) {
   return (
     <div className="space-y-3">
@@ -46,6 +50,7 @@ export default function DomainControls({
         </span>
       </div>
       <ArNSAssociationPanel
+        suggestedName={suggestedName}
         bare
         enabled={enabled}
         onEnabledChange={onEnabledChange}

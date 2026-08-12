@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useTurboCapture } from '../../hooks/useTurboCapture';
@@ -80,6 +80,20 @@ export default function CapturePanel() {
 
   // Capture state
   const [urlInput, setUrlInput] = useState('');
+
+  // Suggestion for the "get a name" link: the hostname of the page being
+  // captured, minus www/TLD — capturing example.com/blog suggests "example".
+  // Derived, never auto-selected; the user still chooses.
+  const suggestedArnsName = useMemo(() => {
+    const raw = urlInput.trim();
+    if (!raw) return undefined;
+    try {
+      const host = new URL(raw.startsWith('http') ? raw : `https://${raw}`).hostname;
+      return host.replace(/^www\./, '').split('.')[0] || undefined;
+    } catch {
+      return undefined;
+    }
+  }, [urlInput]);
   const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const { capture, isCapturing, error: captureError, result: captureResult, captureFile } = useTurboCapture();
 
@@ -499,6 +513,7 @@ export default function CapturePanel() {
       {/* ArNS Association Panel - Show for Solana wallets when not uploading and URL is valid */}
       {!uploading && hasValidUrl && hasArNSAccess && (
         <ArNSAssociationPanel
+          suggestedName={suggestedArnsName}
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
           selectedName={selectedArnsName}
@@ -916,6 +931,7 @@ export default function CapturePanel() {
       {/* Assign Domain Modal */}
       {showAssignDomainModal && (
         <AssignDomainModal
+          suggestedName={suggestedArnsName}
           onClose={() => setShowAssignDomainModal(null)}
           manifestId={showAssignDomainModal}
           onSuccess={(arnsName: string, undername?: string, transactionId?: string) => {

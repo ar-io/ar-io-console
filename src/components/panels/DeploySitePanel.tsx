@@ -2231,6 +2231,7 @@ export default function DeploySitePanel() {
       {/* ArNS Association Panel - shown for all wallet types; panel handles linking/reconnection internally */}
       {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
         <ArNSAssociationPanel
+          suggestedName={appName}
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
           selectedName={selectedArnsName}
@@ -2535,6 +2536,7 @@ export default function DeploySitePanel() {
        hasArNSAccess && userArnsNames.length > 0 && (
         <div className="mt-6">
           <ArNSAssociationPanel
+            suggestedName={appName}
             enabled={postDeployArNSEnabled}
             onEnabledChange={setPostDeployArNSEnabled}
             selectedName={postDeployArNSName}
@@ -3245,6 +3247,7 @@ export default function DeploySitePanel() {
       {/* Assign Domain Modal */}
       {showAssignDomainModal && (
         <AssignDomainModal
+          suggestedName={appName}
           onClose={() => setShowAssignDomainModal(null)}
           manifestId={showAssignDomainModal}
           existingArnsName={getArNSAssociation(showAssignDomainModal)?.arnsName}

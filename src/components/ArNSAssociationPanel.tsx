@@ -5,6 +5,7 @@ import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from './modals/LinkSolanaWalletModal';
 import { sanitizeUndername, hasInvalidCharacters } from '../utils/undernames';
+import ArNSGetNameLinks from './ArNSGetNameLinks';
 import { useStore } from '../store/useStore';
 import { promptSignIn } from '../utils';
 
@@ -22,6 +23,10 @@ interface ArNSAssociationPanelProps {
   /** Render without the gradient card wrapper + icon/subtitle — for hosts (e.g.
    *  the Pages editor) that already provide a section card + heading. */
   bare?: boolean;
+  /** What the user is already naming (site name, page title). Prefills the
+   *  register search via ?q= so "get a name" lands on a live availability check
+   *  rather than an empty box. */
+  suggestedName?: string;
 }
 
 export default function ArNSAssociationPanel({
@@ -36,6 +41,7 @@ export default function ArNSAssociationPanel({
   customTTL: _customTTL, // eslint-disable-line @typescript-eslint/no-unused-vars
   onCustomTTLChange,
   bare = false,
+  suggestedName,
 }: ArNSAssociationPanelProps) {
   const { names, loading, fetchError, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
   const { isSolanaConnected, needsLinking, promptReconnect, showLinkModal, setShowLinkModal } = useLinkedSolanaWallet();
@@ -281,19 +287,7 @@ export default function ArNSAssociationPanel({
                 </li>
               </ul>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <button
-                  onClick={() =>
-                    // Open the in-console register in a new tab so the caller's
-                    // deploy/capture/pages form state (files, URL, selections)
-                    // isn't lost to a route change. Register there, come back,
-                    // and the new name appears here after a refresh.
-                    window.open('/arns', '_blank', 'noopener,noreferrer')
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
-                >
-                  <Globe className="h-4 w-4" />
-                  Find a name
-                </button>
+                <ArNSGetNameLinks suggestedName={suggestedName} variant="empty" />
                 {/* Registered elsewhere and came back? Pull the fresh list. */}
                 <button
                   onClick={() => fetchOwnedNames(true)}
@@ -405,6 +399,11 @@ export default function ArNSAssociationPanel({
                     </Combobox.Options>
                   </div>
                 </Combobox>
+
+                {/* The case the empty state never covers: you already own names,
+                    but want a NEW one for this particular deploy/page. Quiet by
+                    design — it must not compete with the picker above. */}
+                <ArNSGetNameLinks suggestedName={suggestedName} variant="inline" />
               </div>
 
               {/* Undername Option */}
