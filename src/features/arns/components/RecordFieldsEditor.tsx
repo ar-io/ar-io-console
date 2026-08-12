@@ -10,7 +10,7 @@ import {
 import LogoUploadField from './LogoUploadField';
 
 const inputCls =
-  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
+  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
 interface RecordFieldsEditorProps {
   value: RecordFieldsState;
@@ -110,7 +110,7 @@ export default function RecordFieldsEditor({
       )}
       {value.target.trim() === DEFAULT_ANT_TRANSACTION_ID && (
         <p className="mt-1 text-xs text-foreground/60">
-          Currently resolves to the default AR.IO placeholder — set a target to
+          Currently resolves to the default ar.io placeholder — set a target to
           point this name at your content.
         </p>
       )}

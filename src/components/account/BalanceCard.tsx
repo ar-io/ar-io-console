@@ -45,7 +45,7 @@ export default function BalanceCard() {
           <Coins className="h-5 w-5 text-foreground" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-foreground">Balance</h3>
+          <h3 className="text-lg font-extrabold text-foreground">Balance</h3>
           <p className="text-sm text-foreground/80">Credits &amp; storage</p>
         </div>
       </div>

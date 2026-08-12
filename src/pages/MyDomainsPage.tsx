@@ -56,7 +56,7 @@ export default function MyDomainsPage() {
             <Globe className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="mb-1 font-heading text-2xl font-bold text-foreground sm:text-3xl">
+            <h1 className="mb-1 font-heading text-2xl font-extrabold text-foreground sm:text-3xl">
               Manage Domains
             </h1>
             <p className="text-sm text-foreground/80">
@@ -150,7 +150,7 @@ export default function MyDomainsPage() {
           ) : ownedNames.length === 0 ? (
             <div className="rounded-2xl border border-border/20 bg-card p-6 text-center sm:p-8">
               <Globe className="mx-auto mb-4 h-12 w-12 text-primary/50" />
-              <h3 className="mb-2 font-heading font-bold text-foreground">No domains yet</h3>
+              <h3 className="mb-2 font-heading font-extrabold text-foreground">No domains yet</h3>
               <p className="mb-4 text-sm text-foreground/80">
                 Register an ArNS name to give your sites and apps a friendly address.
               </p>

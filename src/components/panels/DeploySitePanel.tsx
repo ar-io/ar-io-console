@@ -132,7 +132,7 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
           }}
           placeholder="My Awesome App"
           maxLength={100}
-          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:outline-none focus:border-primary/50 transition-colors"
+          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:border-primary/50 transition-colors"
         />
         {/* Suggestions Dropdown */}
         {showSuggestions && filteredSuggestions.length > 0 && (
@@ -164,7 +164,7 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
           onBlur={() => onAppVersionChange(localVersion)} // Sync to parent on blur
           placeholder="1.0.0"
           maxLength={50}
-          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:outline-none focus:border-primary/50 transition-colors"
+          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:border-primary/50 transition-colors"
         />
         {currentApp && localVersion !== currentApp.appVersion && (
           <p className="mt-1 text-xs text-foreground/80">Last: v{currentApp.appVersion}</p>
@@ -427,7 +427,7 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:outline-none focus:border-foreground"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:border-foreground"
                   />
                   <span className="text-xs text-foreground/80">%</span>
                 </div>
@@ -564,7 +564,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
             <Zap className="w-5 h-5 text-primary" />
           </div>
           <div className="text-left">
-            <h3 className="text-lg font-bold text-foreground">Ready to Deploy</h3>
+            <h3 className="text-lg font-extrabold text-foreground">Ready to Deploy</h3>
             <p className="text-xs text-foreground/80">Confirm your deployment details</p>
           </div>
         </div>
@@ -1856,7 +1856,7 @@ export default function DeploySitePanel() {
               <CheckCircle className="w-5 h-5 text-success" />
             </div>
             <div>
-              <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
+              <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
                 {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
                   'Site Deployed with Domain' :
                   'Site Deployed'
@@ -1903,7 +1903,7 @@ export default function DeploySitePanel() {
             <Zap className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Deploy Site</h3>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Deploy Site</h3>
             <p className="text-sm text-foreground/80">
               Deploy NFT collections, static sites and apps to the permanent cloud
             </p>
@@ -2479,7 +2479,7 @@ export default function DeploySitePanel() {
                 <Globe className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-foreground mb-1">Give your site a name people remember</h4>
+                <h4 className="text-lg font-extrabold text-foreground mb-1">Give your site a name people remember</h4>
                 <p className="text-sm text-foreground/80">
                   Your site is live at a permanent URL. Point an ArNS{' '}
                   <span className="font-medium text-primary">smart domain</span> at it — a name you own

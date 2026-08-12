@@ -197,7 +197,7 @@ export function ArNSPurchaseCard({
         <LeaseTermPrefetcher name={name} fundFrom={fundFrom} fromAddress={address} />
       )}
       <div className="mb-4 flex items-baseline justify-between">
-        <h3 className="font-heading text-lg font-bold text-foreground">
+        <h3 className="font-heading text-lg font-extrabold text-foreground">
           Register <span className="break-all font-mono text-primary">{toUnicodeName(name)}.ar.io</span>
         </h3>
       </div>

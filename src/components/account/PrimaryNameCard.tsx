@@ -94,7 +94,7 @@ export default function PrimaryNameCard({
           <Star className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-heading text-lg font-bold text-foreground">
+          <h3 className="font-heading text-lg font-extrabold text-foreground">
             Primary name
           </h3>
           <p className="text-sm text-foreground/70">

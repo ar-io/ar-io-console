@@ -56,7 +56,7 @@ export default function ArNSPanel() {
           <Globe className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Search Domains</h3>
+          <h3 className="text-2xl font-extrabold font-heading text-foreground mb-1">Search Domains</h3>
           <p className="text-sm text-foreground/80">
             Search available ArNS names and check registration costs
           </p>
@@ -93,7 +93,7 @@ export default function ArNSPanel() {
                   setAvailability(null);
                   setCheckError(null);
                 }}
-                className="flex-1 p-3 bg-transparent text-foreground font-mono focus:outline-none min-w-0"
+                className="flex-1 p-3 bg-transparent text-foreground font-mono min-w-0"
                 placeholder="my-awesome-app"
               />
               <div className="px-3 text-sm text-foreground/80 font-mono border-l border-border/20 flex-shrink-0">
@@ -176,7 +176,7 @@ export default function ArNSPanel() {
               <Globe className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Human-Readable Names</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Human-Readable Names</h4>
               <p className="text-xs text-foreground/80">
                 Replace complex transaction IDs with memorable domain names for your apps.
               </p>
@@ -190,7 +190,7 @@ export default function ArNSPanel() {
               <Shield className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Permanent Ownership</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Permanent Ownership</h4>
               <p className="text-xs text-foreground/80">
                 Domain ownership is permanently recorded on the Arweave blockchain.
               </p>
@@ -204,7 +204,7 @@ export default function ArNSPanel() {
               <Zap className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Global Propagation</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Global Propagation</h4>
               <p className="text-xs text-foreground/80">
                 Instant propagation across the entire ar.io network worldwide.
               </p>
@@ -218,7 +218,7 @@ export default function ArNSPanel() {
               <ExternalLink className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Update Anytime</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Update Anytime</h4>
               <p className="text-xs text-foreground/80">
                 Change where your domain points without losing ownership.
               </p>
@@ -231,7 +231,7 @@ export default function ArNSPanel() {
       <div className="bg-card rounded-2xl p-6 border border-border/20">
         <div className="flex items-start gap-4">
           <div className="flex-1">
-            <h4 className="text-lg font-bold font-heading text-foreground mb-2">Ready to Register?</h4>
+            <h4 className="text-lg font-extrabold font-heading text-foreground mb-2">Ready to Register?</h4>
             <p className="text-sm text-foreground/80 mb-4">
               For the complete ArNS experience including domain registration, management, and advanced features,
               visit the full ArNS application.

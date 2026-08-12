@@ -79,7 +79,7 @@ export default function VerifyHero({ result, onReverify, reverifying }: Props) {
         <div className="flex items-start gap-3">
           <cfg.Icon className={`h-6 w-6 shrink-0 ${cfg.iconColor}`} />
           <div>
-            <h2 className={`font-heading text-xl font-bold ${cfg.headColor}`}>{cfg.title}</h2>
+            <h2 className={`font-heading text-xl font-extrabold ${cfg.headColor}`}>{cfg.title}</h2>
             <p className={`mt-0.5 text-sm ${cfg.textColor}`}>{cfg.desc}</p>
             <p className="mt-1.5 text-xs text-foreground/50">{typeSummary}</p>
           </div>

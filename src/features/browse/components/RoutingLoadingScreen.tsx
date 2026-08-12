@@ -118,7 +118,7 @@ export function RoutingLoadingScreen({
 
           {inputType === "arnsName" && !isCheckingHealth && (
             <p className="text-xs text-foreground/50 mt-2">
-              Looking up ArNS name on AR.IO Network
+              Looking up ArNS name on ar.io Network
             </p>
           )}
         </div>

@@ -41,7 +41,7 @@ export default function WalletIdentityCard({
           <Wallet className="h-5 w-5 text-foreground" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-foreground">Wallet</h3>
+          <h3 className="text-lg font-extrabold text-foreground">Wallet</h3>
           <p className="text-sm text-foreground/80">The account you’re signed in as</p>
         </div>
       </div>

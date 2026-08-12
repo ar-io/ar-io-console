@@ -336,7 +336,7 @@ export default function ArNSAssociationPanel({
                   <div className="relative">
                     <div className="relative w-full">
                       <Combobox.Input
-                        className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 pr-10"
+                        className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary disabled:opacity-50 pr-10"
                         displayValue={(name: string) => {
                           if (!name) return '';
                           const found = names.find(n => n.name === name);
@@ -485,10 +485,10 @@ export default function ArNSAssociationPanel({
                           }
                         }}
                         placeholder="my_blog, docs, app..."
-                        className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground focus:ring-2 text-sm transition-colors ${
+                        className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground text-sm transition-colors ${
                           selectedUndername && hasInvalidCharacters(selectedUndername)
-                            ? 'border-warning focus:ring-warning'
-                            : 'border-border/20 focus:ring-primary'
+                            ? 'border-warning'
+                            : 'border-border/20'
                         }`}
                       />
                       <p className="text-xs mt-1">
@@ -611,7 +611,7 @@ export default function ArNSAssociationPanel({
                                       max="86400"
                                       value={customTTLInput}
                                       onChange={(e) => setCustomTTLInput(e.target.value)}
-                                      className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                      className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary"
                                       placeholder="600"
                                     />
                                     <span className="px-3 py-2 bg-card/50 border border-border/20 rounded-2xl text-foreground/80 text-sm flex items-center">
@@ -659,7 +659,7 @@ export default function ArNSAssociationPanel({
                         {/* Help Text */}
                         <div className="mt-3 text-xs text-foreground/80 bg-primary/10 rounded p-3 border border-primary/30">
                           <div className="font-medium text-foreground mb-1">What is TTL?</div>
-                          TTL controls how long AR.IO gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
+                          TTL controls how long ar.io gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
                         </div>
                       </div>
                     </div>

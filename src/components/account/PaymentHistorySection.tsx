@@ -218,7 +218,7 @@ export default function PaymentHistorySection() {
           <Receipt className="h-5 w-5 text-foreground" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-foreground">Top-up History</h3>
+          <h3 className="text-lg font-extrabold text-foreground">Top-up History</h3>
           <p className="text-sm text-foreground/80">Every credit purchase you’ve made</p>
         </div>
         {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
@@ -293,7 +293,7 @@ export default function PaymentHistorySection() {
       {(status === 'loaded' || status === 'loadingMore') && payments.length === 0 && (
         <div className="px-4 pb-8 pt-2 text-center sm:px-6">
           <Inbox className="mx-auto mb-3 h-10 w-10 text-foreground/30" />
-          <h4 className="mb-1 font-bold text-foreground">No top-ups yet</h4>
+          <h4 className="mb-1 font-extrabold text-foreground">No top-ups yet</h4>
           <p className="mx-auto mb-4 max-w-xs text-sm text-foreground/80">
             Credit purchases you make will show up here.
           </p>

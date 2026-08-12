@@ -39,7 +39,7 @@ export default function ThemeControls({ def, update }: ControlProps) {
                 type="button"
                 onClick={() => setTheme({ ...preset.theme, colors: { ...preset.theme.colors } })}
                 aria-pressed={active}
-                className={`overflow-hidden rounded-lg border text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`overflow-hidden rounded-lg border text-left transition-all focus-visible:ring-2 focus-visible:ring-primary ${
                   active ? 'border-primary ring-1 ring-primary' : 'border-border/20 hover:border-primary/40'
                 }`}
               >
@@ -218,7 +218,7 @@ function ColorField({
           }}
           aria-invalid={!valid}
           aria-label={`${label} hex value`}
-          className="min-w-0 flex-1 bg-transparent font-mono text-xs text-foreground focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent font-mono text-xs text-foreground"
         />
       </div>
       {!valid && <p className="mt-1 text-[11px] text-error">Enter a 6-digit hex color, e.g. #5427C8.</p>}

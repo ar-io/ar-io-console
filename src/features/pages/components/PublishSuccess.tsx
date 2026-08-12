@@ -36,7 +36,7 @@ export default function PublishSuccess({
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success/15">
           <CheckCircle2 className="h-7 w-7 text-success" />
         </div>
-        <h3 className="font-heading text-2xl font-bold text-foreground">Your page is live</h3>
+        <h3 className="font-heading text-2xl font-extrabold text-foreground">Your page is live</h3>
         <p className="mt-1 text-sm text-foreground/70">
           {result.version && result.version >= 2
             ? `Version ${result.version} is now live — published permanently${

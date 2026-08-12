@@ -142,7 +142,7 @@ export default function ReturnedNamesPanel() {
           <Flame className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h3 className="mb-1 font-heading text-2xl font-bold text-foreground">
+          <h3 className="mb-1 font-heading text-2xl font-extrabold text-foreground">
             Returned Name Auctions
           </h3>
           <p className="text-sm text-foreground/80">
@@ -185,7 +185,7 @@ export default function ReturnedNamesPanel() {
               setSearchInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
               resetPage();
             }}
-            className="min-w-0 flex-1 bg-transparent p-3 font-mono text-foreground focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent p-3 font-mono text-foreground"
             placeholder="Filter names…"
             aria-label="Filter returned names"
           />
@@ -256,7 +256,7 @@ export default function ReturnedNamesPanel() {
                 <div className="col-span-2 min-w-0 sm:col-span-4">
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 flex-shrink-0 text-primary" />
-                    <span className="truncate font-heading font-bold text-foreground">
+                    <span className="truncate font-heading font-extrabold text-foreground">
                       {toUnicodeName(r.name)}
                     </span>
                     <span className="flex-shrink-0 text-sm text-foreground/50">

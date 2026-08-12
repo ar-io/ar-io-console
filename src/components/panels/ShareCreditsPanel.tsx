@@ -161,7 +161,7 @@ export default function ShareCreditsPanel() {
   if (!address) {
     return (
       <div className="text-center py-12">
-        <h3 className="text-xl font-heading font-bold mb-3">Sign in required</h3>
+        <h3 className="text-xl font-heading font-extrabold mb-3">Sign in required</h3>
         <p className="text-foreground/80 mb-5">Sign in to share credits with another wallet.</p>
         <button
           onClick={promptSignIn}
@@ -186,7 +186,7 @@ export default function ShareCreditsPanel() {
           <Share2 className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Share Credits</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Share Credits</h3>
           <p className="text-sm text-foreground/80">
             Delegate credits to other wallets for collaborative uploads and distributed payments
           </p>
@@ -249,7 +249,7 @@ export default function ShareCreditsPanel() {
                 setCreditAmount(finalAmount);
                 setCreditAmountInput(String(finalAmount));
               }}
-              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
+              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground transition-colors"
               placeholder="Minimum 0.01 credits"
               inputMode="decimal"
             />
@@ -298,7 +298,7 @@ export default function ShareCreditsPanel() {
                   setRecipientWalletType(null);
                 }
               }}
-              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-foreground focus:outline-none transition-colors"
+              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-foreground transition-colors"
               placeholder="Arweave, Ethereum, or Solana address"
             />
             {recipientWalletType && recipientWalletType !== 'unknown' && (
@@ -369,7 +369,7 @@ export default function ShareCreditsPanel() {
               type="number"
               value={expiresBySeconds}
               onChange={(e) => setExpiresBySeconds(Math.max(0, Number(e.target.value)))}
-              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
+              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground transition-colors"
               placeholder="Custom time in seconds"
               min="1"
             />

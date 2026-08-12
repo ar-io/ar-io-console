@@ -35,7 +35,7 @@ export default function InfoPanel() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-2">Your Account</h2>
+        <h2 className="text-2xl font-extrabold mb-2">Your Account</h2>
         <p className="text-foreground/80">Manage credits, upload files, and more</p>
       </div>
 

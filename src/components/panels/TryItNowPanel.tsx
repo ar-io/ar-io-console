@@ -338,7 +338,7 @@ export default function TryItNowPanel() {
           <Upload className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Try It Out</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Try It Out</h3>
           <p className="text-sm text-foreground/80">
             Upload a file for free. It will be stored permanently and accessible to anyone with the link.
           </p>
@@ -548,7 +548,7 @@ export default function TryItNowPanel() {
         <div className="bg-card rounded-2xl border border-border/20">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border/20">
-            <h3 className="font-bold font-heading text-foreground flex items-center gap-2">
+            <h3 className="font-extrabold font-heading text-foreground flex items-center gap-2">
               <Upload className="w-5 h-5 text-foreground" />
               Your Uploads ({userUploads.length})
             </h3>
@@ -740,7 +740,7 @@ export default function TryItNowPanel() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground group-hover:text-foreground">
-              What is the AR.IO Network?
+              What is the ar.io Network?
             </p>
             <p className="text-xs text-foreground/80">Learn about the permanent cloud - decentralized storage and hosting that lasts forever</p>
           </div>

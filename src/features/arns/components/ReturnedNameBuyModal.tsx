@@ -156,7 +156,7 @@ export default function ReturnedNameBuyModal({
             <Flame className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-heading text-xl font-bold text-foreground">
+            <h3 className="font-heading text-xl font-extrabold text-foreground">
               Buy <span className="break-all font-mono text-primary">{toUnicodeName(name)}.ar.io</span>
             </h3>
             <p className="text-sm text-foreground/70">from the returned-name auction</p>
@@ -168,7 +168,7 @@ export default function ReturnedNameBuyModal({
           <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3">
             <div>
               <p className="text-xs text-foreground/60">Current premium</p>
-              <p className="font-heading text-lg font-bold text-primary">
+              <p className="font-heading text-lg font-extrabold text-primary">
                 {multiplier.toFixed(1)}x
               </p>
             </div>

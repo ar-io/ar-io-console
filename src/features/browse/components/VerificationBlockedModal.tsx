@@ -52,7 +52,7 @@ export function VerificationBlockedModal({
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">
+              <h2 className="text-xl font-extrabold text-foreground">
                 Verification Failed
               </h2>
               <p className="text-sm text-red-600">
@@ -138,7 +138,7 @@ export function VerificationBlockedModal({
                   type="checkbox"
                   checked={acknowledged}
                   onChange={(e) => setAcknowledged(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-red-600 rounded focus:ring-red-600 accent-red-600"
+                  className="mt-1 w-4 h-4 text-red-600 rounded accent-red-600"
                 />
                 <span className="text-sm text-foreground">
                   I understand the risks. I acknowledge that this content failed

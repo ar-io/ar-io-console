@@ -146,7 +146,7 @@ export default function PublishModal({
             <Rocket className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-heading text-lg font-bold text-foreground">Ready to publish</h3>
+            <h3 className="font-heading text-lg font-extrabold text-foreground">Ready to publish</h3>
             <p className="text-xs text-foreground/70">Your page will be permanent on Arweave.</p>
           </div>
         </div>

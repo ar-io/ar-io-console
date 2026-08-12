@@ -62,7 +62,7 @@ export default function ReleaseDomainModal({
     <BaseModal onClose={onClose} showCloseButton>
       <div className="max-h-[88vh] w-[92vw] max-w-md overflow-y-auto p-6">
         <div className="mb-5">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-xl font-extrabold text-foreground">
             Release{' '}
             <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io
@@ -143,7 +143,7 @@ export default function ReleaseDomainModal({
               spellCheck={false}
               autoComplete="off"
               disabled={isBusy}
-              className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
+              className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary disabled:opacity-50"
             />
             {confirmText.trim() && !nameMatches && (
               <p className="mb-2 text-xs text-error">

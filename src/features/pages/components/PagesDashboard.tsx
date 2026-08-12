@@ -127,7 +127,7 @@ export default function PagesDashboard({
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
             <Sparkles className="h-7 w-7 text-primary" />
           </div>
-          <h3 className="mb-1 font-heading text-xl font-bold text-foreground">Create your first page</h3>
+          <h3 className="mb-1 font-heading text-xl font-extrabold text-foreground">Create your first page</h3>
           <p className="mx-auto mb-5 max-w-md text-sm text-foreground/70">
             Build a permanent link-in-bio page from a template, assign a domain name, and it&rsquo;s
             live in seconds.
@@ -163,7 +163,7 @@ export default function PagesDashboard({
       {/* List header + actions */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-heading text-lg font-bold text-foreground">Your pages</h3>
+          <h3 className="font-heading text-lg font-extrabold text-foreground">Your pages</h3>
           <p className="text-sm text-foreground/70">
             {sortedPages.length} page{sortedPages.length !== 1 ? 's' : ''}
           </p>
@@ -308,7 +308,7 @@ function RemoveDomainConfirm({
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-warning/15">
             <Unlink className="h-4 w-4 text-warning" />
           </div>
-          <h3 className="font-heading text-lg font-bold text-foreground">Remove domain?</h3>
+          <h3 className="font-heading text-lg font-extrabold text-foreground">Remove domain?</h3>
         </div>
         <p className="mb-3 text-sm text-foreground/70">
           This clears the <span className="font-medium text-foreground">{label}</span> association from
@@ -367,7 +367,7 @@ function DeleteConfirm({
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-error/15">
               <Trash2 className="h-4 w-4 text-error" />
             </div>
-            <h3 className="font-heading text-lg font-bold text-foreground">Delete page?</h3>
+            <h3 className="font-heading text-lg font-extrabold text-foreground">Delete page?</h3>
           </div>
           <button onClick={onCancel} className="p-1 text-foreground/50 hover:text-foreground" aria-label="Close">
             <X className="h-4 w-4" />

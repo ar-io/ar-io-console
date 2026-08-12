@@ -151,7 +151,7 @@ const Header = () => {
       {/* Clean Services Waffle Popover */}
       <div className="mr-3">
         <Popover className="relative">
-          <PopoverButton className="flex items-center p-3 text-foreground/60 hover:text-foreground transition-colors focus:outline-none" title="All Services">
+          <PopoverButton className="flex items-center p-3 text-foreground/60 hover:text-foreground transition-colors" title="All Services">
             <Grid3x3 className="w-6 h-6" />
           </PopoverButton>
 

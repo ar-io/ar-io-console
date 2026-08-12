@@ -24,14 +24,14 @@ export function Section({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-foreground/[0.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-foreground/[0.03] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
       >
         <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           {icon}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="font-heading text-sm font-bold text-foreground">{title}</span>
+            <span className="font-heading text-sm font-extrabold text-foreground">{title}</span>
             {badge}
           </span>
           {subtitle && <span className="block truncate text-xs text-foreground/60">{subtitle}</span>}
@@ -54,7 +54,7 @@ export function FieldLabel({ children, htmlFor }: { children: ReactNode; htmlFor
 }
 
 const inputClasses =
-  'w-full rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 transition-colors focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/40';
+  'w-full rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 transition-colors focus:border-primary/60';
 
 export function TextField({
   label,
@@ -145,7 +145,7 @@ export function SegmentedControl<T extends string>({
               role="radio"
               aria-checked={active}
               onClick={() => onChange(opt.value)}
-              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-primary ${
                 active ? 'bg-foreground text-white' : 'text-foreground/70 hover:text-foreground'
               }`}
             >

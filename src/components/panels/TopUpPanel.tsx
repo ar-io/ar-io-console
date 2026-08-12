@@ -616,7 +616,7 @@ export default function TopUpPanel({
             <CreditCard className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Buy Credits</h3>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Buy Credits</h3>
             <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
           </div>
         </div>
@@ -720,7 +720,7 @@ export default function TopUpPanel({
                   }
                 }}
                 placeholder="Enter Arweave, Ethereum, or Solana address"
-                className={`w-full p-3 rounded-2xl border bg-card text-foreground font-mono text-sm focus:outline-none transition-colors ${
+                className={`w-full p-3 rounded-2xl border bg-card text-foreground font-mono text-sm transition-colors ${
                   targetAddressError
                     ? 'border-error focus:border-error'
                     : 'border-border/20 focus:border-foreground'
@@ -831,7 +831,7 @@ export default function TopUpPanel({
                       }
                     }}
                     placeholder="Enter Arweave, Ethereum, or Solana address"
-                    className={`w-full p-3 rounded-2xl border bg-card text-foreground font-mono text-sm focus:outline-none transition-colors ${
+                    className={`w-full p-3 rounded-2xl border bg-card text-foreground font-mono text-sm transition-colors ${
                       targetAddressError
                         ? 'border-error focus:border-error'
                         : 'border-border/20 focus:border-foreground'
@@ -1134,7 +1134,7 @@ export default function TopUpPanel({
                       }
                     }}
                     placeholder="Enter Arweave, Ethereum, or Solana address"
-                    className={`w-full p-3 rounded-2xl border bg-card text-foreground font-mono text-sm focus:outline-none transition-colors ${
+                    className={`w-full p-3 rounded-2xl border bg-card text-foreground font-mono text-sm transition-colors ${
                       targetAddressError
                         ? 'border-error focus:border-error'
                         : 'border-border/20 focus:border-foreground'
@@ -1244,7 +1244,7 @@ export default function TopUpPanel({
                             setUsdAmountInput(String(usdAmount));
                           }
                         }}
-                        className={`flex-1 p-3 rounded-2xl border bg-card text-foreground font-medium text-lg focus:outline-none transition-colors ${
+                        className={`flex-1 p-3 rounded-2xl border bg-card text-foreground font-medium text-lg transition-colors ${
                           usdAmount > maxUSDAmount || (usdAmount < minUSDAmount && usdAmount > 0)
                             ? 'border-error focus:border-error'
                             : 'border-border/20 focus:border-foreground'
@@ -1302,7 +1302,7 @@ export default function TopUpPanel({
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
-                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 text-lg font-medium text-foreground focus:border-foreground focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 text-lg font-medium text-foreground focus:border-foreground cursor-pointer text-left">
                             <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
@@ -1353,7 +1353,7 @@ export default function TopUpPanel({
                           setStorageAmount(value);
                           setErrorMessage('');
                         }}
-                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 text-lg font-medium text-foreground focus:border-foreground focus:outline-none"
+                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 text-lg font-medium text-foreground focus:border-foreground"
                         placeholder="Enter amount"
                       />
                     </div>
@@ -1447,7 +1447,7 @@ export default function TopUpPanel({
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
-                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 text-lg font-medium text-foreground focus:border-foreground focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 text-lg font-medium text-foreground focus:border-foreground cursor-pointer text-left">
                             <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
@@ -1498,7 +1498,7 @@ export default function TopUpPanel({
                           setStorageAmount(value);
                           setErrorMessage('');
                         }}
-                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 text-lg font-medium text-foreground focus:border-foreground focus:outline-none"
+                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 text-lg font-medium text-foreground focus:border-foreground"
                         placeholder="Enter amount"
                       />
                     </div>
@@ -1547,7 +1547,7 @@ export default function TopUpPanel({
                             setCryptoAmountInput(String(cryptoAmount));
                           }
                         }}
-                        className="flex-1 p-3 rounded-2xl border bg-card text-foreground font-medium text-lg focus:outline-none transition-colors border-border/20 focus:border-foreground"
+                        className="flex-1 p-3 rounded-2xl border bg-card text-foreground font-medium text-lg transition-colors border-border/20 focus:border-foreground"
                         placeholder={`Enter ${tokenLabels[selectedTokenType]} amount`}
                         inputMode="decimal"
                       />

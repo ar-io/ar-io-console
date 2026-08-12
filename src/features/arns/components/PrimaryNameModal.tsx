@@ -41,7 +41,7 @@ const TITLES: Record<PrimaryNameModalMode, string> = {
 };
 
 const inputCls =
-  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
+  'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
 /**
  * Manage the connected wallet's ArNS primary name (reverse resolution). Setting
@@ -146,7 +146,7 @@ export default function PrimaryNameModal({
             <Star className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-heading text-xl font-bold text-foreground">
+            <h3 className="font-heading text-xl font-extrabold text-foreground">
               {TITLES[mode]}
             </h3>
             <p className="text-sm text-foreground/70">

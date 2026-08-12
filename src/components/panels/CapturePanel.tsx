@@ -442,7 +442,7 @@ export default function CapturePanel() {
           <Camera className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Capture Page</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Capture Page</h3>
           <p className="text-sm text-foreground/80">Capture and permanently archive any webpage to Arweave</p>
         </div>
       </div>
@@ -486,7 +486,7 @@ export default function CapturePanel() {
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="https://example.com"
-              className="w-full px-4 py-3 bg-card border border-border/20 rounded-2xl text-foreground placeholder-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
+              className="w-full px-4 py-3 bg-card border border-border/20 rounded-2xl text-foreground placeholder-foreground/50 focus:border-primary/50 transition-colors"
               disabled={isCapturing}
             />
             <p className="mt-2 text-xs text-foreground/80">
@@ -941,7 +941,7 @@ export default function CapturePanel() {
                 <Camera className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
-                <h3 className="text-lg font-heading font-bold text-foreground">Ready to Upload</h3>
+                <h3 className="text-lg font-heading font-extrabold text-foreground">Ready to Upload</h3>
                 <p className="text-xs text-foreground/80">Confirm screenshot upload details</p>
               </div>
             </div>

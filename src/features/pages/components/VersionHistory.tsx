@@ -90,7 +90,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
           <History className="h-5 w-5 text-foreground" />
         </div>
         <div className="min-w-0">
-          <h3 className="mb-0.5 font-heading text-xl font-bold text-foreground">Version history</h3>
+          <h3 className="mb-0.5 font-heading text-xl font-extrabold text-foreground">Version history</h3>
           <p className="truncate text-sm text-foreground/70" title={page.title}>
             {page.title || 'Untitled Page'}
             {arnsLabel && <span className="text-foreground/50"> · {arnsLabel}</span>}
@@ -160,7 +160,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-heading text-sm font-bold text-foreground">v{v.version}</span>
+                    <span className="font-heading text-sm font-extrabold text-foreground">v{v.version}</span>
                     {isLive && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">
                         <CheckCircle2 className="h-3 w-3" /> Live

@@ -39,7 +39,7 @@ export async function getTrustedGateways(count: number = 3): Promise<GatewayWith
     });
 
     if (!result.items || result.items.length === 0) {
-      throw new Error('No gateways returned from AR.IO network');
+      throw new Error('No gateways returned from ar.io network');
     }
 
     // Filter active gateways and calculate total stake (operator + delegated)
@@ -114,7 +114,7 @@ export async function getAllJoinedGateways(): Promise<GatewayWithStake[]> {
     });
 
     if (!result.items || result.items.length === 0) {
-      throw new Error('No gateways returned from AR.IO network');
+      throw new Error('No gateways returned from ar.io network');
     }
 
     // Filter active gateways and calculate total stake (operator + delegated)

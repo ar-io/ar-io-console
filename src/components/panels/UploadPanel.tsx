@@ -315,7 +315,7 @@ function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:outline-none focus:border-foreground"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:border-foreground"
                   />
                   <span className="text-xs text-foreground/80">%</span>
                 </div>
@@ -710,7 +710,7 @@ export default function UploadPanel() {
           <Upload className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Upload Files</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Upload Files</h3>
           <p className="text-sm text-foreground/80">Store your files permanently on the Arweave network</p>
         </div>
       </div>
@@ -1308,7 +1308,7 @@ export default function UploadPanel() {
                 <Upload className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
-                <h3 className="text-lg font-bold text-foreground">Ready to Upload</h3>
+                <h3 className="text-lg font-extrabold text-foreground">Ready to Upload</h3>
                 <p className="text-xs text-foreground/80">Confirm your upload details</p>
               </div>
             </div>

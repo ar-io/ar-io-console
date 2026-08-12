@@ -81,7 +81,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-success" />
           </div>
-          <h4 className="text-2xl font-heading font-bold text-success mb-2">Payment Complete!</h4>
+          <h4 className="text-2xl font-heading font-extrabold text-success mb-2">Payment Complete!</h4>
           <p className="text-foreground/80">
             {isCryptoPayment && tokenType === 'arweave'
               ? 'Your account will be credited in 15-30 minutes.'

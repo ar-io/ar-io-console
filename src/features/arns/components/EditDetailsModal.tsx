@@ -184,13 +184,13 @@ export default function EditDetailsModal({
   };
 
   const inputCls =
-    'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50';
+    'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
       <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
         <div className="mb-4">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-xl font-extrabold text-foreground">
             Edit details{' '}
             <span className="break-all font-mono text-primary">
               {domain.displayName}.ar.io

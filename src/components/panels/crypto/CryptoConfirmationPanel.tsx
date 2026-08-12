@@ -583,7 +583,7 @@ export default function CryptoConfirmationPanel({
           <Wallet className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Review Payment</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Review Payment</h3>
           <p className="text-sm text-foreground/80">Confirm your crypto payment details</p>
         </div>
       </div>

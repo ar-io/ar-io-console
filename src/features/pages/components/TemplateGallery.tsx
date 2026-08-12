@@ -81,7 +81,7 @@ function TemplateCard({
     <button
       type="button"
       onClick={onSelect}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border/20 bg-card text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border/20 bg-card text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div className="relative border-b border-border/20">
         <ThumbPreview html={html} />
@@ -92,7 +92,7 @@ function TemplateCard({
         </div>
       </div>
       <div className="p-4">
-        <h4 className="font-heading text-base font-bold text-foreground">{template.meta.name}</h4>
+        <h4 className="font-heading text-base font-extrabold text-foreground">{template.meta.name}</h4>
         <p className="mt-1 line-clamp-2 text-xs text-foreground/70">{template.meta.description}</p>
       </div>
     </button>
@@ -157,7 +157,7 @@ export default function TemplateGallery({
       <section>
         <div className="mb-2 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <h3 className="font-heading text-base font-bold text-foreground">Start here</h3>
+          <h3 className="font-heading text-base font-extrabold text-foreground">Start here</h3>
         </div>
         <p className="mb-4 text-sm text-foreground/70">
           A great start for most — restyle, rewrite, and rearrange freely. Nothing is permanent until you publish.
@@ -175,13 +175,13 @@ export default function TemplateGallery({
           <button
             type="button"
             onClick={onStartBlank}
-            className="group flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/40 bg-card p-6 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="group flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/40 bg-card p-6 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
               <FilePlus2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-heading text-base font-bold text-foreground">Start blank</h4>
+              <h4 className="font-heading text-base font-extrabold text-foreground">Start blank</h4>
               <p className="mt-1 text-xs text-foreground/70">A clean, minimal page.</p>
             </div>
           </button>

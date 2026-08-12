@@ -141,7 +141,7 @@ export default function PageSettingsControls({
             }}
             placeholder="Add a label…"
             aria-label="New label"
-            className="min-w-0 flex-1 rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
+            className="min-w-0 flex-1 rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60"
           />
           <button
             type="button"
@@ -170,7 +170,7 @@ export default function PageSettingsControls({
                 }
                 placeholder="Name"
                 aria-label="Tag name"
-                className="min-w-0 flex-1 rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="min-w-0 flex-1 rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60"
               />
               <input
                 type="text"
@@ -180,7 +180,7 @@ export default function PageSettingsControls({
                 }
                 placeholder="Value"
                 aria-label="Tag value"
-                className="min-w-0 flex-1 rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="min-w-0 flex-1 rounded-lg border border-border/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60"
               />
               <button
                 type="button"
