@@ -31,8 +31,8 @@ interface RecordFieldsEditorProps {
  * (Arweave/IPFS), a target input validated per protocol, a TTL input, and a
  * collapsible "Advanced" area (priority, display name, record logo, record
  * description, record keywords). Purely presentational — no signer/writes.
- * Reused by the base `@` section (EditDetailsModal) and each undername
- * (UndernamesModal) so both render identical controls.
+ * Reused by the base `@` row and each undername row in the Records table
+ * (RecordsTable) so both render identical controls.
  */
 export default function RecordFieldsEditor({
   value,
