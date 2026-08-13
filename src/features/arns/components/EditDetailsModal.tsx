@@ -14,23 +14,17 @@ import { ArNSName } from '@/types';
 import { useStore } from '../../../store/useStore';
 import BaseModal from '../../../components/modals/BaseModal';
 import {
-  DEFAULT_TTL,
   isArweaveTxId,
   MAX_KEYWORDS,
   parseKeywords,
-  TARGET_PROTOCOL,
 } from '../utils';
 import { useANTDetails } from '../hooks/useANTDetails';
 import {
   ArNSMetadataChanges,
   useSetArNSMetadata,
 } from '../hooks/useSetArNSMetadata';
-import RecordFieldsEditor from './RecordFieldsEditor';
 import LogoUploadField from './LogoUploadField';
 import {
-  RecordFieldsState,
-  toRecordChange,
-  validateRecordFields,
 } from '../recordFields';
 
 interface EditDetailsModalProps {
@@ -62,7 +56,8 @@ function explorerAddressUrl(address: string, configMode: string): string {
 
 /**
  * Edit an owned name's ANT metadata (nickname, ticker, description, keywords,
- * logo) and its base `@` target record. ANT-level fields are each a separate
+ * logo). The base `@` record moved to the Records table on the Name Detail
+ * page. ANT-level fields are each a separate
  * write / wallet signature; the base record saves in ONE signature (all its
  * fields bundled). The modal saves only what changed and shows per-op progress.
  */
@@ -82,18 +77,6 @@ export default function EditDetailsModal({
   const [description, setDescription] = useState('');
   const [keywordsRaw, setKeywordsRaw] = useState('');
   const [logo, setLogo] = useState('');
-  // Base `@` record editor state + its original (for diffing).
-  const [record, setRecord] = useState<RecordFieldsState>(() => ({
-    target: '',
-    protocol: TARGET_PROTOCOL.arweave,
-    ttl: String(DEFAULT_TTL),
-    priority: '',
-    displayName: '',
-    logo: '',
-    description: '',
-    keywordsRaw: '',
-  }));
-  const [origRecord, setOrigRecord] = useState<RecordFieldsState | null>(null);
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
@@ -104,18 +87,6 @@ export default function EditDetailsModal({
       setDescription(d.description);
       setKeywordsRaw(d.keywords.join(', '));
       setLogo(d.logo);
-      const seededRecord: RecordFieldsState = {
-        target: d.target ?? '',
-        protocol: d.targetProtocol ?? TARGET_PROTOCOL.arweave,
-        ttl: String(d.ttlSeconds ?? DEFAULT_TTL),
-        priority: d.priority !== undefined ? String(d.priority) : '',
-        displayName: d.recordDisplayName ?? '',
-        logo: d.recordLogo ?? '',
-        description: d.recordDescription ?? '',
-        keywordsRaw: (d.recordKeywords ?? []).join(', '),
-      };
-      setRecord(seededRecord);
-      setOrigRecord(seededRecord);
       setSeeded(true);
     }
   }, [details.data, seeded]);
@@ -128,16 +99,6 @@ export default function EditDetailsModal({
   const logoValid = logo.trim() === '' || isArweaveTxId(logo.trim());
   const keywordsValid = keywords.length <= MAX_KEYWORDS;
 
-  // Base record validity + diff.
-  const recordValidity = validateRecordFields(record);
-  const recordChanged = useMemo(() => {
-    if (!origRecord) return false;
-    return (
-      JSON.stringify(toRecordChange(record)) !==
-      JSON.stringify(toRecordChange(origRecord))
-    );
-  }, [record, origRecord]);
-
   // Diff vs. the loaded state — only changed + valid fields are written.
   const changes: ArNSMetadataChanges = useMemo(() => {
     if (!orig) return {};
@@ -149,11 +110,6 @@ export default function EditDetailsModal({
     // Logo can be changed but not cleared (setLogo requires a txId).
     if (logo.trim() && logo.trim() !== orig.logo && isArweaveTxId(logo.trim()))
       c.logo = logo.trim();
-    // Base record: whenever ANY record field changed, resend the FULL param
-    // set (setBaseNameRecord requires transactionId + ttlSeconds every time).
-    if (recordChanged && recordValidity.allValid) {
-      c.baseRecord = toRecordChange(record);
-    }
     return c;
   }, [
     orig,
@@ -162,17 +118,13 @@ export default function EditDetailsModal({
     description,
     keywords,
     logo,
-    record,
-    recordChanged,
-    recordValidity.allValid,
   ]);
 
   const changeCount = Object.keys(changes).length;
   // Block save if a touched-but-invalid field would silently drop.
   const antLevelValid = logoValid && keywordsValid;
-  const recordBlocks = recordChanged && !recordValidity.allValid;
   const canSave =
-    seeded && changeCount > 0 && antLevelValid && !recordBlocks && !isBusy;
+    seeded && changeCount > 0 && antLevelValid && !isBusy;
 
   const handleSave = async () => {
     try {
@@ -293,23 +245,6 @@ export default function EditDetailsModal({
                 Enter a valid 43-character Arweave TX ID.
               </p>
             )}
-
-            <div className="my-4 border-t border-border/20" />
-
-            {/* Base @ record */}
-            <div className="mb-1 text-sm font-semibold text-foreground">
-              Target (base <span className="font-mono">@</span> record)
-            </div>
-            <p className="mb-3 text-xs text-foreground/60">
-              Where {domain.displayName}.ar.io resolves. Choose the storage
-              protocol, then enter the target.
-            </p>
-            <RecordFieldsEditor
-              value={record}
-              onChange={setRecord}
-              disabled={isBusy}
-              idPrefix="base-record"
-            />
 
             {/* Progress / error */}
             {isBusy && (

@@ -11,7 +11,6 @@ export { default as TransferDomainModal } from './components/TransferDomainModal
 export { default as ReassignDomainModal } from './components/ReassignDomainModal';
 export { default as ReleaseDomainModal } from './components/ReleaseDomainModal';
 export { default as EditDetailsModal } from './components/EditDetailsModal';
-export { default as UndernamesModal } from './components/UndernamesModal';
 export { default as ControllersModal } from './components/ControllersModal';
 export { default as PrimaryNameModal } from './components/PrimaryNameModal';
 export type { PrimaryNameModalMode } from './components/PrimaryNameModal';

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
   CalendarPlus,
@@ -9,7 +10,6 @@ import {
   Layers,
   Loader2,
   Pencil,
-  Search,
   Shuffle,
   Send,
   Star,
@@ -26,7 +26,6 @@ import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import {
   ManageDomainModal,
   EditDetailsModal,
-  UndernamesModal,
   ControllersModal,
   PrimaryNameModal,
   TransferDomainModal,
@@ -37,18 +36,16 @@ import {
   useControllersState,
   usePrimaryName,
 } from '@/features/arns';
-import type { UndernameRecord } from '@/features/arns';
 import { useArNSNameRecord } from '@/features/arns/hooks/useArNSNameRecord';
 import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
 import { deriveAntRoleStrict } from '@/features/arns/antRole';
-import { isArweaveTxId, isValidIpfsCid, isValidArNSName } from '@/features/arns/utils';
+import { isArweaveTxId, isValidArNSName } from '@/features/arns/utils';
 import { toUnicodeName } from '@/utils/punycode';
 
 /** Which action modal is open, if any. */
 type OpenModal =
   | 'manage'
   | 'edit'
-  | 'undernames'
   | 'controllers'
   | 'primary'
   | 'transfer'
@@ -66,13 +63,6 @@ const fmtDate = (ts?: number) => {
     ? new Date(ms).toLocaleDateString(undefined, { dateStyle: 'medium' })
     : '—';
 };
-
-/** Classify a resolved target id so we can label it Arweave vs IPFS. */
-function targetKind(id: string): 'Arweave' | 'IPFS' | null {
-  if (isArweaveTxId(id)) return 'Arweave';
-  if (isValidIpfsCid(id)) return 'IPFS';
-  return null;
-}
 
 function shorten(id: string, head = 6, tail = 4) {
   return id.length > head + tail + 1 ? `${id.slice(0, head)}…${id.slice(-tail)}` : id;
@@ -109,126 +99,6 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function TargetValue({ target }: { target: string | null | undefined }) {
-  if (target === undefined)
-    return (
-      <span className="inline-flex items-center gap-1.5 text-foreground/60">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Resolving…
-      </span>
-    );
-  if (!target) return <span className="text-foreground/50">No target set</span>;
-  const kind = targetKind(target);
-  return (
-    <div className="flex min-w-0 items-center justify-end gap-1">
-      {kind && <span className="flex-shrink-0 text-xs text-foreground/50">{kind}</span>}
-      <span className="truncate font-mono text-xs">{shorten(target, 8, 6)}</span>
-      <CopyButton textToCopy={target} />
-    </div>
-  );
-}
-
-/**
- * The name's records (`@` root + every undername) as a searchable, paginated
- * table so it scales to names with many undernames — the piece the flat card
- * list didn't handle.
- */
-function RecordsSection({
-  apexTarget,
-  undernames,
-}: {
-  apexTarget: string | null | undefined;
-  undernames: UndernameRecord[] | undefined;
-}) {
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(0);
-  const PAGE = 10;
-
-  const rows = useMemo(() => {
-    const all: { key: string; label: string; sub?: string; target: string | null | undefined }[] = [
-      { key: '@', label: '@', sub: 'root', target: apexTarget },
-      ...(undernames ?? []).map((u) => ({
-        key: u.undername,
-        label: u.undername,
-        target: u.transactionId,
-      })),
-    ];
-    const needle = q.trim().toLowerCase();
-    if (!needle) return all;
-    return all.filter(
-      (r) =>
-        r.label.toLowerCase().includes(needle) ||
-        (r.target ?? '').toLowerCase().includes(needle),
-    );
-  }, [apexTarget, undernames, q]);
-
-  const total = 1 + (undernames?.length ?? 0);
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
-  const cur = Math.min(page, pageCount - 1);
-  const shown = rows.slice(cur * PAGE, cur * PAGE + PAGE);
-
-  return (
-    <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-primary" />
-          <h2 className="font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
-            Records <span className="text-foreground/40">({total})</span>
-          </h2>
-        </div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground/40" />
-          <input
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search records"
-            className="w-full rounded-full border border-border/20 bg-background py-1.5 pl-8 pr-3 text-sm focus:border-primary sm:w-56"
-          />
-        </div>
-      </div>
-
-      {shown.length === 0 ? (
-        <p className="py-2 text-xs text-foreground/50">No matching records.</p>
-      ) : (
-        <div className="divide-y divide-border/10">
-          {shown.map((r) => (
-            <div key={r.key} className="flex items-center justify-between gap-4 py-2.5">
-              <span className="min-w-0 truncate font-mono text-sm text-foreground">
-                {r.label}
-                {r.sub && <span className="text-foreground/40"> ({r.sub})</span>}
-              </span>
-              <TargetValue target={r.target} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {pageCount > 1 && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <button
-            onClick={() => setPage(cur - 1)}
-            disabled={cur === 0}
-            className="rounded-full border border-border/20 px-3 py-1 font-medium text-foreground/70 transition-colors hover:border-primary/40 disabled:opacity-40"
-          >
-            Prev
-          </button>
-          <span className="text-foreground/50">
-            Page {cur + 1} of {pageCount}
-          </span>
-          <button
-            onClick={() => setPage(cur + 1)}
-            disabled={cur >= pageCount - 1}
-            className="rounded-full border border-border/20 px-3 py-1 font-medium text-foreground/70 transition-colors hover:border-primary/40 disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /**
  * Name Detail (`/domains/:name`) — the single, deep-linkable page for one ArNS
@@ -295,7 +165,6 @@ export default function NameDetailPage() {
     // a new record with the previous name's unicode rendering.
   }, [record, displayName]);
 
-  const target = ant?.target;
   const logoTxId = ant?.logo && isArweaveTxId(ant.logo) ? ant.logo : undefined;
   const explorerUrl = processId
     ? `https://explorer.solana.com/address/${processId}${
@@ -567,9 +436,18 @@ export default function NameDetailPage() {
             </SectionCard>
           </div>
 
-          {/* Records — full width + searchable + paginated so it scales to
-              names with many undernames. */}
-          <RecordsSection apexTarget={target} undernames={undernames} />
+          {/* Records — the name's whole zone (`@` + every undername) in one
+              editable table, DNS-style. Replaces the old split where the root
+              lived in "Edit details" and everything else in an "Undernames"
+              modal. */}
+          <RecordsTable
+            processId={record.processId}
+            ant={ant}
+            undernames={undernames}
+            canManage={canManage}
+            undernameLimit={record.undernameLimit}
+            onSuccess={refresh}
+          />
 
           {/* Actions (only for names you own or control) */}
           {canManage && (
@@ -580,7 +458,6 @@ export default function NameDetailPage() {
               <div className="flex flex-wrap gap-2">
                 <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
                 <ActionBtn icon={Pencil} label="Edit details" onClick={() => setOpen('edit')} />
-                <ActionBtn icon={Layers} label="Undernames" onClick={() => setOpen('undernames')} />
                 <ActionBtn icon={Star} label="Set as primary" onClick={() => setOpen('primary')} />
                 {ownerOnly && (
                   <>
@@ -602,9 +479,6 @@ export default function NameDetailPage() {
           )}
           {open === 'edit' && (
             <EditDetailsModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
-          )}
-          {open === 'undernames' && (
-            <UndernamesModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
           )}
           {open === 'controllers' && (
             <ControllersModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
