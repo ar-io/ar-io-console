@@ -86,3 +86,28 @@ export function expiryLabel(daysRemaining: number): string {
   if (daysRemaining === 1) return 'in 1 day';
   return `in ${daysRemaining} days`;
 }
+
+/**
+ * At-a-glance lifecycle state for a name, mirroring the status column every
+ * registrar shows. Derived from the same `daysUntil` / threshold logic as the
+ * expiry warnings, so the pill and the banner can never disagree.
+ *
+ * `permanent` covers both an explicit permabuy and a name with no known
+ * `endTimestamp` — we never imply an expiry we cannot substantiate, matching
+ * `getExpiringDomains`, which excludes unknown end dates rather than guessing.
+ */
+export type DomainStatus = 'permanent' | 'active' | 'expiring' | 'expired';
+
+export function domainStatus(
+  name: OwnedNameLike,
+  now: number,
+  thresholdDays: number = EXPIRY_WARNING_DAYS,
+): DomainStatus {
+  if (name.type === 'permabuy') return 'permanent';
+  if (typeof name.endTimestamp !== 'number' || name.endTimestamp <= 0)
+    return 'permanent';
+  const days = daysUntil(name.endTimestamp, now);
+  if (days < 0) return 'expired';
+  if (days <= thresholdDays) return 'expiring';
+  return 'active';
+}
