@@ -94,8 +94,14 @@
    * The CONTAINER owns the indicator instead, so it follows the pill's radius.
    * This is the sanctioned way to suppress an input outline: the replacement is
    * real, visible, and brand-shaped, per the kit's focus rule.
+   *
+   * The :has() is scoped to form CONTROLS deliberately. Most of these wrappers
+   * also hold a button (a clear "x", a submit, a unit toggle), and a bare
+   * :has(:focus-visible) would light the whole container when that button was
+   * focused — a ring around the wrong element, drawn on top of the button's own
+   * ring. Only the field's control should claim the field's outline.
    */
-  :where(.field):has(:focus-visible) {
+  :where(.field):has(:is(input, select, textarea):focus-visible) {
     outline: 2px solid rgb(var(--color-primary));
     outline-offset: 2px;
   }
