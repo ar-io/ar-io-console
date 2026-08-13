@@ -68,7 +68,7 @@ export function ArNSNameSearch({
       <label className="block text-sm font-medium mb-3">Search for a name</label>
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
-          <div className="flex items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors">
+          <div className="field flex items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors">
             <Search className="w-4 h-4 text-foreground/50 ml-3 flex-shrink-0" />
             <input
               type="text"

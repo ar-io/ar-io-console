@@ -141,7 +141,7 @@ export default function BrowseDomainsPanel() {
 
       {/* Search + quick filters — single row on desktop */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex flex-1 items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors min-w-[180px]">
+        <div className="field flex flex-1 items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors min-w-[180px]">
           <Search className="w-4 h-4 text-foreground/50 ml-3 flex-shrink-0" />
           <input
             type="text"

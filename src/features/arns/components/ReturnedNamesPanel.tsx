@@ -176,7 +176,7 @@ export default function ReturnedNamesPanel() {
 
       {/* Search */}
       <div className="mb-4">
-        <div className="flex items-center rounded-2xl border border-border/20 bg-card transition-colors focus-within:border-primary">
+        <div className="field flex items-center rounded-2xl border border-border/20 bg-card transition-colors focus-within:border-primary">
           <Search className="ml-3 h-4 w-4 flex-shrink-0 text-foreground/50" />
           <input
             type="text"

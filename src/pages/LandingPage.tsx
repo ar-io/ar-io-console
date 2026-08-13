@@ -451,7 +451,7 @@ const LandingPage = () => {
               {/* Live availability search (primary conversion action) */}
               <form onSubmit={handleArnsSearch} className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <label htmlFor="arns-home-search" className="sr-only">Search for an ArNS name</label>
-                <div className="flex flex-1 items-center rounded-full border border-primary/30 bg-background pl-5 pr-3 transition-colors focus-within:border-primary">
+                <div className="field flex flex-1 items-center rounded-full border border-primary/30 bg-background pl-5 pr-3 transition-colors focus-within:border-primary">
                   <input
                     id="arns-home-search"
                     type="text"

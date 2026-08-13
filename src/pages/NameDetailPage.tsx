@@ -196,7 +196,7 @@ export default function NameDetailPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6">
       {/* Back goes where you came FROM. This page is reachable from My Domains,
           from Browse, and from a deep link, and a hardcoded "/domains" dumped
           portfolio users into the public browse-all table. Falls back to

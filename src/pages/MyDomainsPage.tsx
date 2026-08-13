@@ -185,7 +185,7 @@ export default function MyDomainsPage() {
             <>
               {/* Search sits above the table, mirroring BrowseDomainsPanel so the
                   two name lists behave identically. */}
-              <div className="mb-3 flex min-w-[180px] items-center rounded-2xl border border-border/20 bg-card transition-colors focus-within:border-primary">
+              <div className="field mb-3 flex min-w-[180px] items-center rounded-2xl border border-border/20 bg-card transition-colors focus-within:border-primary">
                 <Search className="ml-3 h-4 w-4 flex-shrink-0 text-foreground/50" />
                 <input
                   type="text"

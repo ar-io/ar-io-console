@@ -195,7 +195,10 @@ export default function RecordsTable({
   };
 
   const editor = (r: Row | null) => (
-    <div className="border-t border-border/10 bg-background/60 px-1 py-3">
+    // A nested card, per the style guide's rounded-xl convention. Previously a
+    // flat border-t strip, which squared off inside the rounded records card and
+    // read as a seam rather than a panel.
+    <div className="mb-3 rounded-xl border border-border/20 bg-background p-4">
       {r === null && (
         <div className="mb-3">
           <label htmlFor="new-undername" className="mb-1 block text-sm font-medium">
@@ -296,7 +299,7 @@ export default function RecordsTable({
       </div>
 
       {isAdding && (
-        <div className="mb-2 rounded-xl border border-primary/20">{editor(null)}</div>
+        <div className="ring-1 ring-primary/20 rounded-xl mb-3">{editor(null)}</div>
       )}
 
       {shown.length === 0 ? (

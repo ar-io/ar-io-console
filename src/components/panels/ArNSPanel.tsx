@@ -83,7 +83,7 @@ export default function ArNSPanel() {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <div className="flex items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors">
+            <div className="field flex items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors">
               <input
                 type="text"
                 value={nameSearch}
