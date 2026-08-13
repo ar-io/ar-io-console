@@ -237,7 +237,7 @@ export default function BrowseDomainsPanel() {
                 {/* Name — click to open details */}
                 <div className="col-span-2 sm:col-span-4 min-w-0">
                   <button
-                    onClick={() => navigate(`/domains/${r.name}`)}
+                    onClick={() => navigate(`/domains/${r.name}`, { state: { from: '/domains' } })}
                     title="View details"
                     className="group flex items-center gap-2 min-w-0 text-left"
                   >

@@ -143,7 +143,9 @@ export default function MyDomainsPage() {
                 </div>
                 <button
                   onClick={() =>
-                    navigate(`/domains/${expiringDomains[0].name}`)
+                    navigate(`/domains/${expiringDomains[0].name}`, {
+                      state: { from: '/my-domains' },
+                    })
                   }
                   className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 >
