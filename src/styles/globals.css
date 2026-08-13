@@ -85,6 +85,24 @@
     border-radius: inherit;
   }
 
+  /*
+   * An input wrapped in a bordered "field" container (search pills, the ArNS
+   * name box) must NOT draw its own ring. The input is a bare rectangle inside
+   * a rounded pill, so the outline lands on the inner edge and reads as a stray
+   * highlight around the text rather than around the control.
+   *
+   * The CONTAINER owns the indicator instead, so it follows the pill's radius.
+   * This is the sanctioned way to suppress an input outline: the replacement is
+   * real, visible, and brand-shaped, per the kit's focus rule.
+   */
+  :where(.field):has(:focus-visible) {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+  .field :where(input, select, textarea):focus-visible {
+    outline: none;
+  }
+
   /* On deep-dark surfaces primary only reaches ~1.9:1 — use accent lavender. */
   .on-dark :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])):focus-visible,
   :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])).on-dark:focus-visible {
