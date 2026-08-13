@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Globe, ExternalLink, AlertTriangle, ArrowRight } from 'lucide-react';
 import { ARIO_LOGO_TX_ID } from '@ar.io/sdk/solana';
 import { ArNSName } from '@/types';
-import { daysUntil, isExpiringSoon } from '@/utils/domainExpiry';
+import { daysUntil, domainStatus, isExpiringSoon, type DomainStatus } from '@/utils/domainExpiry';
 import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
 import { deriveAntRole } from '@/features/arns/antRole';
 import { useStore } from '@/store/useStore';
@@ -69,6 +69,29 @@ function ExpiresCell({ domain }: { domain: ArNSName }) {
 }
 
 /**
+ * At-a-glance lifecycle pill, the column every registrar leads with. Uses the
+ * semantic status tokens (not raw palette colours) per the style guide, and
+ * derives from `domainStatus` so it can never contradict the expiry banner.
+ */
+const STATUS_STYLE: Record<DomainStatus, { label: string; cls: string }> = {
+  permanent: { label: 'Permanent', cls: 'bg-primary/10 text-primary' },
+  active: { label: 'Active', cls: 'bg-success/10 text-success' },
+  expiring: { label: 'Expiring', cls: 'bg-warning/15 text-warning' },
+  expired: { label: 'Expired', cls: 'bg-error/10 text-error' },
+};
+
+function StatusPill({ status }: { status: DomainStatus }) {
+  const { label, cls } = STATUS_STYLE[status];
+  return (
+    <span
+      className={`inline-flex flex-shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+/**
  * A scannable list of the ArNS names you own/control. Each row links into the
  * canonical Name Detail page (`/domains/:name`) where all management happens —
  * the table itself stays slim (name, explicit expiry, quick links). Rows the
@@ -95,13 +118,16 @@ export default function DomainsTable({
         <thead>
           <tr className="border-b border-border/20 text-left text-xs uppercase tracking-wider text-foreground/60">
             <th className="px-4 py-3 font-medium">Domain</th>
+            <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Expires</th>
             <th className="px-4 py-3 text-right font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
           {domains.map((domain) => {
-            const expiringSoon = isExpiringSoon(domain, Date.now());
+            const now = Date.now();
+            const expiringSoon = isExpiringSoon(domain, now);
+            const status = domainStatus(domain, now);
             const role = deriveAntRole(
               summaries.get(domain.processId),
               walletAddress,
@@ -133,6 +159,9 @@ export default function DomainsTable({
                       </span>
                     )}
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  <StatusPill status={status} />
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <ExpiresCell domain={domain} />

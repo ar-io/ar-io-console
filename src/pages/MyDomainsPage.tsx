@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Globe, RefreshCw, AlertTriangle, Download } from 'lucide-react';
+import { Globe, RefreshCw, AlertTriangle, Download, Search, X } from 'lucide-react';
 import { getExpiringDomains, expiryLabel } from '@/utils/domainExpiry';
 import { downloadDomainsCsv } from '@/utils/domainCsv';
 import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
@@ -20,6 +20,7 @@ const DOMAINS_SHOWN = 10;
  * "Manage Domains" entry.
  */
 export default function MyDomainsPage() {
+  const [nameFilter, setNameFilter] = useState('');
   const { address } = useStore();
   const navigate = useNavigate();
   const { hasArNSAccess, arnsAddress } = useLinkedSolanaWallet();
@@ -33,6 +34,11 @@ export default function MyDomainsPage() {
   }
 
   const now = Date.now();
+  // Filter your own names. Browse (/domains) has had search since launch while
+  // this page — the one you actually live in — did not, so a large portfolio
+  // could only be scrolled. Matches on the name and its unicode display form so
+  // punycode names are findable by what the user sees.
+  const needle = nameFilter.trim().toLowerCase();
   const expiringDomains = getExpiringDomains(ownedNames, now);
   // Soonest-expiring first across ALL leases; permabuy (never expires) last.
   const sortedDomains = [...ownedNames].sort((a, b) => {
@@ -46,6 +52,13 @@ export default function MyDomainsPage() {
         : b.endTimestamp;
     return ka - kb;
   });
+  const visibleDomains = needle
+    ? sortedDomains.filter(
+        (d) =>
+          d.name.toLowerCase().includes(needle) ||
+          (d.displayName ?? '').toLowerCase().includes(needle),
+      )
+    : sortedDomains;
 
   return (
     <div className="px-4 sm:px-6">
@@ -69,13 +82,18 @@ export default function MyDomainsPage() {
           <div className="flex flex-shrink-0 items-center gap-1">
             {ownedNames.length > 0 && (
               <button
-                onClick={() => downloadDomainsCsv(sortedDomains)}
+                // Export what is on screen. With a search active, exporting the
+                // full list instead of the visible matches would quietly hand
+                // back a different set than the one being looked at.
+                onClick={() => downloadDomainsCsv(visibleDomains)}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground transition-colors hover:text-foreground/80"
-                title="Export domains to CSV"
-                aria-label="Export domains to CSV"
+                title={needle ? 'Export the matching names to CSV' : 'Export domains to CSV'}
+                aria-label={needle ? 'Export the matching names to CSV' : 'Export domains to CSV'}
               >
                 <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Export CSV</span>
+                <span className="hidden sm:inline">
+                  Export CSV{needle ? ` (${visibleDomains.length})` : ''}
+                </span>
               </button>
             )}
             <button
@@ -163,16 +181,47 @@ export default function MyDomainsPage() {
             </div>
           ) : (
             <>
-              <DomainsTable
-                domains={
-                  showAllDomains
-                    ? sortedDomains
-                    : sortedDomains.slice(0, DOMAINS_SHOWN)
-                }
-                walletAddress={arnsAddress}
-              />
+              {/* Search sits above the table, mirroring BrowseDomainsPanel so the
+                  two name lists behave identically. */}
+              <div className="mb-3 flex min-w-[180px] items-center rounded-2xl border border-border/20 bg-card transition-colors focus-within:border-primary">
+                <Search className="ml-3 h-4 w-4 flex-shrink-0 text-foreground/50" />
+                <input
+                  type="text"
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value.toLowerCase())}
+                  placeholder="Search your names"
+                  aria-label="Search your names"
+                  className="min-w-0 flex-1 bg-transparent p-2.5 font-mono text-sm text-foreground"
+                />
+                {nameFilter && (
+                  <button
+                    onClick={() => setNameFilter('')}
+                    aria-label="Clear search"
+                    className="mr-2 rounded-full p-1 text-foreground/50 transition-colors hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
 
-              {ownedNames.length > DOMAINS_SHOWN && (
+              {visibleDomains.length === 0 ? (
+                <p className="rounded-2xl border border-border/20 bg-card px-4 py-6 text-center text-sm text-foreground/60">
+                  No names match &ldquo;{nameFilter}&rdquo;.
+                </p>
+              ) : (
+                <DomainsTable
+                  domains={
+                    // A search should show every match; the show-more cap only
+                    // applies to the unfiltered list.
+                    needle || showAllDomains
+                      ? visibleDomains
+                      : visibleDomains.slice(0, DOMAINS_SHOWN)
+                  }
+                  walletAddress={arnsAddress}
+                />
+              )}
+
+              {!needle && ownedNames.length > DOMAINS_SHOWN && (
                 <div className="mt-4 text-center">
                   <button
                     onClick={() => setShowAllDomains((v) => !v)}
