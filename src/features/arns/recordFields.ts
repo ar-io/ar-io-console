@@ -100,19 +100,34 @@ export interface RecordChangeParams {
 }
 
 /**
- * Convert a record editor state into the SDK param set. Advanced text fields
- * are sent verbatim (blanking a field sends `''`, which clears it on-chain);
- * priority is omitted when blank (vs. an explicit `0`).
+ * Convert a record editor state into the SDK param set. Free-text advanced
+ * fields are sent verbatim (blanking one sends `''`, which clears it on-chain);
+ * priority and logo are OMITTED when blank.
+ *
+ * Logo is not like the other text fields. The ANT program validates it as a
+ * 43-character Arweave address, so an empty string is rejected outright:
+ *
+ *   AnchorError ... programs/ario-ant/src/lib.rs:1162
+ *   Error Code: InvalidLogo. Error Number: 6021.
+ *   Error Message: Logo must be a valid 43-character Arweave address.
+ *
+ * Sending `logo: ''` therefore failed EVERY record write made without a logo —
+ * the base `@` record, adding an undername, and editing one — and it failed
+ * *after* SetRecord had already succeeded, so the target saved and the metadata
+ * did not. Omitting a blank logo means "leave it unchanged", which matches the
+ * ANT-level setLogo path that already notes a logo can be changed but not
+ * cleared.
  */
 export function toRecordChange(s: RecordFieldsState): RecordChangeParams {
   const priorityTrimmed = s.priority.trim();
+  const logoTrimmed = s.logo.trim();
   return {
     transactionId: s.target.trim(),
     ttlSeconds: Number(s.ttl),
     targetProtocol: s.protocol,
     ...(priorityTrimmed !== '' ? { priority: Number(priorityTrimmed) } : {}),
     displayName: s.displayName,
-    logo: s.logo.trim(),
+    ...(logoTrimmed !== '' ? { logo: logoTrimmed } : {}),
     description: s.description,
     keywords: parseKeywords(s.keywordsRaw),
   };

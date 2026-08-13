@@ -97,6 +97,22 @@ describe('toRecordChange', () => {
     ).toBe(0);
   });
 
+  it('omits a blank logo rather than sending an empty string', () => {
+    // The ANT program validates logo as a 43-char Arweave address and rejects
+    // '' with AnchorError 6021 (InvalidLogo). Sending it broke every record
+    // write made without a logo, AFTER SetRecord had already succeeded.
+    const c = toRecordChange(base({ target: 'a'.repeat(43), logo: '' }));
+    expect('logo' in c).toBe(false);
+
+    // Whitespace-only is still blank.
+    expect('logo' in toRecordChange(base({ target: 'a'.repeat(43), logo: '   ' }))).toBe(false);
+
+    // A real logo is still sent.
+    expect(
+      toRecordChange(base({ target: 'a'.repeat(43), logo: 'b'.repeat(43) })).logo,
+    ).toBe('b'.repeat(43));
+  });
+
   it('parses keywords and trims target/logo', () => {
     const c = toRecordChange(
       base({
