@@ -145,6 +145,7 @@ export default function DomainsTable({
                     />
                     <Link
                       to={`/domains/${domain.name}`}
+                      state={{ from: '/my-domains' }}
                       className="truncate font-medium text-foreground hover:text-primary hover:underline"
                       title={`View ${domain.displayName}.ar.io`}
                     >
@@ -179,6 +180,7 @@ export default function DomainsTable({
                     </a>
                     <Link
                       to={`/domains/${domain.name}`}
+                      state={{ from: '/my-domains' }}
                       className="inline-flex items-center gap-1 py-1 font-medium text-foreground/70 hover:text-foreground hover:underline"
                     >
                       Manage

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
@@ -112,6 +112,10 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
  */
 export default function NameDetailPage() {
   const { name: rawName } = useParams<{ name: string }>();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  const backTo = from === '/my-domains' ? '/my-domains' : '/domains';
+  const backLabel = backTo === '/my-domains' ? 'My domains' : 'All names';
   const navigate = useNavigate();
   const configMode = useStore((s) => s.configMode);
   const { arnsAddress } = useLinkedSolanaWallet();
@@ -193,11 +197,15 @@ export default function NameDetailPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6">
+      {/* Back goes where you came FROM. This page is reachable from My Domains,
+          from Browse, and from a deep link, and a hardcoded "/domains" dumped
+          portfolio users into the public browse-all table. Falls back to
+          browse for a cold deep link, which has no origin to return to. */}
       <Link
-        to="/domains"
+        to={backTo}
         className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="h-4 w-4" /> All names
+        <ArrowLeft className="h-4 w-4" /> {backLabel}
       </Link>
 
       {/* Invalid name */}
