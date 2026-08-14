@@ -157,23 +157,45 @@ export default function CryptoConfirmationPanel({
           // ETH L1/Base ETH/POL/USDC direct payment via Ethereum wallet
           const { ethers } = await import('ethers');
 
-          // Check if this is a Privy embedded wallet
-          const privyWallet = wallets.find((w) => w.walletClientType === 'privy');
+          // Pay from the SESSION wallet — the one whose balance this screen just
+          // showed. Privy is configured `createOnLogin: 'all-users'`, so an
+          // embedded wallet exists for everyone, including users who connected
+          // MetaMask. Selecting it merely because it exists meant the balance was
+          // read from one address and the transfer signed by another: the screen
+          // showed a funded wallet while an empty embedded wallet sent the tx,
+          // which fails estimateGas with an opaque CALL_EXCEPTION.
+          const sessionAddress = address?.toLowerCase();
+          const privyWallet = wallets.find(
+            (w) =>
+              w.walletClientType === 'privy' &&
+              w.address?.toLowerCase() === sessionAddress,
+          );
 
           let provider;
           let signer;
 
           if (privyWallet) {
-            // Use Privy embedded wallet
+            // The session wallet IS the Privy embedded wallet.
             const privyProvider = await privyWallet.getEthereumProvider();
             provider = new ethers.BrowserProvider(privyProvider);
             signer = await provider.getSigner();
           } else if (window.ethereum) {
-            // Fallback to regular Ethereum wallet (MetaMask, WalletConnect)
+            // Injected wallet (MetaMask, WalletConnect, Coinbase).
             provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
           } else {
             throw new Error('No Ethereum wallet available');
+          }
+
+          // Never pay from an address other than the one quoted. Wallets can
+          // switch accounts behind the app's back, so verify rather than assume.
+          const signerAddress = (await signer.getAddress()).toLowerCase();
+          if (sessionAddress && signerAddress !== sessionAddress) {
+            throw new Error(
+              `Your wallet is set to ${signerAddress.slice(0, 6)}…${signerAddress.slice(-4)}, ` +
+                `but this payment was quoted for ${address!.slice(0, 6)}…${address!.slice(-4)}. ` +
+                `Switch back to that account in your wallet, or sign out and reconnect, then try again.`,
+            );
           }
 
           // Network validation and auto-switching

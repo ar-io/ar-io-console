@@ -78,8 +78,16 @@ export function useEthereumTurboClient() {
       // Create new signer
       const createSigner = async (): Promise<CachedEthereumSigner> => {
         console.log('[useEthereumTurboClient] Creating new signer...');
-        // Get Ethereum provider - priority: Privy > RainbowKit/Wagmi > window.ethereum
-        const privyWallet = wallets.find((w) => w.walletClientType === 'privy');
+        // Get Ethereum provider for the SESSION address. Preferring "the Privy
+        // wallet" merely because one exists is what let an auto-created embedded
+        // wallet sign on behalf of a connected MetaMask user; only use it when
+        // it IS the session wallet.
+        const sessionAddress = address?.toLowerCase();
+        const privyWallet = wallets.find(
+          (w) =>
+            w.walletClientType === 'privy' &&
+            (!sessionAddress || w.address?.toLowerCase() === sessionAddress),
+        );
         let ethersSigner: ethers.JsonRpcSigner;
 
         if (privyWallet) {
@@ -216,7 +224,13 @@ export function useEthereumTurboClient() {
 
       // For EVM token transfers, we need to switch network BEFORE getting the signer
       // Otherwise the signer will be connected to the wrong network
-      const privyWallet = wallets.find((w) => w.walletClientType === 'privy');
+      const sessionAddressForSwitch = address?.toLowerCase();
+      const privyWallet = wallets.find(
+        (w) =>
+          w.walletClientType === 'privy' &&
+          (!sessionAddressForSwitch ||
+            w.address?.toLowerCase() === sessionAddressForSwitch),
+      );
 
       if (evmTokenTransferTypes.has(tokenType)) {
         // EVM token transfers: must switch to correct network first

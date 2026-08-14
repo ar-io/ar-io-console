@@ -62,7 +62,14 @@ export function WalletProviders({ children }: WalletProvidersProps) {
       config={{
         embeddedWallets: {
           ethereum: {
-            createOnLogin: 'all-users', // Create wallet for all users who log in
+            // Only mint an embedded wallet for users who arrive WITHOUT one,
+            // i.e. the email/"try it now" flow. 'all-users' also minted one for
+            // people connecting MetaMask, producing a second, empty address the
+            // user never asked for and did not know existed — and payment code
+            // that reached for "the Privy wallet" would then sign from that
+            // empty address while the UI displayed the connected wallet's
+            // balance.
+            createOnLogin: 'users-without-wallets',
           },
           // Disable wallet UIs to prevent signature prompts during file uploads
           showWalletUIs: false,

@@ -65,6 +65,26 @@ export const supportedCryptoTokens = [
 ] as const;
 export type SupportedTokenType = (typeof supportedCryptoTokens)[number];
 
+/**
+ * Tokens that exist throughout the type system and plumbing but are NOT offered
+ * to users, because the payment path was never finished.
+ *
+ * Kept as a deny-list rather than deleting the token: balance lookups, explorer
+ * URLs, decimals and pending-transaction recovery all still resolve, so anyone
+ * who somehow holds an in-flight transfer is not stranded, and the type union
+ * stays intact across ~30 call sites. Only *selection* is removed.
+ *
+ * Remove an entry here once its flow is genuinely implemented and tested.
+ */
+export const unavailableCryptoTokens: readonly SupportedTokenType[] = [
+  'polygon-usdc',
+];
+
+/** True when a token may be offered as a payment option in the UI. */
+export function isTokenSelectable(token: SupportedTokenType): boolean {
+  return !unavailableCryptoTokens.includes(token);
+}
+
 // Currency labels matching reference app
 export const tokenLabels: Record<SupportedTokenType, string> = {
   arweave: 'AR',

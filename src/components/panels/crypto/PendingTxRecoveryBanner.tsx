@@ -7,6 +7,9 @@ import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import CopyButton from '../../CopyButton';
 
 // Token types that support top-up recovery
+// Recovery is deliberately NOT filtered by isTokenSelectable: if a transfer was
+// ever sent on a network we have since stopped offering, the user still needs a
+// way to recover it. Hiding the option would strand their funds.
 const recoverableTokens: { value: string; label: string }[] = [
   { value: 'ethereum', label: 'ETH (Mainnet)' },
   { value: 'base-eth', label: 'ETH (Base)' },
