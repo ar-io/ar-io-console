@@ -139,6 +139,10 @@ export default function CryptoConfirmationPanel({
             turboCreditDestinationAddress,
           });
 
+          // Credits just changed on the server; tell the rest of the app to
+          // refetch rather than showing a stale balance until the next reload.
+          window.dispatchEvent(new CustomEvent('refresh-balance'));
+
           onPaymentComplete({
             ...result,
             quote,
@@ -187,16 +191,7 @@ export default function CryptoConfirmationPanel({
             throw new Error('No Ethereum wallet available');
           }
 
-          // Never pay from an address other than the one quoted. Wallets can
-          // switch accounts behind the app's back, so verify rather than assume.
-          const signerAddress = (await signer.getAddress()).toLowerCase();
-          if (sessionAddress && signerAddress !== sessionAddress) {
-            throw new Error(
-              `Your wallet is set to ${signerAddress.slice(0, 6)}…${signerAddress.slice(-4)}, ` +
-                `but this payment was quoted for ${address!.slice(0, 6)}…${address!.slice(-4)}. ` +
-                `Switch back to that account in your wallet, or sign out and reconnect, then try again.`,
-            );
-          }
+
 
           // Network validation and auto-switching
           const network = await provider.getNetwork();
@@ -422,6 +417,20 @@ export default function CryptoConfirmationPanel({
             turboConfig_forSDK.gatewayUrl = turboConfig.tokenMap[tokenType];
           }
 
+          // Never pay from an address other than the one quoted. Checked HERE,
+          // not before the network switch: each switch branch rebuilds `provider`
+          // and `signer`, and a wallet can change its active account while
+          // switching chains. Verifying early would have passed against a signer
+          // that no longer exists by the time funds move.
+          const signerAddress = (await signer.getAddress()).toLowerCase();
+          if (sessionAddress && signerAddress !== sessionAddress) {
+            throw new Error(
+              `Your wallet is set to ${signerAddress.slice(0, 6)}…${signerAddress.slice(-4)}, ` +
+                `but this payment was quoted for ${address!.slice(0, 6)}…${address!.slice(-4)}. ` +
+                `Switch back to that account in your wallet, or sign out and reconnect, then try again.`,
+            );
+          }
+
           const turbo = TurboFactory.authenticated(turboConfig_forSDK);
 
           // Convert to smallest unit (wei for ETH/Base, POL for Polygon, 6 decimals for USDC/ARIO)
@@ -441,6 +450,10 @@ export default function CryptoConfirmationPanel({
             tokenAmount,
             turboCreditDestinationAddress,
           });
+
+          // Credits just changed on the server; tell the rest of the app to
+          // refetch rather than showing a stale balance until the next reload.
+          window.dispatchEvent(new CustomEvent('refresh-balance'));
 
           onPaymentComplete({
             ...result,
@@ -462,6 +475,10 @@ export default function CryptoConfirmationPanel({
             tokenAmount: SOLToTokenAmount(cryptoAmount), // Convert to lamports
             turboCreditDestinationAddress,
           });
+
+          // Credits just changed on the server; tell the rest of the app to
+          // refetch rather than showing a stale balance until the next reload.
+          window.dispatchEvent(new CustomEvent('refresh-balance'));
 
           onPaymentComplete({
             ...result,

@@ -211,8 +211,14 @@ export function useTokenBalance(
    */
   const ensureCorrectNetwork = useCallback(
     async (expectedChainId: number, networkName: string): Promise<void> => {
-      // Check for Privy wallet first (email login users)
-      const privyWallet = privyWallets.find((w) => w.walletClientType === 'privy');
+      // Same session-wallet gate as getEthereumProvider: switching the network
+      // of a wallet the user is not paying from is both useless and confusing.
+      const sessionAddress = address?.toLowerCase();
+      const privyWallet = privyWallets.find(
+        (w) =>
+          w.walletClientType === 'privy' &&
+          (!sessionAddress || w.address?.toLowerCase() === sessionAddress),
+      );
 
       if (privyWallet) {
         // For Privy: Check current chain and switch if needed
@@ -320,7 +326,7 @@ export function useTokenBalance(
         }
       }
     },
-    [privyWallets, ethAccount.isConnected, ethAccount.connector, ethAccount.chainId, wagmiConfig]
+    [privyWallets, ethAccount.isConnected, ethAccount.connector, ethAccount.chainId, wagmiConfig, address]
   );
 
   /**
