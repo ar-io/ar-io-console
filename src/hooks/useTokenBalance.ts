@@ -137,10 +137,20 @@ export function useTokenBalance(
    *
    * This ensures we use the same wallet the user connected with,
    * not a random wallet extension that happens to be at window.ethereum
+   *
+   * The Privy branch is gated on the embedded wallet BEING the session wallet.
+   * Picking it merely because one exists contradicted the intent stated above:
+   * an embedded wallet can co-exist with a connected MetaMask, and reading
+   * through the wrong provider risks querying a chain the user is not on.
    */
   const getEthereumProvider = useCallback(async (): Promise<any> => {
-    // Check for Privy wallet first (email login users)
-    const privyWallet = privyWallets.find((w) => w.walletClientType === 'privy');
+    // Privy embedded wallet, but only when it is the session wallet.
+    const sessionAddress = address?.toLowerCase();
+    const privyWallet = privyWallets.find(
+      (w) =>
+        w.walletClientType === 'privy' &&
+        (!sessionAddress || w.address?.toLowerCase() === sessionAddress),
+    );
     if (privyWallet) {
       const provider = await privyWallet.getEthereumProvider();
       ethProviderRef.current = provider;
@@ -171,7 +181,7 @@ export function useTokenBalance(
     }
 
     throw new Error('No Ethereum wallet found. Please connect a wallet first.');
-  }, [privyWallets, ethAccount.isConnected, ethAccount.connector, wagmiConfig]);
+  }, [privyWallets, ethAccount.isConnected, ethAccount.connector, wagmiConfig, address]);
 
   /**
    * Get a cached ethers.BrowserProvider. Reuses the same instance as long as
@@ -201,8 +211,14 @@ export function useTokenBalance(
    */
   const ensureCorrectNetwork = useCallback(
     async (expectedChainId: number, networkName: string): Promise<void> => {
-      // Check for Privy wallet first (email login users)
-      const privyWallet = privyWallets.find((w) => w.walletClientType === 'privy');
+      // Same session-wallet gate as getEthereumProvider: switching the network
+      // of a wallet the user is not paying from is both useless and confusing.
+      const sessionAddress = address?.toLowerCase();
+      const privyWallet = privyWallets.find(
+        (w) =>
+          w.walletClientType === 'privy' &&
+          (!sessionAddress || w.address?.toLowerCase() === sessionAddress),
+      );
 
       if (privyWallet) {
         // For Privy: Check current chain and switch if needed
@@ -310,7 +326,7 @@ export function useTokenBalance(
         }
       }
     },
-    [privyWallets, ethAccount.isConnected, ethAccount.connector, ethAccount.chainId, wagmiConfig]
+    [privyWallets, ethAccount.isConnected, ethAccount.connector, ethAccount.chainId, wagmiConfig, address]
   );
 
   /**

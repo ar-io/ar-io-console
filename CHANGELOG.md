@@ -2,6 +2,54 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.2.0] - 2026-08-14
+
+**Manage a name like a zone file, and pay from the wallet you actually
+connected.** Everything below landed after 4.1.0 shipped. It is a minor rather
+than a patch release because domain records and the portfolio view both gained
+real capability, and because 4.1.0 was already deployed — leaving these commits
+under the same version number would have made two materially different builds
+indistinguishable in a bug report.
+
+### Added
+- **Records table** — the root `@` and every undername in one editable,
+  DNS-style table on the name detail page, with search and pagination. Editing
+  expands in place. Replaces a split where the root lived in "Edit details" and
+  everything else in an "Undernames" modal, even though both edited the same
+  record shape through the same editor.
+- **Search your own names**, with a status on every row (permanent, active,
+  expiring, expired). CSV export follows the filter rather than dumping the
+  whole portfolio.
+- **A path to buying a name from the picker** — the "get a name" prompt used to
+  appear only when you owned none, so the moment you had one it vanished. The
+  register link now carries what you are already naming via `?q=`.
+
+### Fixed
+- **Payments could be signed by a wallet you never connected.** Privy was
+  configured to mint an embedded wallet for *all* users, and the payment paths
+  preferred it whenever one existed. The checkout showed your connected wallet's
+  balance while an empty embedded wallet signed the transfer, failing with an
+  opaque `CALL_EXCEPTION`. Embedded wallets are now created only for users who
+  arrive without one, wallet selection requires a match with the session
+  address, and the signer is verified against the quoted address before spending.
+- **Every record write without a logo failed.** A blank logo was sent as `''`,
+  which the ANT program rejects (`InvalidLogo`), after `SetRecord` had already
+  landed — so the target saved and the metadata did not.
+- **Auto-reconnect could silently repoint your linked Solana wallet** to a
+  different account, changing which names the console showed as yours.
+- **Removing an undername** with no Solana signer errored instead of offering to
+  connect.
+- **Back from a name** returned to the public browse list instead of My Domains.
+- **Focus rings on search fields** outlined the inner input rather than the
+  field, and could be claimed by a button inside it.
+- The expanded record editor had square corners; the name detail page was too
+  narrow to show its records above the fold.
+
+### Removed
+- **USDC on Polygon** is no longer offered. The payment path was never finished.
+  Existing pending-transaction recovery still lists it, so nobody with an
+  in-flight transfer is stranded.
+
 ## [4.1.0] - 2026-08-12
 
 **On brand, and keyboard-complete.** The console now tracks the ar.io brand kit

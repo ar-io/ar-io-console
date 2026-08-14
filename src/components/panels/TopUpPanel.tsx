@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
-import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType } from '../../constants';
+import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable } from '../../constants';
 import { useStore } from '../../store/useStore';
 import { Loader2, Lock, CreditCard, DollarSign, Wallet, Info, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
@@ -387,13 +387,25 @@ export default function TopUpPanel({
     onComplete?.();
   };
 
+  // Stablecoin options actually offered, after the availability gate. Derived
+  // once so the grid's column count and its contents can never disagree.
+  const stablecoinTokens = useMemo(
+    () =>
+      (['usdc', 'base-usdc', 'polygon-usdc'] as SupportedTokenType[]).filter(
+        isTokenSelectable,
+      ),
+    [],
+  );
+
   // Get available tokens based on wallet type (ordered by priority - first token is default)
   const getAvailableTokens = useCallback((): SupportedTokenType[] => {
     switch (walletType) {
       case 'arweave':
         return ['arweave'];
       case 'ethereum':
-        return ['base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum'];
+        return (
+          ['base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum'] as SupportedTokenType[]
+        ).filter(isTokenSelectable);
       case 'solana':
         return ['solana'];
       default:
@@ -951,8 +963,8 @@ export default function TopUpPanel({
                 {/* USDC Stablecoins Row */}
                 <div>
                   <div className="text-[10px] font-medium text-foreground/80 mb-1.5 px-1 uppercase tracking-wider">Stablecoins</div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {(['usdc', 'base-usdc', 'polygon-usdc'] as const).map((tokenType) => {
+                  <div className={`grid gap-1.5 ${stablecoinTokens.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    {stablecoinTokens.map((tokenType) => {
                       const networkName = tokenType === 'usdc' ? 'Ethereum'
                         : tokenType === 'base-usdc' ? 'Base'
                         : 'Polygon';
