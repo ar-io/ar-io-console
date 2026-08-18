@@ -8,6 +8,7 @@ import {
 } from "../utils/trustedGateways";
 import { GatewayCombobox } from "./GatewayCombobox";
 import type { GatewayWithStake } from "../types";
+import { lockBodyScroll, releaseBodyScroll } from "@/components/modals/bodyScrollLock";
 
 // Feature flag: Signature verification is hidden until SDK fixes ANS-104 data item support
 // The SDK's SignatureVerificationStrategy uses /tx/{txId} which only works for L1 transactions
@@ -63,15 +64,16 @@ export function BrowseSettingsFlyout({
     }
   }, [isOpen, topGateways.length]);
 
-  // Lock body scroll when flyout is open to prevent layout shifts
+  // Lock body scroll when flyout is open to prevent layout shifts. Routed
+  // through the shared reference-counted lock rather than saving/restoring
+  // body.overflow directly: a private copy fights any modal that is open at the
+  // same time, either unlocking the page underneath it or restoring 'hidden'
+  // and leaving the app permanently unscrollable.
   useEffect(() => {
-    if (isOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
+    if (!isOpen) return;
+    const id = Symbol("browse-settings-flyout");
+    lockBodyScroll(id, document.body);
+    return () => releaseBodyScroll(id, document.body);
   }, [isOpen]);
 
   if (!isOpen) return null;
