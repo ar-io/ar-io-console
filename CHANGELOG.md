@@ -25,8 +25,10 @@ All notable changes to the ar.io Console are documented in this file.
   prominent message was the wrong one, and it pointed people at buying a name
   they may already have owned. The empty state now names the real blocker when
   no wallet is linked, and Refresh is hidden there because without an address it
-  can only return an empty list again. Applies to all seven surfaces that use
-  the modal.
+  can only return an empty list again. A failed lookup is now distinguished
+  too — `fetchError` was tracked but never rendered, so a request that threw
+  showed the same "No names yet" message; it now says so and offers a retry.
+  Applies to all seven surfaces that use the modal.
 
 ## [4.2.0] - 2026-08-14
 
