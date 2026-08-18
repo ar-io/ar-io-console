@@ -2,6 +2,21 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.2.1] - 2026-08-18
+
+### Fixed
+- **The page could stop scrolling after connecting a wallet.** Every modal
+  saved the pre-lock value of `body.overflow` for itself, so a modal opening on
+  top of another saved `hidden` and, if it was the last one out, restored
+  `hidden` — locking the app until a reload. Wallet connection hits this
+  exactly: `WalletSelectionModal` renders the connecting spinner inside its own
+  modal and closes with the spinner still mounted, so the two unmount together
+  and the inner one releases last. It was reported against Deploy Site because
+  that is where the content first grows past the viewport, but the lock leaked
+  at connect time and affected every page. The lock is now reference-counted in
+  one place and is independent of release order. The Browse settings flyout had
+  a second, independent copy of the same bug and now shares the lock.
+
 ## [4.2.0] - 2026-08-14
 
 **Manage a name like a zone file, and pay from the wallet you actually
