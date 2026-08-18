@@ -226,6 +226,20 @@ export default function AssignDomainModal({
                           linked.
                         </div>
                       </>
+                    ) : fetchError ? (
+                      <>
+                        {/* The third way `names` ends up empty: the lookup ran
+                            and threw. useOwnedArNSNames falls back to cache and
+                            otherwise returns [], so without this branch a failed
+                            request is indistinguishable from owning nothing. */}
+                        <div className="text-sm font-medium text-foreground mb-1">
+                          Couldn't load your names
+                        </div>
+                        <div className="text-sm text-foreground/80 mb-3">
+                          The lookup failed, so we can't show what you own right
+                          now. Your names aren't affected — try again.
+                        </div>
+                      </>
                     ) : (
                       <>
                         <div className="text-sm font-medium text-foreground mb-1">No names yet</div>
@@ -247,7 +261,7 @@ export default function AssignDomainModal({
                           className="px-3 py-1.5 border border-border/20 text-foreground/80 rounded-full text-xs hover:bg-card transition-colors flex items-center gap-1"
                         >
                           <RefreshCw className="w-3 h-3" />
-                          Refresh
+                          {fetchError ? 'Retry' : 'Refresh'}
                         </button>
                       )}
                     </div>
