@@ -17,6 +17,17 @@ All notable changes to the ar.io Console are documented in this file.
   one place and is independent of release order. The Browse settings flyout had
   a second, independent copy of the same bug and now shares the lock.
 
+- **The assign-domain modal told you that you owned no names when it had never
+  checked.** `useOwnedArNSNames` returns an empty list without an error or a
+  loading state when there is no ArNS address, so a user with no Solana wallet
+  linked saw "No names yet — register an ArNS name right here in the console"
+  sitting directly above the modal's own "Link a Solana wallet" banner. The
+  prominent message was the wrong one, and it pointed people at buying a name
+  they may already have owned. The empty state now names the real blocker when
+  no wallet is linked, and Refresh is hidden there because without an address it
+  can only return an empty list again. Applies to all seven surfaces that use
+  the modal.
+
 ## [4.2.0] - 2026-08-14
 
 **Manage a name like a zone file, and pay from the wallet you actually
