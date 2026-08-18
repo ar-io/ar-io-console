@@ -1,4 +1,6 @@
 import { ReactNode, useEffect, useRef } from 'react';
+
+import { lockBodyScroll, releaseBodyScroll } from './bodyScrollLock';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -62,8 +64,10 @@ export default function BaseModal({
     modalStack.push(id);
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Reference-counted and stored module-side, NOT per instance: an inner modal
+    // mounting on top of an outer one would otherwise save 'hidden' and restore
+    // it as the last one out, locking the page for good. See bodyScrollLock.ts.
+    lockBodyScroll(id, document.body);
 
     // Focus the panel itself rather than its first control, so a screen reader
     // announces the dialog before its contents.
@@ -72,8 +76,7 @@ export default function BaseModal({
     return () => {
       const i = modalStack.indexOf(id);
       if (i > -1) modalStack.splice(i, 1);
-      // Only the last modal out restores scrolling.
-      if (modalStack.length === 0) document.body.style.overflow = previousOverflow;
+      releaseBodyScroll(id, document.body);
       previouslyFocused?.focus?.();
     };
   }, []);
