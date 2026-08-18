@@ -205,20 +205,65 @@ export default function AssignDomainModal({
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-foreground/60 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-sm font-medium text-foreground mb-1">No names yet</div>
-                    <div className="text-sm text-foreground/80 mb-3">
-                      Register an ArNS name right here in the console, then come
-                      back to assign it.
-                    </div>
+                    {/*
+                      An empty `names` array means two different things, and
+                      saying the wrong one sends people off to buy a name they
+                      may already own. useOwnedArNSNames bails with `return []`
+                      when there is no ArNS address (no error, no loading), so
+                      with no Solana wallet linked the list is empty simply
+                      because nobody ever looked. `needsLinking` is exactly that
+                      case: getArNSAddress() is falsy iff neither a primary
+                      Solana session nor a linked address exists.
+                    */}
+                    {needsLinking ? (
+                      <>
+                        <div className="text-sm font-medium text-foreground mb-1">
+                          Link a wallet to see your names
+                        </div>
+                        <div className="text-sm text-foreground/80 mb-3">
+                          ArNS names are managed on Solana, so the console can't
+                          tell which names you own until a Solana wallet is
+                          linked.
+                        </div>
+                      </>
+                    ) : fetchError ? (
+                      <>
+                        {/* The third way `names` ends up empty: the lookup ran
+                            and threw. useOwnedArNSNames falls back to cache and
+                            otherwise returns [], so without this branch a failed
+                            request is indistinguishable from owning nothing. */}
+                        <div className="text-sm font-medium text-foreground mb-1">
+                          Couldn't load your names
+                        </div>
+                        <div className="text-sm text-foreground/80 mb-3">
+                          The lookup failed, so we can't show what you own right
+                          now. Your names aren't affected — try again.
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm font-medium text-foreground mb-1">No names yet</div>
+                        <div className="text-sm text-foreground/80 mb-3">
+                          Register an ArNS name right here in the console, then come
+                          back to assign it.
+                        </div>
+                      </>
+                    )}
                     <div className="flex items-center gap-2">
                       <ArNSGetNameLinks suggestedName={suggestedName} variant="empty" />
-                      <button
-                        onClick={() => fetchOwnedNames(true)}
-                        className="px-3 py-1.5 border border-border/20 text-foreground/80 rounded-full text-xs hover:bg-card transition-colors flex items-center gap-1"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        Refresh
-                      </button>
+                      {/* Refresh can only ever return [] without an address, so
+                          it is offered only once a lookup is actually possible.
+                          The Link Wallet action stays in the footer banner
+                          rather than being duplicated here. */}
+                      {!needsLinking && (
+                        <button
+                          onClick={() => fetchOwnedNames(true)}
+                          className="px-3 py-1.5 border border-border/20 text-foreground/80 rounded-full text-xs hover:bg-card transition-colors flex items-center gap-1"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          {fetchError ? 'Retry' : 'Refresh'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
