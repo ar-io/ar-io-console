@@ -2,6 +2,27 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.4.0] - 2026-08-19
+
+### Removed
+- **The `/verify` page.** It was backed by a third-party service we do not
+  maintain (`verifyApiUrl`, pointing at `vilenarios.com/local/verify`), so the
+  page could break without warning and nobody would be on the hook to fix it.
+  Shipping a tool that asserts authenticity is worse than shipping none when the
+  thing behind it is unowned. Removed with it: the "Verify Data" header nav
+  entry, the `verifyApiUrl` config field and its Developer Resources input, and
+  the two Pages menu items that deep-linked into it.
+
+  **Browse is now the single verification surface** — it already does
+  cryptographic verification through Wayfinder, and the intent is that it grows
+  to cover what the standalone page did. `/verify` falls through to the
+  catch-all, so old links land on the homepage instead of erroring.
+
+  The Pages "Verify" buttons were dropped rather than repointed: both surfaces
+  already link to the live page, and for a published page the transaction *is*
+  the page, so a gateway link would have duplicated a link already sitting next
+  to it. The transaction id is still copyable on both, and Browse accepts one.
+
 ## [4.3.0] - 2026-08-18
 
 **Finishing an upload now tells you where the file went, and offers to name
