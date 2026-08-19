@@ -6,7 +6,7 @@ import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { useImagePreviews } from '../../hooks/useImagePreviews';
 import { wincPerCredit, SupportedTokenType } from '../../constants';
-import { useStore } from '../../store/useStore';
+import { useStore, type UploadResult } from '../../store/useStore';
 import { CheckCircle, XCircle, Upload, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
@@ -363,7 +363,7 @@ export default function UploadPanel() {
   // The just-completed single-file upload, surfaced as a result card. Only for
   // one file: with several there is no single URL to feature, so Recent is the
   // right home and we simply expand it.
-  const [lastSingleUpload, setLastSingleUpload] = useState<any | null>(null);
+  const [lastSingleUpload, setLastSingleUpload] = useState<UploadResult | null>(null);
   const [showUploadResults, setShowUploadResults] = useState(true);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
   const [uploadsToShow, setUploadsToShow] = useState(20); // Start with 20 uploads
@@ -1331,7 +1331,7 @@ export default function UploadPanel() {
             updateUploadWithArNS(showAssignDomainModal, arnsName, undername, transactionId);
             // The card renders from local state, so mirror the store write or
             // the freshly-connected domain wouldn't show until a remount.
-            setLastSingleUpload((prev: any) =>
+            setLastSingleUpload((prev) =>
               prev && prev.id === showAssignDomainModal
                 ? { ...prev, arnsName, undername }
                 : prev

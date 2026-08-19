@@ -3,20 +3,11 @@ import { Check, Copy, Globe, Upload as UploadIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import CopyButton from '../CopyButton';
+import { type UploadResult } from '../../store/useStore';
 import { formatBytes, getArweaveUrl } from '../../utils';
 
-interface UploadSuccessResult {
-  id: string;
-  dataCaches: string[];
-  fileName?: string;
-  fileSize?: number;
-  contentType?: string;
-  arnsName?: string;
-  undername?: string;
-}
-
 interface UploadSuccessCardProps {
-  result: UploadSuccessResult;
+  result: UploadResult;
   /** Open AssignDomainModal for this upload. */
   onConnectDomain: () => void;
   /** Clear the success state and return to the picker. */

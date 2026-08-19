@@ -78,7 +78,7 @@ const PRESET_CONFIGS = {
   },
 } as const;
 
-interface UploadResult {
+export interface UploadResult {
   id: string;
   owner: string;
   dataCaches: string[];
