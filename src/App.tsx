@@ -31,7 +31,6 @@ const RecentDeploymentsPage = lazy(() => import('./pages/RecentDeploymentsPage')
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const MyDomainsPage = lazy(() => import('./pages/MyDomainsPage'));
 const TryItNowPage = lazy(() => import('./pages/TryItNowPage'));
-const VerifyPage = lazy(() => import('./pages/VerifyPage'));
 const PagesPage = lazy(() => import('./pages/PagesPage'));
 const BrowsePage = lazy(() => import('./pages/BrowsePage'));
 
@@ -129,7 +128,6 @@ function AppRoutes() {
           <Route path="my-domains" element={<MyDomainsPage />} />
           <Route path="settings" element={<GatewayInfoPage />} />
           <Route path="try" element={<TryItNowPage />} />
-          <Route path="verify" element={<VerifyPage />} />
           <Route path="browse" element={
             <Suspense fallback={<BrowsePageLoader />}>
               <BrowsePage />

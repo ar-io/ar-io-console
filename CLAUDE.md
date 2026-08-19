@@ -72,18 +72,17 @@ ar.io Console - a unified application for uploading and accessing permanent data
 ```text
 src/
 ├── components/
-│   ├── panels/           # Feature panels (TopUpPanel, UploadPanel, VerifyPanel, etc.)
+│   ├── panels/           # Feature panels (TopUpPanel, UploadPanel, DeploySitePanel, etc.)
 │   ├── panels/fiat/      # Fiat payment flow (3-panel: Details→Confirm→Success)
 │   ├── panels/crypto/    # Crypto payment panels
 │   ├── modals/           # BaseModal, WalletSelectionModal, ReceiptModal
-│   ├── verify/           # Verify sub-components (VerifyHero, ProvenanceChain, etc.)
 │   └── account/          # Account page components
 ├── features/
 │   ├── browse/           # Browse feature with Wayfinder verification (see below)
 │   └── pages/            # Pages — permaweb link-in-bio builder (see below)
 ├── hooks/                # Custom React hooks (Turbo SDK wrappers, pricing, uploads)
 ├── pages/                # React Router page components
-├── services/             # Backend service clients (paymentService, verificationService)
+├── services/             # Backend service clients (paymentService, etc.)
 ├── store/useStore.ts     # Zustand state management
 ├── providers/            # WalletProviders.tsx (Wagmi, Solana, Privy, Stripe, React Query)
 ├── utils/                # Helpers (addressValidation, token utilities, jitPayment)
@@ -108,6 +107,11 @@ The Browse feature allows users to view permaweb content with optional cryptogra
 4. Content displayed in iframe with verification badge
 
 **Dependencies:** `@ar.io/wayfinder-core`, `@ar.io/wayfinder-react`
+
+Browse is now the *only* verification surface. A separate `/verify` page existed
+until 4.4.0, backed by an unmaintained third-party service (`verifyApiUrl`); it
+was removed rather than kept limping, with the intent that Browse grows to cover
+what it did. Don't reintroduce a second verification entry point.
 
 ### Wallet Integration
 
@@ -138,22 +142,6 @@ The Browse feature allows users to view permaweb content with optional cryptogra
 - `creditBalance`, payment flow state, UI state
 
 **Cache expiry:** ArNS names (24h), owned names (6h), upload status (1h confirmed, 24h finalized)
-
-### Verify Feature
-
-The Verify tool (`/verify`) lets users verify permaweb transaction authenticity and provenance.
-
-**Key files:**
-- `src/components/panels/VerifyPanel.tsx` - Main UI with TX ID input, examples, file comparison
-- `src/hooks/useVerification.ts` - Verification hook (60s timeout, abort controller)
-- `src/services/verificationService.ts` - API client for verify backend
-- `src/components/verify/` - Sub-components (VerifyHero, AuthenticitySection, ProvenanceChain)
-
-**How it works:**
-1. User enters a transaction ID (or uses `?tx=` deep link)
-2. Calls `verifyApiUrl` from config (production: `vilenarios.com/local/verify`)
-3. Returns gateway attestation data, provenance chain, content hashes
-4. Optional: user can compare a local file hash against the on-chain hash
 
 ### Pages Feature
 
@@ -202,7 +190,7 @@ Three modes via `configMode` in store (`ConfigMode = 'production' | 'development
 - **development**: Testnet/devnet endpoints, test Stripe key. Note: the store value is still `'development'`, but the UI labels it **"Testnet"** (Header shows `TESTNET MODE`, GatewayInfoPanel shows a testnet faucet link). Don't rename the enum expecting the label to follow.
 - **custom**: User-defined for testing
 
-Config includes: `paymentServiceUrl`, `uploadServiceUrl`, `captureServiceUrl`, `verifyApiUrl`, `arioGatewayUrl`, `stripeKey`, `processId`, `tokenMap`, plus the four **Solana program IDs** the ArNS feature reads: `coreProgramId`, `garProgramId`, `arnsProgramId`, `antProgramId` (mainnet constants in production, `DEVNET_PROGRAM_IDS` in development). `processId` is the legacy AO field — it is empty on devnet and unused by the Solana ArNS paths.
+Config includes: `paymentServiceUrl`, `uploadServiceUrl`, `captureServiceUrl`, `arioGatewayUrl`, `stripeKey`, `processId`, `tokenMap`, plus the four **Solana program IDs** the ArNS feature reads: `coreProgramId`, `garProgramId`, `arnsProgramId`, `antProgramId` (mainnet constants in production, `DEVNET_PROGRAM_IDS` in development). `processId` is the legacy AO field — it is empty on devnet and unused by the Solana ArNS paths.
 
 Access via `useTurboConfig(tokenType)` hook or `getCurrentConfig()` from store.
 
@@ -491,7 +479,7 @@ if (privyWallet) {
 
 ```typescript
 '/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share',
-'/account', '/pages', '/balances', '/settings', '/try', '/browse', '/verify',
+'/account', '/pages', '/balances', '/settings', '/try', '/browse',
 // ArNS / domains — flat, one purpose per route (no tabs):
 '/domains',        // Browse & search all registered names (BrowseDomainsPanel)
 '/domains/:name',  // Deep-linkable public Name Detail page (NameDetailPage)
@@ -511,7 +499,7 @@ Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unk
 
 **Deprecated/removed routes:** `/gift` and `/redeem` are gone (gifting was deprecated in favor of manual TX recovery on the top-up page). As of 4.1.0 the whole tree was **deleted** — `GiftPage`, `RedeemPage`, `GiftPanel`, `RedeemPanel`, the three `GiftPayment*Panel` components, and `getGiftPaymentIntent` in `paymentService.ts`. It had been unrouted and unreachable for some time, so it survived greps and audits while rendering nowhere. Recover from git history if it's ever needed.
 
-URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx), `?tx=<txId>` (deep link for Verify page)
+URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallbackHandler in App.tsx)
 
 ## Custom Events
 
@@ -548,7 +536,6 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 - `useOwnedArNSNames(address)` - Fetch all owned ArNS names
 
 **Other Hooks:**
-- `useVerification()` - Transaction verification (verify data integrity)
 - `useGatewayInfo()` - Gateway information and status
 
 ## Important Utilities

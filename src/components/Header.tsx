@@ -1,5 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
-import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, ShieldCheck, LayoutTemplate, Unlink, Flame } from 'lucide-react';
+import { ExternalLink, Coins, Calculator, RefreshCw, Wallet, CreditCard, Upload, Camera, Share2, Globe, Code, Search, Grid3x3, Zap, User, Key, Settings, Server, Compass, PencilLine, LayoutTemplate, Unlink, Flame } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDisconnect } from 'wagmi';
@@ -38,7 +38,6 @@ const utilityServices = [
   { name: 'Pricing', page: 'pricing' as const, icon: Calculator },
   { name: 'Check Balance', page: 'balances' as const, icon: Search },
   { name: 'Browse Data', page: 'browse' as const, icon: Compass },
-  { name: 'Verify Data', page: 'verify' as const, icon: ShieldCheck },
   { name: 'Network Dashboard', href: 'https://gateways.ar.io', icon: Server, external: true },
   { name: 'Developer Docs', href: 'https://docs.ar.io', icon: Code, external: true },
 ];

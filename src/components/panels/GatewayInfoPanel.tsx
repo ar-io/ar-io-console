@@ -306,27 +306,6 @@ export default function GatewayInfoPanel() {
                 )}
               </div>
 
-              {/* Verification Service URL */}
-              <div>
-                <label htmlFor="cfg-verifyApiUrl" className="block text-sm font-medium text-foreground/80 mb-2">Verification Service URL</label>
-                {configMode === 'custom' ? (
-                  <input
-                    id="cfg-verifyApiUrl"
-                    type="text"
-                    value={currentConfig.verifyApiUrl}
-                    onChange={(e) => updateCustomConfig('verifyApiUrl', e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-border/20 rounded-2xl text-foreground text-sm"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-code-surface rounded-2xl text-sm text-white/90 font-mono truncate">
-                      {currentConfig.verifyApiUrl}
-                    </code>
-                    <CopyButton textToCopy={currentConfig.verifyApiUrl} />
-                  </div>
-                )}
-              </div>
-
               {/* AR.IO Gateway URL */}
               <div>
                 <label htmlFor="cfg-arioGatewayUrl" className="block text-sm font-medium text-foreground/80 mb-2">ar.io Gateway URL</label>

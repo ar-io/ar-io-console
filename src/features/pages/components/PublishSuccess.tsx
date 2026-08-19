@@ -1,5 +1,4 @@
-import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, ExternalLink, Globe, LayoutGrid, PenLine, PlusCircle, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, Globe, LayoutGrid, PenLine, PlusCircle } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import type { PublishResult } from '../hooks/usePagePublish';
 
@@ -26,7 +25,6 @@ export default function PublishSuccess({
   onViewAllPages,
   onAssignDomain,
 }: PublishSuccessProps) {
-  const navigate = useNavigate();
   const txId = result.txId ?? '';
   const shortTx = txId ? `${txId.slice(0, 8)}…${txId.slice(-6)}` : '';
 
@@ -123,13 +121,6 @@ export default function PublishSuccess({
           <div className="mb-1 text-xs font-medium text-foreground/60">Transaction ID</div>
           <div className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate font-mono text-sm text-foreground">{shortTx}</span>
-            <button
-              type="button"
-              onClick={() => navigate(`/verify?tx=${txId}`)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/20 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/50"
-            >
-              <ShieldCheck className="h-3.5 w-3.5" /> Verify
-            </button>
             <CopyButton textToCopy={txId} />
           </div>
         </div>

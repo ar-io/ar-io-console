@@ -9,7 +9,6 @@
  */
 
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import {
   Archive,
@@ -23,7 +22,6 @@ import {
   History,
   MoreVertical,
   PenLine,
-  ShieldCheck,
   Trash2,
   Unlink,
   XCircle,
@@ -124,7 +122,6 @@ export default function PageCard({
   onVersionHistory,
   onDelete,
 }: PageCardProps) {
-  const navigate = useNavigate();
   const configMode = useStore((s) => s.configMode);
 
   const isDraft = page.currentVersion < 1 || !page.latestTxId;
@@ -345,19 +342,6 @@ export default function PageCard({
                       >
                         <History className="h-4 w-4" />
                         Version history
-                      </button>
-                    )}
-                    {!isDraft && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigate(`/verify?tx=${page.latestTxId}`);
-                          close();
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-foreground/80 transition-colors hover:bg-primary/10 hover:text-foreground"
-                      >
-                        <ShieldCheck className="h-4 w-4" />
-                        Verify
                       </button>
                     )}
                     {!isDraft && (
