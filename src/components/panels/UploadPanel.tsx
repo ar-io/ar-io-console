@@ -10,6 +10,7 @@ import { useStore } from '../../store/useStore';
 import { CheckCircle, XCircle, Upload, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
+import UploadSuccessCard from './UploadSuccessCard';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
@@ -359,6 +360,10 @@ export default function UploadPanel() {
   const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showAssignDomainModal, setShowAssignDomainModal] = useState<string | null>(null);
+  // The just-completed single-file upload, surfaced as a result card. Only for
+  // one file: with several there is no single URL to feature, so Recent is the
+  // right home and we simply expand it.
+  const [lastSingleUpload, setLastSingleUpload] = useState<any | null>(null);
   const [showUploadResults, setShowUploadResults] = useState(true);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
   const [uploadsToShow, setUploadsToShow] = useState(20); // Start with 20 uploads
@@ -449,12 +454,14 @@ export default function UploadPanel() {
     
     const droppedFiles = Array.from(e.dataTransfer.files);
     setFiles(prev => [...prev, ...droppedFiles]);
+    setLastSingleUpload(null);
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...newFiles]);
+      setLastSingleUpload(null);
       // Reset input value after processing to allow re-selecting the same file
       setTimeout(() => {
         e.target.value = '';
@@ -593,6 +600,9 @@ export default function UploadPanel() {
   }, [showConfirmModal, totalCost, creditBalance, walletType, setPaymentTab, setJitSectionExpanded, setLocalJitEnabled]);
 
   const handleUpload = () => {
+    // Clear any prior result so the header can't claim success while the next
+    // upload is still running.
+    setLastSingleUpload(null);
     if (!address) {
       setUploadMessage({ type: 'error', text: 'Please sign in to upload files' });
       return;
@@ -676,10 +686,20 @@ export default function UploadPanel() {
         // Upload successful
 
         if (failedFiles.length === 0) {
-          setUploadMessage({
-            type: 'success',
-            text: `Successfully uploaded ${results.length} file${results.length !== 1 ? 's' : ''}!`
-          });
+          if (results.length === 1) {
+            // The card carries the confirmation, the link and the naming CTA,
+            // so a toast saying the same thing would just be noise above it.
+            setLastSingleUpload(results[0]);
+            setUploadMessage(null);
+          } else {
+            setLastSingleUpload(null);
+            setUploadMessage({
+              type: 'success',
+              text: `Successfully uploaded ${results.length} files!`
+            });
+          }
+          // Whatever just landed, make it reachable without hunting for a chevron.
+          setShowUploadResults(true);
         }
       }
       
@@ -704,16 +724,38 @@ export default function UploadPanel() {
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
+      {/* Inline Header with Description. On a completed single-file upload this
+          swaps to a success header, the same way DeploySitePanel does, so the
+          panel itself reports the outcome instead of a throwaway toast. */}
       <div className="flex items-start gap-3 mb-4 sm:mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <Upload className="w-5 h-5 text-primary" />
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20 ${
+          lastSingleUpload ? 'bg-success/20' : 'bg-primary/20'
+        }`}>
+          {lastSingleUpload
+            ? <CheckCircle className="w-5 h-5 text-success" />
+            : <Upload className="w-5 h-5 text-primary" />}
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Upload Files</h3>
-          <p className="text-sm text-foreground/80">Store your files permanently on the Arweave network</p>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
+            {lastSingleUpload
+              ? (lastSingleUpload.arnsName ? 'File Uploaded with Domain' : 'File Uploaded')
+              : 'Upload Files'}
+          </h3>
+          <p className="text-sm text-foreground/80">
+            {lastSingleUpload
+              ? 'Success! Your file is live on the permanent cloud.'
+              : 'Store your files permanently on the Arweave network'}
+          </p>
         </div>
       </div>
+
+      {lastSingleUpload && (
+        <UploadSuccessCard
+          result={lastSingleUpload}
+          onConnectDomain={() => setShowAssignDomainModal(lastSingleUpload.id)}
+          onUploadAnother={() => setLastSingleUpload(null)}
+        />
+      )}
 
       {/* Upload Message */}
       {uploadMessage && (
@@ -740,8 +782,11 @@ export default function UploadPanel() {
         </div>
       )}
 
-      {/* Main Content Container with Gradient - Hide during upload */}
-      {!uploading && (
+      {/* Main Content Container with Gradient - hidden during upload, and while a
+          single-file result is on screen: the success card's "Upload Another"
+          brings this back, so showing both would be two controls competing for
+          the same job. DeploySitePanel hides its picker on success the same way. */}
+      {!uploading && !lastSingleUpload && (
         <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
           {/* Upload Area - Show when no files selected */}
           {files.length === 0 && (
@@ -1284,6 +1329,13 @@ export default function UploadPanel() {
           onSuccess={(arnsName: string, undername?: string, transactionId?: string) => {
             // Update the upload item with ArNS assignment
             updateUploadWithArNS(showAssignDomainModal, arnsName, undername, transactionId);
+            // The card renders from local state, so mirror the store write or
+            // the freshly-connected domain wouldn't show until a remount.
+            setLastSingleUpload((prev: any) =>
+              prev && prev.id === showAssignDomainModal
+                ? { ...prev, arnsName, undername }
+                : prev
+            );
 
             setShowAssignDomainModal(null);
 
