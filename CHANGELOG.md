@@ -2,6 +2,31 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.3.0] - 2026-08-18
+
+**Finishing an upload now tells you where the file went, and offers to name
+it.** Minor rather than patch because Upload gained a capability it never had:
+before this, it was the only one of the three upload surfaces with no ArNS
+prompt anywhere in its flow.
+
+### Added
+- **A result card when a single file finishes.** The permanent link is the
+  lead content, copyable, alongside Copy TX ID for the transaction id — the one
+  value you could not get by clicking the link. The panel header swaps to a
+  success header the way Deploy Site's does, so the panel reports the outcome
+  instead of a toast that vanishes.
+- **"Add a domain" at the point it matters.** Deploy and Capture already
+  prompted for an ArNS name; Upload's only path was an unlabelled globe icon on
+  a collapsed Recent row, which almost nobody found. The prompt reuses Deploy's
+  wording and drives the existing assign-domain modal, so naming reads and
+  behaves the same on every surface.
+
+### Changed
+- The file picker hides while a result is on screen, and **Upload Another**
+  brings it back — Deploy Site already hid its picker on success. Uploads of two
+  or more files are unchanged: there is no single URL to feature and no single
+  target for a name, so that path keeps its summary message and expands Recent.
+
 ## [4.2.1] - 2026-08-18
 
 ### Fixed
