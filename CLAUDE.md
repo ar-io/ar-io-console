@@ -82,7 +82,7 @@ src/
 │   └── pages/            # Pages — permaweb link-in-bio builder (see below)
 ├── hooks/                # Custom React hooks (Turbo SDK wrappers, pricing, uploads)
 ├── pages/                # React Router page components
-├── services/             # Backend service clients (paymentService, verificationService)
+├── services/             # Backend service clients (paymentService, etc.)
 ├── store/useStore.ts     # Zustand state management
 ├── providers/            # WalletProviders.tsx (Wagmi, Solana, Privy, Stripe, React Query)
 ├── utils/                # Helpers (addressValidation, token utilities, jitPayment)
