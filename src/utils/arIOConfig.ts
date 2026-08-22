@@ -69,15 +69,38 @@ const getSolanaWsUrl = (rpcUrl: string) => {
 };
 
 /**
- * Build the RPC + WS-subscription client pair from the active Solana config.
- * Shared by the write-enabled clients so URL derivation lives in one place.
+ * The RPC + WS-subscription transport pair for write-enabled clients.
+ *
+ * Memoised per network config, for the same reason the read clients below are:
+ * every `createSolanaRpc` attaches listeners to shared Node-polyfilled emitters,
+ * and every `createSolanaRpcSubscriptions` opens a WebSocket. This used to be
+ * rebuilt on EVERY call — and there are ~30 call sites, one per write action
+ * (buy, renew, set record, transfer, controllers, undernames…). Nothing closed
+ * them, so a session doing several writes accumulated sockets against the RPC
+ * provider's connection limit.
+ *
+ * Deliberately caches only the TRANSPORT, never the client. The SDK client is
+ * still constructed per call with the caller's signer, so a cached client can
+ * never sign with a stale wallet — the failure mode that produced the
+ * pay-from-the-wrong-wallet bug.
  */
+let cachedWriteSig: string | null = null;
+let cachedWriteRpc: ReturnType<typeof createSolanaRpc> | null = null;
+let cachedWriteSubs: ReturnType<typeof createSolanaRpcSubscriptions> | null = null;
+
 const getSolanaRpcClients = () => {
+  const sig = configSignature();
+  if (sig !== cachedWriteSig) {
+    cachedWriteSig = sig;
+    cachedWriteRpc = null;
+    cachedWriteSubs = null;
+  }
   const rpcUrl = getSolanaRpcUrl();
-  return {
-    rpc: createSolanaRpc(rpcUrl),
-    rpcSubscriptions: createSolanaRpcSubscriptions(getSolanaWsUrl(rpcUrl)),
-  };
+  if (!cachedWriteRpc) cachedWriteRpc = createSolanaRpc(rpcUrl);
+  if (!cachedWriteSubs) {
+    cachedWriteSubs = createSolanaRpcSubscriptions(getSolanaWsUrl(rpcUrl));
+  }
+  return { rpc: cachedWriteRpc, rpcSubscriptions: cachedWriteSubs };
 };
 
 // --- Cached read clients (one per active network config) ---------------------
