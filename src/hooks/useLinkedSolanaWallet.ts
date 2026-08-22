@@ -15,13 +15,20 @@ import { useStore } from '../store/useStore';
  * auto-reconnects it so the signer is ready without manual intervention.
  */
 export function useLinkedSolanaWallet() {
-  const { walletType, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, setLinkedSolanaWallet, clearLinkedSolanaWallet, getArNSAddress } = useStore();
+  const { walletType, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, setAddress, setLinkedSolanaWallet, clearLinkedSolanaWallet, getArNSAddress } = useStore();
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction, select: solanaSelect, connect: solanaConnect, wallet: solanaWallet, wallets: solanaWallets } = useWallet();
 
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [pendingLink, setPendingLink] = useState(false);
+  /**
+   * Whether the pending connect belongs to the PRIMARY session rather than a
+   * linked one. Both share the connect effect below, but they persist their
+   * result to different places — a primary reconnect must restore `address`,
+   * not create a linked-wallet record.
+   */
+  const pendingIsPrimaryRef = useRef(false);
   /**
    * Address the pending connection is REQUIRED to produce, or null when any
    * address is acceptable.
@@ -86,9 +93,12 @@ export function useLinkedSolanaWallet() {
     // Silent path: only the already-known address is acceptable.
     expectedAddressRef.current = targetAddress;
     solanaSelect(targetWalletName as any);
-    // Primary sessions are owned by useWalletAccountListener, which picks up the
-    // reconnected publicKey itself; only the linked flow needs this latch.
-    if (!isPrimarySolana) setPendingLink(true);
+    // BOTH identities need this latch: `select()` only chooses an adapter, it
+    // does not connect. The effect below is what calls `connect()`, and without
+    // it a primary session would select a wallet, never connect, and sit with a
+    // persisted address and no signer.
+    pendingIsPrimaryRef.current = isPrimarySolana;
+    setPendingLink(true);
   }, [isPrimarySolana, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, isSolanaConnected, solanaWallets, solanaSelect]);
 
   // After select(), wait for the adapter to be ready, then connect and save
@@ -115,6 +125,11 @@ export function useLinkedSolanaWallet() {
           setLinkError(
             'Your wallet reconnected with a different account. Switch back to the linked account, or link the new one explicitly.',
           );
+        } else if (pendingIsPrimaryRef.current) {
+          // Primary session: restore the wallet's own address. Writing a linked
+          // record here would invent a secondary ArNS wallet for a user who
+          // never linked one.
+          setAddress(pk.toString(), 'solana', solanaWallet.adapter.name);
         } else {
           setLinkedSolanaWallet(pk.toString(), solanaWallet.adapter.name);
         }
@@ -123,11 +138,14 @@ export function useLinkedSolanaWallet() {
         setLinkError(error instanceof Error ? error.message : 'Failed to connect wallet. Please try again.');
       } finally {
         expectedAddressRef.current = null;
+        pendingIsPrimaryRef.current = false;
         setIsLinking(false);
+        // Always released, including on failure — leaving this set would make
+        // useWalletAccountListener ignore a genuine later disconnect.
         (window as any).__SOLANA_SWITCHING__ = false;
       }
     })();
-  }, [pendingLink, solanaWallet, solanaConnect, setLinkedSolanaWallet]);
+  }, [pendingLink, solanaWallet, solanaConnect, setLinkedSolanaWallet, setAddress]);
 
   const linkWallet = useCallback((adapterName: string) => {
     setIsLinking(true);
