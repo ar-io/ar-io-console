@@ -15,7 +15,7 @@ import { useStore } from '../store/useStore';
  * auto-reconnects it so the signer is ready without manual intervention.
  */
 export function useLinkedSolanaWallet() {
-  const { walletType, linkedSolanaAddress, linkedSolanaWalletName, setLinkedSolanaWallet, clearLinkedSolanaWallet, getArNSAddress } = useStore();
+  const { walletType, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, setLinkedSolanaWallet, clearLinkedSolanaWallet, getArNSAddress } = useStore();
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction, select: solanaSelect, connect: solanaConnect, wallet: solanaWallet, wallets: solanaWallets } = useWallet();
 
   const [isLinking, setIsLinking] = useState(false);
@@ -57,24 +57,39 @@ export function useLinkedSolanaWallet() {
   const autoReconnectAttempted = useRef(false);
   useEffect(() => {
     if (autoReconnectAttempted.current) return;
-    if (isPrimarySolana) return;             // primary Solana handled elsewhere
-    if (!linkedSolanaAddress || !linkedSolanaWalletName) return; // nothing to reconnect
     if (isSolanaConnected) return;           // already live
 
-    // Only attempt if the adapter is available in the wallet list
+    // Both identities reconnect the same way. A PRIMARY Solana session restores
+    // `address`; a LINKED one restores the secondary ArNS wallet. Primary was
+    // excluded here and got signed out on every reload instead — the identity
+    // ArNS is actually built for had the worse experience of the two.
+    const targetAddress = isPrimarySolana ? address : linkedSolanaAddress;
+    const targetWalletName = isPrimarySolana
+      ? solanaWalletName
+      : linkedSolanaWalletName;
+    if (!targetAddress || !targetWalletName) return; // nothing to reconnect
+
+    // Only attempt if the adapter is present. Same rule as the stale-session
+    // check in useWalletAccountListener, deliberately: if one defers to a
+    // reconnect the other must be willing to attempt it, or a session survives
+    // the sign-out only to have nothing try to restore it.
     const adapterExists = solanaWallets.some(
-      (w) => w.adapter.name === linkedSolanaWalletName,
+      (w) => w.adapter.name === targetWalletName && w.readyState !== 'NotDetected',
     );
     if (!adapterExists) return;
 
     autoReconnectAttempted.current = true;
-    console.log('[LinkedSolana] Auto-reconnecting linked wallet:', linkedSolanaWalletName);
+    console.log('[LinkedSolana] Auto-reconnecting Solana wallet:', targetWalletName, {
+      primary: isPrimarySolana,
+    });
     (window as any).__SOLANA_SWITCHING__ = true;
-    // Silent path: only the already-linked address is acceptable.
-    expectedAddressRef.current = linkedSolanaAddress;
-    solanaSelect(linkedSolanaWalletName as any);
-    setPendingLink(true);
-  }, [isPrimarySolana, linkedSolanaAddress, linkedSolanaWalletName, isSolanaConnected, solanaWallets, solanaSelect]);
+    // Silent path: only the already-known address is acceptable.
+    expectedAddressRef.current = targetAddress;
+    solanaSelect(targetWalletName as any);
+    // Primary sessions are owned by useWalletAccountListener, which picks up the
+    // reconnected publicKey itself; only the linked flow needs this latch.
+    if (!isPrimarySolana) setPendingLink(true);
+  }, [isPrimarySolana, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, isSolanaConnected, solanaWallets, solanaSelect]);
 
   // After select(), wait for the adapter to be ready, then connect and save
   useEffect(() => {

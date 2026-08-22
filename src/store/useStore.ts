@@ -195,6 +195,17 @@ interface StoreState {
   // Wallet state
   address: string | null;
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
+  /**
+   * Adapter name of a PRIMARY Solana session (e.g. 'Phantom').
+   *
+   * The Solana WalletProvider runs `autoConnect={false}`, so nothing restores
+   * the adapter on reload. Linked wallets survive a refresh because their name
+   * is persisted and re-selected; primary sessions had no equivalent, so they
+   * were signed out on every page load — the identity ArNS is actually built
+   * for got the worst treatment. Persisting the name lets the same
+   * auto-reconnect cover both.
+   */
+  solanaWalletName: string | null;
   creditBalance: number;
 
   // Linked Solana wallet for ArNS (non-Solana primary users)
@@ -296,7 +307,12 @@ interface StoreState {
   browseConfig: BrowseConfig;
 
   // Actions
-  setAddress: (address: string | null, type: 'arweave' | 'ethereum' | 'solana' | null) => void;
+  setAddress: (
+    address: string | null,
+    type: 'arweave' | 'ethereum' | 'solana' | null,
+    /** Solana adapter name — persisted so the session survives a reload. */
+    solanaWalletName?: string,
+  ) => void;
   clearAddress: () => void;
   setLinkedSolanaWallet: (address: string, walletName: string) => void;
   clearLinkedSolanaWallet: () => void;
@@ -434,6 +450,7 @@ export const useStore = create<StoreState>()(
       // Initial state
       address: null,
       walletType: null,
+      solanaWalletName: null,
       creditBalance: 0,
 
       // Linked Solana wallet for ArNS
@@ -503,11 +520,23 @@ export const useStore = create<StoreState>()(
       },
       jitBufferMultiplier: 1.1, // Default 10% buffer
       // Actions
-      setAddress: (address, type) => set({ address, walletType: type, creditBalance: 0 }),
+      setAddress: (address, type, solanaWalletName) =>
+        set({
+          address,
+          walletType: type,
+          creditBalance: 0,
+          // Keep the existing name when re-setting the same Solana session
+          // (the listener calls this without a name on reconnect).
+          solanaWalletName:
+            type === 'solana'
+              ? (solanaWalletName ?? get().solanaWalletName)
+              : null,
+        }),
       clearAddress: () =>
         set({
           address: null,
           walletType: null,
+          solanaWalletName: null,
           creditBalance: 0,
           arnsNamesCache: {},
           ownedArnsCache: {},
@@ -978,6 +1007,7 @@ export const useStore = create<StoreState>()(
       partialize: (state) => ({
         address: state.address,
         walletType: state.walletType,
+        solanaWalletName: state.solanaWalletName,
         linkedSolanaAddress: state.linkedSolanaAddress,
         linkedSolanaWalletName: state.linkedSolanaWalletName,
         arnsNamesCache: state.arnsNamesCache,
