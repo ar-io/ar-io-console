@@ -5,6 +5,12 @@ import type { FundFrom } from '@ar.io/sdk/solana';
 import { APP_NAME } from '../../../constants';
 import { getWritableARIO } from '../../../utils';
 import { ArNSSettlementResult } from '../services/TurboArNSClient';
+import {
+  buildBuyRecordArgs,
+  routeBuyError,
+  submittingMessage,
+  toSettlement,
+} from '../purchase/buyDecisions';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import type { ArNSRegistrationType } from './useArNSPrice';
@@ -103,11 +109,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
 
       try {
         setPhase('submitting');
-        setStatusMessage(
-          type === 'permabuy'
-            ? `Registering '${lowered}' permanently and creating its ANT…`
-            : `Registering '${lowered}' and creating its ANT…`,
-        );
+        setStatusMessage(submittingMessage(lowered, type));
 
         const ario = getWritableARIO(signer.getSolanaSigner());
 
@@ -115,19 +117,17 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         // assigns the name in ONE tx. No pre-spawn ⇒ no orphaned-ANT window.
         // `fundFrom` selects where the ARIO price is drawn from (credits vs the
         // wallet's ARIO balance/stakes); SOL rent is always paid by the signer.
-        const res = await ario.buyRecord({
-          name: lowered,
-          type,
-          ...(type === 'lease' && years ? { years } : {}),
-          fundFrom,
-          referrer: APP_NAME,
-        });
+        const res = await ario.buyRecord(
+          buildBuyRecordArgs({
+            name: lowered,
+            type,
+            years,
+            fundFrom,
+            referrer: APP_NAME,
+          }) as Parameters<typeof ario.buyRecord>[0],
+        );
 
-        const settlement: ArNSSettlementResult = {
-          nonce: '',
-          messageId: res?.id ?? '',
-          receipt: { processId: res?.result?.processId ?? null },
-        };
+        const settlement: ArNSSettlementResult = toSettlement(res);
         setResult(settlement);
         setPhase('success');
         // The name price was debited (credits or ARIO) — refresh the balance.
@@ -138,7 +138,12 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         // ARIO path (balance/stakes/any) an insufficient-funds error is an ARIO
         // shortfall, which buying Turbo Credits wouldn't resolve — surface it as
         // a normal error instead.
-        if (fundFrom === 'turbo' && isInsufficientCredits(err)) {
+        if (
+          routeBuyError({
+            fundFrom,
+            isInsufficientCredits: isInsufficientCredits(err),
+          }).kind === 'insufficient-credits'
+        ) {
           setInsufficientCredits(true);
           setPhase('error');
           setError(err instanceof Error ? err : new Error(String(err)));
