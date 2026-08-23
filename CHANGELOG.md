@@ -2,6 +2,28 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.4.1] - 2026-08-22
+
+### Fixed
+- **Native Solana wallets were signed out on every page reload.** The Solana
+  provider runs with auto-connect off, and only *linked* wallets persisted the
+  adapter name needed to restore them — primary sessions persisted just the
+  address, so there was nothing to reconnect and the session was cleared on
+  mount. The identity ArNS is actually built for had the worse experience of the
+  two. Both now persist the adapter name and share one reconnect path; sessions
+  saved before this change are cleared once, then it stops. Reported as ArNS
+  names going missing during a site deploy or file upload — the names were fine,
+  the session was not.
+
+### Changed
+- **The Solana write RPC transport is reused instead of rebuilt per call.** Each
+  write action (buy, renew, set record, transfer, controllers, undernames…) was
+  creating a fresh RPC client and a fresh WebSocket, and nothing closed them, so
+  a session doing several writes accumulated connections against the provider's
+  limit. The read clients were already shared for exactly this reason. Only the
+  transport is cached — the SDK client is still built per call with the caller's
+  signer, so it can never sign with a stale wallet.
+
 ## [4.4.0] - 2026-08-19
 
 ### Removed
