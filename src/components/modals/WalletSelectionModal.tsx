@@ -225,7 +225,9 @@ const WalletSelectionModal = ({
         // in case the listener hasn't fired yet.
         const pk = solanaWallet.adapter.publicKey;
         if (pk) {
-          setAddress(pk.toString(), 'solana');
+          // Record WHICH adapter — without it the session cannot be restored on
+          // reload (autoConnect is off), and the user is silently signed out.
+          setAddress(pk.toString(), 'solana', solanaWallet.adapter.name);
         }
       } catch (error) {
         console.error('[Solana] Connection failed:', error);

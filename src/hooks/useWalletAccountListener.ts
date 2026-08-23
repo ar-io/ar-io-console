@@ -4,6 +4,7 @@ import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { clearEthereumTurboClientCache } from './useEthereumTurboClient';
 import { clearX402SignerCache } from './useX402Upload';
+import { canRestoreSolanaSession } from '../utils/solanaSessionRestore';
 
 /**
  * Hook that listens for wallet account changes across all supported wallet types
@@ -20,7 +21,7 @@ import { clearX402SignerCache } from './useX402Upload';
  * 3. Header component automatically refetches the balance due to address change
  */
 export function useWalletAccountListener() {
-  const { address, walletType, setAddress, clearAddress, clearAllPaymentState } = useStore();
+  const { address, walletType, solanaWalletName, setAddress, clearAddress, clearAllPaymentState } = useStore();
 
   // Listen for Ethereum account changes (RainbowKit, MetaMask, Privy embedded wallet)
   const { address: ethAddress, isConnected: ethIsConnected, connector } = useAccount();
@@ -88,7 +89,7 @@ export function useWalletAccountListener() {
   // Use publicKey as source of truth — solanaConnected can be stale when
   // Standard Wallet adapters auto-approve (connect() returns early without
   // emitting 'connect' event, so WalletProviderBase never calls setConnected(true)).
-  const { publicKey: solanaPublicKey } = useWallet();
+  const { publicKey: solanaPublicKey, wallets: solanaWallets } = useWallet();
 
   // Track whether a Solana wallet has been active in this session.
   const solanaEverConnectedRef = useRef(false);
@@ -130,14 +131,42 @@ export function useWalletAccountListener() {
     }
   }, [solanaPublicKey, walletType, address, clearAllPaymentState, clearAddress]);
 
-  // Clear stale Solana session on page load.
-  // With autoConnect=false, the wallet adapter never reconnects on reload.
-  // If the store persisted walletType='solana', clear it since the adapter isn't connected.
+  // Clear a stale Solana session on page load — but only one that cannot be
+  // restored.
+  //
+  // With autoConnect=false the adapter never reconnects by itself, so a
+  // persisted primary Solana session starts with no publicKey. This used to
+  // sign the user out unconditionally, on every single reload. It now defers to
+  // useLinkedSolanaWallet's auto-reconnect whenever that has something to work
+  // with: a remembered adapter name that is actually installed.
+  //
+  // Sessions saved before `solanaWalletName` existed have no name to reconnect
+  // with and are still cleared — one final sign-out, then it stops.
+  //
+  // If the reconnect is attempted and fails, the disconnect effect above owns
+  // the cleanup (it is latched on solanaEverConnectedRef, so it only fires once
+  // a wallet has genuinely been live).
   useEffect(() => {
-    if (walletType === 'solana' && address && !solanaPublicKey) {
-      console.log('[Wallet Listener] Clearing stale Solana session from previous page load');
-      clearAddress();
+    const { action } = canRestoreSolanaSession({
+      walletType,
+      address,
+      solanaPublicKey: solanaPublicKey ? solanaPublicKey.toString() : null,
+      solanaWalletName,
+      // Exclude only definitively-absent adapters. Filtering to 'Installed'
+      // alone would sign out users whose wallet is merely 'Loadable' — which
+      // is the very bug this change fixes — while accepting every configured
+      // wallet would defer forever for someone who uninstalled theirs.
+      installedWalletNames: solanaWallets
+        .filter((w) => w.readyState !== 'NotDetected')
+        .map((w) => w.adapter.name),
+    });
+    if (action === 'none') return;
+    if (action === 'defer-to-reconnect') {
+      console.log('[Wallet Listener] Deferring to auto-reconnect for', solanaWalletName);
+      return;
     }
+    console.log('[Wallet Listener] Clearing unrestorable Solana session from previous page load');
+    clearAddress();
     // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
