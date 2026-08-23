@@ -28,7 +28,7 @@ export default function BuyCreditsModal({
 }: BuyCreditsModalProps) {
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="max-h-[90vh] w-[92vw] max-w-xl overflow-y-auto p-6">
+      <div className="w-[92vw] max-w-xl p-6">
         <div className="mb-5">
           <div className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary" />

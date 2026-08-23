@@ -180,7 +180,7 @@ export default function ManageDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
+      <div className="w-[92vw] max-w-lg p-6">
         {/* Header */}
         <div className="mb-5">
           <h3 className="font-heading text-xl font-extrabold text-foreground">

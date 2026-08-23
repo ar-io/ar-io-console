@@ -149,7 +149,7 @@ export default function ReturnedNameBuyModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-md max-h-[85vh] overflow-y-auto p-6">
+      <div className="w-[92vw] max-w-md p-6">
         {/* Header */}
         <div className="mb-4 flex items-start gap-3">
           <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20">
