@@ -33,6 +33,10 @@ function getNetworkParams(chainId: number): {
       chainId: '0x2105',
       chainName: 'Base',
       nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+      // NOTE: deliberately a PUBLIC endpoint, not RPC_ENDPOINTS.base.
+      // These params go to `wallet_addEthereumChain` — the USER'S wallet keeps
+      // this URL and polls it for their own balances forever after. Pointing it
+      // at our paid provider would put every user's MetaMask on our quota.
       rpcUrls: ['https://mainnet.base.org'],
       blockExplorerUrls: ['https://basescan.org'],
     },

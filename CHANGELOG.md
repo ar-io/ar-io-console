@@ -2,6 +2,26 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.4.2] - 2026-08-23
+
+### Changed
+- **Every RPC endpoint is now overridable at build time.** Only Solana was; the
+  rest were hard-coded free public RPCs — `mainnet.base.org` alone backed three
+  tokens *and* the wallet connector, and Base's own docs say it is not for
+  production. Those endpoints rate-limit aggressively, which makes them the
+  likeliest source of 429s. `VITE_ETHEREUM_RPC`, `VITE_BASE_RPC` and
+  `VITE_POLYGON_RPC` join `VITE_SOLANA_RPC`; each falls back to the endpoint it
+  replaced, so an unset var changes nothing.
+- **One source of truth per chain.** `RPC_ENDPOINTS` in the store now feeds both
+  the `tokenMap` and wagmi's transports, so balance reads and wallet operations
+  can no longer drift onto different providers. `usdc` was pointing at a third
+  Ethereum endpoint (`cloudflare-eth.com`) and now shares the Ethereum one.
+
+  Two `rpcUrls` are deliberately left public: they are `wallet_addEthereumChain`
+  parameters, so the URL is kept by the *user's wallet* and polled independently
+  from then on. Pointing those at a paid provider would put every user's
+  MetaMask on our quota.
+
 ## [4.4.1] - 2026-08-22
 
 ### Fixed

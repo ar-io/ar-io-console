@@ -14,6 +14,30 @@ import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
 import type { PriceDisplayCurrency } from '../features/arns/priceDisplay';
 
+/**
+ * Production RPC endpoints, each overridable at build time.
+ *
+ * Every one of these except Solana used to be a hard-coded free public RPC —
+ * `mainnet.base.org` alone backed three tokens plus the wallet connector, and
+ * Base's own docs say it is not for production use. Those endpoints rate-limit
+ * aggressively, which makes them the most likely source of 429s in the app.
+ *
+ * Making them build-time vars lets a real provider be swapped in, or a leaked
+ * key rotated, without a code change. Each falls back to the endpoint it
+ * replaced, so an unset var changes nothing.
+ *
+ * NOTE: like every `VITE_` value these are inlined into the published bundle and
+ * are therefore PUBLIC — permanently, once deployed to Arweave. Protect the
+ * endpoint provider-side (referrer allowlist, method limits). Never treat one
+ * of these as a secret.
+ */
+export const RPC_ENDPOINTS = {
+  solana: import.meta.env.VITE_SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
+  ethereum: import.meta.env.VITE_ETHEREUM_RPC || 'https://ethereum.publicnode.com',
+  base: import.meta.env.VITE_BASE_RPC || 'https://mainnet.base.org',
+  polygon: import.meta.env.VITE_POLYGON_RPC || 'https://polygon-bor-rpc.publicnode.com',
+} as const;
+
 // Preset configurations
 const PRESET_CONFIGS = {
   production: {
@@ -31,21 +55,23 @@ const PRESET_CONFIGS = {
     tokenMap: {
       arweave: 'https://turbo-gateway.com',
       ario: 'https://turbo-gateway.com',
-      'base-ario': 'https://mainnet.base.org',
-      ethereum: 'https://ethereum.publicnode.com',
-      'base-eth': 'https://mainnet.base.org',
+      'base-ario': RPC_ENDPOINTS.base,
+      ethereum: RPC_ENDPOINTS.ethereum,
+      'base-eth': RPC_ENDPOINTS.base,
       // Provider URL carries an auth token, so it is injected at build time rather
       // than committed. Vite inlines this into the bundle — it is NOT a secret, it
       // is merely un-committed. The endpoint is protected by referrer + method
       // whitelists on the provider side; treat the published value as public.
       // Same var as the wallet adapter (providers/WalletProviders.tsx) so both
       // halves of the app talk to one RPC.
-      solana: import.meta.env.VITE_SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
+      solana: RPC_ENDPOINTS.solana,
       kyve: 'https://api.kyve.network',
-      pol: 'https://polygon-bor-rpc.publicnode.com',
-      usdc: 'https://cloudflare-eth.com',
-      'base-usdc': 'https://mainnet.base.org',
-      'polygon-usdc': 'https://polygon-bor-rpc.publicnode.com',
+      pol: RPC_ENDPOINTS.polygon,
+      // cloudflare-eth.com was the odd one out — a THIRD public Ethereum
+      // endpoint alongside the two above. Same chain, so same endpoint.
+      usdc: RPC_ENDPOINTS.ethereum,
+      'base-usdc': RPC_ENDPOINTS.base,
+      'polygon-usdc': RPC_ENDPOINTS.polygon,
     } as Record<SupportedTokenType, string>,
   },
   development: {
