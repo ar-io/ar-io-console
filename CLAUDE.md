@@ -343,7 +343,26 @@ VITE_NODE_ENV=production        # Controls mainnet vs testnet
 VITE_PRIVY_APP_ID=...           # Required for email auth
 VITE_WALLETCONNECT_PROJECT_ID=...  # Optional
 VITE_SOLANA_RPC=...             # Required for prod — full provider URL incl. token
+VITE_ETHEREUM_RPC=...           # Optional — defaults to ethereum.publicnode.com
+VITE_BASE_RPC=...               # Optional — defaults to mainnet.base.org
+VITE_POLYGON_RPC=...            # Optional — defaults to polygon-bor-rpc.publicnode.com
 ```
+
+**All RPC endpoints resolve through `RPC_ENDPOINTS` in `store/useStore.ts`**, which
+both the `tokenMap` and wagmi's transports read, so balance reads and wallet
+operations always hit the same provider per chain. Add a new chain there, not in
+two places.
+
+The three EVM vars are optional and each falls back to the public endpoint it
+replaced. They exist because those defaults are free public RPCs that rate-limit
+hard — `mainnet.base.org` alone backed three tokens plus the wallet connector,
+and Base's docs say it is not for production. If the app is seeing 429s, check
+these before assuming it is Solana.
+
+**Two `rpcUrls` are deliberately left public** (`useTokenBalance.ts`,
+`CryptoConfirmationPanel.tsx`): they are `wallet_addEthereumChain` params, so the
+URL is kept by the *user's wallet* and polled independently forever. Pointing
+those at a paid provider would put every user's MetaMask on our quota.
 
 `VITE_SOLANA_RPC` is consumed by both `store/useStore.ts` (`tokenMap.solana`) and
 `providers/WalletProviders.tsx` (`ConnectionProvider`) so the app uses one RPC

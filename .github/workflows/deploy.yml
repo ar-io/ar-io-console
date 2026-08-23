@@ -86,6 +86,13 @@ jobs:
           # NOT optional for a live deploy — see the guard above. Carries an auth
           # token, so it lives in secrets (masked in logs), not vars.
           VITE_SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
+          # EVM endpoints — optional. Each falls back to the public RPC it
+          # replaced, so an unset secret changes nothing. Set them to move off
+          # the free public endpoints (mainnet.base.org et al), which are the
+          # most likely source of 429s.
+          VITE_ETHEREUM_RPC: ${{ secrets.VITE_ETHEREUM_RPC }}
+          VITE_BASE_RPC: ${{ secrets.VITE_BASE_RPC }}
+          VITE_POLYGON_RPC: ${{ secrets.VITE_POLYGON_RPC }}
 
       - name: Deploy to Arweave + update ArNS
         id: deploy

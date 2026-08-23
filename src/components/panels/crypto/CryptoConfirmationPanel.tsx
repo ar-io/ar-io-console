@@ -281,6 +281,9 @@ export default function CryptoConfirmationPanel({
                               symbol: 'ETH',
                               decimals: 18,
                             },
+                            // PUBLIC on purpose — see useTokenBalance's note:
+                            // this URL is handed to the user's wallet, which
+                            // then polls it independently of the app.
                             rpcUrls: ['https://mainnet.base.org'],
                             blockExplorerUrls: ['https://basescan.org'],
                           };
