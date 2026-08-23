@@ -124,7 +124,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             years,
             fundFrom,
             referrer: APP_NAME,
-          }) as Parameters<typeof ario.buyRecord>[0],
+          }),
         );
 
         const settlement: ArNSSettlementResult = toSettlement(res);

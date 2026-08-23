@@ -11,6 +11,8 @@
  * not a stale test.
  */
 
+import type { FundFrom } from '@ar.io/sdk/solana';
+
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
 
 export type BuyRegistrationType = 'lease' | 'permabuy';
@@ -31,19 +33,28 @@ export interface BuyRecordResponseLike {
  * `years` must be absent — not undefined-valued — for a permabuy, which is why
  * this spreads conditionally rather than always setting the key.
  */
+export interface BuyRecordArgs {
+  name: string;
+  type: BuyRegistrationType;
+  /** Present only for a lease with a term — see the note above. */
+  years?: number;
+  /**
+   * Typed as the SDK's own union rather than `string`, so this object can be
+   * passed to `buyRecord` with no cast. A cast here would silence the compiler
+   * on a call that spends money — if this shape ever drifts from the SDK's,
+   * that must be a build error, not a runtime surprise.
+   */
+  fundFrom?: FundFrom;
+  referrer: string;
+}
+
 export function buildBuyRecordArgs({
   name,
   type,
   years,
   fundFrom,
   referrer,
-}: {
-  name: string;
-  type: BuyRegistrationType;
-  years?: number;
-  fundFrom?: string;
-  referrer: string;
-}): Record<string, unknown> {
+}: BuyRecordArgs & { years?: number }): BuyRecordArgs {
   return {
     name,
     type,
@@ -86,7 +97,7 @@ export function routeBuyError({
   fundFrom,
   isInsufficientCredits,
 }: {
-  fundFrom: string | undefined;
+  fundFrom: FundFrom | undefined;
   isInsufficientCredits: boolean;
 }): BuyErrorRoute {
   if (fundFrom === 'turbo' && isInsufficientCredits) return { kind: 'insufficient-credits' };
