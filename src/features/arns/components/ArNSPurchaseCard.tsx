@@ -191,10 +191,14 @@ export function ArNSPurchaseCard({
     if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
     if (insufficientSol) {
       const need = cost ? Math.max(0, cost.gasTotalSol - balances.sol) : 0;
+      // Format first, then decide. A shortfall under 0.00005 SOL is real but
+      // rounds to "0" at 4dp, and "you need about 0 more SOL" reads as a bug.
+      const needText = need.toLocaleString(undefined, { maximumFractionDigits: 4 });
       return {
-        text: need > 0
-          ? `You need about ${need.toLocaleString(undefined, { maximumFractionDigits: 4 })} more SOL for the network deposit.`
-          : 'You need more SOL for the network deposit.',
+        text:
+          need > 0 && Number(needText) > 0
+            ? `You need about ${needText} more SOL for the network deposit.`
+            : 'You need a little more SOL for the network deposit.',
       };
     }
     if (insufficientFunds && method === 'ario') {
