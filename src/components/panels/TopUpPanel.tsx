@@ -31,12 +31,21 @@ interface TopUpPanelProps {
   initialUsdAmount?: number;
   /** Fired once a top-up reaches a success terminal state (credits landed). */
   onComplete?: () => void;
+  /**
+   * Fired when the panel enters or leaves a state that must not be interrupted
+   * — a card being charged, or a crypto transfer in flight. A host modal uses
+   * this to stop Escape and backdrop clicks from tearing the flow down
+   * mid-payment, which would leave the charge to land server-side with no UI
+   * to report it.
+   */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 export default function TopUpPanel({
   embedded = false,
   initialUsdAmount,
   onComplete,
+  onBusyChange,
 }: TopUpPanelProps = {}) {
   const {
     address,
@@ -551,6 +560,21 @@ export default function TopUpPanel({
 
 
   // Render fiat flow screens
+  /**
+   * Mid-payment states. `success`/`complete` are deliberately excluded — once
+   * the credits have landed, closing is exactly what the user should be able
+   * to do.
+   */
+  const busy =
+    isProcessing ||
+    (paymentMethod === 'fiat' && fiatFlowStep === 'confirmation') ||
+    (paymentMethod === 'crypto' &&
+      (cryptoFlowStep === 'confirmation' || cryptoFlowStep === 'manual-payment'));
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+
   if (paymentMethod === 'fiat' && fiatFlowStep !== 'amount') {
     // Determine target address for payment (use target if set, otherwise connected wallet)
     const targetAddress = paymentTargetAddress || address;

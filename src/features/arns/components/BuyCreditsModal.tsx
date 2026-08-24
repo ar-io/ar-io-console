@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CreditCard } from 'lucide-react';
 
 import BaseModal from '../../../components/modals/BaseModal';
@@ -27,8 +28,20 @@ export default function BuyCreditsModal({
   onClose,
   onComplete,
 }: BuyCreditsModalProps) {
+  const [busy, setBusy] = useState(false);
+
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    /*
+      `dismissible={!busy}` blocks Escape and backdrop clicks while a payment is
+      in flight — an accidental dismissal there would let the charge land with
+      no UI to report it, and PendingTxRecoveryBanner exists because people do
+      lose transfers this way.
+
+      The close button deliberately STAYS. Hiding it too would trap the user
+      inside a flow they may have good reason to abandon; the goal is to prevent
+      an accident, not to remove the exit.
+    */
+    <BaseModal onClose={onClose} showCloseButton dismissible={!busy}>
       <div className="w-[92vw] max-w-xl p-6">
         <div className="mb-5">
           <div className="flex items-center gap-2">
@@ -66,6 +79,7 @@ export default function BuyCreditsModal({
             embedded
             initialUsdAmount={initialUsdAmount}
             onComplete={onComplete}
+            onBusyChange={setBusy}
           />
         </StripeElementsProvider>
       </div>
