@@ -1302,9 +1302,11 @@ export default function TopUpPanel({
 
                   {/* Custom USD Input */}
                   <div className="bg-card rounded-2xl p-4">
+                    {!targetedTopUp && (
                     <label className="block text-xs font-medium text-foreground/80 mb-2 uppercase tracking-wider">
                       Custom Amount (USD)
                     </label>
+                    )}
                     <div className="flex items-center gap-3">
                       <DollarSign className="w-5 h-5 text-foreground" />
                       <input

@@ -3,6 +3,8 @@ import { AlertTriangle, Check, ExternalLink, Info, Loader2 } from 'lucide-react'
 import type { ArNSPaymentMethod } from './ArNSPaymentSelector';
 import PriceAmount from './PriceAmount';
 import PriceDisplayToggle from './PriceDisplayToggle';
+import { useStore } from '../../../store/useStore';
+import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
 /** Where to send users who need SOL for the network deposit. Configurable. */
 const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
@@ -78,6 +80,13 @@ export function ArNSCostBreakdown({
   insufficientFunds,
   insufficientSol,
 }: Props) {
+  const currency = useStore((s) => s.priceDisplayCurrency);
+  // Credits per $1, inverted. Shown with "~" because this is an indicative
+  // rate, not the amount that will be charged — minimums and rounding apply.
+  const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
+  const usdPerCredit =
+    creditsForOneUSD && creditsForOneUSD > 0 ? 1 / creditsForOneUSD : undefined;
+
   const priceNode = priceLoading ? (
     <span className="flex items-center gap-2 text-sm text-foreground/70">
       <Loader2 className="h-4 w-4 animate-spin" /> Fetching…
@@ -91,7 +100,12 @@ export function ArNSCostBreakdown({
       // lowercase "credits" is the unit that follows an amount. Keep it lowercase
       // here — it's a unit, not the product name.
       <span className="text-lg font-bold text-foreground">
-        {fmtNum(creditsPrice)} credits
+        {currency === 'usd' && usdPerCredit != null
+          ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`
+          : `${fmtNum(creditsPrice)} credits`}
       </span>
     ) : (
       <span className="text-sm text-foreground/50">—</span>
@@ -109,7 +123,13 @@ export function ArNSCostBreakdown({
         label={
           <span className="flex items-center gap-2">
             Name price
-            {method === 'ario' && <PriceDisplayToggle />}
+            {/* Both payment methods get the toggle. "0.89 credits" means
+                nothing to someone paying by card — arguably the USD view
+                matters MORE here than on the token path, where the holder
+                already knows what ARIO is worth. */}
+            <PriceDisplayToggle
+              nativeLabel={method === 'credits' ? 'Credits' : 'ARIO'}
+            />
           </span>
         }
         strong

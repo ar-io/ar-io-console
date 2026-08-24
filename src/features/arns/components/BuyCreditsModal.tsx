@@ -68,8 +68,7 @@ export default function BuyCreditsModal({
           */}
           {initialUsdAmount != null && initialUsdAmount < minUSDAmount && (
             <p className="mt-2 text-xs text-foreground/60">
-              Purchases start at ${minUSDAmount}. Anything you don&apos;t spend on
-              this name stays in your balance for future names and uploads.
+              ${minUSDAmount} minimum — the rest stays as credits.
             </p>
           )}
         </div>
@@ -82,6 +81,20 @@ export default function BuyCreditsModal({
             onBusyChange={setBusy}
           />
         </StripeElementsProvider>
+
+        {/* Same wording and destination as Deploy / Upload / Capture / Try It
+            Now — this flow was the only paid action without it. */}
+        <p className="mt-4 text-center text-xs text-foreground/80">
+          By continuing, you agree to our{' '}
+          <a
+            href="https://ardrive.io/tos-and-privacy/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline transition-colors hover:text-primary/80"
+          >
+            Terms of Service
+          </a>
+        </p>
       </div>
     </BaseModal>
   );
