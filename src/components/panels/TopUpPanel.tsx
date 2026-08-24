@@ -209,6 +209,19 @@ export default function TopUpPanel({
 
   const presetAmounts = [10, 25, 50, 100, 250, 500];
 
+  /**
+   * True when this panel was opened to unblock ONE known purchase, with the
+   * shortfall already supplied.
+   *
+   * The full page is a shop: pick any amount, or work backwards from how much
+   * storage you want. A modal opened mid-purchase is not — the amount is
+   * already known, so a storage calculator and a grid of round-number presets
+   * are answering a question the user did not ask, and inviting them to
+   * overshoot a purchase they are trying to finish. The amount stays editable;
+   * only the shopping furniture goes.
+   */
+  const targetedTopUp = embedded && initialUsdAmount != null;
+
   // Crypto preset amounts based on token type (from reference app)
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
     switch (tokenType) {
@@ -1221,8 +1234,13 @@ export default function TopUpPanel({
             <>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-foreground/80">
-                  {inputType === 'dollars' ? 'Select USD Amount' : 'Enter Storage Amount'}
+                  {targetedTopUp
+                    ? 'Amount'
+                    : inputType === 'dollars'
+                      ? 'Select USD Amount'
+                      : 'Enter Storage Amount'}
                 </label>
+                {!targetedTopUp && (
                 <div className="inline-flex bg-card rounded-2xl p-0.5 border border-border/20">
                   <button
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
@@ -1253,11 +1271,14 @@ export default function TopUpPanel({
                     USD
                   </button>
                 </div>
+                )}
               </div>
 
               {inputType === 'dollars' ? (
                 <>
-                  {/* USD Preset Amounts */}
+                  {/* USD Preset Amounts — round-number shopping, irrelevant when
+                      we already know the exact shortfall. */}
+                  {!targetedTopUp && (
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {presetAmounts.map((amount) => (
                       <button
@@ -1277,6 +1298,7 @@ export default function TopUpPanel({
                       </button>
                     ))}
                   </div>
+                  )}
 
                   {/* Custom USD Input */}
                   <div className="bg-card rounded-2xl p-4">
