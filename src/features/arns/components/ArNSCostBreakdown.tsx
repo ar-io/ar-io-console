@@ -1,13 +1,19 @@
-import { AlertTriangle, Check, ExternalLink, Info, Loader2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ExternalLink,
+  Info,
+  Loader2,
+} from "lucide-react";
 
-import type { ArNSPriceUnit } from './ArNSPaymentSelector';
-import PriceAmount from './PriceAmount';
-import PriceDisplayToggle from './PriceDisplayToggle';
-import { useStore } from '../../../store/useStore';
-import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
+import type { ArNSPriceUnit } from "./ArNSPaymentSelector";
+import PriceAmount from "./PriceAmount";
+import PriceDisplayToggle from "./PriceDisplayToggle";
+import { useStore } from "../../../store/useStore";
+import { useCreditsForFiat } from "../../../hooks/useCreditsForFiat";
 
 /** Where to send users who need SOL for the network deposit. Configurable. */
-const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
+const GET_SOL_URL = "https://www.coinbase.com/how-to-buy/solana";
 
 const fmtSol = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 4 });
@@ -47,6 +53,38 @@ interface Props {
   networkCostCovered?: boolean;
 }
 
+/**
+ * An explainer that lives on its label rather than under the value.
+ *
+ * A footnote row costs a full line of vertical space to say something most
+ * people already know, and in a short cost summary those lines add up to real
+ * scrolling. Attaching it to the term keeps the summary scannable while leaving
+ * the detail one hover (or Tab) away.
+ *
+ * `focus-within` as well as `hover` so it is reachable from the keyboard, and
+ * `title` as the touch fallback — there is no hover on a phone.
+ */
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="group/tip relative inline-flex align-middle">
+      <button
+        type="button"
+        aria-label={text}
+        title={text}
+        className="inline-flex cursor-help items-center text-foreground/40 transition-colors hover:text-foreground/70"
+      >
+        <Info className="h-3 w-3" />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 w-56 -translate-x-1/2 rounded-xl bg-foreground px-2.5 py-1.5 text-[11px] leading-snug text-white opacity-0 shadow-sm transition-opacity group-hover/tip:opacity-100 group-focus-within/tip:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 function Row({
   label,
   children,
@@ -59,7 +97,7 @@ function Row({
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
       <span
-        className={`text-sm ${strong ? 'font-medium text-foreground' : 'text-foreground/70'}`}
+        className={`text-sm ${strong ? "font-medium text-foreground" : "text-foreground/70"}`}
       >
         {label}
       </span>
@@ -104,14 +142,14 @@ export function ArNSCostBreakdown({
     </span>
   ) : priceError ? (
     <span className="text-sm text-error">Unavailable</span>
-  ) : priceUnit === 'credits' ? (
+  ) : priceUnit === "credits" ? (
     creditsPrice != null ? (
       // Casing convention across ArNS priced surfaces: "Turbo Credits" is the
       // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
       // lowercase "credits" is the unit that follows an amount. Keep it lowercase
       // here — it's a unit, not the product name.
       <span className="text-lg font-bold text-foreground">
-        {currency === 'usd' && usdPerCredit != null
+        {currency === "usd" && usdPerCredit != null
           ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -128,125 +166,138 @@ export function ArNSCostBreakdown({
   );
 
   return (
-    <div className="rounded-2xl border border-border/20 bg-card p-4">
-      {/* Name price */}
-      <Row
-        label={
-          <span className="flex items-center gap-2">
-            Name price
-            {/* Both payment methods get the toggle. "0.89 credits" means
+    <>
+      <div className="rounded-2xl border border-border/20 bg-card p-4">
+        {/* Name price */}
+        <Row
+          label={
+            <span className="flex items-center gap-2">
+              Name price
+              {/* Both payment methods get the toggle. "0.89 credits" means
                 nothing to someone paying by card — arguably the USD view
                 matters MORE here than on the token path, where the holder
                 already knows what ARIO is worth. */}
-            <PriceDisplayToggle
-              nativeLabel={priceUnit === 'credits' ? 'Credits' : 'ARIO'}
-            />
-          </span>
-        }
-        strong
-      >
-        {priceNode}
-      </Row>
-      {insufficientFunds && !priceLoading && (
-        <p className="flex items-center justify-end gap-1 text-xs text-error">
-          <AlertTriangle className="h-3 w-3" />
-          {priceUnit === 'credits'
-            ? 'Not enough Turbo Credits'
-            : 'Not enough ARIO in this source'}
-        </p>
-      )}
-
-      <div className="my-2 border-t border-border/10" />
-
-      {/* Solana network cost — always required */}
-      {gasLoading ? (
-        <div className="flex items-center gap-2 py-1 text-sm text-foreground/70">
-          <Loader2 className="h-4 w-4 animate-spin" /> Estimating network cost…
-        </div>
-      ) : networkCostCovered ? (
-        /* Paying by card: the service does the on-chain write from its own
-           keypair, so there is no SOL for the buyer to hold or be short of. */
-        <Row label="Network costs">
-          <span className="text-sm text-foreground/80">Included</span>
+              <PriceDisplayToggle
+                nativeLabel={priceUnit === "credits" ? "Credits" : "ARIO"}
+              />
+            </span>
+          }
+          strong
+        >
+          {priceNode}
         </Row>
-      ) : gasError ? (
-        <div className="flex items-center gap-2 py-1 text-sm text-error">
-          <AlertTriangle className="h-4 w-4" /> Network cost unavailable — try
-          again
-        </div>
-      ) : (
-        <>
-          <Row label="Network deposit">
-            <span className="text-sm text-foreground/80">
-              ~{fmtSol(gasRentSol)} SOL
-            </span>
-          </Row>
-          <p className="flex items-center justify-end gap-1 pb-1 text-[11px] text-foreground/50">
-            <Info className="h-3 w-3" /> Solana account rent, held on-chain while
-            the name is registered
+        {insufficientFunds && !priceLoading && (
+          <p className="flex items-center justify-end gap-1 text-xs text-error">
+            <AlertTriangle className="h-3 w-3" />
+            {priceUnit === "credits"
+              ? "Not enough Turbo Credits"
+              : "Not enough ARIO in this source"}
           </p>
-          <Row label="Network fee">
-            <span className="text-sm text-foreground/80">
-              ~{fmtSol(gasFeeSol)} SOL
-            </span>
+        )}
+
+        <div className="my-2 border-t border-border/10" />
+
+        {/* Solana network cost — always required */}
+        {gasLoading ? (
+          <div className="flex items-center gap-2 py-1 text-sm text-foreground/70">
+            <Loader2 className="h-4 w-4 animate-spin" /> Estimating network
+            cost…
+          </div>
+        ) : networkCostCovered ? (
+          /* Paying by card: the service does the on-chain write from its own
+           keypair, so there is no SOL for the buyer to hold or be short of. */
+          <Row label="Network costs">
+            <span className="text-sm text-foreground/80">Included</span>
           </Row>
-          <div className="my-2 border-t border-border/10" />
-          <Row label="SOL needed" strong>
-            <span
-              className={`text-sm font-semibold ${insufficientSol ? 'text-error' : 'text-foreground'}`}
-            >
-              ~{fmtSol(gasTotalSol)} SOL
-            </span>
-          </Row>
-          <p
-            className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
-          >
-            {insufficientSol ? (
-              <>
-                <span className="flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> You have{' '}
-                  {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL — add more to cover the deposit
+        ) : gasError ? (
+          <div className="flex items-center gap-2 py-1 text-sm text-error">
+            <AlertTriangle className="h-4 w-4" /> Network cost unavailable — try
+            again
+          </div>
+        ) : (
+          <>
+            <Row
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  Network deposit
+                  <InfoTip text="Solana account rent, held on-chain while the name is registered." />
                 </span>
-                <a
-                  href={GET_SOL_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
-                >
-                  Get SOL
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </>
-            ) : solBalance === undefined ? (
-              /*
+              }
+            >
+              <span className="text-sm text-foreground/80">
+                ~{fmtSol(gasRentSol)} SOL
+              </span>
+            </Row>
+            <Row label="Network fee">
+              <span className="text-sm text-foreground/80">
+                ~{fmtSol(gasFeeSol)} SOL
+              </span>
+            </Row>
+            <div className="my-2 border-t border-border/10" />
+            <Row label="SOL needed" strong>
+              <span
+                className={`text-sm font-semibold ${insufficientSol ? "text-error" : "text-foreground"}`}
+              >
+                ~{fmtSol(gasTotalSol)} SOL
+              </span>
+            </Row>
+            <p
+              className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? "text-error" : "text-foreground/50"}`}
+            >
+              {insufficientSol ? (
+                <>
+                  <span className="flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> You have{" "}
+                    {solBalance === undefined ? "—" : fmtSol(solBalance)} SOL —
+                    add more to cover the deposit
+                  </span>
+                  <a
+                    href={GET_SOL_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+                  >
+                    Get SOL
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </>
+              ) : solBalance === undefined ? (
+                /*
                 Unknown is not "enough". The tick previously rendered against a
                 literal "Balance unavailable", so a lookup failure read as
                 "You have ✓ Balance unavailable" — a confirmation of nothing.
                 Say we can't see it, with no reassuring mark.
               */
-              <span className="text-foreground/50">
-                Your SOL balance is unavailable right now.
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <Check className="h-3 w-3 text-primary" /> You have{' '}
-                {fmtSol(solBalance)} SOL
-              </span>
-            )}
-          </p>
-        </>
-      )}
-      <div className="mt-3 border-t border-border/10 pt-2 text-right">
-        <a
-          href="https://docs.ar.io/build/upload/turbo-credits#pricing--fees"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline"
-        >
-          How pricing works
-          <ExternalLink className="h-3 w-3" />
-        </a>
+                <span className="text-foreground/50">
+                  Your SOL balance is unavailable right now.
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Check className="h-3 w-3 text-primary" /> You have{" "}
+                  {fmtSol(solBalance)} SOL
+                </span>
+              )}
+            </p>
+          </>
+        )}
       </div>
-    </div>
+      {/*
+      Outside the card, not inside it.
+
+      Sitting under a divider at the foot of the list, it read as one more line
+      item — the last row of a bill, which is exactly where the eye expects a
+      total. It is help text about the card, so it belongs beside it, quiet and
+      left-aligned.
+    */}
+      <a
+        href="https://docs.ar.io/build/upload/turbo-credits#pricing--fees"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 inline-flex items-center gap-0.5 text-xs text-foreground/60 transition-colors hover:text-primary"
+      >
+        How pricing works
+        <ExternalLink className="h-3 w-3" />
+      </a>
+    </>
   );
 }

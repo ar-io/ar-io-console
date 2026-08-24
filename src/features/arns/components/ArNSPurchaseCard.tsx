@@ -373,7 +373,12 @@ export function ArNSPurchaseCard({
           until you can see one. */}
       <p className="mb-4 text-xs text-foreground/70">
         Includes {INCLUDED_UNDERNAMES} undernames, like{' '}
-        <span className="font-mono">blog.{toUnicodeName(name)}.ar.io</span>
+        {/* Undernames join with an underscore, not a dot — `blog_name.ar.io`.
+            The whole app builds them that way; a dot would be a subdomain of
+            .ar.io, which is a different thing entirely and not yours. */}
+        <span className="break-all font-mono">
+          blog_{toUnicodeName(name)}.ar.io
+        </span>
       </p>
 
       {/* Lease vs permabuy */}
@@ -407,7 +412,13 @@ export function ArNSPurchaseCard({
         <p className="-mt-2 mb-4 text-xs text-foreground/60">
           {type === 'permabuy'
             ? `Own it forever — no renewals, ever. Roughly the cost of ${permabuyBreakEvenYears} years of leasing.`
-            : `Permabuy ≈ ${permabuyBreakEvenYears} years of leasing — own it forever, never renew.`}
+            : /*
+                 Was "Permabuy ≈ N years of leasing — own it forever, never
+                 renew", which reads as a DURATION and so contradicts its own
+                 second half. It's a price comparison: say "costs about as much
+                 as", and never put "≈" next to a span of years.
+              */
+              `Permabuy costs about as much as ${permabuyBreakEvenYears} years of leasing, and never needs renewing.`}
         </p>
       )}
 
