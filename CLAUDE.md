@@ -197,11 +197,19 @@ Access via `useTurboConfig(tokenType)` hook or `getCurrentConfig()` from store.
 ## Token Support
 
 **Supported tokens** (from `constants.ts`):
-`arweave`, `ario`, `base-ario`, `ethereum`, `base-eth`, `solana`, `kyve`, `pol`, `usdc`, `base-usdc`, `polygon-usdc`
+`arweave`, `ario`, `ethereum`, `base-eth`, `solana`, `kyve`, `pol`, `usdc`, `base-usdc`
+
+**Withdrawn from selection** (`unavailableCryptoTokens` in `constants.ts`):
+`base-ario` — turbo-sdk drops it as of 1.42.0-alpha.8, so a payment could be
+started that the SDK cannot settle — and `polygon-usdc`. Both keep their types
+and formatting tables so existing history still renders, and
+`PendingTxRecoveryBanner` deliberately ignores the list so a user mid-transfer
+on a retired network can still recover their funds. Retire a token by adding it
+there, not by deleting it.
 
 **Network detection:** `getTokenTypeFromChainId()` in `utils/index.ts`
 
-**JIT payments supported:** `ario`, `base-ario`, `solana`, `base-eth`, `base-usdc` (see `supportsJitPayment()` in `utils/jitPayment.ts`)
+**JIT payments supported:** `solana`, `base-eth`, `base-usdc` — the authority is `supportsJitPayment()` in `utils/jitPayment.ts`, which has never included `ario` or `base-ario` despite earlier docs saying so
 
 **EVM token transfer types** (require network switching): `base-ario`, `base-eth`, `base-usdc`, `polygon-usdc`, `pol`, `usdc`
 
@@ -333,7 +341,7 @@ Network-specific settings in `constants.ts`:
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
 | Update ArNS Records | ❌ | ❌ | ✅ |
-| JIT Payments | ✅ ARIO | ✅ Base-ARIO, Base-ETH, Base-USDC | ✅ SOL |
+| JIT Payments | ❌ | ✅ Base-ETH, Base-USDC | ✅ SOL |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
 ## Environment Variables

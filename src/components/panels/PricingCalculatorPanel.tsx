@@ -35,7 +35,6 @@ export default function PricingCalculatorPanel() {
     { value: 'usd', label: 'USD', symbol: '$' },
     { value: 'arweave', label: tokenLabels.arweave, symbol: 'AR' },
     { value: 'ario', label: tokenLabels.ario, symbol: 'ARIO' },
-    { value: 'base-ario', label: tokenLabels['base-ario'], symbol: 'ARIO' },
     { value: 'ethereum', label: tokenLabels.ethereum, symbol: 'ETH' },
     { value: 'base-eth', label: tokenLabels['base-eth'], symbol: 'ETH' },
     { value: 'solana', label: tokenLabels.solana, symbol: 'SOL' },

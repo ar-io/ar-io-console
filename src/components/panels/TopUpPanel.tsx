@@ -23,7 +23,8 @@ import { availableTokensForWallet } from '../../utils/walletTokens';
 
 
 interface TopUpPanelProps {
-  /** Hide the page header + recipient section and tighten layout, for embedding
+  /** Hide the page header, recipient section and recovery banner, and tighten
+   *  layout, for embedding
    *  in a modal (e.g. on-demand credit top-up during an ArNS purchase). */
   embedded?: boolean;
   /** Pre-seed the USD amount once on mount (e.g. rounded up to cover a shortfall). */
@@ -765,7 +766,11 @@ export default function TopUpPanel({
         )}
 
         {/* For logged-in users with fiat - show editable recipient field */}
-        {paymentMethod === 'fiat' && address && (
+        {/* Embedded (a modal opened to fund THIS user's purchase) has exactly one
+            recipient — the person who clicked. Offering to send credits
+            elsewhere mid-purchase is a different intent and just raises the
+            question "buying for whom?". Full page keeps it. */}
+        {paymentMethod === 'fiat' && address && !embedded && (
           <div className="mb-6">
             {!isRecipientExpanded ? (
               // Collapsed state - summary button
@@ -1068,7 +1073,7 @@ export default function TopUpPanel({
         )}
 
         {/* Recipient Wallet Address for Crypto - Only if wallet is connected */}
-        {paymentMethod === 'crypto' && address && (
+        {paymentMethod === 'crypto' && address && !embedded && (
           <div className="mb-6">
             {!isRecipientExpanded ? (
               // Collapsed state - summary button
@@ -1820,8 +1825,12 @@ export default function TopUpPanel({
 
       </div>
 
-      {/* Recovery banner for failed top-up transactions + manual TX recovery */}
-      <PendingTxRecoveryBanner />
+      {/* Recovery banner for failed top-up transactions + manual TX recovery.
+          Full page only: recovering a stranded transaction is its own errand,
+          not something to start halfway through buying a name — and the banner
+          is for a PAST failure, which has nothing to do with the purchase the
+          user is currently trying to fund. */}
+      {!embedded && <PendingTxRecoveryBanner />}
 
       {/* Wallet Selection Modal */}
       {showWalletModal && (

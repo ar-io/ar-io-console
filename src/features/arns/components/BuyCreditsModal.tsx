@@ -3,6 +3,7 @@ import { CreditCard } from 'lucide-react';
 import BaseModal from '../../../components/modals/BaseModal';
 import StripeElementsProvider from '../../../components/StripeElementsProvider';
 import TopUpPanel from '../../../components/panels/TopUpPanel';
+import { minUSDAmount } from '../../../constants';
 
 interface BuyCreditsModalProps {
   /** USD to pre-seed the top-up amount (rounded up to cover the shortfall). */
@@ -43,6 +44,19 @@ export default function BuyCreditsModal({
                 maximumFractionDigits: 2,
               })}{' '}
               more credits to continue.
+            </p>
+          )}
+          {/*
+            The exact shortfall is pre-filled below, but purchases have a
+            ${minUSDAmount} floor, so a name costing cents still charges the
+            minimum. Saying so is the difference between "why am I being charged
+            $5?" and a understood trade — and the remainder is not lost, it
+            stays spendable. Only shown when the minimum actually binds.
+          */}
+          {initialUsdAmount != null && initialUsdAmount < minUSDAmount && (
+            <p className="mt-2 text-xs text-foreground/60">
+              Purchases start at ${minUSDAmount}. Anything you don&apos;t spend on
+              this name stays in your balance for future names and uploads.
             </p>
           )}
         </div>

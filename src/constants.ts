@@ -78,6 +78,12 @@ export type SupportedTokenType = (typeof supportedCryptoTokens)[number];
  */
 export const unavailableCryptoTokens: readonly SupportedTokenType[] = [
   'polygon-usdc',
+  // ARIO-on-Base is retired: turbo-sdk drops `base-ario` as of 1.42.0-alpha.8
+  // (11 tokens, absent), so offering it would let a user start a payment the
+  // SDK can no longer settle. Withdrawn from selection rather than deleted —
+  // the type stays so existing history renders, and PendingTxRecoveryBanner
+  // deliberately ignores this list so anyone mid-transfer can still recover.
+  'base-ario',
 ];
 
 /** True when a token may be offered as a payment option in the UI. */
