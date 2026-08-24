@@ -50,10 +50,19 @@ export type TurboArNSIntentPriceResponse = {
   mARIO: string;
   winc: string;
   fiatEstimate?: {
+    /** Name price incl. the Turbo infra fee, in the currency's smallest unit. */
     paymentAmount: number;
     quotedPaymentAmount: string;
     adjustments: Array<unknown>;
     fees: Array<unknown>;
+    /**
+     * SOL rent for spawning a Turbo-owned ANT, recovered as a surcharge. The
+     * infra fee deliberately does NOT apply to it — it is cost recovery, not
+     * revenue. Present only for intents that can provision (Buy-Name).
+     */
+    antSpawnSurchargeAmount?: number;
+    /** `paymentAmount` + the surcharge — what a CUSTODIAL card buy costs. */
+    paymentAmountWithAntSpawn?: number;
   };
 };
 

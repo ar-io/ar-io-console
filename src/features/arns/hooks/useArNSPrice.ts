@@ -18,6 +18,12 @@ export type ArNSPriceResult = {
   mARIO: string;
   /** Best-effort USD estimate, from the bundler fiat estimate or the rate. */
   usd: number | undefined;
+  /**
+   * USD including the ANT-spawn surcharge — what a CUSTODIAL card purchase
+   * costs (no `processId`, so Turbo spawns and owns the ANT and recovers its
+   * SOL rent). Absent for intents that can't provision an ANT.
+   */
+  usdWithAntSpawn: number | undefined;
 };
 
 /**
@@ -87,7 +93,18 @@ export function useArNSPrice({
           : creditsPerUSD
             ? credits / creditsPerUSD
             : undefined;
-      return { winc: price.winc, credits, mARIO: price.mARIO, usd };
+      const withAntCents = price.fiatEstimate?.paymentAmountWithAntSpawn;
+      const usdWithAntSpawn =
+        typeof withAntCents === 'number' && withAntCents > 0
+          ? fiatAmountToMajorUnits(withAntCents, 'usd')
+          : undefined;
+      return {
+        winc: price.winc,
+        credits,
+        mARIO: price.mARIO,
+        usd,
+        usdWithAntSpawn,
+      };
     },
   });
 }

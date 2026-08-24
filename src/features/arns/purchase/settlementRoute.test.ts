@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { isTokenSelectable } from '../../../constants';
 import { buildPaymentOptions } from './paymentOptions';
 import {
-  actionLabel, isTwoStep, resolveSettlementRoute, showsFundingSource,
+  actionLabel, cardFlavor, isTwoStep, resolveSettlementRoute, showsFundingSource,
 } from './settlementRoute';
 
 const opts = (walletType: 'solana' | 'ethereum' | 'arweave') =>
@@ -63,5 +63,34 @@ describe('route affordances', () => {
     expect(actionLabel({ kind: 'topup', token: 'solana' })).toBe('Continue');
     expect(actionLabel({ kind: 'credits' })).toBe('Register name');
     expect(actionLabel({ kind: 'card' })).toBe('Pay with card');
+  });
+});
+
+describe('cardFlavor', () => {
+  it('self-custodies when the wallet can sign and cover gas', () => {
+    expect(cardFlavor({ hasSolanaSigner: true, solCoversGas: true }))
+      .toBe('self-custody');
+  });
+
+  it('goes custodial with no Solana signer — the only path that can work', () => {
+    // An Arweave or Ethereum session with no linked Solana wallet cannot
+    // perform the on-chain write at all; today it can't buy a name.
+    expect(cardFlavor({ hasSolanaSigner: false, solCoversGas: true }))
+      .toBe('custodial');
+    expect(cardFlavor({ hasSolanaSigner: false, solCoversGas: undefined }))
+      .toBe('custodial');
+  });
+
+  it('goes custodial when the wallet is known to be short on gas', () => {
+    expect(cardFlavor({ hasSolanaSigner: true, solCoversGas: false }))
+      .toBe('custodial');
+  });
+
+  it('treats an UNKNOWN balance as self-custody, not custodial', () => {
+    // The asymmetry is the whole point: an underfunded self-custody attempt
+    // fails before charging, while a custodial buy spends money and gives the
+    // ANT away. Never guess in the direction you can't undo.
+    expect(cardFlavor({ hasSolanaSigner: true, solCoversGas: undefined }))
+      .toBe('self-custody');
   });
 });

@@ -25,7 +25,7 @@ import {
   buildPaymentOptions,
   defaultPaymentOption,
 } from '../purchase/paymentOptions';
-import { resolveSettlementRoute } from '../purchase/settlementRoute';
+import { cardFlavor, resolveSettlementRoute } from '../purchase/settlementRoute';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
@@ -271,6 +271,21 @@ export function ArNSPurchaseCard({
    * how they want to pay, so this opens on that method rather than asking again.
    */
   /**
+   * Who will own the ANT if they pay by card. Derived, never asked — see
+   * `cardFlavor`. Self-custody keeps the atomic buyRecord (user-owned, no
+   * surcharge, but their SOL pays the rent); custodial is the one-step quote
+   * that works with no crypto at all.
+   */
+  const flavor = cardFlavor({
+    hasSolanaSigner: signer.isReady && !!signer.walletAdapter,
+    solCoversGas:
+      balances.loading || balances.sol === undefined || !cost
+        ? undefined
+        : balances.sol >= cost.gasTotalSol,
+  });
+  const custodialCard = route.kind === 'card' && flavor === 'custodial';
+
+  /**
    * Card and non-ARIO tokens can't pay the contract directly, so they take a
    * payment step first. The user already said how they want to pay, so it opens
    * on that method rather than asking again.
@@ -282,7 +297,7 @@ export function ArNSPurchaseCard({
    */
   const needsPaymentStep =
     !!address &&
-    (route.kind === 'card' || (route.kind === 'topup' && !insufficientSol));
+    (custodialCard || ((route.kind === 'card' || route.kind === 'topup') && !insufficientSol));
 
   /**
    * Why the buy button is disabled, said next to the button itself.
@@ -305,9 +320,10 @@ export function ArNSPurchaseCard({
    */
   const blockedReason = useMemo((): { text: string; canSwitchToCredits?: boolean } | null => {
     if (!address || isBusy) return null;
-    // Card is settled and funded server-side — none of the SOL/gas blockers
-    // below apply to it, and the price comes from the quote, not from us.
-    if (route.kind === 'card') return null;
+    // Only the CUSTODIAL card is settled and funded server-side. A self-custody
+    // card buy still needs the user's SOL for rent, so it keeps every blocker
+    // below.
+    if (custodialCard) return null;
     if (!priceReady) return null;
     if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
     if (insufficientSol) {
@@ -331,7 +347,7 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route.kind, cost, balances.sol,
+    insufficientFunds, route.kind, cost, balances.sol, custodialCard,
   ]);
 
   // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
@@ -464,7 +480,13 @@ export function ArNSPurchaseCard({
           creditsPrice={creditsPrice?.credits}
           // Card only: the fee-inclusive charge. Every other route settles at
           // the fee-free winc price, so passing it there would overstate.
-          cardUsdPrice={route.kind === 'card' ? creditsPrice?.usd : undefined}
+          cardUsdPrice={
+            custodialCard
+              ? // Turbo spawns the ANT and recovers its rent — the surcharge is
+                // part of the charge, so quoting without it under-quotes by ~2x.
+                creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
+              : undefined
+          }
           arioPrice={cost?.arioCost}
           priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
           priceError={!!(priceUnit === 'credits' ? creditsError : costError)}
@@ -476,7 +498,8 @@ export function ArNSPurchaseCard({
           solBalance={balances.sol}
           insufficientFunds={insufficientFunds}
           insufficientSol={insufficientSol}
-          networkCostCovered={route.kind === 'card'}
+          networkCostCovered={custodialCard}
+          custodialAnt={custodialCard}
         />
       </div>
 
@@ -485,9 +508,9 @@ export function ArNSPurchaseCard({
           onClick={() => setShowPayment(true)}
           disabled={
             isBusy ||
-            // The card path is quoted server-side, so neither our credits price
-            // nor the SOL estimate needs to have loaded for it to work.
-            (route.kind !== 'card' && (!priceReady || gasUnavailable))
+            // A custodial card buy is quoted server-side, so neither our
+            // credits price nor the SOL estimate needs to have loaded.
+            (!custodialCard && (!priceReady || gasUnavailable))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
@@ -541,7 +564,7 @@ export function ArNSPurchaseCard({
 
       {/* Card settles server-side in one step — quote, charge, on-chain write —
           so it gets the dedicated checkout rather than the top-up shell. */}
-      {showPayment && route.kind === 'card' && (
+      {showPayment && custodialCard && (
         <ArNSCardPaymentModal
           displayName={name}
           quoteInput={{
@@ -564,13 +587,20 @@ export function ArNSPurchaseCard({
         />
       )}
 
-      {showPayment && route.kind === 'topup' && (
+      {/* Self-custody card: buy credits, then the user's own signer registers
+          the name atomically. Two steps, but they own the ANT and skip the
+          surcharge. */}
+      {showPayment && ((route.kind === 'card' && !custodialCard) || route.kind === 'topup') && (
         <ArNSPaymentModal
           initialUsdAmount={topUpUsd}
           shortfallCredits={creditShortfall}
-          paymentMethod="crypto"
-          token={route.token as SupportedTokenType}
-          tokenLabel={tokenLabels[route.token as SupportedTokenType]}
+          paymentMethod={route.kind === 'card' ? 'fiat' : 'crypto'}
+          token={route.kind === 'topup' ? (route.token as SupportedTokenType) : undefined}
+          tokenLabel={
+            route.kind === 'topup'
+              ? tokenLabels[route.token as SupportedTokenType]
+              : undefined
+          }
           onClose={() => setShowPayment(false)}
           onComplete={() => setShowPayment(false)}
         />

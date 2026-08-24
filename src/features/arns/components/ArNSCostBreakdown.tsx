@@ -61,6 +61,15 @@ interface Props {
    * only reason to offer it.
    */
   networkCostCovered?: boolean;
+  /**
+   * Turbo will hold this name's ANT (a custodial card purchase).
+   *
+   * Stated, never asked. The console picks the best custody the wallet can
+   * support, but "who owns this" must not be something the buyer discovers
+   * later — so the one case where they don't own it says so, next to the price
+   * that includes spawning it.
+   */
+  custodialAnt?: boolean;
 }
 
 /**
@@ -139,6 +148,7 @@ export function ArNSCostBreakdown({
   insufficientFunds,
   insufficientSol,
   networkCostCovered = false,
+  custodialAnt = false,
 }: Props) {
   const currency = useStore((s) => s.priceDisplayCurrency);
   // Credits per $1, inverted. Shown with "~" because this is an indicative
@@ -227,11 +237,20 @@ export function ArNSCostBreakdown({
             cost…
           </div>
         ) : networkCostCovered ? (
-          /* Paying by card: the service does the on-chain write from its own
-           keypair, so there is no SOL for the buyer to hold or be short of. */
-          <Row label="Network costs">
-            <span className="text-sm text-foreground/80">Included</span>
-          </Row>
+          <>
+            {/* Paying by card custodially: the service does the on-chain write
+                from its own keypair, so there is no SOL for the buyer to hold
+                or be short of. */}
+            <Row label="Network costs">
+              <span className="text-sm text-foreground/80">Included</span>
+            </Row>
+            {custodialAnt && (
+              <p className="pt-1 text-[11px] leading-snug text-foreground/60">
+                Turbo holds this name&apos;s ANT so you don&apos;t need SOL. You
+                can transfer it to your own wallet any time.
+              </p>
+            )}
+          </>
         ) : gasError ? (
           <div className="flex items-center gap-2 py-1 text-sm text-error">
             <AlertTriangle className="h-4 w-4" /> Network cost unavailable — try
