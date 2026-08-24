@@ -1,4 +1,4 @@
-import { SupportedTokenType } from '../constants';
+import { isSdkToken, SupportedTokenType } from '../constants';
 import { formatUnitsExact } from './formatUnits';
 
 /** Decimal places of each supported token's smallest unit. */
@@ -220,6 +220,11 @@ export async function calculateRequiredTokenAmount({
       const { TurboFactory } = await import('@ardrive/turbo-sdk/web');
 
       // Create TurboFactory with proper config including dev mode RPC URLs
+      if (!isSdkToken(tokenType)) {
+        throw new Error(
+          `${tokenType} is no longer supported by the Turbo SDK — it cannot be priced or settled.`,
+        );
+      }
       const turbo = TurboFactory.unauthenticated({
         token: tokenType,
         paymentServiceConfig: { url: turboConfig.paymentServiceUrl },

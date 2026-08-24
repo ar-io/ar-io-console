@@ -86,6 +86,20 @@ export const unavailableCryptoTokens: readonly SupportedTokenType[] = [
   'base-ario',
 ];
 
+/**
+ * Tokens the turbo-sdk still knows about.
+ *
+ * We keep `base-ario` in `SupportedTokenType` so historical receipts and
+ * recovery still render, but turbo-sdk dropped it in 1.42.0-alpha.8. Anything
+ * crossing into the SDK must narrow through here — widening the SDK's own type
+ * with a cast would just move the failure to runtime.
+ */
+export type SdkTokenType = Exclude<SupportedTokenType, 'base-ario'>;
+
+export function isSdkToken(token: SupportedTokenType): token is SdkTokenType {
+  return token !== 'base-ario';
+}
+
 /** True when a token may be offered as a payment option in the UI. */
 export function isTokenSelectable(token: SupportedTokenType): boolean {
   return !unavailableCryptoTokens.includes(token);

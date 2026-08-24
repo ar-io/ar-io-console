@@ -7,6 +7,7 @@ import { useStore } from '../../../store/useStore';
 import useAddressState, { TransferTransactionResult } from '../../../hooks/useAddressState';
 import useTurboWallets from '../../../hooks/useTurboWallets';
 import CopyButton from '../../CopyButton';
+import { isSdkToken } from '../../../constants';
 
 
 
@@ -36,7 +37,11 @@ export default function CryptoManualPaymentPanel({
   const [signingMessage, setSigningMessage] = useState<string>();
   const [isRetrying, setIsRetrying] = useState(false);
 
-  const turboWallet = address && turboWallets ? turboWallets[tokenType] : undefined;
+  // base-ario is retired from the SDK, so it has no Turbo wallet to show.
+  const turboWallet =
+    address && turboWallets && isSdkToken(tokenType)
+      ? turboWallets[tokenType]
+      : undefined;
 
   // Get unauthenticated Turbo client for submitting fund transactions
   const turboUnauthenticatedClient = TurboFactory.unauthenticated(turboConfig);
