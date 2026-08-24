@@ -19,6 +19,7 @@ import { parseTopUpDeepLink, formatDeepLinkSource } from '../../utils/topupDeepL
 import WalletSelectionModal from '../modals/WalletSelectionModal';
 import PendingTxRecoveryBanner from './crypto/PendingTxRecoveryBanner';
 import { getTurboBalance } from '../../utils';
+import { availableTokensForWallet } from '../../utils/walletTokens';
 
 
 interface TopUpPanelProps {
@@ -398,20 +399,28 @@ export default function TopUpPanel({
   );
 
   // Get available tokens based on wallet type (ordered by priority - first token is default)
-  const getAvailableTokens = useCallback((): SupportedTokenType[] => {
-    switch (walletType) {
-      case 'arweave':
-        return ['arweave'];
-      case 'ethereum':
-        return (
-          ['base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum'] as SupportedTokenType[]
-        ).filter(isTokenSelectable);
-      case 'solana':
-        return ['solana'];
-      default:
-        return []; // No crypto tokens available without wallet
+  const getAvailableTokens = useCallback(
+    (): SupportedTokenType[] =>
+      availableTokensForWallet(walletType, isTokenSelectable),
+    [walletType],
+  );
+
+  /**
+   * Keep the selected token payable by the connected wallet.
+   *
+   * The initial state below is `'arweave'` for want of a better default at
+   * module scope, but a Solana user opening the crypto tab on AR sees their
+   * (empty) AR balance and reads it as having no funds. Snap to the wallet's
+   * own first choice whenever the current pick is not something it can sign.
+   */
+  useEffect(() => {
+    if (!walletType) return;
+    const available = availableTokensForWallet(walletType, isTokenSelectable);
+    if (available.length === 0) return;
+    if (!available.includes(selectedTokenType)) {
+      setSelectedTokenType(available[0]);
     }
-  }, [walletType]);
+  }, [walletType, selectedTokenType]);
 
   // Check if selected token is compatible with connected wallet
   const isTokenCompatibleWithWallet = (tokenType: SupportedTokenType): boolean => {
