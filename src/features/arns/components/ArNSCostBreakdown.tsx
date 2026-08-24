@@ -25,6 +25,16 @@ interface Props {
   priceUnit: ArNSPriceUnit;
   /** Name price in Turbo Credits (credits method). */
   creditsPrice?: number;
+  /**
+   * What a CARD is actually charged, in dollars — the bundler's `fiatEstimate`.
+   *
+   * Not interchangeable with `creditsPrice`. `/v1/arns/price` computes `winc`
+   * with `feeMode: "none"`, so converting credits to USD gives the fee-free
+   * price — the same number as paying ARIO directly. The fiat estimate uses
+   * `feeMode: "invert"`, which adds the infra fee the card pays. Showing the
+   * former on the card route quotes a price we will not charge.
+   */
+  cardUsdPrice?: number;
   /** Name price in ARIO (ario method). */
   arioPrice?: number;
   priceLoading: boolean;
@@ -116,6 +126,7 @@ function Row({
 export function ArNSCostBreakdown({
   priceUnit,
   creditsPrice,
+  cardUsdPrice,
   arioPrice,
   priceLoading,
   priceError,
@@ -142,6 +153,18 @@ export function ArNSCostBreakdown({
     </span>
   ) : priceError ? (
     <span className="text-sm text-error">Unavailable</span>
+  ) : /*
+        Paying by card, the price IS a dollar amount — quote the charge, not our
+        internal unit. It is also the only figure carrying the infra fee, so the
+        credits view would understate what we are about to charge.
+     */
+  cardUsdPrice != null ? (
+    <span className="text-lg font-bold text-foreground">
+      {`$${cardUsdPrice.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`}
+    </span>
   ) : priceUnit === "credits" ? (
     creditsPrice != null ? (
       // Casing convention across ArNS priced surfaces: "Turbo Credits" is the

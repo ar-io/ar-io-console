@@ -462,6 +462,9 @@ export function ArNSPurchaseCard({
         <ArNSCostBreakdown
           priceUnit={priceUnit}
           creditsPrice={creditsPrice?.credits}
+          // Card only: the fee-inclusive charge. Every other route settles at
+          // the fee-free winc price, so passing it there would overstate.
+          cardUsdPrice={route.kind === 'card' ? creditsPrice?.usd : undefined}
           arioPrice={cost?.arioCost}
           priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
           priceError={!!(priceUnit === 'credits' ? creditsError : costError)}

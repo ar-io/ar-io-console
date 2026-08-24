@@ -370,6 +370,9 @@ export default function ManageDomainModal({
               <ArNSCostBreakdown
                 priceUnit={priceUnit}
                 creditsPrice={creditsPrice?.credits}
+                cardUsdPrice={
+                  route.kind === 'card' ? creditsPrice?.usd : undefined
+                }
                 arioPrice={cost?.arioCost}
                 priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
                 priceError={!!(priceUnit === 'credits' ? creditsError : costError)}
