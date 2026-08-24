@@ -129,7 +129,12 @@ export function ArNSPurchaseCard({
   });
 
   const insufficientSol =
-    !!cost && !balances.loading && balances.sol < cost.gasTotalSol;
+    // Only a KNOWN balance can block the action. `undefined` means the lookup
+    // failed or never ran — blocking on that told funded users to go buy SOL.
+    !!cost &&
+    !balances.loading &&
+    balances.sol !== undefined &&
+    balances.sol < cost.gasTotalSol;
   const insufficientFunds = useMemo(() => {
     if (method === 'credits') {
       return creditsPrice ? balances.credits < creditsPrice.credits : false;
@@ -190,7 +195,10 @@ export function ArNSPurchaseCard({
     if (!address || isBusy || !priceReady) return null;
     if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
     if (insufficientSol) {
-      const need = cost ? Math.max(0, cost.gasTotalSol - balances.sol) : 0;
+      const need =
+        cost && balances.sol !== undefined
+          ? Math.max(0, cost.gasTotalSol - balances.sol)
+          : 0;
       // Format first, then decide. A shortfall under 0.00005 SOL is real but
       // rounds to "0" at 4dp, and "you need about 0 more SOL" reads as a bug.
       const needText = need.toLocaleString(undefined, { maximumFractionDigits: 4 });

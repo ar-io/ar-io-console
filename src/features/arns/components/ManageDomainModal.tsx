@@ -122,7 +122,12 @@ export default function ManageDomainModal({
   });
 
   const insufficientSol =
-    !!cost && !balances.loading && balances.sol < cost.gasTotalSol;
+    // Only a KNOWN balance can block the action. `undefined` means the lookup
+    // failed or never ran — blocking on that told funded users to go buy SOL.
+    !!cost &&
+    !balances.loading &&
+    balances.sol !== undefined &&
+    balances.sol < cost.gasTotalSol;
   const insufficientFunds = useMemo(() => {
     if (method === 'credits') {
       return creditsPrice ? balances.credits < creditsPrice.credits : false;

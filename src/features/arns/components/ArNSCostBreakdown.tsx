@@ -28,7 +28,8 @@ interface Props {
   /** The gas estimate couldn't be fetched — show an unavailable state, not ~0 SOL. */
   gasError?: boolean;
   /** Balances for the affordability lines. */
-  solBalance: number;
+  /** `undefined` when the balance is unknown — render that, never 0. */
+  solBalance: number | undefined;
   /** Name price can't be covered by the chosen source (ARIO shortfall or credits < price). */
   insufficientFunds: boolean;
   insufficientSol: boolean;
@@ -167,7 +168,7 @@ export function ArNSCostBreakdown({
               <>
                 <span className="flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> You have{' '}
-                  {fmtSol(solBalance)} SOL — add more to cover the deposit
+                  {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL — add more to cover the deposit
                 </span>
                 <a
                   href={GET_SOL_URL}
@@ -182,7 +183,9 @@ export function ArNSCostBreakdown({
             ) : (
               <span className="flex items-center gap-1">
                 <Check className="h-3 w-3 text-primary" /> You have{' '}
-                {fmtSol(solBalance)} SOL
+                {solBalance === undefined
+                  ? 'Balance unavailable'
+                  : `${fmtSol(solBalance)} SOL`}
               </span>
             )}
           </p>
