@@ -19,7 +19,10 @@ describe('buildPaymentOptions', () => {
   });
 
   it('puts card first — the only option needing no crypto at all', () => {
-    expect(buildPaymentOptions({ ...base, walletType: 'solana' })[0].kind).toBe('card');
+    const first = buildPaymentOptions({ ...base, walletType: 'solana' })[0];
+    expect(first.kind).toBe('card');
+    // Naming the processor is the reassurance a card row exists to give.
+    expect(first.detail).toBe('with Stripe');
   });
 
   it('drops card when the payment service has fiat disabled', () => {

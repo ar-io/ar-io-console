@@ -94,7 +94,9 @@ export function buildPaymentOptions({
       kind: 'card',
       id: 'card',
       label: 'Card',
-      detail: 'Visa, Mastercard',
+      // Name the processor: it tells a hesitant buyer who actually handles
+      // their card details, which is the reassurance a card row is for.
+      detail: 'with Stripe',
       // A card can always cover the price — the charge is sized to it.
       sufficient: true,
     });

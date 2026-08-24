@@ -5,6 +5,7 @@ import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 import { useTurboArNSClient } from './useTurboArNSClient';
 import type { TurboArNSIntent } from '../services/TurboArNSClient';
 import { lowerCaseDomain, wincToCredits } from '../utils';
+import { fiatAmountToMajorUnits } from '../purchase/fiatQuote';
 
 export type ArNSRegistrationType = 'lease' | 'permabuy';
 
@@ -72,12 +73,17 @@ export function useArNSPrice({
         type,
         years,
         increaseQty,
+        // Ask for the bundler's fiat estimate. It is the ONLY USD figure that
+        // includes the infra fee a card is actually charged — `winc` is priced
+        // with the fee off, so the fallback below under-quotes the card path.
+        currency: 'usd',
       });
       const credits = wincToCredits(price.winc);
-      const fiatUsd = price.fiatEstimate?.paymentAmount;
+      const fiatCents = price.fiatEstimate?.paymentAmount;
       const usd =
-        typeof fiatUsd === 'number' && fiatUsd > 0
-          ? fiatUsd
+        typeof fiatCents === 'number' && fiatCents > 0
+          ? // Serialized in cents; assigning it raw showed $5.00 as $500.
+            fiatAmountToMajorUnits(fiatCents, 'usd')
           : creditsPerUSD
             ? credits / creditsPerUSD
             : undefined;

@@ -47,12 +47,17 @@ export function isQuoteExpired(
 }
 
 /**
- * Stripe will not process a charge below its per-currency minimum (about $0.50,
- * and Turbo's own floor is higher). A cheap name therefore gets charged MORE
- * than it costs, and the difference lands in the buyer's credit balance.
+ * The ArNS quote route floors on `stripeMinimumPaymentAmount` — $0.50 for USD —
+ * NOT on the payment service's own `minimumPaymentAmount` of $5 that the credit
+ * top-up flow uses (`routes/arnsPurchaseQuote.ts:127-136` in ar-io-bundler).
  *
- * That is fine — but only if we say so before charging. Silently taking $5 for
- * a $2 name is the kind of surprise that generates a chargeback.
+ * That difference is the point of the one-step card path: a $2 name is charged
+ * $2, where routing it through a top-up would have forced $5. Don't "fix" a
+ * sub-$5 charge here by reintroducing the top-up floor.
+ *
+ * Only a name under $0.50 gets raised, and the difference comes back as credits
+ * — worth saying before charging, since an unexplained overcharge, however
+ * small, is what generates chargebacks.
  */
 export function minimumChargeExcessWinc(quote: Pick<ArNSFiatPurchaseQuote, 'excessWincAmount'>): bigint {
   const raw = quote.excessWincAmount;
@@ -76,10 +81,20 @@ export function hasMinimumChargeExcess(quote: Pick<ArNSFiatPurchaseQuote, 'exces
  */
 const ZERO_DECIMAL = new Set(['jpy', 'krw', 'vnd', 'clp', 'isk', 'ugx', 'xaf', 'xof', 'xpf', 'bif', 'djf', 'gnf', 'kmf', 'mga', 'pyg', 'rwf', 'vuv']);
 
+/**
+ * Smallest unit (cents) → major unit (dollars).
+ *
+ * Both the quote's `paymentAmount` and the price route's `fiatEstimate`
+ * serialize in the currency's smallest unit. Assigning either straight to a
+ * "usd" field renders $5.00 as $500.
+ */
+export function fiatAmountToMajorUnits(smallestUnit: number, currency: string): number {
+  return ZERO_DECIMAL.has(currency.toLowerCase()) ? smallestUnit : smallestUnit / 100;
+}
+
 export function formatFiatAmount(smallestUnit: number, currency: string): string {
-  const code = currency.toLowerCase();
-  const zeroDecimal = ZERO_DECIMAL.has(code);
-  const value = zeroDecimal ? smallestUnit : smallestUnit / 100;
+  const zeroDecimal = ZERO_DECIMAL.has(currency.toLowerCase());
+  const value = fiatAmountToMajorUnits(smallestUnit, currency);
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',

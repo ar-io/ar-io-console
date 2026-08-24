@@ -46,6 +46,17 @@ interface ArNSPurchaseCardProps {
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
 /**
+ * Undernames a newly registered name starts with.
+ *
+ * Set by the ArNS contract, not by us, and not returned in the price response —
+ * so it is a documented constant rather than a value we can read. Worth stating
+ * on the checkout because it's the part of what you're buying that isn't
+ * obvious from the name itself, and it's the answer to "can I use this for more
+ * than one site?". `Increase-Undername-Limit` in ManageDomainModal buys more.
+ */
+const INCLUDED_UNDERNAMES = 10;
+
+/**
  * Renders nothing — just mounts the two price queries for one lease term so its
  * cost is already in the react-query cache before the user selects it. Keyed
  * identically to the visible card's queries (same fundFrom/fromAddress), so a
@@ -353,11 +364,17 @@ export function ArNSPurchaseCard({
       {type === 'lease' && name && (
         <LeaseTermPrefetcher name={name} fundFrom={fundFrom} fromAddress={address} />
       )}
-      <div className="mb-4 flex items-baseline justify-between">
+      <div className="mb-1 flex items-baseline justify-between">
         <h3 className="font-heading text-lg font-extrabold text-foreground">
           Register <span className="break-all font-mono text-primary">{toUnicodeName(name)}.ar.io</span>
         </h3>
       </div>
+      {/* Show the example, not just the number — "10 undernames" means nothing
+          until you can see one. */}
+      <p className="mb-4 text-xs text-foreground/70">
+        Includes {INCLUDED_UNDERNAMES} undernames, like{' '}
+        <span className="font-mono">blog.{toUnicodeName(name)}.ar.io</span>
+      </p>
 
       {/* Lease vs permabuy */}
       <div className="mb-4 grid grid-cols-2 gap-3">

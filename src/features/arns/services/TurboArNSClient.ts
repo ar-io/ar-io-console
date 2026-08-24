@@ -119,15 +119,48 @@ export class TurboArNSClient {
     type,
     years,
     increaseQty,
+    currency,
   }: {
     name: string;
     intent?: TurboArNSIntent;
     type?: 'lease' | 'permabuy';
     years?: number;
     increaseQty?: number;
+    /**
+     * Ask for the bundler's `fiatEstimate` alongside the winc price.
+     *
+     * Worth the extra plumbing because the two numbers are NOT the same price.
+     * `winc` is computed with `feeMode: "none"`, while both the fiat estimate
+     * and the real card quote use `feeMode: "invert"` — the infra fee added on
+     * top. Deriving USD from `winc` therefore under-quotes what a card charges.
+     *
+     * Sent by hand: the SDK's query builder whitelists
+     * type/years/increaseQty/processId/paidBy and silently drops `currency`, so
+     * `getArNSPriceForName` can never surface this field.
+     */
+    currency?: string;
   }): Promise<TurboArNSIntentPriceResponse> {
-    const turbo = this.unauthenticated('solana');
     const params = intentParams({ name, intent, type, years, increaseQty });
+
+    if (currency) {
+      const query = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) {
+        if (k !== 'intent' && k !== 'name' && v !== undefined) {
+          query.set(k, String(v));
+        }
+      }
+      query.set('currency', currency);
+      const url =
+        `${this.paymentUrl}/v1/arns/price/${encodeURIComponent(intent.toLowerCase())}` +
+        `/${encodeURIComponent(String(params.name))}?${query.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`ArNS price lookup failed (${res.status})`);
+      }
+      return (await res.json()) as TurboArNSIntentPriceResponse;
+    }
+
+    const turbo = this.unauthenticated('solana');
 
     const price = await turbo.getArNSPriceForName(
       params as Parameters<typeof turbo.getArNSPriceForName>[0],

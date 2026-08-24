@@ -1,5 +1,7 @@
 import { CheckCircle2, Circle, CreditCard, Coins, Wallet } from 'lucide-react';
 
+import type { SupportedTokenType } from '../../../constants';
+
 import type { PaymentOption } from '../purchase/paymentOptions';
 import type { ArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 
@@ -29,10 +31,37 @@ interface Props {
   arioOnly?: boolean;
 }
 
-function optionIcon(option: PaymentOption) {
-  if (option.kind === 'card') return <CreditCard className="h-4 w-4" />;
-  if (option.kind === 'balance') return <Coins className="h-4 w-4" />;
-  return <Wallet className="h-4 w-4" />;
+/**
+ * Brand coins for the tokens people recognise by their mark.
+ *
+ * Both are drawn on the same dark disc at the same size, so ARIO and SOL read
+ * as a matched set rather than two logos that happen to share a row. Anything
+ * without its own mark (a card, a credit balance) keeps a line icon — those are
+ * categories, not brands, and inventing a logo for them would be noise.
+ */
+const TOKEN_COIN: Partial<Record<SupportedTokenType, string>> = {
+  ario: 'brand/ario-token-logo.svg',
+  solana: 'brand/solana-token-logo.svg',
+};
+
+function OptionIcon({ option, active }: { option: PaymentOption; active: boolean }) {
+  const coin = option.token ? TOKEN_COIN[option.token] : undefined;
+  if (coin) {
+    return (
+      <img
+        src={`${import.meta.env.BASE_URL}${coin}`}
+        alt=""
+        aria-hidden="true"
+        // Sized to sit on the same baseline as the 16px line icons beside it.
+        className={`h-5 w-5 rounded-full transition-opacity ${
+          active ? '' : 'opacity-80'
+        }`}
+      />
+    );
+  }
+  const Icon =
+    option.kind === 'card' ? CreditCard : option.kind === 'balance' ? Coins : Wallet;
+  return <Icon className="h-4 w-4" />;
 }
 
 function OptionCard({
@@ -58,8 +87,12 @@ function OptionCard({
           : 'border-border/20 bg-card hover:border-primary/40'
       }`}
     >
-      <span className={`mt-0.5 ${active ? 'text-primary' : 'text-foreground/60'}`}>
-        {optionIcon(option)}
+      <span
+        className={`flex h-5 w-5 flex-shrink-0 items-center justify-center ${
+          active ? 'text-primary' : 'text-foreground/60'
+        }`}
+      >
+        <OptionIcon option={option} active={active} />
       </span>
       <span className="min-w-0">
         <span className="block font-medium text-foreground">{option.label}</span>

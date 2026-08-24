@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  classifyQuoteError, clientSecretOf, formatFiatAmount, hasMinimumChargeExcess,
-  isQuoteExpired, minimumChargeExcessWinc, msUntilExpiry,
+  classifyQuoteError, clientSecretOf, fiatAmountToMajorUnits, formatFiatAmount,
+  hasMinimumChargeExcess, isQuoteExpired, minimumChargeExcessWinc, msUntilExpiry,
 } from './fiatQuote';
 
 const q = (o: Record<string, unknown>) => o as never;
@@ -77,6 +77,20 @@ describe('minimum-charge excess', () => {
     // winc values are big; parseInt would silently round these.
     expect(minimumChargeExcessWinc(q({ excessWincAmount: '9007199254740993' })))
       .toBe(9007199254740993n);
+  });
+});
+
+describe('fiatAmountToMajorUnits', () => {
+  it('converts cents to dollars', () => {
+    // The price route's fiatEstimate and the quote's paymentAmount are BOTH in
+    // the smallest unit. Assigning either straight to a "usd" field renders a
+    // $5.00 name as $500 — the bug this exists to prevent.
+    expect(fiatAmountToMajorUnits(500, 'usd')).toBe(5);
+    expect(fiatAmountToMajorUnits(1234, 'USD')).toBe(12.34);
+  });
+
+  it('leaves zero-decimal currencies alone', () => {
+    expect(fiatAmountToMajorUnits(500, 'jpy')).toBe(500);
   });
 });
 
