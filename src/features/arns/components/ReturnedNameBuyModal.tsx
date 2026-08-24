@@ -303,20 +303,21 @@ export default function ReturnedNameBuyModal({
             {/* Funding source (ARIO only) */}
             <div className="mb-4">
               <ArNSPaymentSelector
-                method="ario"
+                arioOnly
+                options={[]}
+                selectedId=""
                 fundingSource={fundingSource}
                 balances={balances}
-                onMethodChange={() => undefined}
+                onSelect={() => undefined}
                 onSourceChange={setFundingSource}
                 disabled={buyState.isBusy}
-                hideMethodToggle
               />
             </div>
 
             {/* Cost breakdown */}
             <div className="mb-4">
               <ArNSCostBreakdown
-                method="ario"
+                priceUnit="ario"
                 arioPrice={cost?.arioCost}
                 priceLoading={costLoading}
                 priceError={!!costError}

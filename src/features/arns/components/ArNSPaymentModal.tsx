@@ -1,34 +1,53 @@
 import { useState } from 'react';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Wallet } from 'lucide-react';
 
 import BaseModal from '../../../components/modals/BaseModal';
 import StripeElementsProvider from '../../../components/StripeElementsProvider';
 import TopUpPanel from '../../../components/panels/TopUpPanel';
-import { minUSDAmount } from '../../../constants';
+import type { SupportedTokenType } from '../../../constants';
 
-interface BuyCreditsModalProps {
-  /** USD to pre-seed the top-up amount (rounded up to cover the shortfall). */
+interface ArNSPaymentModalProps {
+  /** USD to pre-seed the amount (rounded up to cover the name's price). */
   initialUsdAmount?: number;
   /** Credits still needed — shown as context in the header. */
   shortfallCredits?: number;
+  /** Card or token, already chosen on the checkout surface. */
+  paymentMethod: 'fiat' | 'crypto';
+  /** Which token, when paying with crypto. */
+  token?: SupportedTokenType;
+  /** Ticker for the header, e.g. "SOL". */
+  tokenLabel?: string;
   onClose: () => void;
-  /** Fired when a top-up completes (credits landed). */
+  /** Fired when payment completes (credits landed). */
   onComplete: () => void;
 }
 
 /**
- * On-demand credit top-up during an ArNS purchase: the full console top-up flow
- * (Card + Crypto incl. SOL) in a modal, pre-seeded with the credit shortfall.
- * On completion the store's credit balance refreshes and the ArNS buy re-enables
- * — the user never leaves the checkout.
+ * The payment step of an ArNS purchase, for the methods that can't pay the
+ * contract directly.
+ *
+ * ARIO settles a name in one transaction; a card or SOL has to become credits
+ * first. That conversion is real and can't be wished away, but it is *our*
+ * plumbing, not a decision — so this modal continues the payment the user
+ * already chose rather than starting a new one. It opens on their method, with
+ * the amount sized to the name, and never re-asks how they want to pay.
+ *
+ * Previously this was `BuyCreditsModal`: choosing "Turbo Credits" on the
+ * checkout opened it, and it asked "card or crypto?" — the same question the
+ * checkout had just asked, one layer down and phrased in terms of our billing
+ * product. Hence the rename; the job changed.
  */
-export default function BuyCreditsModal({
+export default function ArNSPaymentModal({
   initialUsdAmount,
   shortfallCredits,
+  paymentMethod,
+  token,
+  tokenLabel,
   onClose,
   onComplete,
-}: BuyCreditsModalProps) {
+}: ArNSPaymentModalProps) {
   const [busy, setBusy] = useState(false);
+  const payingByCard = paymentMethod === 'fiat';
 
   return (
     /*
@@ -45,30 +64,19 @@ export default function BuyCreditsModal({
       <div className="w-[92vw] max-w-xl p-6">
         <div className="mb-5">
           <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
+            {payingByCard ? (
+              <CreditCard className="h-5 w-5 text-primary" />
+            ) : (
+              <Wallet className="h-5 w-5 text-primary" />
+            )}
             <h3 className="font-heading text-xl font-extrabold text-foreground">
-              Buy Turbo Credits
+              {payingByCard ? 'Pay with card' : `Pay with ${tokenLabel ?? 'crypto'}`}
             </h3>
           </div>
           {shortfallCredits != null && shortfallCredits > 0 && (
             <p className="mt-1 text-sm text-foreground/70">
-              You need about{' '}
-              {shortfallCredits.toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              })}{' '}
-              more credits to continue.
-            </p>
-          )}
-          {/*
-            The exact shortfall is pre-filled below, but purchases have a
-            ${minUSDAmount} floor, so a name costing cents still charges the
-            minimum. Saying so is the difference between "why am I being charged
-            $5?" and a understood trade — and the remainder is not lost, it
-            stays spendable. Only shown when the minimum actually binds.
-          */}
-          {initialUsdAmount != null && initialUsdAmount < minUSDAmount && (
-            <p className="mt-2 text-xs text-foreground/60">
-              ${minUSDAmount} minimum — the rest stays as credits.
+              This covers your name. You&apos;ll confirm the registration right
+              after.
             </p>
           )}
         </div>
@@ -77,6 +85,8 @@ export default function BuyCreditsModal({
           <TopUpPanel
             embedded
             initialUsdAmount={initialUsdAmount}
+            initialPaymentMethod={paymentMethod}
+            initialToken={token}
             onComplete={onComplete}
             onBusyChange={setBusy}
           />

@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, ExternalLink, Info, Loader2 } from 'lucide-react';
 
-import type { ArNSPaymentMethod } from './ArNSPaymentSelector';
+import type { ArNSPriceUnit } from './ArNSPaymentSelector';
 import PriceAmount from './PriceAmount';
 import PriceDisplayToggle from './PriceDisplayToggle';
 import { useStore } from '../../../store/useStore';
@@ -15,7 +15,8 @@ const fmtNum = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 4 });
 
 interface Props {
-  method: ArNSPaymentMethod;
+  /** Which unit the name's price is quoted in — not how it's being paid. */
+  priceUnit: ArNSPriceUnit;
   /** Name price in Turbo Credits (credits method). */
   creditsPrice?: number;
   /** Name price in ARIO (ario method). */
@@ -35,6 +36,15 @@ interface Props {
   /** Name price can't be covered by the chosen source (ARIO shortfall or credits < price). */
   insufficientFunds: boolean;
   insufficientSol: boolean;
+  /**
+   * The payment service performs the on-chain write itself and covers the
+   * Solana rent + fee from its own keypair — true on the card path.
+   *
+   * Card is the option that works for someone holding no crypto at all, so
+   * showing them a SOL requirement (let alone blocking on it) contradicts the
+   * only reason to offer it.
+   */
+  networkCostCovered?: boolean;
 }
 
 function Row({
@@ -66,7 +76,7 @@ function Row({
  * rent for, even when the name itself is paid with credits.
  */
 export function ArNSCostBreakdown({
-  method,
+  priceUnit,
   creditsPrice,
   arioPrice,
   priceLoading,
@@ -79,6 +89,7 @@ export function ArNSCostBreakdown({
   solBalance,
   insufficientFunds,
   insufficientSol,
+  networkCostCovered = false,
 }: Props) {
   const currency = useStore((s) => s.priceDisplayCurrency);
   // Credits per $1, inverted. Shown with "~" because this is an indicative
@@ -93,7 +104,7 @@ export function ArNSCostBreakdown({
     </span>
   ) : priceError ? (
     <span className="text-sm text-error">Unavailable</span>
-  ) : method === 'credits' ? (
+  ) : priceUnit === 'credits' ? (
     creditsPrice != null ? (
       // Casing convention across ArNS priced surfaces: "Turbo Credits" is the
       // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
@@ -128,7 +139,7 @@ export function ArNSCostBreakdown({
                 matters MORE here than on the token path, where the holder
                 already knows what ARIO is worth. */}
             <PriceDisplayToggle
-              nativeLabel={method === 'credits' ? 'Credits' : 'ARIO'}
+              nativeLabel={priceUnit === 'credits' ? 'Credits' : 'ARIO'}
             />
           </span>
         }
@@ -139,7 +150,7 @@ export function ArNSCostBreakdown({
       {insufficientFunds && !priceLoading && (
         <p className="flex items-center justify-end gap-1 text-xs text-error">
           <AlertTriangle className="h-3 w-3" />
-          {method === 'credits'
+          {priceUnit === 'credits'
             ? 'Not enough Turbo Credits'
             : 'Not enough ARIO in this source'}
         </p>
@@ -152,6 +163,12 @@ export function ArNSCostBreakdown({
         <div className="flex items-center gap-2 py-1 text-sm text-foreground/70">
           <Loader2 className="h-4 w-4 animate-spin" /> Estimating network cost…
         </div>
+      ) : networkCostCovered ? (
+        /* Paying by card: the service does the on-chain write from its own
+           keypair, so there is no SOL for the buyer to hold or be short of. */
+        <Row label="Network costs">
+          <span className="text-sm text-foreground/80">Included</span>
+        </Row>
       ) : gasError ? (
         <div className="flex items-center gap-2 py-1 text-sm text-error">
           <AlertTriangle className="h-4 w-4" /> Network cost unavailable — try
@@ -200,12 +217,20 @@ export function ArNSCostBreakdown({
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </>
+            ) : solBalance === undefined ? (
+              /*
+                Unknown is not "enough". The tick previously rendered against a
+                literal "Balance unavailable", so a lookup failure read as
+                "You have ✓ Balance unavailable" — a confirmation of nothing.
+                Say we can't see it, with no reassuring mark.
+              */
+              <span className="text-foreground/50">
+                Your SOL balance is unavailable right now.
+              </span>
             ) : (
               <span className="flex items-center gap-1">
                 <Check className="h-3 w-3 text-primary" /> You have{' '}
-                {solBalance === undefined
-                  ? 'Balance unavailable'
-                  : `${fmtSol(solBalance)} SOL`}
+                {fmtSol(solBalance)} SOL
               </span>
             )}
           </p>

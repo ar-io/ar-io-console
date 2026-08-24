@@ -1,43 +1,50 @@
-import { CheckCircle2, Circle, Coins, Wallet } from 'lucide-react';
+import { CheckCircle2, Circle, CreditCard, Coins, Wallet } from 'lucide-react';
 
+import type { PaymentOption } from '../purchase/paymentOptions';
 import type { ArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 
-export type ArNSPaymentMethod = 'credits' | 'ario';
+/**
+ * Which unit the price is quoted in. Not a payment method — several methods
+ * share a unit (card, balance and a token top-up all resolve to credits).
+ */
+export type ArNSPriceUnit = 'credits' | 'ario';
 export type ArNSFundingSource = 'balance' | 'any' | 'stakes';
 
 const fmt = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 interface Props {
-  method: ArNSPaymentMethod;
+  options: PaymentOption[];
+  selectedId: string;
   fundingSource: ArNSFundingSource;
   balances: ArNSPaymentBalances;
-  onMethodChange: (m: ArNSPaymentMethod) => void;
+  onSelect: (id: string) => void;
   onSourceChange: (s: ArNSFundingSource) => void;
   disabled?: boolean;
   /**
-   * Hide the Credits/ARIO method toggle and show only the ARIO funding-source
-   * picker. Used where paying with Turbo Credits is not a valid option (e.g.
-   * returned-name auctions, which always settle from the wallet's ARIO at the
-   * premium price — see ReturnedNameBuyModal).
+   * Collapse the picker to just the ARIO funding-source rows. Used where ARIO
+   * is the only possible payment (returned-name auctions always settle from the
+   * wallet's ARIO at the premium price — see ReturnedNameBuyModal).
    */
-  hideMethodToggle?: boolean;
+  arioOnly?: boolean;
 }
 
-function MethodCard({
+function optionIcon(option: PaymentOption) {
+  if (option.kind === 'card') return <CreditCard className="h-4 w-4" />;
+  if (option.kind === 'balance') return <Coins className="h-4 w-4" />;
+  return <Wallet className="h-4 w-4" />;
+}
+
+function OptionCard({
+  option,
   active,
   disabled,
   onClick,
-  icon,
-  title,
-  sub,
 }: {
+  option: PaymentOption;
   active: boolean;
   disabled?: boolean;
   onClick: () => void;
-  icon: React.ReactNode;
-  title: string;
-  sub: string;
 }) {
   return (
     <button
@@ -45,16 +52,26 @@ function MethodCard({
       aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-start gap-2 p-3 rounded-2xl border text-left transition-colors disabled:opacity-50 ${
+      className={`flex items-start gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 ${
         active
           ? 'border-primary bg-primary/10'
           : 'border-border/20 bg-card hover:border-primary/40'
       }`}
     >
-      <span className="mt-0.5 text-primary">{icon}</span>
+      <span className={`mt-0.5 ${active ? 'text-primary' : 'text-foreground/60'}`}>
+        {optionIcon(option)}
+      </span>
       <span className="min-w-0">
-        <span className="block font-medium text-foreground">{title}</span>
-        <span className="block text-xs text-foreground/60 truncate">{sub}</span>
+        <span className="block font-medium text-foreground">{option.label}</span>
+        {option.detail && (
+          <span className="block truncate text-xs text-foreground/60">
+            {option.detail}
+          </span>
+        )}
+        {/* Say it's short here rather than only failing on submit. */}
+        {!option.sufficient && (
+          <span className="block text-xs text-foreground/60">Not enough</span>
+        )}
       </span>
     </button>
   );
@@ -86,9 +103,9 @@ function SourceRow({
       }`}
     >
       {active ? (
-        <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-primary" />
       ) : (
-        <Circle className="h-4 w-4 text-foreground/40 flex-shrink-0" />
+        <Circle className="h-4 w-4 flex-shrink-0 text-foreground/40" />
       )}
       <span className="font-medium text-foreground">{label}</span>
       <span className="ml-auto font-mono text-xs text-foreground/60">
@@ -99,43 +116,42 @@ function SourceRow({
 }
 
 /**
- * Payment-method picker for an ArNS action: Turbo Credits vs the wallet's ARIO
- * tokens, and — when ARIO is chosen — which ARIO source funds it (liquid /
- * liquid + staked / staked). Mirrors arns-react's funding UX, with balances
- * shown inline so the choice is informed.
+ * How you want to pay for a name — one flat row of equals: a card, whichever
+ * tokens this wallet can sign, and your existing balance when you have one.
+ *
+ * It used to lead with "Turbo Credits vs ARIO tokens", which asked the user to
+ * pick our billing subsystem before picking a payment. Choosing credits with an
+ * empty balance then opened a modal asking the *same* question again — card or
+ * crypto? — one layer down. Turbo is how we settle, not a thing to choose.
  */
 export function ArNSPaymentSelector({
-  method,
+  options,
+  selectedId,
   fundingSource,
   balances,
-  onMethodChange,
+  onSelect,
   onSourceChange,
   disabled,
-  hideMethodToggle = false,
+  arioOnly = false,
 }: Props) {
-  const showSources = hideMethodToggle || method === 'ario';
+  const showSources =
+    arioOnly || options.find((o) => o.id === selectedId)?.token === 'ario';
+
   return (
     <div>
-      {!hideMethodToggle && (
+      {!arioOnly && (
         <>
           <label className="mb-2 block text-sm font-medium">Pay with</label>
-          <div className="mb-3 grid grid-cols-2 gap-3">
-            <MethodCard
-              active={method === 'credits'}
-              disabled={disabled}
-              onClick={() => onMethodChange('credits')}
-              icon={<Coins className="h-4 w-4" />}
-              title="Turbo Credits"
-              sub={`${fmt(balances.credits)} available`}
-            />
-            <MethodCard
-              active={method === 'ario'}
-              disabled={disabled}
-              onClick={() => onMethodChange('ario')}
-              icon={<Wallet className="h-4 w-4" />}
-              title="ARIO tokens"
-              sub={`${fmt(balances.totalArio)} ARIO available`}
-            />
+          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {options.map((option) => (
+              <OptionCard
+                key={option.id}
+                option={option}
+                active={option.id === selectedId}
+                disabled={disabled}
+                onClick={() => onSelect(option.id)}
+              />
+            ))}
           </div>
         </>
       )}

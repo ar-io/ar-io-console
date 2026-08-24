@@ -18,11 +18,17 @@ import { useArNSPricing } from '@/hooks/useArNSPricing';
 import type { BuyArNSNameInput } from '../hooks/useBuyArNSName';
 import {
   ArNSFundingSource,
-  ArNSPaymentMethod,
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
+import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
+import {
+  buildPaymentOptions,
+  defaultPaymentOption,
+} from '../purchase/paymentOptions';
+import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
-import BuyCreditsModal from './BuyCreditsModal';
+import ArNSPaymentModal from './ArNSPaymentModal';
+import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
 
@@ -30,6 +36,11 @@ interface ArNSPurchaseCardProps {
   name: string;
   isBusy: boolean;
   onBuy: (input: BuyArNSNameInput) => void;
+  /**
+   * A card purchase settled server-side. Reported up so the host shows the same
+   * receipt a credits/ARIO purchase gets, instead of silently closing.
+   */
+  onCardSuccess: (messageId: string) => void;
 }
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -92,27 +103,71 @@ export function ArNSPurchaseCard({
   name,
   isBusy,
   onBuy,
+  onCardSuccess,
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
-  const [method, setMethod] = useState<ArNSPaymentMethod>('credits');
+  const [selectedId, setSelectedId] = useState<string | undefined>();
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
-  const [showBuyCredits, setShowBuyCredits] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  /**
+   * Card is offered until the service tells us otherwise. The quote route
+   * answers 503 when fiat is disabled (the testnet default), so we learn it by
+   * asking — and then stop offering an option that cannot work.
+   */
+  const [cardEnabled, setCardEnabled] = useState(true);
   const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
 
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
   const balances = useArNSPaymentBalances(address);
 
-  const fundFrom = method === 'credits' ? 'turbo' : fundingSource;
+  /**
+   * One flat row of ways to pay — card, whatever this wallet can sign, and the
+   * existing balance when there is one. `route` is where that choice turns back
+   * into machinery; see settlementRoute.ts for why the two differ.
+   *
+   * `walletType` is hard-coded: ArNS only works on Solana at all, so the menu
+   * of ways to pay is a property of the feature, not of who is signed in. A
+   * signed-out visitor sees the real menu and SolanaGateButton owns the connect
+   * gate — collapsing it to a lone "Card" would understate the page.
+   *
+   * Built twice, deliberately. Which options EXIST doesn't depend on the price,
+   * but whether each one can COVER it does — and the price query's `enabled`
+   * flag depends on the route, which depends on the selection. So routing reads
+   * the price-free list, and the rendered list (below, once the price is known)
+   * adds affordability.
+   */
+  const routingOptions = useMemo(
+    () =>
+      buildPaymentOptions({
+        walletType: 'solana',
+        credits: balances.credits,
+        extraTokens: ['ario'],
+        isTokenSelectable,
+        cardEnabled,
+      }),
+    [balances.credits, cardEnabled],
+  );
+  const selectedOption =
+    routingOptions.find((o) => o.id === selectedId) ??
+    defaultPaymentOption(routingOptions);
+  const route = selectedOption
+    ? resolveSettlementRoute(selectedOption, fundingSource)
+    : ({ kind: 'credits' } as const);
+
+  // Which unit the price is quoted in. Card and token top-ups both land as
+  // credits, so they price like credits — only ARIO prices in ARIO.
+  const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
+  const fundFrom = route.kind === 'ario' ? route.fundFrom : 'turbo';
 
   // Credits price (winc → credits) for the credits method display.
   const {
     data: creditsPrice,
     isFetching: creditsLoading,
     error: creditsError,
-  } = useArNSPrice({ name, type, years, enabled: method === 'credits' });
+  } = useArNSPrice({ name, type, years, enabled: priceUnit === 'credits' });
 
   // Cost details (ARIO price + SOL gas + affordability) for the selected source.
   const {
@@ -135,15 +190,45 @@ export function ArNSPurchaseCard({
     !balances.loading &&
     balances.sol !== undefined &&
     balances.sol < cost.gasTotalSol;
+  /**
+   * Whether the CHOSEN method is short — not whether some other one is.
+   *
+   * Card and token routes are sized to the price at payment time, so they are
+   * never "insufficient" here; treating them as short (because the *credits*
+   * balance is empty) is what used to block a user who had a working card.
+   */
   const insufficientFunds = useMemo(() => {
-    if (method === 'credits') {
+    if (route.kind === 'credits') {
       return creditsPrice ? balances.credits < creditsPrice.credits : false;
     }
-    return (cost?.shortfallMARIO ?? 0) > 0;
-  }, [method, creditsPrice, balances.credits, cost?.shortfallMARIO]);
+    if (route.kind === 'ario') return (cost?.shortfallMARIO ?? 0) > 0;
+    return false;
+  }, [route.kind, creditsPrice, balances.credits, cost?.shortfallMARIO]);
+
+  const paymentOptions = useMemo(
+    () =>
+      buildPaymentOptions({
+        walletType: 'solana',
+        credits: balances.credits,
+        priceInCredits: creditsPrice?.credits,
+        // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
+        // next to a silent SOL row states a fact we don't have and reads as
+        // "you're broke" to someone who simply hasn't connected yet.
+        tokenBalances: address
+          ? { solana: balances.sol, ario: balances.totalArio }
+          : {},
+        extraTokens: ['ario'],
+        isTokenSelectable,
+        cardEnabled,
+      }),
+    [
+      address, balances.credits, balances.sol, balances.totalArio,
+      creditsPrice?.credits, cardEnabled,
+    ],
+  );
 
   const priceReady =
-    method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
+    priceUnit === 'credits' ? !!creditsPrice : cost?.arioCost != null;
   // Every buy needs the SOL rent/gas estimate from useArNSCostDetails, even the
   // credits path. If that query errored or resolved empty we have no estimate —
   // don't let the user confirm against a missing (and cosmetically ~0) SOL cost.
@@ -155,11 +240,11 @@ export function ArNSPurchaseCard({
     !insufficientFunds &&
     !isBusy;
 
-  // Credit shortfall → on-demand top-up (only offered for the credits method).
-  const creditShortfall =
-    method === 'credits' && creditsPrice
-      ? Math.max(0, creditsPrice.credits - balances.credits)
-      : 0;
+  // What a card / token payment has to cover: the whole price when there is no
+  // balance to draw on, or just the gap when there is.
+  const creditShortfall = creditsPrice
+    ? Math.max(0, creditsPrice.credits - balances.credits)
+    : 0;
   const topUpUsd =
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
@@ -169,8 +254,24 @@ export function ArNSPurchaseCard({
   // signed in: a signed-out user has a 0 balance (so credits always read as
   // short), and we want them to hit the connect/sign-in gate first — not a
   // "Buy Turbo Credits" prompt for an account they haven't connected yet.
-  const offerTopUp =
-    !!address && method === 'credits' && insufficientFunds && !insufficientSol;
+  /**
+   * Card and non-ARIO tokens can't pay the contract, so they buy credits first
+   * and then register. Two transactions, one decision — the user already said
+   * how they want to pay, so this opens on that method rather than asking again.
+   */
+  /**
+   * Card and non-ARIO tokens can't pay the contract directly, so they take a
+   * payment step first. The user already said how they want to pay, so it opens
+   * on that method rather than asking again.
+   *
+   * Card deliberately ignores the SOL gate: the payment service does the
+   * on-chain write from its own keypair, so the buyer needs no SOL. Blocking it
+   * would break the one path that works for someone holding no crypto — which
+   * is the entire reason to offer a card.
+   */
+  const needsPaymentStep =
+    !!address &&
+    (route.kind === 'card' || (route.kind === 'topup' && !insufficientSol));
 
   /**
    * Why the buy button is disabled, said next to the button itself.
@@ -178,21 +279,25 @@ export function ArNSPurchaseCard({
    * The cost breakdown above already explains every shortfall, but the button is
    * where the user is looking, and a greyed-out control with no adjacent reason
    * reads as a broken app rather than a missing input. The credits path already
-   * solves this by swapping the button for `offerTopUp`; this covers the cases
+   * solves this by swapping the button for the payment step; this covers the cases
    * that don't.
    *
    * The ARIO branch carries an action rather than only a sentence: switching to
    * credits is a genuine in-app remedy that is otherwise never suggested, and it
-   * chains — if credits are then short, `offerTopUp` takes over and offers a
-   * card top-up pre-seeded with the shortfall. That turns a dead end into a
-   * complete path without leaving the page.
+   * chains — the flat picker's Card and SOL options are pre-seeded with the
+   * name's price, so a dead end becomes a complete path without leaving the
+   * page.
    *
    * Ordered by which blocker the user must clear first. Signed-out and
    * still-loading states are deliberately silent: SolanaGateButton owns the
    * former and a spinner owns the latter.
    */
   const blockedReason = useMemo((): { text: string; canSwitchToCredits?: boolean } | null => {
-    if (!address || isBusy || !priceReady) return null;
+    if (!address || isBusy) return null;
+    // Card is settled and funded server-side — none of the SOL/gas blockers
+    // below apply to it, and the price comes from the quote, not from us.
+    if (route.kind === 'card') return null;
+    if (!priceReady) return null;
     if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
     if (insufficientSol) {
       const need =
@@ -209,13 +314,13 @@ export function ArNSPurchaseCard({
             : 'You need a little more SOL for the network deposit.',
       };
     }
-    if (insufficientFunds && method === 'ario') {
+    if (insufficientFunds && route.kind === 'ario') {
       return { text: 'Not enough ARIO in this source.', canSwitchToCredits: true };
     }
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, method, cost, balances.sol,
+    insufficientFunds, route.kind, cost, balances.sol,
   ]);
 
   // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
@@ -314,10 +419,11 @@ export function ArNSPurchaseCard({
       {/* Payment method + source */}
       <div className="mb-4">
         <ArNSPaymentSelector
-          method={method}
+          options={paymentOptions}
+          selectedId={selectedOption?.id ?? ''}
           fundingSource={fundingSource}
           balances={balances}
-          onMethodChange={setMethod}
+          onSelect={setSelectedId}
           onSourceChange={setFundingSource}
           disabled={isBusy}
         />
@@ -326,11 +432,11 @@ export function ArNSPurchaseCard({
       {/* Cost breakdown */}
       <div className="mb-4">
         <ArNSCostBreakdown
-          method={method}
+          priceUnit={priceUnit}
           creditsPrice={creditsPrice?.credits}
           arioPrice={cost?.arioCost}
-          priceLoading={method === 'credits' ? creditsLoading : costLoading}
-          priceError={!!(method === 'credits' ? creditsError : costError)}
+          priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
+          priceError={!!(priceUnit === 'credits' ? creditsError : costError)}
           gasTotalSol={cost?.gasTotalSol ?? 0}
           gasRentSol={cost?.gasRentSol ?? 0}
           gasFeeSol={cost?.gasFeeSol ?? 0}
@@ -339,15 +445,27 @@ export function ArNSPurchaseCard({
           solBalance={balances.sol}
           insufficientFunds={insufficientFunds}
           insufficientSol={insufficientSol}
+          networkCostCovered={route.kind === 'card'}
         />
       </div>
 
-      {offerTopUp ? (
+      {needsPaymentStep ? (
         <button
-          onClick={() => setShowBuyCredits(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+          onClick={() => setShowPayment(true)}
+          disabled={
+            isBusy ||
+            // The card path is quoted server-side, so neither our credits price
+            // nor the SOL estimate needs to have loaded for it to work.
+            (route.kind !== 'card' && (!priceReady || gasUnavailable))
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          <CreditCard className="h-4 w-4" /> Buy Turbo Credits to continue
+          {route.kind === 'card' ? (
+            <CreditCard className="h-4 w-4" />
+          ) : (
+            <Wallet className="h-4 w-4" />
+          )}{' '}
+          Continue
         </button>
       ) : (
         <SolanaGateButton
@@ -369,33 +487,61 @@ export function ArNSPurchaseCard({
           }
         >
           <Wallet className="h-4 w-4" />{' '}
-          {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
+          Register name
         </SolanaGateButton>
       )}
 
       {/* Say why the button is dead, next to the button. See `blockedReason`. */}
-      {!offerTopUp && blockedReason && (
+      {!needsPaymentStep && blockedReason && (
         <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-xs text-foreground/70">
           <AlertTriangle className="h-3 w-3 flex-shrink-0 text-error" />
           <span>{blockedReason.text}</span>
           {blockedReason.canSwitchToCredits && (
             <button
               type="button"
-              onClick={() => setMethod('credits')}
+              onClick={() => setSelectedId('card')}
               className="font-semibold text-primary hover:underline"
             >
-              Pay with Turbo Credits instead
+              Pay with card instead
             </button>
           )}
         </p>
       )}
 
-      {showBuyCredits && (
-        <BuyCreditsModal
+      {/* Card settles server-side in one step — quote, charge, on-chain write —
+          so it gets the dedicated checkout rather than the top-up shell. */}
+      {showPayment && route.kind === 'card' && (
+        <ArNSCardPaymentModal
+          displayName={name}
+          quoteInput={{
+            name,
+            address: address ?? '',
+            intent: 'Buy-Name',
+            type,
+            years: type === 'lease' ? years : undefined,
+          }}
+          onClose={() => setShowPayment(false)}
+          onSuccess={(messageId) => {
+            setShowPayment(false);
+            onCardSuccess(messageId);
+          }}
+          onFiatDisabled={() => {
+            setCardEnabled(false);
+            setShowPayment(false);
+            setSelectedId(undefined);
+          }}
+        />
+      )}
+
+      {showPayment && route.kind === 'topup' && (
+        <ArNSPaymentModal
           initialUsdAmount={topUpUsd}
           shortfallCredits={creditShortfall}
-          onClose={() => setShowBuyCredits(false)}
-          onComplete={() => setShowBuyCredits(false)}
+          paymentMethod="crypto"
+          token={route.token as SupportedTokenType}
+          tokenLabel={tokenLabels[route.token as SupportedTokenType]}
+          onClose={() => setShowPayment(false)}
+          onComplete={() => setShowPayment(false)}
         />
       )}
     </div>

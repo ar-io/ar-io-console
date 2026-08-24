@@ -29,6 +29,19 @@ interface TopUpPanelProps {
   embedded?: boolean;
   /** Pre-seed the USD amount once on mount (e.g. rounded up to cover a shortfall). */
   initialUsdAmount?: number;
+  /**
+   * Open straight onto card or crypto. The ArNS checkout asks "how do you want
+   * to pay" once, up front, so re-presenting the same tabs here would be asking
+   * the user the same question twice.
+   */
+  initialPaymentMethod?: 'fiat' | 'crypto';
+  /**
+   * Open with this token already selected. Ignored if the connected wallet
+   * cannot sign it — the wallet-availability effect below still has the last
+   * word, so a bad hint degrades to the wallet's own default rather than
+   * stranding the user on an unusable token.
+   */
+  initialToken?: SupportedTokenType;
   /** Fired once a top-up reaches a success terminal state (credits landed). */
   onComplete?: () => void;
   /**
@@ -44,6 +57,8 @@ interface TopUpPanelProps {
 export default function TopUpPanel({
   embedded = false,
   initialUsdAmount,
+  initialPaymentMethod,
+  initialToken,
   onComplete,
   onBusyChange,
 }: TopUpPanelProps = {}) {
@@ -70,7 +85,9 @@ export default function TopUpPanel({
   const deepLinkSourceLabel = formatDeepLinkSource(deepLink.source);
   const deepLinkAppliedRef = useRef(false);
 
-  const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>('fiat');
+  const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>(
+    initialPaymentMethod ?? 'fiat',
+  );
   const [inputType, setInputType] = useState<'dollars' | 'storage'>('dollars');
   const [usdAmount, setUsdAmount] = useState(defaultUSDAmount);
   const [usdAmountInput, setUsdAmountInput] = useState(String(defaultUSDAmount));
@@ -103,7 +120,9 @@ export default function TopUpPanel({
 
   // Crypto flow state
   const [cryptoFlowStep, setCryptoFlowStep] = useState<'selection' | 'confirmation' | 'manual-payment' | 'complete'>('selection');
-  const [selectedTokenType, setSelectedTokenType] = useState<SupportedTokenType>('arweave');
+  const [selectedTokenType, setSelectedTokenType] = useState<SupportedTokenType>(
+    initialToken ?? 'arweave',
+  );
   const [cryptoPaymentResult, setCryptoPaymentResult] = useState<any>(null);
 
   // Token selection is handled by effect at line ~437 using getAvailableTokens() priority order
@@ -704,7 +723,15 @@ export default function TopUpPanel({
           </div>
         )}
 
-        {/* Payment Method Selection - Always show */}
+        {/*
+          Payment-method tabs, unless the host already asked.
+
+          The ArNS checkout presents card and each payable token as one flat
+          row up front, so by the time this panel opens the user has already
+          answered "how do you want to pay". Showing the tabs again would ask
+          it a second time and let the two answers disagree.
+        */}
+        {!initialPaymentMethod && (
         <div className="mb-6">
           <label className="block text-sm font-medium text-foreground/80 mb-3">Choose Payment Method</label>
           <div className="inline-flex bg-card rounded-2xl p-1 border border-border/20 w-full">
@@ -744,6 +771,7 @@ export default function TopUpPanel({
             </button>
           </div>
         </div>
+        )}
 
         {/* Recipient Wallet Address - Only show for fiat payments */}
         {paymentMethod === 'fiat' && !address && !embedded && (
@@ -1307,6 +1335,24 @@ export default function TopUpPanel({
                       Custom Amount (USD)
                     </label>
                     )}
+                    {targetedTopUp ? (
+                      /*
+                        The amount is not a choice here. It is the purchase's
+                        shortfall, floored at Stripe's minimum — so an editable
+                        box bounded by "Min: $5 • Max: $10,000" asks the user to
+                        weigh limits that cannot change the outcome. Show the
+                        figure, not a decision. The full top-up page remains the
+                        place to buy an arbitrary amount.
+                      */
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold text-foreground">
+                          ${usdAmount.toLocaleString(undefined, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    ) : (
                     <div className="flex items-center gap-3">
                       <DollarSign className="w-5 h-5 text-foreground" />
                       <input
@@ -1327,9 +1373,26 @@ export default function TopUpPanel({
                         inputMode="decimal"
                       />
                     </div>
-                    <div className="mt-2 text-xs text-foreground/80">
-                      Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
-                    </div>
+                    )}
+                    {/*
+                      The floor is a STRIPE floor, so this belongs on the card
+                      path only — a crypto top-up has no $5 minimum, and saying
+                      otherwise while the user is on the Crypto tab is simply
+                      wrong. It lived in the host modal, which cannot see which
+                      tab is open.
+                    */}
+                    {targetedTopUp && initialUsdAmount != null &&
+                      initialUsdAmount < minUSDAmount && (
+                        <p className="mt-2 text-xs text-foreground/60">
+                          ${minUSDAmount} minimum — the rest stays as credits.
+                        </p>
+                      )}
+                    {/* Bounds matter only when the figure is editable. */}
+                    {!targetedTopUp && (
+                      <div className="mt-2 text-xs text-foreground/80">
+                        Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (

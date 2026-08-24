@@ -17,7 +17,7 @@ import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
  */
 export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {}) {
   const [search, setSearch] = useState(initialSearch ?? '');
-  const [selectedName, setSelectedName] = useState<string | undefined>();
+  const [selectedName, setSelectedName] = useState<string | undefined>('mycoolname');
 
   const buyState = useBuyArNSName();
 
@@ -129,6 +129,13 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           name={selectedName}
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
+          onCardSuccess={(messageId) =>
+            buyState.markExternalSuccess({
+              nonce: '',
+              messageId,
+              receipt: {},
+            })
+          }
         />
       )}
 
