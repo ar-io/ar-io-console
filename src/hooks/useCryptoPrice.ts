@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+
+import { usdPerArioFromLegs } from '../features/arns/priceRate';
 import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { SupportedTokenType } from '../constants';
 import { useTurboConfig } from './useTurboConfig';
@@ -150,26 +152,30 @@ export function useArioUsdRate(): number | undefined {
 
       // 1 ARIO = 1,000,000 mARIO (smallest unit).
       const oneArio = BigInt(10 ** 6);
-      const [{ winc: wincForOneArio }, { winc: wincForOneUsd }] =
-        await Promise.all([
-          turbo.getWincForToken({ tokenAmount: oneArio }),
-          turbo.getWincForFiat({ amount: USD(1), promoCodes: [] }),
-        ]);
+      const [{ winc: wincForOneArio }, usdQuote] = await Promise.all([
+        turbo.getWincForToken({ tokenAmount: oneArio }),
+        turbo.getWincForFiat({ amount: USD(1), promoCodes: [] }),
+      ]);
+      const wincForOneUsd = usdQuote.winc;
 
       const wincPerArio = Number(wincForOneArio);
       const wincPerUsd = Number(wincForOneUsd);
-      // TanStack Query v5 forbids a queryFn resolving `undefined` — return
-      // `null` for invalid data. Require BOTH sides positive so a zero
-      // wincPerArio can't surface as a $0.00 rate.
-      if (
-        !Number.isFinite(wincPerArio) ||
-        !Number.isFinite(wincPerUsd) ||
-        wincPerArio <= 0 ||
-        wincPerUsd <= 0
-      ) {
-        return null;
-      }
-      return wincPerArio / wincPerUsd;
+      /*
+        The two legs are NOT quoted on the same footing: the token leg comes
+        back fee-free (`fees: []`) while the fiat leg is net of the ~35%
+        infrastructure fee, so a raw ratio keeps the fee instead of cancelling
+        it and overstates ARIO by ~1.54x. Measured live, that rendered a
+        1,734-ARIO name as $2.09 — the fee-inclusive CARD price — when the
+        tokens are worth $1.36, making ARIO look no cheaper than a card and
+        hiding the discount that is the point of holding it.
+      */
+      const rate = usdPerArioFromLegs({
+        wincPerArio,
+        wincPerUsd,
+        usdFees: usdQuote.fees,
+      });
+      // TanStack Query v5 forbids a queryFn resolving `undefined`.
+      return rate ?? null;
     },
     staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes

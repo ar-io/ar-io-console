@@ -24,6 +24,8 @@ import { daysRemaining } from '@/utils';
 import type { ArNSName } from '@/types';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import {
+  CustodialNamePanel,
+  useTurboNameCustody,
   ManageDomainModal,
   EditDetailsModal,
   ControllersModal,
@@ -151,6 +153,15 @@ export default function NameDetailPage() {
   const role = deriveAntRoleStrict(summary, arnsAddress);
   const ownerOnly = role === 'owner';
   const canManage = role === 'owner' || role === 'controller';
+
+  /**
+   * A name Turbo holds fails the on-chain role check above — Turbo is the
+   * owner, not the user — so `canManage` is false and the whole Manage block
+   * disappears. Without this the name a card purchase just bought looks inert:
+   * paid for, listed, and with no action available anywhere.
+   */
+  const { custodyOf } = useTurboNameCustody(arnsAddress ?? undefined);
+  const isCustodial = custodyOf(name ?? '') === 'turbo-custodial';
   const isPrimary = !!primary?.current && primary.current.name === name;
 
   // A minimal ArNSName the action modals consume (they read name/displayName/
@@ -457,8 +468,19 @@ export default function NameDetailPage() {
             onSuccess={refresh}
           />
 
+          {/* Turbo-held: its own surface, with the transfer that unlocks the
+              rest. Shown INSTEAD of the on-chain actions, which cannot work. */}
+          {isCustodial && (
+            <CustodialNamePanel
+              name={name ?? ''}
+              antId={record?.processId ?? ''}
+              targetAddress={arnsAddress ?? undefined}
+              onTransferred={refresh}
+            />
+          )}
+
           {/* Actions (only for names you own or control) */}
-          {canManage && (
+          {!isCustodial && canManage && (
             <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
               <h2 className="mb-2 font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
                 Manage

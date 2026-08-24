@@ -6,6 +6,7 @@ export { ArNSBuyPanel, default as ArNSBuyPanelDefault } from './ArNSBuyPanel';
 export { default as BrowseDomainsPanel } from './components/BrowseDomainsPanel';
 export { default as ReturnedNamesPanel } from './components/ReturnedNamesPanel';
 export { default as ReturnedNameBuyModal } from './components/ReturnedNameBuyModal';
+export { default as CustodialNamePanel } from './components/CustodialNamePanel';
 export { default as ManageDomainModal } from './components/ManageDomainModal';
 export { default as TransferDomainModal } from './components/TransferDomainModal';
 export { default as ReassignDomainModal } from './components/ReassignDomainModal';
@@ -112,3 +113,6 @@ export {
   findTierIndexForLength,
   formatTierCharacterLabel,
 } from './arnsPriceTable';
+
+export { useTurboNameCustody } from './hooks/useNameCustody';
+export { actionAvailability, isActionAvailable, type NameCustody } from './custody/nameCustody';

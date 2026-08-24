@@ -1,6 +1,7 @@
 import {
   ArNSFiatPurchaseQuoteResponse,
   Currency,
+  TurboArNSNamesResponse,
   TokenType,
   TurboFactory,
   TurboUnauthenticatedClient,
@@ -222,6 +223,25 @@ export class TurboArNSClient {
     return turbo.getArNSFiatPurchaseQuote(
       params as Parameters<typeof turbo.getArNSFiatPurchaseQuote>[0],
     );
+  }
+
+  /**
+   * Names this address PURCHASED through Turbo, each flagged `custodial`.
+   *
+   * The only way to discover a Turbo-held name. A custodial ANT is owned by
+   * Turbo on-chain, so `getArNSRecordsForAddress` — which returns Owned union
+   * Controlled for the *user's* address — cannot see it at all. Without this,
+   * the name a card purchase just bought is invisible in the console.
+   *
+   * Receipt history, not a live ownership check: absence proves nothing (the
+   * name may have been bought elsewhere), and `custodial: false` covers both a
+   * self-custody purchase and one since transferred out.
+   *
+   * Open by address, no signature — same as `/v1/account/balance`.
+   */
+  public async getTurboNames(address: string): Promise<TurboArNSNamesResponse> {
+    const turbo = this.unauthenticated('solana');
+    return turbo.getArNSNames(address);
   }
 
   /**
