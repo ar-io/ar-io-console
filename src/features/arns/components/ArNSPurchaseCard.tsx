@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   Calendar,
   CreditCard,
   Infinity as InfinityIcon,
@@ -166,6 +167,49 @@ export function ArNSPurchaseCard({
   const offerTopUp =
     !!address && method === 'credits' && insufficientFunds && !insufficientSol;
 
+  /**
+   * Why the buy button is disabled, said next to the button itself.
+   *
+   * The cost breakdown above already explains every shortfall, but the button is
+   * where the user is looking, and a greyed-out control with no adjacent reason
+   * reads as a broken app rather than a missing input. The credits path already
+   * solves this by swapping the button for `offerTopUp`; this covers the cases
+   * that don't.
+   *
+   * The ARIO branch carries an action rather than only a sentence: switching to
+   * credits is a genuine in-app remedy that is otherwise never suggested, and it
+   * chains — if credits are then short, `offerTopUp` takes over and offers a
+   * card top-up pre-seeded with the shortfall. That turns a dead end into a
+   * complete path without leaving the page.
+   *
+   * Ordered by which blocker the user must clear first. Signed-out and
+   * still-loading states are deliberately silent: SolanaGateButton owns the
+   * former and a spinner owns the latter.
+   */
+  const blockedReason = useMemo((): { text: string; canSwitchToCredits?: boolean } | null => {
+    if (!address || isBusy || !priceReady) return null;
+    if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
+    if (insufficientSol) {
+      const need = cost ? Math.max(0, cost.gasTotalSol - balances.sol) : 0;
+      // Format first, then decide. A shortfall under 0.00005 SOL is real but
+      // rounds to "0" at 4dp, and "you need about 0 more SOL" reads as a bug.
+      const needText = need.toLocaleString(undefined, { maximumFractionDigits: 4 });
+      return {
+        text:
+          need > 0 && Number(needText) > 0
+            ? `You need about ${needText} more SOL for the network deposit.`
+            : 'You need a little more SOL for the network deposit.',
+      };
+    }
+    if (insufficientFunds && method === 'ario') {
+      return { text: 'Not enough ARIO in this source.', canSwitchToCredits: true };
+    }
+    return null;
+  }, [
+    address, isBusy, priceReady, gasUnavailable, insufficientSol,
+    insufficientFunds, method, cost, balances.sol,
+  ]);
+
   // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
   // years = 1 + (permabuy − year1) / annualRenewal, where annualRenewal is the
   // marginal (year2 − year1). Ratios cancel the length, so it's stable per name.
@@ -319,6 +363,23 @@ export function ArNSPurchaseCard({
           <Wallet className="h-4 w-4" />{' '}
           {method === 'credits' ? 'Buy with Turbo Credits' : 'Buy with ARIO'}
         </SolanaGateButton>
+      )}
+
+      {/* Say why the button is dead, next to the button. See `blockedReason`. */}
+      {!offerTopUp && blockedReason && (
+        <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-xs text-foreground/70">
+          <AlertTriangle className="h-3 w-3 flex-shrink-0 text-error" />
+          <span>{blockedReason.text}</span>
+          {blockedReason.canSwitchToCredits && (
+            <button
+              type="button"
+              onClick={() => setMethod('credits')}
+              className="font-semibold text-primary hover:underline"
+            >
+              Pay with Turbo Credits instead
+            </button>
+          )}
+        </p>
       )}
 
       {showBuyCredits && (

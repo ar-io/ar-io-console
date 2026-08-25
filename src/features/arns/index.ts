@@ -15,19 +15,17 @@ export { default as ControllersModal } from './components/ControllersModal';
 export { default as PrimaryNameModal } from './components/PrimaryNameModal';
 export type { PrimaryNameModalMode } from './components/PrimaryNameModal';
 
-// Service layer (reusable, framework-agnostic) — the extension point for later
-// phases (extend / increase-undername / upgrade / custodial manage + transfer).
-export {
-  TurboArNSClient,
-  InsufficientCreditsError,
-  ArNSPurchaseFailedError,
-} from './services/TurboArNSClient';
+// Service layer (framework-agnostic). Scoped to what is actually consumed:
+// pricing (`getArNSPrice`) and the purchase status read used by polling. The
+// credit-settlement layer that used to live here was removed — it had zero
+// callers, because buying goes through `@ar.io/sdk` (see useBuyArNSName) and
+// fiat will go through turbo-sdk's quote endpoint. Its one salvageable part,
+// the terminal-state poller, now lives in `purchase/pollPurchase.ts`.
+export { TurboArNSClient } from './services/TurboArNSClient';
 export type {
   TurboArNSIntent,
   TurboArNSClientConfig,
   ArNSSettlementResult,
-  ArNSSettlementStatus,
-  AuthenticatedArNSPurchaseClient,
 } from './services/TurboArNSClient';
 export { resolveCustodyStrategy } from './services/custodyStrategy';
 export type { CustodyModel, CustodyStrategy } from './services/custodyStrategy';
