@@ -89,8 +89,19 @@ export default function CustodialNamePanel({
           <p className="mb-2 text-sm text-foreground/80">
             Move {name} to{' '}
             <span className="break-all font-mono text-xs">{targetAddress}</span>?
-            {/* One-way and irreversible by us — say so before, not after. */}{' '}
-            Turbo will no longer be able to manage it for you.
+          </p>
+          {/*
+            One-way, and the consequence is not obvious: afterwards EVERY change
+            is signed by this wallet, so it must be connected to edit records —
+            where today Turbo does that for you. Said before the click, because
+            discovering it after an irreversible transfer is the support ticket
+            this feature would otherwise generate.
+          */}
+          <p className="mb-3 text-xs text-foreground/70">
+            You&apos;ll own it outright — including controllers, details and
+            release, which Turbo can&apos;t do for you. In exchange, this wallet
+            has to be connected to change anything, and Turbo can no longer
+            manage the name on your behalf. This can&apos;t be undone from here.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
