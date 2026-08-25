@@ -17,7 +17,10 @@ export interface ArNSPaymentBalances {
   /** liquid + staked. */
   totalArio: number;
   /** Native SOL (for gas/rent). */
-  sol: number;
+  /** SOL balance, or `undefined` when it is genuinely unknown (see below). */
+  sol: number | undefined;
+  /** True when the balance lookup failed, as opposed to returning zero. */
+  solError: boolean;
   /** Turbo Credits. */
   credits: number;
   loading: boolean;
@@ -105,28 +108,38 @@ export function useArNSPaymentBalances(
     staleTime: 30_000,
     queryFn: async () => {
       if (!address) return 0;
-      try {
         // Query SOL on the CONSOLE-CONFIG cluster (same RPC the ARIO balance and
         // the ArNS buy tx use) — NOT the wallet-adapter connection, whose
         // endpoint is fixed to mainnet/VITE_SOLANA_RPC. Otherwise a Testnet/
         // devnet wallet reads 0 SOL because it's queried against mainnet.
-        const rpc = getSolanaReadRpc();
-        const { value } = await rpc.getBalance(toSolanaAddress(address)).send();
-        return Number(value);
-      } catch {
-        return 0;
-      }
+      const rpc = getSolanaReadRpc();
+      const { value } = await rpc.getBalance(toSolanaAddress(address)).send();
+      return Number(value);
     },
   });
 
   const liquidArio = (arioQ.data?.liquidMARIO ?? 0) / M_ARIO_PER_ARIO;
   const stakedArio = (arioQ.data?.stakedMARIO ?? 0) / M_ARIO_PER_ARIO;
 
+  /**
+   * SOL balance, or `undefined` when we genuinely do not know it — the query
+   * errored, or it never ran because there is no address yet.
+   *
+   * This distinction is load-bearing. It used to collapse to `0`: the queryFn
+   * swallowed errors with `catch { return 0 }`, and a disabled query left
+   * `solQ.data` undefined which `?? 0` also turned into zero. Callers then
+   * compared that against the SOL rent and concluded the user was short,
+   * hard-disabling the buy button and telling someone with a funded wallet to
+   * go and buy SOL. An unknown balance must never be reported as an empty one.
+   */
+  const solKnown = solQ.isSuccess && typeof solQ.data === 'number';
+
   return {
     liquidArio,
     stakedArio,
     totalArio: liquidArio + stakedArio,
-    sol: (solQ.data ?? 0) / LAMPORTS_PER_SOL,
+    sol: solKnown ? (solQ.data as number) / LAMPORTS_PER_SOL : undefined,
+    solError: solQ.isError,
     credits,
     loading: arioQ.isLoading || solQ.isLoading,
   };

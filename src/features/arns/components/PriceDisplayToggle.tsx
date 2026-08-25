@@ -1,10 +1,12 @@
 import { useStore } from '../../../store/useStore';
 import type { PriceDisplayCurrency } from '../priceDisplay';
 
-const OPTIONS: { label: string; value: PriceDisplayCurrency }[] = [
-  { label: 'ARIO', value: 'ario' },
-  { label: 'USD', value: 'usd' },
-];
+/**
+ * `'ario'` is really "the native unit of whatever you're paying with" — ARIO on
+ * the token path, credits on the Turbo path. The stored value keeps its name so
+ * the persisted preference stays valid; only the label changes per surface.
+ */
+const usdOption = { label: 'USD', value: 'usd' as PriceDisplayCurrency };
 
 /**
  * Small, reusable segmented ARIO | USD pill bound to the app-wide
@@ -15,9 +17,16 @@ const OPTIONS: { label: string; value: PriceDisplayCurrency }[] = [
  */
 export default function PriceDisplayToggle({
   className = '',
+  nativeLabel = 'ARIO',
 }: {
   className?: string;
+  /** Label for the non-USD side — "ARIO" or "Credits". */
+  nativeLabel?: string;
 }) {
+  const OPTIONS: { label: string; value: PriceDisplayCurrency }[] = [
+    { label: nativeLabel, value: 'ario' },
+    usdOption,
+  ];
   const currency = useStore((s) => s.priceDisplayCurrency);
   const setCurrency = useStore((s) => s.setPriceDisplayCurrency);
 

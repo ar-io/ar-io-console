@@ -23,11 +23,14 @@ import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 import { ManageIntent, useManageArNSName } from '../hooks/useManageArNSName';
 import {
   ArNSFundingSource,
-  ArNSPaymentMethod,
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
+import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
+import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
+import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
-import BuyCreditsModal from './BuyCreditsModal';
+import ArNSPaymentModal from './ArNSPaymentModal';
+import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 const UNDERNAME_QTY_OPTIONS = [1, 5, 10, 25, 50];
@@ -80,13 +83,35 @@ export default function ManageDomainModal({
   const [action, setAction] = useState<ManageIntent>(actions[0]);
   const [years, setYears] = useState(1);
   const [qty, setQty] = useState(1);
-  const [method, setMethod] = useState<ArNSPaymentMethod>('credits');
+  const [selectedId, setSelectedId] = useState<string | undefined>();
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
-  const [showBuyCredits, setShowBuyCredits] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  /** Fiat can be switched off service-side (503); stop offering it if so. */
+  const [cardEnabled, setCardEnabled] = useState(true);
   const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
 
-  const fundFrom = method === 'credits' ? 'turbo' : fundingSource;
+  // Same flat picker as registration — see ArNSPurchaseCard for why routing and
+  // affordability are built from separate lists.
+  const routingOptions = useMemo(
+    () =>
+      buildPaymentOptions({
+        walletType: 'solana',
+        credits: balances.credits,
+        extraTokens: ['ario'],
+        isTokenSelectable,
+        cardEnabled,
+      }),
+    [balances.credits, cardEnabled],
+  );
+  const selectedOption =
+    routingOptions.find((o) => o.id === selectedId) ??
+    defaultPaymentOption(routingOptions);
+  const route = selectedOption
+    ? resolveSettlementRoute(selectedOption, fundingSource)
+    : ({ kind: 'credits' } as const);
+  const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
+  const fundFrom = route.kind === 'ario' ? route.fundFrom : 'turbo';
 
   const { manage, phase, statusMessage, error, insufficientCredits, isBusy } =
     useManageArNSName();
@@ -103,7 +128,7 @@ export default function ManageDomainModal({
     intent: action,
     years: action === 'Extend-Lease' ? years : undefined,
     increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
-    enabled: active && method === 'credits',
+    enabled: active && priceUnit === 'credits',
   });
 
   // Cost details (ARIO price + SOL gas + affordability) for the selected source.
@@ -122,16 +147,42 @@ export default function ManageDomainModal({
   });
 
   const insufficientSol =
-    !!cost && !balances.loading && balances.sol < cost.gasTotalSol;
+    // Only a KNOWN balance can block the action. `undefined` means the lookup
+    // failed or never ran — blocking on that told funded users to go buy SOL.
+    !!cost &&
+    !balances.loading &&
+    balances.sol !== undefined &&
+    balances.sol < cost.gasTotalSol;
+  // Only the CHOSEN method can be short; a card is sized to the price.
   const insufficientFunds = useMemo(() => {
-    if (method === 'credits') {
+    if (route.kind === 'credits') {
       return creditsPrice ? balances.credits < creditsPrice.credits : false;
     }
+    if (route.kind !== 'ario') return false;
     return (cost?.shortfallMARIO ?? 0) > 0;
-  }, [method, creditsPrice, balances.credits, cost?.shortfallMARIO]);
+  }, [route.kind, creditsPrice, balances.credits, cost?.shortfallMARIO]);
+
+  const paymentOptions = useMemo(
+    () =>
+      buildPaymentOptions({
+        walletType: 'solana',
+        credits: balances.credits,
+        priceInCredits: creditsPrice?.credits,
+        // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
+        // next to a silent SOL row states a fact we don't have and reads as
+        // "you're broke" to someone who simply hasn't connected yet.
+        tokenBalances: address
+          ? { solana: balances.sol, ario: balances.totalArio }
+          : {},
+        extraTokens: ['ario'],
+        isTokenSelectable,
+        cardEnabled,
+      }),
+    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.credits],
+  );
 
   const priceReady =
-    method === 'credits' ? !!creditsPrice : cost?.arioCost != null;
+    priceUnit === 'credits' ? !!creditsPrice : cost?.arioCost != null;
   // The SOL gas estimate comes from the cost-details query regardless of the
   // payment method. If that query errored (or resolved with no data), we have
   // no estimate — don't render a misleading "~0 SOL" and don't let the user
@@ -146,7 +197,7 @@ export default function ManageDomainModal({
 
   // Credit shortfall → on-demand top-up (credits method only).
   const creditShortfall =
-    method === 'credits' && creditsPrice
+    creditsPrice
       ? Math.max(0, creditsPrice.credits - balances.credits)
       : 0;
   const topUpUsd =
@@ -155,8 +206,12 @@ export default function ManageDomainModal({
       : undefined;
   // Only offer a credits top-up when SOL gas is sufficient — otherwise topping
   // up credits still can't make the transaction succeed.
-  const offerTopUp =
-    method === 'credits' && insufficientFunds && !insufficientSol && !isBusy;
+  // Card ignores the SOL gate — the service does the on-chain write and pays
+  // the rent itself, so a buyer with no SOL can still renew or upgrade.
+  const needsPaymentStep =
+    !!address &&
+    (route.kind === 'card' || (route.kind === 'topup' && !insufficientSol)) &&
+    !isBusy;
 
   const expiryLabel =
     isLease && typeof domain.endTimestamp === 'number'
@@ -180,7 +235,7 @@ export default function ManageDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
+      <div className="w-[92vw] max-w-lg p-6">
         {/* Header */}
         <div className="mb-5">
           <h3 className="font-heading text-xl font-extrabold text-foreground">
@@ -300,10 +355,11 @@ export default function ManageDomainModal({
             {/* Payment method + source */}
             <div className="mb-4">
               <ArNSPaymentSelector
-                method={method}
+                options={paymentOptions}
+                selectedId={selectedOption?.id ?? ''}
                 fundingSource={fundingSource}
                 balances={balances}
-                onMethodChange={setMethod}
+                onSelect={setSelectedId}
                 onSourceChange={setFundingSource}
                 disabled={isBusy}
               />
@@ -312,11 +368,14 @@ export default function ManageDomainModal({
             {/* Cost breakdown */}
             <div className="mb-4">
               <ArNSCostBreakdown
-                method={method}
+                priceUnit={priceUnit}
                 creditsPrice={creditsPrice?.credits}
+                cardUsdPrice={
+                  route.kind === 'card' ? creditsPrice?.usd : undefined
+                }
                 arioPrice={cost?.arioCost}
-                priceLoading={method === 'credits' ? creditsLoading : costLoading}
-                priceError={!!(method === 'credits' ? creditsError : costError)}
+                priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
+                priceError={!!(priceUnit === 'credits' ? creditsError : costError)}
                 gasTotalSol={cost?.gasTotalSol ?? 0}
                 gasRentSol={cost?.gasRentSol ?? 0}
                 gasFeeSol={cost?.gasFeeSol ?? 0}
@@ -325,6 +384,7 @@ export default function ManageDomainModal({
                 solBalance={balances.sol}
                 insufficientFunds={insufficientFunds}
                 insufficientSol={insufficientSol}
+                networkCostCovered={route.kind === 'card'}
               />
             </div>
 
@@ -338,17 +398,18 @@ export default function ManageDomainModal({
             {phase === 'error' && insufficientCredits && (
               <div className="mb-4 rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">
                 <p className="mb-2 font-medium text-foreground">
-                  Not enough {method === 'credits' ? 'Turbo Credits' : 'ARIO'} for
+                  Not enough {priceUnit === 'credits' ? 'credits' : 'ARIO'} for
                   this.
                 </p>
-                {method === 'credits' && (
-                  <button
-                    onClick={() => setShowBuyCredits(true)}
-                    className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-                  >
-                    Buy Turbo Credits
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    setSelectedId('card');
+                    setShowPayment(true);
+                  }}
+                  className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                >
+                  Pay with card
+                </button>
               </div>
             )}
             {phase === 'error' && !insufficientCredits && error && (
@@ -359,12 +420,18 @@ export default function ManageDomainModal({
             )}
 
             {/* Confirm */}
-            {offerTopUp ? (
+            {needsPaymentStep ? (
               <button
-                onClick={() => setShowBuyCredits(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+                onClick={() => setShowPayment(true)}
+                disabled={route.kind !== 'card' && !priceReady}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
-                <CreditCard className="h-4 w-4" /> Buy Turbo Credits to continue
+                {route.kind === 'card' ? (
+                  <CreditCard className="h-4 w-4" />
+                ) : (
+                  <Wallet className="h-4 w-4" />
+                )}{' '}
+                Continue
               </button>
             ) : (
               <SolanaGateButton
@@ -378,17 +445,46 @@ export default function ManageDomainModal({
                   </>
                 }
               >
-                <Wallet className="h-4 w-4" /> {ACTION_META[action].verb} with{' '}
-                {method === 'credits' ? 'Turbo Credits' : 'ARIO'}
+                <Wallet className="h-4 w-4" /> {ACTION_META[action].verb}
               </SolanaGateButton>
             )}
 
-            {showBuyCredits && (
-              <BuyCreditsModal
+            {/* Renew/upgrade by card settles in one step too — `intent` is just
+                a path segment on the quote route, so all four are card-payable. */}
+            {showPayment && route.kind === 'card' && (
+              <ArNSCardPaymentModal
+                displayName={domain.name}
+                quoteInput={{
+                  name: domain.name,
+                  address: address ?? '',
+                  intent: action,
+                  years: action === 'Extend-Lease' ? years : undefined,
+                  increaseQty:
+                    action === 'Increase-Undername-Limit' ? qty : undefined,
+                }}
+                onClose={() => setShowPayment(false)}
+                onSuccess={() => {
+                  setShowPayment(false);
+                  onSuccess?.();
+                  onClose();
+                }}
+                onFiatDisabled={() => {
+                  setCardEnabled(false);
+                  setShowPayment(false);
+                  setSelectedId(undefined);
+                }}
+              />
+            )}
+
+            {showPayment && route.kind === 'topup' && (
+              <ArNSPaymentModal
                 initialUsdAmount={topUpUsd}
                 shortfallCredits={creditShortfall}
-                onClose={() => setShowBuyCredits(false)}
-                onComplete={() => setShowBuyCredits(false)}
+                paymentMethod="crypto"
+                token={route.token as SupportedTokenType}
+                tokenLabel={tokenLabels[route.token as SupportedTokenType]}
+                onClose={() => setShowPayment(false)}
+                onComplete={() => setShowPayment(false)}
               />
             )}
           </>

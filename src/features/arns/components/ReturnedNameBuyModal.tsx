@@ -117,7 +117,12 @@ export default function ReturnedNameBuyModal({
   const freshnessWarning = !auctionEnded && freshness.isError;
 
   const insufficientSol =
-    !!cost && !balances.loading && balances.sol < cost.gasTotalSol;
+    // Only a KNOWN balance can block the action. `undefined` means the lookup
+    // failed or never ran — blocking on that told funded users to go buy SOL.
+    !!cost &&
+    !balances.loading &&
+    balances.sol !== undefined &&
+    balances.sol < cost.gasTotalSol;
   const insufficientFunds = useMemo(
     () => (cost?.shortfallMARIO ?? 0) > 0,
     [cost?.shortfallMARIO],
@@ -149,7 +154,7 @@ export default function ReturnedNameBuyModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-md max-h-[85vh] overflow-y-auto p-6">
+      <div className="w-[92vw] max-w-md p-6">
         {/* Header */}
         <div className="mb-4 flex items-start gap-3">
           <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20">
@@ -298,20 +303,21 @@ export default function ReturnedNameBuyModal({
             {/* Funding source (ARIO only) */}
             <div className="mb-4">
               <ArNSPaymentSelector
-                method="ario"
+                arioOnly
+                options={[]}
+                selectedId=""
                 fundingSource={fundingSource}
                 balances={balances}
-                onMethodChange={() => undefined}
+                onSelect={() => undefined}
                 onSourceChange={setFundingSource}
                 disabled={buyState.isBusy}
-                hideMethodToggle
               />
             </div>
 
             {/* Cost breakdown */}
             <div className="mb-4">
               <ArNSCostBreakdown
-                method="ario"
+                priceUnit="ario"
                 arioPrice={cost?.arioCost}
                 priceLoading={costLoading}
                 priceError={!!costError}

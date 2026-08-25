@@ -19,22 +19,48 @@ import { parseTopUpDeepLink, formatDeepLinkSource } from '../../utils/topupDeepL
 import WalletSelectionModal from '../modals/WalletSelectionModal';
 import PendingTxRecoveryBanner from './crypto/PendingTxRecoveryBanner';
 import { getTurboBalance } from '../../utils';
+import { availableTokensForWallet } from '../../utils/walletTokens';
 
 
 interface TopUpPanelProps {
-  /** Hide the page header + recipient section and tighten layout, for embedding
+  /** Hide the page header, recipient section and recovery banner, and tighten
+   *  layout, for embedding
    *  in a modal (e.g. on-demand credit top-up during an ArNS purchase). */
   embedded?: boolean;
   /** Pre-seed the USD amount once on mount (e.g. rounded up to cover a shortfall). */
   initialUsdAmount?: number;
+  /**
+   * Open straight onto card or crypto. The ArNS checkout asks "how do you want
+   * to pay" once, up front, so re-presenting the same tabs here would be asking
+   * the user the same question twice.
+   */
+  initialPaymentMethod?: 'fiat' | 'crypto';
+  /**
+   * Open with this token already selected. Ignored if the connected wallet
+   * cannot sign it — the wallet-availability effect below still has the last
+   * word, so a bad hint degrades to the wallet's own default rather than
+   * stranding the user on an unusable token.
+   */
+  initialToken?: SupportedTokenType;
   /** Fired once a top-up reaches a success terminal state (credits landed). */
   onComplete?: () => void;
+  /**
+   * Fired when the panel enters or leaves a state that must not be interrupted
+   * — a card being charged, or a crypto transfer in flight. A host modal uses
+   * this to stop Escape and backdrop clicks from tearing the flow down
+   * mid-payment, which would leave the charge to land server-side with no UI
+   * to report it.
+   */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 export default function TopUpPanel({
   embedded = false,
   initialUsdAmount,
+  initialPaymentMethod,
+  initialToken,
   onComplete,
+  onBusyChange,
 }: TopUpPanelProps = {}) {
   const {
     address,
@@ -59,7 +85,9 @@ export default function TopUpPanel({
   const deepLinkSourceLabel = formatDeepLinkSource(deepLink.source);
   const deepLinkAppliedRef = useRef(false);
 
-  const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>('fiat');
+  const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>(
+    initialPaymentMethod ?? 'fiat',
+  );
   const [inputType, setInputType] = useState<'dollars' | 'storage'>('dollars');
   const [usdAmount, setUsdAmount] = useState(defaultUSDAmount);
   const [usdAmountInput, setUsdAmountInput] = useState(String(defaultUSDAmount));
@@ -92,7 +120,9 @@ export default function TopUpPanel({
 
   // Crypto flow state
   const [cryptoFlowStep, setCryptoFlowStep] = useState<'selection' | 'confirmation' | 'manual-payment' | 'complete'>('selection');
-  const [selectedTokenType, setSelectedTokenType] = useState<SupportedTokenType>('arweave');
+  const [selectedTokenType, setSelectedTokenType] = useState<SupportedTokenType>(
+    initialToken ?? 'arweave',
+  );
   const [cryptoPaymentResult, setCryptoPaymentResult] = useState<any>(null);
 
   // Token selection is handled by effect at line ~437 using getAvailableTokens() priority order
@@ -197,6 +227,19 @@ export default function TopUpPanel({
   // Helper function to get token amount for USD amount
 
   const presetAmounts = [10, 25, 50, 100, 250, 500];
+
+  /**
+   * True when this panel was opened to unblock ONE known purchase, with the
+   * shortfall already supplied.
+   *
+   * The full page is a shop: pick any amount, or work backwards from how much
+   * storage you want. A modal opened mid-purchase is not — the amount is
+   * already known, so a storage calculator and a grid of round-number presets
+   * are answering a question the user did not ask, and inviting them to
+   * overshoot a purchase they are trying to finish. The amount stays editable;
+   * only the shopping furniture goes.
+   */
+  const targetedTopUp = embedded && initialUsdAmount != null;
 
   // Crypto preset amounts based on token type (from reference app)
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
@@ -398,20 +441,28 @@ export default function TopUpPanel({
   );
 
   // Get available tokens based on wallet type (ordered by priority - first token is default)
-  const getAvailableTokens = useCallback((): SupportedTokenType[] => {
-    switch (walletType) {
-      case 'arweave':
-        return ['arweave'];
-      case 'ethereum':
-        return (
-          ['base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum'] as SupportedTokenType[]
-        ).filter(isTokenSelectable);
-      case 'solana':
-        return ['solana'];
-      default:
-        return []; // No crypto tokens available without wallet
+  const getAvailableTokens = useCallback(
+    (): SupportedTokenType[] =>
+      availableTokensForWallet(walletType, isTokenSelectable),
+    [walletType],
+  );
+
+  /**
+   * Keep the selected token payable by the connected wallet.
+   *
+   * The initial state below is `'arweave'` for want of a better default at
+   * module scope, but a Solana user opening the crypto tab on AR sees their
+   * (empty) AR balance and reads it as having no funds. Snap to the wallet's
+   * own first choice whenever the current pick is not something it can sign.
+   */
+  useEffect(() => {
+    if (!walletType) return;
+    const available = availableTokensForWallet(walletType, isTokenSelectable);
+    if (available.length === 0) return;
+    if (!available.includes(selectedTokenType)) {
+      setSelectedTokenType(available[0]);
     }
-  }, [walletType]);
+  }, [walletType, selectedTokenType]);
 
   // Check if selected token is compatible with connected wallet
   const isTokenCompatibleWithWallet = (tokenType: SupportedTokenType): boolean => {
@@ -541,6 +592,21 @@ export default function TopUpPanel({
 
 
   // Render fiat flow screens
+  /**
+   * Mid-payment states. `success`/`complete` are deliberately excluded — once
+   * the credits have landed, closing is exactly what the user should be able
+   * to do.
+   */
+  const busy =
+    isProcessing ||
+    (paymentMethod === 'fiat' && fiatFlowStep === 'confirmation') ||
+    (paymentMethod === 'crypto' &&
+      (cryptoFlowStep === 'confirmation' || cryptoFlowStep === 'manual-payment'));
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+
   if (paymentMethod === 'fiat' && fiatFlowStep !== 'amount') {
     // Determine target address for payment (use target if set, otherwise connected wallet)
     const targetAddress = paymentTargetAddress || address;
@@ -657,7 +723,15 @@ export default function TopUpPanel({
           </div>
         )}
 
-        {/* Payment Method Selection - Always show */}
+        {/*
+          Payment-method tabs, unless the host already asked.
+
+          The ArNS checkout presents card and each payable token as one flat
+          row up front, so by the time this panel opens the user has already
+          answered "how do you want to pay". Showing the tabs again would ask
+          it a second time and let the two answers disagree.
+        */}
+        {!initialPaymentMethod && (
         <div className="mb-6">
           <label className="block text-sm font-medium text-foreground/80 mb-3">Choose Payment Method</label>
           <div className="inline-flex bg-card rounded-2xl p-1 border border-border/20 w-full">
@@ -697,6 +771,7 @@ export default function TopUpPanel({
             </button>
           </div>
         </div>
+        )}
 
         {/* Recipient Wallet Address - Only show for fiat payments */}
         {paymentMethod === 'fiat' && !address && !embedded && (
@@ -756,7 +831,11 @@ export default function TopUpPanel({
         )}
 
         {/* For logged-in users with fiat - show editable recipient field */}
-        {paymentMethod === 'fiat' && address && (
+        {/* Embedded (a modal opened to fund THIS user's purchase) has exactly one
+            recipient — the person who clicked. Offering to send credits
+            elsewhere mid-purchase is a different intent and just raises the
+            question "buying for whom?". Full page keeps it. */}
+        {paymentMethod === 'fiat' && address && !embedded && (
           <div className="mb-6">
             {!isRecipientExpanded ? (
               // Collapsed state - summary button
@@ -1059,7 +1138,7 @@ export default function TopUpPanel({
         )}
 
         {/* Recipient Wallet Address for Crypto - Only if wallet is connected */}
-        {paymentMethod === 'crypto' && address && (
+        {paymentMethod === 'crypto' && address && !embedded && (
           <div className="mb-6">
             {!isRecipientExpanded ? (
               // Collapsed state - summary button
@@ -1183,8 +1262,13 @@ export default function TopUpPanel({
             <>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-foreground/80">
-                  {inputType === 'dollars' ? 'Select USD Amount' : 'Enter Storage Amount'}
+                  {targetedTopUp
+                    ? 'Amount'
+                    : inputType === 'dollars'
+                      ? 'Select USD Amount'
+                      : 'Enter Storage Amount'}
                 </label>
+                {!targetedTopUp && (
                 <div className="inline-flex bg-card rounded-2xl p-0.5 border border-border/20">
                   <button
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
@@ -1215,11 +1299,14 @@ export default function TopUpPanel({
                     USD
                   </button>
                 </div>
+                )}
               </div>
 
               {inputType === 'dollars' ? (
                 <>
-                  {/* USD Preset Amounts */}
+                  {/* USD Preset Amounts — round-number shopping, irrelevant when
+                      we already know the exact shortfall. */}
+                  {!targetedTopUp && (
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {presetAmounts.map((amount) => (
                       <button
@@ -1239,12 +1326,33 @@ export default function TopUpPanel({
                       </button>
                     ))}
                   </div>
+                  )}
 
                   {/* Custom USD Input */}
                   <div className="bg-card rounded-2xl p-4">
+                    {!targetedTopUp && (
                     <label className="block text-xs font-medium text-foreground/80 mb-2 uppercase tracking-wider">
                       Custom Amount (USD)
                     </label>
+                    )}
+                    {targetedTopUp ? (
+                      /*
+                        The amount is not a choice here. It is the purchase's
+                        shortfall, floored at Stripe's minimum — so an editable
+                        box bounded by "Min: $5 • Max: $10,000" asks the user to
+                        weigh limits that cannot change the outcome. Show the
+                        figure, not a decision. The full top-up page remains the
+                        place to buy an arbitrary amount.
+                      */
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold text-foreground">
+                          ${usdAmount.toLocaleString(undefined, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    ) : (
                     <div className="flex items-center gap-3">
                       <DollarSign className="w-5 h-5 text-foreground" />
                       <input
@@ -1265,9 +1373,26 @@ export default function TopUpPanel({
                         inputMode="decimal"
                       />
                     </div>
-                    <div className="mt-2 text-xs text-foreground/80">
-                      Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
-                    </div>
+                    )}
+                    {/*
+                      The floor is a STRIPE floor, so this belongs on the card
+                      path only — a crypto top-up has no $5 minimum, and saying
+                      otherwise while the user is on the Crypto tab is simply
+                      wrong. It lived in the host modal, which cannot see which
+                      tab is open.
+                    */}
+                    {targetedTopUp && initialUsdAmount != null &&
+                      initialUsdAmount < minUSDAmount && (
+                        <p className="mt-2 text-xs text-foreground/60">
+                          ${minUSDAmount} minimum — the rest stays as credits.
+                        </p>
+                      )}
+                    {/* Bounds matter only when the figure is editable. */}
+                    {!targetedTopUp && (
+                      <div className="mt-2 text-xs text-foreground/80">
+                        Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1811,8 +1936,12 @@ export default function TopUpPanel({
 
       </div>
 
-      {/* Recovery banner for failed top-up transactions + manual TX recovery */}
-      <PendingTxRecoveryBanner />
+      {/* Recovery banner for failed top-up transactions + manual TX recovery.
+          Full page only: recovering a stranded transaction is its own errand,
+          not something to start halfway through buying a name — and the banner
+          is for a PAST failure, which has nothing to do with the purchase the
+          user is currently trying to fund. */}
+      {!embedded && <PendingTxRecoveryBanner />}
 
       {/* Wallet Selection Modal */}
       {showWalletModal && (

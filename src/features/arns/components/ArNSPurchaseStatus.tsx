@@ -112,6 +112,18 @@ export function ArNSPurchaseStatus({
                   <Pencil className="h-4 w-4" /> Edit details
                 </button>
               )}
+              {/*
+                Always present, unlike "Edit details" above, which needs an ANT
+                id the fiat path never returns. This lands on the name's own
+                page, which works for a Turbo-held name too — otherwise a card
+                buyer's only follow-up is a bare tx hash.
+              */}
+              <button
+                onClick={() => navigate(`/domains/${name}`)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+              >
+                <Settings2 className="h-4 w-4" /> Set up this name
+              </button>
               <button
                 onClick={() => navigate('/my-domains')}
                 className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"

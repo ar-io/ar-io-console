@@ -140,7 +140,7 @@ export default function PrimaryNameModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="max-h-[88vh] w-[92vw] max-w-lg overflow-y-auto p-6">
+      <div className="w-[92vw] max-w-lg p-6">
         <div className="mb-4 flex items-start gap-3">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-card">
             <Star className="h-5 w-5 text-primary" />

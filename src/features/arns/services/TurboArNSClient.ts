@@ -1,4 +1,7 @@
 import {
+  ArNSFiatPurchaseQuoteResponse,
+  Currency,
+  TurboArNSNamesResponse,
   TokenType,
   TurboFactory,
   TurboUnauthenticatedClient,
@@ -48,10 +51,19 @@ export type TurboArNSIntentPriceResponse = {
   mARIO: string;
   winc: string;
   fiatEstimate?: {
+    /** Name price incl. the Turbo infra fee, in the currency's smallest unit. */
     paymentAmount: number;
     quotedPaymentAmount: string;
     adjustments: Array<unknown>;
     fees: Array<unknown>;
+    /**
+     * SOL rent for spawning a Turbo-owned ANT, recovered as a surcharge. The
+     * infra fee deliberately does NOT apply to it — it is cost recovery, not
+     * revenue. Present only for intents that can provision (Buy-Name).
+     */
+    antSpawnSurchargeAmount?: number;
+    /** `paymentAmount` + the surcharge — what a CUSTODIAL card buy costs. */
+    paymentAmountWithAntSpawn?: number;
   };
 };
 
@@ -117,39 +129,48 @@ export class TurboArNSClient {
     type,
     years,
     increaseQty,
+    currency,
   }: {
     name: string;
     intent?: TurboArNSIntent;
     type?: 'lease' | 'permabuy';
     years?: number;
     increaseQty?: number;
+    /**
+     * Ask for the bundler's `fiatEstimate` alongside the winc price.
+     *
+     * Worth the extra plumbing because the two numbers are NOT the same price.
+     * `winc` is computed with `feeMode: "none"`, while both the fiat estimate
+     * and the real card quote use `feeMode: "invert"` — the infra fee added on
+     * top. Deriving USD from `winc` therefore under-quotes what a card charges.
+     *
+     * Sent by hand: the SDK's query builder whitelists
+     * type/years/increaseQty/processId/paidBy and silently drops `currency`, so
+     * `getArNSPriceForName` can never surface this field.
+     */
+    currency?: string;
   }): Promise<TurboArNSIntentPriceResponse> {
-    const turbo = this.unauthenticated('solana');
-    const domain = lowerCaseDomain(name);
+    const params = intentParams({ name, intent, type, years, increaseQty });
 
-    // `getArNSPriceForName` takes a discriminated union keyed on `intent`; build
-    // the intent-specific param object so each carries only its valid fields
-    // (Extend needs years, Increase needs increaseQty, Upgrade needs neither).
-    let params: Record<string, unknown>;
-    switch (intent) {
-      case 'Extend-Lease':
-        params = { intent, name: domain, years };
-        break;
-      case 'Increase-Undername-Limit':
-        params = { intent, name: domain, increaseQty };
-        break;
-      case 'Upgrade-Name':
-        params = { intent, name: domain };
-        break;
-      case 'Buy-Name':
-      default:
-        params = {
-          intent,
-          name: domain,
-          ...(type ? { type } : {}),
-          ...(type === 'lease' && years ? { years } : {}),
-        };
+    if (currency) {
+      const query = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) {
+        if (k !== 'intent' && k !== 'name' && v !== undefined) {
+          query.set(k, String(v));
+        }
+      }
+      query.set('currency', currency);
+      const url =
+        `${this.paymentUrl}/v1/arns/price/${encodeURIComponent(intent.toLowerCase())}` +
+        `/${encodeURIComponent(String(params.name))}?${query.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`ArNS price lookup failed (${res.status})`);
+      }
+      return (await res.json()) as TurboArNSIntentPriceResponse;
     }
+
+    const turbo = this.unauthenticated('solana');
 
     const price = await turbo.getArNSPriceForName(
       params as Parameters<typeof turbo.getArNSPriceForName>[0],
@@ -157,12 +178,126 @@ export class TurboArNSClient {
     return price as TurboArNSIntentPriceResponse;
   }
 
-  /** Poll target for a submitted purchase (`GET /v1/arns/purchase/:nonce`). */
-  public async getIntentStatus(nonce: string): Promise<Record<string, unknown>> {
-    const res = await fetch(`${this.paymentUrl}/v1/arns/purchase/${nonce}`, {
-      method: 'GET',
-    });
-    return res.json();
+  /**
+   * Quote a **fiat (card) purchase** — the one-step card → name path.
+   *
+   * Distinct from `getArNSPrice`, which prices the purchase in credits/mARIO.
+   * This records a quote server-side and returns a Stripe PaymentIntent to
+   * confirm against; the resulting `nonce` is what settlement is polled by. The
+   * route needs no signature (`address` is a path param), so it runs on the
+   * unauthenticated client like pricing does.
+   *
+   * Throws on `503` when fiat is switched off service-side — a normal state in
+   * the testnet sandbox. Callers classify with `classifyQuoteError` and degrade
+   * to the credit paths rather than reporting a fault.
+   */
+  public async getFiatQuote({
+    name,
+    address,
+    currency = 'usd',
+    intent = 'Buy-Name',
+    type,
+    years,
+    increaseQty,
+    promoCodes,
+  }: {
+    name: string;
+    address: string;
+    currency?: Currency;
+    intent?: TurboArNSIntent;
+    type?: 'lease' | 'permabuy';
+    years?: number;
+    increaseQty?: number;
+    promoCodes?: string[];
+  }): Promise<ArNSFiatPurchaseQuoteResponse> {
+    const turbo = this.unauthenticated('solana');
+    const params = {
+      ...intentParams({ name, intent, type, years, increaseQty }),
+      address,
+      currency,
+      // A PaymentIntent yields a client_secret we can confirm inline, keeping
+      // the user on the checkout instead of redirecting to a hosted page.
+      method: 'payment-intent' as const,
+      ...(promoCodes?.length ? { promoCodes } : {}),
+    };
+    return turbo.getArNSFiatPurchaseQuote(
+      params as Parameters<typeof turbo.getArNSFiatPurchaseQuote>[0],
+    );
   }
 
+  /**
+   * Names this address PURCHASED through Turbo, each flagged `custodial`.
+   *
+   * The only way to discover a Turbo-held name. A custodial ANT is owned by
+   * Turbo on-chain, so `getArNSRecordsForAddress` — which returns Owned union
+   * Controlled for the *user's* address — cannot see it at all. Without this,
+   * the name a card purchase just bought is invisible in the console.
+   *
+   * Receipt history, not a live ownership check: absence proves nothing (the
+   * name may have been bought elsewhere), and `custodial: false` covers both a
+   * self-custody purchase and one since transferred out.
+   *
+   * Open by address, no signature — same as `/v1/account/balance`.
+   */
+  public async getTurboNames(address: string): Promise<TurboArNSNamesResponse> {
+    const turbo = this.unauthenticated('solana');
+    return turbo.getArNSNames(address);
+  }
+
+  /**
+   * Poll target for a submitted purchase (`GET /v1/arns/purchase/:nonce`).
+   *
+   * Uses the SDK method rather than a raw fetch so a non-2xx becomes a thrown
+   * error instead of a parsed error *body* that the poller would read as a
+   * status record — a 404 shaped like `{error}` has no `messageId` and no
+   * `failedDate`, so it would look like "still pending" forever.
+   */
+  public async getIntentStatus(nonce: string): Promise<Record<string, unknown>> {
+    const turbo = this.unauthenticated('solana');
+    const status = await turbo.getArNSPurchaseStatus({ nonce });
+    return status as unknown as Record<string, unknown>;
+  }
+
+}
+
+/**
+ * Build the intent-specific half of a params object.
+ *
+ * `getArNSPriceForName` and `getArNSFiatPurchaseQuote` take the SAME
+ * discriminated union keyed on `intent`, where each branch carries only its own
+ * fields (Extend needs years, Increase needs increaseQty, Upgrade needs
+ * neither). Shared so the price a user is shown and the quote they are charged
+ * can never be built from different rules.
+ */
+function intentParams({
+  name,
+  intent,
+  type,
+  years,
+  increaseQty,
+}: {
+  name: string;
+  intent: TurboArNSIntent;
+  type?: 'lease' | 'permabuy';
+  years?: number;
+  increaseQty?: number;
+}): Record<string, unknown> {
+  const domain = lowerCaseDomain(name);
+  switch (intent) {
+    case 'Extend-Lease':
+      return { intent, name: domain, years };
+    case 'Increase-Undername-Limit':
+      return { intent, name: domain, increaseQty };
+    case 'Upgrade-Name':
+      return { intent, name: domain };
+    case 'Buy-Name':
+    default:
+      return {
+        intent,
+        name: domain,
+        ...(type ? { type } : {}),
+        // Permabuy must OMIT years entirely — sending it is rejected.
+        ...(type === 'lease' && years ? { years } : {}),
+      };
+  }
 }

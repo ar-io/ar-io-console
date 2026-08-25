@@ -30,6 +30,8 @@ export interface BuyArNSNameInput {
 }
 
 export interface UseBuyArNSNameResult {
+  /** Record a purchase settled outside `buy()` (the card path). */
+  markExternalSuccess: (settlement: ArNSSettlementResult) => void;
   buy: (input: BuyArNSNameInput) => Promise<ArNSSettlementResult | undefined>;
   reset: () => void;
   phase: BuyPhase;
@@ -76,6 +78,25 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
   const [result, setResult] = useState<ArNSSettlementResult | undefined>();
   const [error, setError] = useState<Error | undefined>();
   const [insufficientCredits, setInsufficientCredits] = useState(false);
+
+  /**
+   * Record a purchase that settled somewhere else.
+   *
+   * The card path is settled by the payment service, not by `buy()` — but it
+   * produces the same thing (a name and an on-chain tx), and users deserve the
+   * same receipt. Without this the modal closes and drops them back on the
+   * configurator with no confirmation that anything happened.
+   */
+  const markExternalSuccess = useCallback(
+    (settlement: ArNSSettlementResult) => {
+      setError(undefined);
+      setInsufficientCredits(false);
+      setResult(settlement);
+      setPhase('success');
+      window.dispatchEvent(new CustomEvent('refresh-balance'));
+    },
+    [],
+  );
 
   const reset = useCallback(() => {
     setPhase('idle');
@@ -160,6 +181,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
 
   return {
     buy,
+    markExternalSuccess,
     reset,
     phase,
     statusMessage,

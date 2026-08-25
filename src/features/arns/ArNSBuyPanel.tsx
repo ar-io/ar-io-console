@@ -53,8 +53,11 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
               Register an ArNS Name
             </h3>
             <p className="text-sm text-foreground/80">
-              Search, price, and buy a name with Turbo Credits or your ARIO tokens
-              — no leaving the console.
+              {/* Named the two crypto routes and omitted the one that needs no
+                  crypto at all — which is the option a newcomer is looking for.
+                  Lead with the card. */}
+              Search, price, and buy a name with a card, ARIO, or SOL — no
+              leaving the console.
             </p>
             <a
               href="https://docs.ar.io/learn/arns"
@@ -129,6 +132,13 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           name={selectedName}
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
+          onCardSuccess={(messageId) =>
+            buyState.markExternalSuccess({
+              nonce: '',
+              messageId,
+              receipt: {},
+            })
+          }
         />
       )}
 

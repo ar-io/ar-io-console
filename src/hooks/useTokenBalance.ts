@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { address as toSolanaAddress } from '@solana/kit';
+
+import { getSolanaReadRpc } from '../utils/arIOConfig';
+
+/** Lamports per SOL — previously from the deprecated @solana/web3.js. */
+const LAMPORTS_PER_SOL = 1_000_000_000;
 import { useStore } from '../store/useStore';
 import {
   SupportedTokenType,
@@ -10,7 +15,6 @@ import {
   POLYGON_CONFIG,
   BASE_ARIO_CONFIG,
 } from '../constants';
-import { getSolanaConnection } from '../utils/solanaConnection';
 import { getARIO } from '../utils';
 import { useAccount, useConfig } from 'wagmi';
 import { getConnectorClient, switchChain } from 'wagmi/actions';
@@ -114,7 +118,6 @@ export function useTokenBalance(
   walletType: 'arweave' | 'ethereum' | 'solana' | null,
   address: string | null,
   enabled: boolean = true,
-  solanaConnection?: Connection
 ): TokenBalanceResult {
   const { getCurrentConfig, configMode } = useStore();
   const [balance, setBalance] = useState(0);
@@ -424,22 +427,17 @@ export function useTokenBalance(
   const fetchSolBalance = useCallback(
     async (solanaAddress: string): Promise<{ readable: number; smallest: number }> => {
       try {
-        // Use provided connection if available, otherwise get from singleton
-        let connection: Connection;
-
-        if (solanaConnection) {
-          connection = solanaConnection;
-        } else {
-          const config = getCurrentConfig();
-          const rpcUrl = config.tokenMap['solana'];
-          if (!rpcUrl) {
-            throw new Error('Solana RPC URL not configured');
-          }
-          connection = getSolanaConnection(rpcUrl);
-        }
-
-        const publicKey = new PublicKey(solanaAddress);
-        const balanceInLamports = await connection.getBalance(publicKey);
+        // `@solana/kit`, NOT the legacy `@solana/web3.js` Connection this used
+        // to build. web3.js is deprecated, and concretely it was being rejected
+        // by the provider — a 401 that this function then reported as a balance
+        // of zero, so every Solana payment surface showed an empty wallet.
+        //
+        // getSolanaReadRpc() is the same memoised client the ArNS reads use, so
+        // there is one Solana read path for the whole app instead of two that
+        // can disagree about whether the user has money.
+        const rpc = getSolanaReadRpc();
+        const { value } = await rpc.getBalance(toSolanaAddress(solanaAddress)).send();
+        const balanceInLamports = Number(value);
         const balanceInSol = balanceInLamports / LAMPORTS_PER_SOL;
 
         return {
@@ -451,7 +449,7 @@ export function useTokenBalance(
         throw new Error('Unable to fetch SOL balance. Please try again.');
       }
     },
-    [getCurrentConfig, solanaConnection]
+    []
   );
 
   /**
