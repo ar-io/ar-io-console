@@ -745,6 +745,7 @@ export function ArNSPurchaseCard({
           creditsPrice={creditsPrice?.credits}
           // Card only: the fee-inclusive charge. Every other route settles at
           // the fee-free winc price, so passing it there would overstate.
+          isCardRoute={route.kind === 'card'}
           cardUsdPrice={
             /*
               Set for EVERY card route, not just the custodial one. A card price

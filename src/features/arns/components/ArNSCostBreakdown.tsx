@@ -55,6 +55,15 @@ interface Props {
    * former on the card route quotes a price we will not charge.
    */
   cardUsdPrice?: number;
+  /**
+   * This is a card route, whether or not the dollar figure has arrived.
+   *
+   * `cardUsdPrice` alone cannot say so: while the fiat estimate loads it is
+   * undefined, and the price fell through to the credits view — quoting
+   * "0.62 credits" to someone paying by card, the exact unit leak this panel
+   * exists to avoid.
+   */
+  isCardRoute?: boolean;
   /** Name price in ARIO (ario method). */
   arioPrice?: number;
   priceLoading: boolean;
@@ -165,6 +174,7 @@ export function ArNSCostBreakdown({
   priceUnit,
   creditsPrice,
   cardUsdPrice,
+  isCardRoute = false,
   arioPrice,
   priceLoading,
   priceError,
@@ -187,6 +197,35 @@ export function ArNSCostBreakdown({
   const usdPerCredit =
     creditsForOneUSD && creditsForOneUSD > 0 ? 1 / creditsForOneUSD : undefined;
 
+  /**
+   * The name's cost repeated in the total, when it is a DIFFERENT asset from
+   * the network fees.
+   *
+   * Undefined when there is nothing to add: a SOL purchase is already counted
+   * in the SOL figure, and a custodial card has its network costs included, so
+   * repeating either would double-count in the reader's head.
+   */
+  const nameCostSummary: string | undefined = (() => {
+    if (networkCostCovered || tokenForName) return undefined;
+    // A card pays dollars — quoting the credits it buys would name our unit
+    // rather than the one being charged.
+    if (isCardRoute) {
+      return cardUsdPrice == null
+        ? undefined
+        : `$${cardUsdPrice.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`;
+    }
+    if (priceUnit === 'ario' && arioPrice != null) {
+      return `${fmtNum(arioPrice)} ARIO`;
+    }
+    if (priceUnit === 'credits' && creditsPrice != null) {
+      return `${fmtNum(creditsPrice)} credits`;
+    }
+    return undefined;
+  })();
+
   const priceNode = priceLoading ? (
     <span className="flex items-center gap-2 text-sm text-foreground/70">
       <Loader2 className="h-4 w-4 animate-spin" /> Fetching…
@@ -198,9 +237,12 @@ export function ArNSCostBreakdown({
         internal unit. It is also the only figure carrying the infra fee, so the
         credits view would understate what we are about to charge.
      */
-  tokenForName ? (
+  isCardRoute && cardUsdPrice == null ? (
+    // Card price not resolved yet — wait rather than quoting another unit.
+    <span className="text-sm text-foreground/50">…</span>
+  ) : tokenForName ? (
     // Priced in the token actually handed over; USD stays on the toggle.
-    <span className="text-lg font-bold text-foreground">
+    <span className="text-sm font-medium text-foreground">
       {currency === 'usd' && usdPerCredit != null && creditsPrice != null
         ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
             minimumFractionDigits: 2,
@@ -209,7 +251,7 @@ export function ArNSCostBreakdown({
         : `${fmtSol(tokenForName.amount)} ${tokenForName.label}`}
     </span>
   ) : cardUsdPrice != null ? (
-    <span className="text-lg font-bold text-foreground">
+    <span className="text-sm font-medium text-foreground">
       {`$${cardUsdPrice.toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -221,7 +263,7 @@ export function ArNSCostBreakdown({
       // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
       // lowercase "credits" is the unit that follows an amount. Keep it lowercase
       // here — it's a unit, not the product name.
-      <span className="text-lg font-bold text-foreground">
+      <span className="text-sm font-medium text-foreground">
         {currency === 'usd' && usdPerCredit != null
           ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
               minimumFractionDigits: 2,
@@ -233,7 +275,12 @@ export function ArNSCostBreakdown({
       <span className="text-sm text-foreground/50">—</span>
     )
   ) : arioPrice != null ? (
-    <PriceAmount ario={arioPrice} />
+    <PriceAmount
+      ario={arioPrice}
+      // Matches the other line items. Its default is the headline style this
+      // panel now reserves for the total.
+      primaryClassName="text-sm font-medium text-foreground"
+    />
   ) : (
     <span className="text-sm text-foreground/50">—</span>
   );
@@ -309,6 +356,25 @@ export function ArNSCostBreakdown({
             <Row label="Network costs">
               <span className="text-sm text-foreground/80">Included</span>
             </Row>
+            {/*
+              This branch skips the SOL rows, so it would otherwise have no
+              prominent figure at all once the name price was demoted. Here the
+              name price IS the total — network costs are covered — so it gets
+              the same weight every other route's total gets.
+            */}
+            {cardUsdPrice != null && (
+              <>
+                <div className="my-2 border-t border-border/10" />
+                <Row label="Total" strong>
+                  <span className="text-lg font-bold text-foreground">
+                    {`$${cardUsdPrice.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+                  </span>
+                </Row>
+              </>
+            )}
             {custodialAnt && (
               <p className="pt-1 text-[11px] leading-snug text-foreground/60">
                 Turbo holds this name&apos;s ANT so you don&apos;t need SOL. You
@@ -341,11 +407,34 @@ export function ArNSCostBreakdown({
               </span>
             </Row>
             <div className="my-2 border-t border-border/10" />
-            <Row label="SOL needed" strong>
-              <span
-                className={`text-sm font-semibold ${insufficientSol ? 'text-error' : 'text-foreground'}`}
-              >
-                ~{fmtSol(gasTotalSol + (tokenForName?.amount ?? 0))} SOL
+            {/*
+              The total carries the weight the name price used to.
+
+              It was the SMALLEST figure in the panel while a single line item
+              was the largest, so the eye landed on a component cost and had to
+              infer the sum — the opposite of what a checkout should do.
+
+              Two assets stay two figures rather than being blended: paying in
+              ARIO or credits still costs SOL in network fees, and a single
+              combined number would be fiction.
+            */}
+            <Row label="Total" strong>
+              <span className="flex flex-col items-end">
+                {nameCostSummary && (
+                  <span className="text-lg font-bold text-foreground">
+                    {nameCostSummary}
+                  </span>
+                )}
+                <span
+                  className={`text-lg font-bold ${insufficientSol ? 'text-error' : 'text-foreground'}`}
+                >
+                  ~{fmtSol(gasTotalSol + (tokenForName?.amount ?? 0))} SOL
+                </span>
+                {nameCostSummary && (
+                  <span className="text-[11px] font-normal text-foreground/60">
+                    name + network costs
+                  </span>
+                )}
               </span>
             </Row>
             <p
