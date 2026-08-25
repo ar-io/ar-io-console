@@ -85,6 +85,9 @@ export default function ArNSPaymentModal({
           <TopUpPanel
             embedded
             initialUsdAmount={initialUsdAmount}
+            // Sizes the CRYPTO side. Without it a token top-up here falls back
+            // to the panel's 0.01 default instead of the name's price.
+            initialCreditAmount={shortfallCredits}
             initialPaymentMethod={paymentMethod}
             initialToken={token}
             onComplete={onComplete}

@@ -22,8 +22,14 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   const buyState = useBuyArNSName();
 
   const handleBuy = (input: BuyArNSNameInput) => {
-    // Swallow the throw — terminal state is surfaced via buyState (status card).
-    void buyState.buy(input).catch(() => undefined);
+    /*
+      Returns the promise rather than swallowing it. The status card still owns
+      the terminal UI, but the token path ALSO needs to know: it has already
+      taken the user's money for credits, so a registration failure there is
+      "funded, not registered" — a different message with a different remedy.
+      Rejections stay handled at the call site.
+    */
+    return buyState.buy(input).catch(() => undefined);
   };
 
   const handleDone = () => {

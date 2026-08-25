@@ -195,6 +195,7 @@ export default function TopUpPanel({
   const cryptoForTarget = useCryptoPriceForWinc(
     wincNeededForTarget,
     selectedTokenType,
+    true, // charged, not displayed — see the hook's `roundUp`
   );
 
   // Calculate cost in dollars for storage
@@ -272,7 +273,16 @@ export default function TopUpPanel({
     under- or over-fund the purchase.
   */
   useEffect(() => {
-    if (!targetedTopUp || cryptoForTarget === undefined || cryptoForTarget <= 0) {
+    if (!targetedTopUp) return;
+    if (cryptoForTarget === undefined || cryptoForTarget <= 0) {
+      /*
+        The quote isn't ready (still loading, token just changed, or the lookup
+        failed). Zero the amount rather than leaving the 0.01 default or the
+        PREVIOUS token's figure in place — either would let the user check out
+        against a number that has nothing to do with this purchase.
+      */
+      setCryptoAmount(0);
+      setCryptoAmountInput('');
       return;
     }
     setCryptoAmount(cryptoForTarget);

@@ -43,12 +43,22 @@ const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
  */
 export function useCryptoPriceForWinc(
   wincAmount: number | undefined,
-  tokenType: SupportedTokenType
+  tokenType: SupportedTokenType,
+  /**
+   * Round the token amount UP to the next smallest unit.
+   *
+   * The conversion below is integer division, which truncates — so an exact
+   * "how much SOL buys N credits" answer lands just BELOW N. Fine for a display
+   * estimate, not fine when the number is what we actually charge: the top-up
+   * then buys slightly too few credits and the purchase it was funding fails
+   * for want of a fraction, after taking the user's money.
+   */
+  roundUp = false,
 ): number | undefined {
   const turboConfig = useTurboConfig(tokenType);
 
   const { data: tokenAmount } = useQuery({
-    queryKey: ['cryptoPriceForWinc', wincAmount, tokenType, turboConfig.paymentServiceConfig.url],
+    queryKey: ['cryptoPriceForWinc', wincAmount, tokenType, roundUp, turboConfig.paymentServiceConfig.url],
     queryFn: async () => {
       if (!wincAmount || wincAmount <= 0) return undefined;
 
@@ -68,7 +78,11 @@ export function useCryptoPriceForWinc(
 
       // Calculate token amount: (wincAmount / wincForOneToken) * oneToken
       // Then convert to display units by dividing by smallest unit
-      const tokenInSmallestUnit = (BigInt(Math.round(wincAmount)) * oneToken) / wincForOneTokenBigInt;
+      const numerator = BigInt(Math.round(wincAmount)) * oneToken;
+      let tokenInSmallestUnit = numerator / wincForOneTokenBigInt;
+      if (roundUp && numerator % wincForOneTokenBigInt !== 0n) {
+        tokenInSmallestUnit += 1n;
+      }
 
       // Convert to display units (e.g., wei to ETH)
       return Number(tokenInSmallestUnit) / Number(oneToken);

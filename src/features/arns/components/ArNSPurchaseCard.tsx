@@ -42,7 +42,7 @@ import { toUnicodeName } from '@/utils/punycode';
 interface ArNSPurchaseCardProps {
   name: string;
   isBusy: boolean;
-  onBuy: (input: BuyArNSNameInput) => void;
+  onBuy: (input: BuyArNSNameInput) => void | Promise<unknown>;
   /**
    * A card purchase settled server-side. Reported up so the host shows the same
    * receipt a credits/ARIO purchase gets, instead of silently closing.
@@ -345,6 +345,9 @@ export function ArNSPurchaseCard({
       ? creditShortfall * 1e12
       : undefined,
     route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
+    // This figure is charged, not displayed — truncating it under-funds the
+    // registration it exists to pay for.
+    true,
   );
 
   const tokenStepLabel = stepLabel(tokenTopUp.step);
@@ -372,15 +375,32 @@ export function ArNSPurchaseCard({
     } catch {
       return; // `fund` already recorded whether any money moved.
     }
-    // Registration reports its own outcome through ArNSPurchaseStatus, exactly
-    // as the ARIO and credits paths do — don't duplicate that here.
-    onBuy({
-      name,
-      type,
-      years: type === 'lease' ? years : undefined,
-      fundFrom: 'turbo',
-    });
-    tokenTopUp.reset();
+    /*
+      Hold the funded state until registration actually settles. Resetting here
+      would drop the fact that the user has already paid — and "purchase failed"
+      after we took their money implies a refund that is never coming, when what
+      they actually hold is spendable credits and an unfinished registration.
+    */
+    try {
+      const settled = await onBuy({
+        name,
+        type,
+        years: type === 'lease' ? years : undefined,
+        fundFrom: 'turbo',
+      });
+      // `buy` resolves undefined on the handled insufficient-credits path.
+      if (settled === undefined) {
+        tokenTopUp.failAfterFunding(
+          'Your credits arrived but the name was not registered.',
+        );
+        return;
+      }
+      tokenTopUp.reset();
+    } catch (err) {
+      tokenTopUp.failAfterFunding(
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   }, [
     route, tokenAmountForName, tokenTopUp, creditsPrice?.credits,
     onBuy, name, type, years,
@@ -741,7 +761,13 @@ export function ArNSPurchaseCard({
       {/* Card settles server-side in one step — quote, charge, on-chain write —
           so it gets the dedicated checkout rather than the top-up shell. */}
       {showLinkModal && (
-        <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
+        <LinkSolanaWalletModal
+          onClose={() => setShowLinkModal(false)}
+          // Reconnecting an existing wallet is a different task from linking a
+          // new one — the modal changes its copy and closes itself when the
+          // known address comes back.
+          isReconnect={cardPlan.kind === 'reconnect'}
+        />
       )}
 
       {showPayment && custodialCard && (
