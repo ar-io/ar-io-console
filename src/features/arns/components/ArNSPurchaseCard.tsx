@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Calendar,
@@ -29,6 +29,10 @@ import { cardFlavor, resolveSettlementRoute } from '../purchase/settlementRoute'
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
+import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
+import { useCryptoPriceForWinc } from '../../../hooks/useCryptoPrice';
+import { useStore } from '../../../store/useStore';
+import { stepLabel, failureAdvice } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
 
@@ -164,9 +168,13 @@ export function ArNSPurchaseCard({
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
     defaultPaymentOption(routingOptions);
-  const route = selectedOption
-    ? resolveSettlementRoute(selectedOption, fundingSource)
-    : ({ kind: 'credits' } as const);
+  const route = useMemo(
+    () =>
+      selectedOption
+        ? resolveSettlementRoute(selectedOption, fundingSource)
+        : ({ kind: 'credits' } as const),
+    [selectedOption, fundingSource],
+  );
 
   // Which unit the price is quoted in. Card and token top-ups both land as
   // credits, so they price like credits — only ARIO prices in ARIO.
@@ -295,9 +303,64 @@ export function ArNSPurchaseCard({
    * would break the one path that works for someone holding no crypto — which
    * is the entire reason to offer a card.
    */
-  const needsPaymentStep =
-    !!address &&
-    (custodialCard || ((route.kind === 'card' || route.kind === 'topup') && !insufficientSol));
+  /**
+   * Only the card still opens a dialog, because a card is the one method with
+   * something to type. A token top-up needs no input at all now that the amount
+   * is computed, so it runs inline on this card — same feel as paying with
+   * ARIO, which was always modal-free.
+   */
+  const needsPaymentStep = !!address && route.kind === 'card';
+
+  /**
+   * SOL (and any non-ARIO token) can't pay the registry, so it buys credits and
+   * then registers: two signatures, nothing typed in between.
+   */
+  const tokenTopUp = useArNSTokenTopUp();
+  const tokenAmountForName = useCryptoPriceForWinc(
+    route.kind === 'topup' && creditShortfall > 0
+      ? creditShortfall * 1e12
+      : undefined,
+    route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
+  );
+
+  const tokenStepLabel = stepLabel(tokenTopUp.step);
+
+  const runTokenPurchase = useCallback(async () => {
+    if (route.kind !== 'topup' || !tokenAmountForName) return;
+    try {
+      await tokenTopUp.fund({
+        token: route.token as SupportedTokenType,
+        tokenAmount: tokenAmountForName,
+        creditsNeeded: creditsPrice?.credits ?? 0,
+        /*
+          Credits live in the store and are refreshed by the app-wide
+          `refresh-balance` event, so ask for a refresh and read what landed.
+          Polling this rather than trusting the transfer receipt is the point:
+          the credits apply server-side a moment after the transfer is accepted,
+          and registering into that gap fails for "insufficient credits" having
+          already taken the money.
+        */
+        readCredits: async () => {
+          window.dispatchEvent(new CustomEvent('refresh-balance'));
+          return useStore.getState().creditBalance ?? 0;
+        },
+      });
+    } catch {
+      return; // `fund` already recorded whether any money moved.
+    }
+    // Registration reports its own outcome through ArNSPurchaseStatus, exactly
+    // as the ARIO and credits paths do — don't duplicate that here.
+    onBuy({
+      name,
+      type,
+      years: type === 'lease' ? years : undefined,
+      fundFrom: 'turbo',
+    });
+    tokenTopUp.reset();
+  }, [
+    route, tokenAmountForName, tokenTopUp, creditsPrice?.credits,
+    onBuy, name, type, years,
+  ]);
 
   /**
    * Why the buy button is disabled, said next to the button itself.
@@ -524,25 +587,66 @@ export function ArNSPurchaseCard({
       ) : (
         <SolanaGateButton
           onAction={() =>
-            onBuy({
-              name,
-              type,
-              years: type === 'lease' ? years : undefined,
-              fundFrom,
-            })
+            route.kind === 'topup'
+              ? void runTokenPurchase()
+              : onBuy({
+                  name,
+                  type,
+                  years: type === 'lease' ? years : undefined,
+                  fundFrom,
+                })
           }
-          disabled={!canPay}
-          busy={isBusy}
+          disabled={
+            route.kind === 'topup'
+              ? !priceReady || gasUnavailable || insufficientSol || isBusy ||
+                !tokenAmountForName || tokenStepLabel !== undefined
+              : !canPay
+          }
+          busy={isBusy || tokenStepLabel !== undefined}
           actionVerb="buy this name"
           busyLabel={
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Processing…
+              <Loader2 className="h-4 w-4 animate-spin" />{' '}
+              {/* Name the step: two wallet popups with one spinner between
+                  them is indistinguishable from a stuck app. */}
+              {tokenStepLabel ?? 'Processing…'}
             </>
           }
         >
-          <Wallet className="h-4 w-4" />{' '}
-          Register name
+          <Wallet className="h-4 w-4" /> Register name
         </SolanaGateButton>
+      )}
+
+      {/* Funded but not registered must never read as "payment failed". */}
+      {tokenTopUp.step.phase === 'failed' && (
+        <p className="mt-2 flex flex-wrap items-start justify-center gap-x-1.5 text-center text-xs text-error">
+          <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+          <span>
+            {tokenTopUp.step.message}{' '}
+            <span className="text-foreground/70">
+              {failureAdvice(tokenTopUp.step)}
+            </span>
+          </span>
+        </p>
+      )}
+
+      {/*
+        Terms sit under the button that accepts them. The card and token paths
+        each showed this inside their own modal; the ARIO and Balance paths
+        never showed it at all, because they never open one.
+      */}
+      {!needsPaymentStep && (
+        <p className="mt-3 text-center text-xs text-foreground/80">
+          By registering, you agree to our{' '}
+          <a
+            href="https://ardrive.io/tos-and-privacy/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline transition-colors hover:text-primary/80"
+          >
+            Terms of Service
+          </a>
+        </p>
       )}
 
       {/* Say why the button is dead, next to the button. See `blockedReason`. */}

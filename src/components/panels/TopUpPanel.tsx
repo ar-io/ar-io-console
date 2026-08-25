@@ -30,6 +30,16 @@ interface TopUpPanelProps {
   /** Pre-seed the USD amount once on mount (e.g. rounded up to cover a shortfall). */
   initialUsdAmount?: number;
   /**
+   * Credits the host actually needs — the authoritative figure for a targeted
+   * top-up, in the unit the purchase is priced in.
+   *
+   * `initialUsdAmount` only ever seeded the FIAT side, so the crypto path fell
+   * back to its hardcoded 0.01 default: paying for a name with SOL topped up an
+   * arbitrary amount rather than the name's price. Converting from credits
+   * keeps both payment methods sized by the same source of truth.
+   */
+  initialCreditAmount?: number;
+  /**
    * Open straight onto card or crypto. The ArNS checkout asks "how do you want
    * to pay" once, up front, so re-presenting the same tabs here would be asking
    * the user the same question twice.
@@ -57,6 +67,7 @@ interface TopUpPanelProps {
 export default function TopUpPanel({
   embedded = false,
   initialUsdAmount,
+  initialCreditAmount,
   initialPaymentMethod,
   initialToken,
   onComplete,
@@ -173,6 +184,19 @@ export default function TopUpPanel({
     : undefined;
   const cryptoForStorage = useCryptoPriceForWinc(wincNeededForStorage, selectedTokenType);
 
+  /**
+   * Token amount for a targeted top-up, priced from the credits the host needs
+   * rather than from a default. 1 credit = 1e12 winc.
+   */
+  const wincNeededForTarget =
+    initialCreditAmount != null && initialCreditAmount > 0
+      ? initialCreditAmount * 1e12
+      : undefined;
+  const cryptoForTarget = useCryptoPriceForWinc(
+    wincNeededForTarget,
+    selectedTokenType,
+  );
+
   // Calculate cost in dollars for storage
   const calculateStorageCost = () => {
     if (!wincForOneGiB || !creditsForOneUSD) return 0;
@@ -240,6 +264,20 @@ export default function TopUpPanel({
    * only the shopping furniture goes.
    */
   const targetedTopUp = embedded && initialUsdAmount != null;
+
+  /*
+    Drive the crypto amount from the target rather than the 0.01 default. Runs
+    whenever the token changes too: the same name costs a different number of
+    SOL than it does ARIO, so a stale figure from the previous token would
+    under- or over-fund the purchase.
+  */
+  useEffect(() => {
+    if (!targetedTopUp || cryptoForTarget === undefined || cryptoForTarget <= 0) {
+      return;
+    }
+    setCryptoAmount(cryptoForTarget);
+    setCryptoAmountInput(String(cryptoForTarget));
+  }, [targetedTopUp, cryptoForTarget]);
 
   // Crypto preset amounts based on token type (from reference app)
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
@@ -1742,7 +1780,9 @@ export default function TopUpPanel({
                         )
                     }
                   </div>
-                  {wincForOneGiB && (
+                  {/* Storage equivalence is meaningless in a name purchase —
+                      nobody buying a domain is asking how many MiB it is. */}
+                  {wincForOneGiB && !targetedTopUp && (
                     <div className="text-xs text-foreground/80">
                       ~{paymentMethod === 'fiat'
                         ? (inputType === 'storage'
@@ -1799,6 +1839,21 @@ export default function TopUpPanel({
               )}
             </div>
 
+            {/*
+              A targeted top-up is buying a NAME, not a balance. These credits
+              are earmarked: the registration spends them moments later, so
+              "New Balance: 0.28" answers a question the user didn't ask with a
+              number that is true for about ten seconds. Showing the purpose
+              beats showing an intermediate balance.
+            */}
+            {targetedTopUp && (
+              <div className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-foreground/80">
+                This covers your name. You&apos;ll confirm the registration
+                next, and anything left over stays in your balance.
+              </div>
+            )}
+            {!targetedTopUp && (
+            <>
             {/* Balance Section */}
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -1860,6 +1915,8 @@ export default function TopUpPanel({
                 </div>
               </div>
             </div>
+            </>
+            )}
           </div>
         )}
 
