@@ -27,6 +27,20 @@ export function classifyQuoteError(err: unknown): QuoteFailure {
   // The route returns 503 with "Fiat (Stripe) ArNS payments are disabled" when
   // stripeEnabled is false. That is a configuration state, not a fault.
   if (status === 503 || /disabled/i.test(message)) return { kind: 'disabled' };
+  /*
+    A custodial buy sends no `processId`, which the service rejects with
+    400 "Missing required parameter: processId (ArNS provisioning is disabled)"
+    unless ARNS_PROVISIONING_ENABLED=true. That is a deployment switch, not user
+    input — treating it as a field error shows a message naming a parameter the
+    user has never heard of and cannot supply. It degrades exactly like the 503:
+    stop offering the card.
+
+    Ordered before the generic 400 because it IS a 400; the status alone cannot
+    distinguish "you typed something wrong" from "this path is switched off".
+  */
+  if (/provisioning is disabled|required parameter: processId/i.test(message)) {
+    return { kind: 'disabled' };
+  }
   if (status === 400) return { kind: 'invalid', message };
   return { kind: 'unavailable', message };
 }

@@ -17,6 +17,18 @@ describe('classifyQuoteError', () => {
       .toBe('disabled');
   });
 
+  it('treats a provisioning-disabled 400 as disabled, not as user error', () => {
+    // Custodial buys send no processId; the service 400s unless
+    // ARNS_PROVISIONING_ENABLED=true. Showing that verbatim names a parameter
+    // the user cannot supply — it must remove the card option instead.
+    expect(
+      classifyQuoteError({
+        status: 400,
+        message: 'Missing required parameter: processId (ArNS provisioning is disabled)',
+      }).kind,
+    ).toBe('disabled');
+  });
+
   it('routes 400 to the field, not to a toast', () => {
     const f = classifyQuoteError({ status: 400, message: 'name too short' });
     expect(f.kind).toBe('invalid');
