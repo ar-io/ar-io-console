@@ -759,8 +759,14 @@ export function ArNSPurchaseCard({
             route.kind !== 'card'
               ? undefined
               : custodialCard
-                ? creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
-                : creditsPrice?.usd
+                ? // Server-quoted, and charged exactly as quoted.
+                  creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
+                : // What the card is ACTUALLY charged. A self-custody card runs
+                  // through the top-up flow, which floors at `minUSDAmount` and
+                  // rounds to whole dollars — so a $2.10 name showed $2.10 and
+                  // charged $5. The two card paths genuinely have different
+                  // floors: the quote route floors at Stripe's ~$0.50.
+                  topUpUsd
           }
           arioPrice={cost?.arioCost}
           priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}

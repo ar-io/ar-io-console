@@ -303,7 +303,13 @@ export function ArNSCostBreakdown({
                 offering "Credits" to someone paying SOL surfaces our billing
                 plumbing at the one moment they are thinking in SOL.
               */}
-              {cardUsdPrice == null && (
+              {/*
+                Gated on the ROUTE, not on the price being resolved. Testing
+                `cardUsdPrice == null` inverted the intent: while the fiat
+                estimate loaded, a card route briefly offered a Credits/USD
+                switch — the leak `isCardRoute` was added to close.
+              */}
+              {!isCardRoute && (
                 <PriceDisplayToggle
                   nativeLabel={
                     tokenForName
