@@ -98,15 +98,30 @@ export function buildPaymentOptions({
 }: PaymentOptionsInput): PaymentOption[] {
   const options: PaymentOption[] = [];
 
-  // Card first: it is the only option that works with no crypto at all, and the
-  // one a newcomer is looking for.
+  /*
+    An existing balance leads when there is one: it is preselected (see
+    `defaultPaymentOption`), costs nothing new, and the eye should land on the
+    option already chosen rather than hunt for it at the end of the row.
+
+    With no balance — the common case — Card leads instead. It is the only
+    option that works with no crypto at all, and the one a newcomer is looking
+    for.
+  */
+  if (credits > 0) {
+    options.push({
+      kind: 'balance',
+      id: 'balance',
+      label: 'Balance',
+      detail: `${credits.toLocaleString(undefined, { maximumFractionDigits: 4 })} credits`,
+      sufficient: priceInCredits === undefined ? true : credits >= priceInCredits,
+    });
+  }
+
   if (cardEnabled) {
     options.push({
       kind: 'card',
       id: 'card',
       label: 'Card',
-      // Name the processor: it tells a hesitant buyer who actually handles
-      // their card details, which is the reassurance a card row is for.
       detail: cardIsCustodial ? 'Turbo holds the name' : 'with Stripe',
       // A card can always cover the price — the charge is sized to it.
       sufficient: true,
@@ -149,18 +164,6 @@ export function buildPaymentOptions({
       // Unknown holdings or unknown price must NOT read as insufficient — the
       // same conflation that made a funded wallet look empty elsewhere.
       sufficient: held === undefined || price === undefined ? true : held >= price,
-    });
-  }
-
-  // Existing credits are the cheapest and fastest route, but only meaningful
-  // when there are some. Named for what it is, not for the product.
-  if (credits > 0) {
-    options.push({
-      kind: 'balance',
-      id: 'balance',
-      label: 'Balance',
-      detail: `${credits.toLocaleString(undefined, { maximumFractionDigits: 4 })} credits`,
-      sufficient: priceInCredits === undefined ? true : credits >= priceInCredits,
     });
   }
 

@@ -20,7 +20,11 @@ export interface ReturnedNameRecord {
   premiumMultiplier: number;
 }
 
-export type ReturnedNameSortKey = 'name' | 'endTimestamp' | 'premiumMultiplier';
+export type ReturnedNameSortKey =
+  | 'name'
+  | 'endTimestamp'
+  | 'premiumMultiplier'
+  | 'estPrice';
 export type ReturnedNameSortOrder = 'asc' | 'desc';
 
 /** Structural view of the ARIO reads used by this feature. */
@@ -66,6 +70,12 @@ async function loadReturnedNames(): Promise<ReturnedNameRecord[]> {
 export interface UseReturnedNamesOptions {
   search?: string;
   sortBy?: ReturnedNameSortKey;
+  /**
+   * Resolves a row's estimated ARIO price, for the `estPrice` sort. Injected
+   * because price needs the fee schedule and demand factor, which the caller
+   * already has and this hook shouldn't fetch a second time.
+   */
+  priceOf?: (row: ReturnedNameRecord) => number | undefined;
   sortOrder?: ReturnedNameSortOrder;
   page?: number; // 0-indexed
   pageSize?: number;
@@ -82,6 +92,7 @@ export function useReturnedNames(options: UseReturnedNamesOptions = {}) {
   const {
     search = '',
     sortBy = 'endTimestamp',
+    priceOf,
     sortOrder = 'asc',
     page = 0,
     pageSize = 25,
@@ -115,9 +126,9 @@ export function useReturnedNames(options: UseReturnedNamesOptions = {}) {
       ? active.filter((r) => r.name.toLowerCase().includes(q))
       : active;
     return [...matched].sort((a, b) =>
-      compareReturnedNames(a, b, sortBy, sortOrder, now),
+      compareReturnedNames(a, b, sortBy, sortOrder, now, priceOf),
     );
-  }, [active, search, sortBy, sortOrder, now]);
+  }, [active, search, sortBy, sortOrder, now, priceOf]);
 
   const activeCount = active.length;
   const totalFiltered = filtered.length;

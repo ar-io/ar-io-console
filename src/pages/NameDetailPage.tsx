@@ -20,7 +20,7 @@ import {
 
 import { useStore } from '@/store/useStore';
 import CopyButton from '@/components/CopyButton';
-import { daysRemaining } from '@/utils';
+import { daysUntil } from '@/utils/domainExpiry';
 import type { ArNSName } from '@/types';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import {
@@ -353,7 +353,7 @@ export default function NameDetailPage() {
                   <div>
                     {fmtDate(record.endTimestamp)}
                     <div className="text-xs text-foreground/50">
-                      in {daysRemaining(new Date(record.endTimestamp))} days
+                      in {daysUntil(record.endTimestamp, Date.now())} days
                     </div>
                   </div>
                 ) : (

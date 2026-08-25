@@ -81,7 +81,7 @@ function OptionCard({
       aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-start gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 ${
+      className={`flex flex-1 items-start gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 sm:basis-0 ${
         active
           ? 'border-primary bg-primary/10'
           : 'border-border/20 bg-card hover:border-primary/40'
@@ -182,7 +182,13 @@ export function ArNSPaymentSelector({
       {!arioOnly && (
         <>
           <label className="mb-2 block text-sm font-medium">Pay with</label>
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {/*
+            One row on desktop whatever the count. A fixed 3-column grid wrapped
+            to two rows the moment a Balance option appeared, which made the set
+            read as two groups rather than one row of equals — the whole point
+            of flattening it.
+          */}
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row">
             {options.map((option) => (
               <OptionCard
                 key={option.id}

@@ -30,8 +30,27 @@ export interface ExpiringDomain {
  * round up ("in N days"); past durations round down, so a lease even 1ms past reads
  * as expired (-1) rather than "today" (0).
  */
+/**
+ * Normalise an epoch value to milliseconds.
+ *
+ * ArNS timestamps arrive in BOTH units depending on the source, and the two are
+ * indistinguishable by type. Getting it wrong is silent and specific: a seconds
+ * value read as milliseconds lands in 1970, so a name expiring in 2027 reports
+ * "in 0 days" while the date beside it — formatted by a helper that DID
+ * normalise — correctly reads 2027.
+ *
+ * Epoch seconds stay below 1e12 until the year 33658, so the threshold is
+ * unambiguous for any date this app will ever show.
+ */
+export function toEpochMs(ts: number): number {
+  if (!Number.isFinite(ts) || ts <= 0) return ts;
+  return ts < 1e12 ? ts * 1000 : ts;
+}
+
 export function daysUntil(endTimestamp: number, now: number): number {
-  const days = (endTimestamp - now) / MS_PER_DAY;
+  // Normalised here rather than at each call site: five callers pass this
+  // value, and one of them silently disagreeing is how the bug above happened.
+  const days = (toEpochMs(endTimestamp) - now) / MS_PER_DAY;
   return days >= 0 ? Math.ceil(days) : Math.floor(days);
 }
 

@@ -271,3 +271,38 @@ describe('baseAnnualMARIOForName', () => {
     expect(baseAnnualMARIOForName(sparse, 20)).toBeUndefined();
   });
 });
+
+describe('compareReturnedNames — estPrice', () => {
+  const row = (name: string, start = START, end = END) => ({
+    name, startTimestamp: start, endTimestamp: end,
+  });
+
+  it('orders by resolved price, not by premium', () => {
+    // Premium is identical here; only the base fee differs. Sorting by premium
+    // would call these equal, which is the whole reason estPrice exists.
+    const a = row('aa');
+    const b = row('bbbb');
+    const priceOf = (r: { name: string }) => (r.name === 'aa' ? 90 : 10);
+    expect(compareReturnedNames(a, b, 'estPrice', 'asc', START, priceOf)).toBeGreaterThan(0);
+    expect(compareReturnedNames(a, b, 'estPrice', 'desc', START, priceOf)).toBeLessThan(0);
+  });
+
+  it('sorts unresolvable prices LAST in both directions', () => {
+    // Fees not loaded, or a name length outside the schedule. Treating those as
+    // zero would park them at the top of an ascending sort as if they were free.
+    const known = row('known');
+    const unknown = row('unknown');
+    const priceOf = (r: { name: string }) => (r.name === 'known' ? 5 : undefined);
+    expect(compareReturnedNames(known, unknown, 'estPrice', 'asc', START, priceOf)).toBeLessThan(0);
+    expect(compareReturnedNames(known, unknown, 'estPrice', 'desc', START, priceOf)).toBeLessThan(0);
+  });
+
+  it('treats two unresolvable prices as equal', () => {
+    const priceOf = () => undefined;
+    expect(compareReturnedNames(row('a'), row('b'), 'estPrice', 'asc', START, priceOf)).toBe(0);
+  });
+
+  it('is stable when no resolver is supplied', () => {
+    expect(compareReturnedNames(row('a'), row('b'), 'estPrice', 'asc', START)).toBe(0);
+  });
+});

@@ -136,12 +136,39 @@ export function selectActiveReturnedNames<
 export function compareReturnedNames<T extends ReturnedNameWindow>(
   a: T,
   b: T,
-  sortBy: 'name' | 'endTimestamp' | 'premiumMultiplier',
+  sortBy: 'name' | 'endTimestamp' | 'premiumMultiplier' | 'estPrice',
   sortOrder: 'asc' | 'desc',
   now: number,
+  /**
+   * Resolves a row's estimated ARIO price. Injected because price needs the fee
+   * schedule and demand factor, which this module has no business fetching —
+   * and only the `estPrice` sort needs it.
+   */
+  priceOf?: (row: T) => number | undefined,
 ): number {
   const dir = sortOrder === 'asc' ? 1 : -1;
   switch (sortBy) {
+    case 'estPrice': {
+      /*
+        Not the same order as `premiumMultiplier`. The premium is a pure
+        function of elapsed time, while price is that premium times a base fee
+        that varies by name LENGTH — so a long name early in its auction can
+        cost less than a short one late in its own.
+
+        Rows whose price can't be resolved (fees not loaded, or a length outside
+        the schedule) sort last in both directions rather than counting as zero,
+        which would park them at the top of an ascending sort as if they were
+        free.
+      */
+      const pa = priceOf?.(a);
+      const pb = priceOf?.(b);
+      const aMissing = pa === undefined || !Number.isFinite(pa);
+      const bMissing = pb === undefined || !Number.isFinite(pb);
+      if (aMissing && bMissing) return 0;
+      if (aMissing) return 1;
+      if (bMissing) return -1;
+      return ((pa as number) - (pb as number)) * dir;
+    }
     case 'name':
       return a.name.localeCompare(b.name) * dir;
     case 'premiumMultiplier':

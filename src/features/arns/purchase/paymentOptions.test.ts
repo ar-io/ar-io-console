@@ -18,7 +18,7 @@ describe('buildPaymentOptions', () => {
       .toEqual(['card', 'token:base-usdc', 'token:base-eth', 'token:usdc', 'token:pol', 'token:ethereum']);
   });
 
-  it('puts card first — the only option needing no crypto at all', () => {
+  it('puts card first when there is no balance to lead with', () => {
     const first = buildPaymentOptions({ ...base, walletType: 'solana' })[0];
     expect(first.kind).toBe('card');
     // Naming the processor is the reassurance a card row exists to give.
@@ -41,6 +41,14 @@ describe('buildPaymentOptions', () => {
     // there would be a dead end.
     const o = buildPaymentOptions({ ...base, walletType: 'solana', cardEnabled: false });
     expect(ids(o)).toEqual(['token:solana']);
+  });
+
+  it('leads with Balance when there is one — it is what gets preselected', () => {
+    // The eye should land on the already-chosen option, not hunt for it at the
+    // end of the row.
+    const o = buildPaymentOptions({ ...base, walletType: 'solana', credits: 12.4 });
+    expect(o[0].kind).toBe('balance');
+    expect(defaultPaymentOption(o)).toBe(o[0]);
   });
 
   it('offers Balance only when there are credits, and names it Balance', () => {
@@ -135,11 +143,14 @@ describe('defaultPaymentOption', () => {
   });
 
   it('falls back to the first option when nothing is sufficient', () => {
+    // Asserts the documented rule, not a position: something must stay selected
+    // so the picker never renders with nothing chosen.
     const o = buildPaymentOptions({
       ...base, walletType: 'solana', credits: 1, priceInCredits: 5,
       cardEnabled: false, tokenBalances: { solana: 0 }, tokenPrices: { solana: 2 },
     });
-    expect(defaultPaymentOption(o)?.id).toBe('token:solana');
+    expect(o.every((x) => !x.sufficient)).toBe(true);
+    expect(defaultPaymentOption(o)).toBe(o[0]);
   });
 
   it('returns undefined when there is nothing at all', () => {
