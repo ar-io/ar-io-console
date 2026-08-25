@@ -388,7 +388,12 @@ export function ArNSPurchaseCard({
         years: type === 'lease' ? years : undefined,
         fundFrom: 'turbo',
       });
-      // `buy` resolves undefined on the handled insufficient-credits path.
+      /*
+        The host catches rejections and resolves `undefined`, so this covers
+        EVERY failure, not just the insufficient-credits one — which is what we
+        want here: any unregistered outcome after a successful top-up must keep
+        the funded state rather than read as a plain failure.
+      */
       if (settled === undefined) {
         tokenTopUp.failAfterFunding(
           'Your credits arrived but the name was not registered.',
