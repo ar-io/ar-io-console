@@ -1,3 +1,4 @@
+import { MAINNET_ARIO_MINT } from "@ar.io/sdk/web";
 import {
   AlertTriangle,
   Check,
@@ -16,20 +17,25 @@ import { useCreditsForFiat } from "../../../hooks/useCreditsForFiat";
 const GET_SOL_URL = "https://www.coinbase.com/how-to-buy/solana";
 
 
+
 /**
- * Where to send someone who needs ARIO.
+ * Swap SOL for ARIO on Raydium, prefilled — the venue ar.io's own token page
+ * points at, and confirmed working on device.
  *
- * ar.io's own token page, not a DEX directly. A first attempt deep-linked a
- * prefilled Raydium swap and failed in the field — Raydium's documented form
- * uses the `sol` shorthand for the input side, not the wrapped-SOL mint, and
- * that was never tested against the live site.
+ * The input side MUST be the `sol` shorthand. An earlier attempt passed the
+ * wrapped-SOL mint address instead and the page failed to load the pair; this
+ * is the form Raydium documents and the one that actually works.
  *
- * The deeper reason to stay here: this page is maintained by ar.io and already
- * lists both Raydium and Jupiter, so it survives liquidity moving venues. A
- * hardcoded pool link rots silently and strands the user on the one route that
- * is meant to be cheapest.
+ * The output mint comes from `@ar.io/sdk` rather than being pasted in. A wrong
+ * mint would send someone to swap real SOL for the wrong token, and a constant
+ * copied by hand cannot follow the SDK if the token ever moves.
+ *
+ * Deliberately mainnet-only: devnet ARIO has no Raydium market, so deriving
+ * this from config would land the user in an empty pool.
  */
-const GET_ARIO_URL = "https://ar.io/token";
+const GET_ARIO_URL =
+  `https://raydium.io/swap/?inputMint=sol` +
+  `&outputMint=${MAINNET_ARIO_MINT.toString()}`;
 
 const fmtSol = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 4 });
@@ -248,7 +254,7 @@ export function ArNSCostBreakdown({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
               >
-                Get ARIO
+                Swap for ARIO
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
