@@ -1,22 +1,20 @@
-import { MAINNET_ARIO_MINT } from "@ar.io/sdk/web";
+import { MAINNET_ARIO_MINT } from '@ar.io/sdk/web';
 import {
   AlertTriangle,
   Check,
   ExternalLink,
   Info,
   Loader2,
-} from "lucide-react";
+} from 'lucide-react';
 
-import type { ArNSPriceUnit } from "./ArNSPaymentSelector";
-import PriceAmount from "./PriceAmount";
-import PriceDisplayToggle from "./PriceDisplayToggle";
-import { useStore } from "../../../store/useStore";
-import { useCreditsForFiat } from "../../../hooks/useCreditsForFiat";
+import type { ArNSPriceUnit } from './ArNSPaymentSelector';
+import PriceAmount from './PriceAmount';
+import PriceDisplayToggle from './PriceDisplayToggle';
+import { useStore } from '../../../store/useStore';
+import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
 /** Where to send users who need SOL for the network deposit. Configurable. */
-const GET_SOL_URL = "https://www.coinbase.com/how-to-buy/solana";
-
-
+const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
 
 /**
  * Swap SOL for ARIO on Raydium, prefilled — the venue ar.io's own token page
@@ -138,7 +136,7 @@ function Row({
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
       <span
-        className={`text-sm ${strong ? "font-medium text-foreground" : "text-foreground/70"}`}
+        className={`text-sm ${strong ? 'font-medium text-foreground' : 'text-foreground/70'}`}
       >
         {label}
       </span>
@@ -197,14 +195,14 @@ export function ArNSCostBreakdown({
         maximumFractionDigits: 2,
       })}`}
     </span>
-  ) : priceUnit === "credits" ? (
+  ) : priceUnit === 'credits' ? (
     creditsPrice != null ? (
       // Casing convention across ArNS priced surfaces: "Turbo Credits" is the
       // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
       // lowercase "credits" is the unit that follows an amount. Keep it lowercase
       // here — it's a unit, not the product name.
       <span className="text-lg font-bold text-foreground">
-        {currency === "usd" && usdPerCredit != null
+        {currency === 'usd' && usdPerCredit != null
           ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -233,7 +231,7 @@ export function ArNSCostBreakdown({
                 matters MORE here than on the token path, where the holder
                 already knows what ARIO is worth. */}
               <PriceDisplayToggle
-                nativeLabel={priceUnit === "credits" ? "Credits" : "ARIO"}
+                nativeLabel={priceUnit === 'credits' ? 'Credits' : 'ARIO'}
               />
             </span>
           }
@@ -244,10 +242,10 @@ export function ArNSCostBreakdown({
         {insufficientFunds && !priceLoading && (
           <p className="flex items-center justify-end gap-1 text-xs text-error">
             <AlertTriangle className="h-3 w-3" />
-            {priceUnit === "credits"
-              ? "Not enough Turbo Credits"
-              : "Not enough ARIO in this source"}
-            {priceUnit !== "credits" && (
+            {priceUnit === 'credits'
+              ? 'Not enough Turbo Credits'
+              : 'Not enough ARIO in this source'}
+            {priceUnit !== 'credits' && (
               <a
                 href={GET_ARIO_URL}
                 target="_blank"
@@ -311,19 +309,19 @@ export function ArNSCostBreakdown({
             <div className="my-2 border-t border-border/10" />
             <Row label="SOL needed" strong>
               <span
-                className={`text-sm font-semibold ${insufficientSol ? "text-error" : "text-foreground"}`}
+                className={`text-sm font-semibold ${insufficientSol ? 'text-error' : 'text-foreground'}`}
               >
                 ~{fmtSol(gasTotalSol)} SOL
               </span>
             </Row>
             <p
-              className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? "text-error" : "text-foreground/50"}`}
+              className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
             >
               {insufficientSol ? (
                 <>
                   <span className="flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" /> You have{" "}
-                    {solBalance === undefined ? "—" : fmtSol(solBalance)} SOL —
+                    <AlertTriangle className="h-3 w-3" /> You have{' '}
+                    {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL —
                     add more to cover the deposit
                   </span>
                   <a
@@ -348,7 +346,7 @@ export function ArNSCostBreakdown({
                 </span>
               ) : (
                 <span className="flex items-center gap-1">
-                  <Check className="h-3 w-3 text-primary" /> You have{" "}
+                  <Check className="h-3 w-3 text-primary" /> You have{' '}
                   {fmtSol(solBalance)} SOL
                 </span>
               )}
