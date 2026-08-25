@@ -75,6 +75,14 @@ export interface PaymentOptionsInput {
   isTokenSelectable: (t: SupportedTokenType) => boolean;
   /** Card is unavailable when the payment service has Stripe disabled (503). */
   cardEnabled?: boolean;
+  /**
+   * Paying by card will leave Turbo holding the name's ANT.
+   *
+   * Surfaced on the option itself because it changes what you get, not just how
+   * you pay — and a difference that large should be visible while choosing,
+   * not discovered in the cost breakdown after.
+   */
+  cardIsCustodial?: boolean;
 }
 
 export function buildPaymentOptions({
@@ -86,6 +94,7 @@ export function buildPaymentOptions({
   extraTokens = [],
   isTokenSelectable,
   cardEnabled = true,
+  cardIsCustodial = false,
 }: PaymentOptionsInput): PaymentOption[] {
   const options: PaymentOption[] = [];
 
@@ -98,7 +107,7 @@ export function buildPaymentOptions({
       label: 'Card',
       // Name the processor: it tells a hesitant buyer who actually handles
       // their card details, which is the reassurance a card row is for.
-      detail: 'with Stripe',
+      detail: cardIsCustodial ? 'Turbo holds the name' : 'with Stripe',
       // A card can always cover the price — the charge is sized to it.
       sufficient: true,
     });

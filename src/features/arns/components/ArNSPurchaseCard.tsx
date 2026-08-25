@@ -25,7 +25,10 @@ import {
   buildPaymentOptions,
   defaultPaymentOption,
 } from '../purchase/paymentOptions';
-import { cardFlavor, resolveSettlementRoute } from '../purchase/settlementRoute';
+import { resolveSettlementRoute } from '../purchase/settlementRoute';
+import { planCardPurchase } from '../purchase/cardPlan';
+import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
+import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
@@ -224,6 +227,33 @@ export function ArNSPurchaseCard({
     return false;
   }, [route.kind, creditsPrice, balances.credits, cost?.shortfallMARIO]);
 
+  const {
+    needsLinking,
+    isSolanaConnected,
+    promptReconnect,
+    showLinkModal,
+    setShowLinkModal,
+  } = useLinkedSolanaWallet();
+  /** Set only when the user is offered linking and chooses to go without. */
+  const [declinedLink, setDeclinedLink] = useState(false);
+
+  const cardPlan = planCardPurchase({
+    needsLinking,
+    // A cold adapter is NOT a missing wallet — conflating them is what used to
+    // hand Turbo the ANT for a user who only needed to reconnect.
+    signerLive: isSolanaConnected && signer.isReady && !!signer.walletAdapter,
+    solCoversGas:
+      balances.loading || balances.sol === undefined || !cost
+        ? undefined
+        : balances.sol >= cost.gasTotalSol,
+    declinedLink,
+  });
+  const custodialCard = route.kind === 'card' && cardPlan.kind === 'custodial';
+  /** Card is chosen but a cheaper, self-owned route is one click away. */
+  const cardNeedsWallet =
+    route.kind === 'card' &&
+    (cardPlan.kind === 'link' || cardPlan.kind === 'reconnect');
+
   const paymentOptions = useMemo(
     () =>
       buildPaymentOptions({
@@ -233,6 +263,7 @@ export function ArNSPurchaseCard({
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
         // next to a silent SOL row states a fact we don't have and reads as
         // "you're broke" to someone who simply hasn't connected yet.
+        cardIsCustodial: cardPlan.kind === 'custodial',
         tokenBalances: address
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
@@ -242,7 +273,7 @@ export function ArNSPurchaseCard({
       }),
     [
       address, balances.credits, balances.sol, balances.totalArio,
-      creditsPrice?.credits, cardEnabled,
+      creditsPrice?.credits, cardEnabled, cardPlan.kind,
     ],
   );
 
@@ -280,18 +311,11 @@ export function ArNSPurchaseCard({
    */
   /**
    * Who will own the ANT if they pay by card. Derived, never asked — see
-   * `cardFlavor`. Self-custody keeps the atomic buyRecord (user-owned, no
+   * `planCardPurchase`. Self-custody keeps the atomic buyRecord (user-owned, no
    * surcharge, but their SOL pays the rent); custodial is the one-step quote
    * that works with no crypto at all.
    */
-  const flavor = cardFlavor({
-    hasSolanaSigner: signer.isReady && !!signer.walletAdapter,
-    solCoversGas:
-      balances.loading || balances.sol === undefined || !cost
-        ? undefined
-        : balances.sol >= cost.gasTotalSol,
-  });
-  const custodialCard = route.kind === 'card' && flavor === 'custodial';
+
 
   /**
    * Card and non-ARIO tokens can't pay the contract directly, so they take a
@@ -309,7 +333,7 @@ export function ArNSPurchaseCard({
    * is computed, so it runs inline on this card — same feel as paying with
    * ARIO, which was always modal-free.
    */
-  const needsPaymentStep = !!address && route.kind === 'card';
+  const needsPaymentStep = !!address && route.kind === 'card' && !cardNeedsWallet;
 
   /**
    * SOL (and any non-ARIO token) can't pay the registry, so it buys credits and
@@ -566,7 +590,55 @@ export function ArNSPurchaseCard({
         />
       </div>
 
-      {needsPaymentStep ? (
+      {/*
+        Custody is the last rung, not the default. A user with a Solana wallet
+        gets a cheaper, self-owned name — so offer that before Turbo holds it.
+      */}
+      {cardNeedsWallet ? (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <p className="mb-3 text-sm text-foreground/80">
+            {cardPlan.kind === 'reconnect' ? (
+              <>
+                Reconnect your Solana wallet to buy this name outright — you
+                &apos;ll own it directly and skip the setup fee.
+              </>
+            ) : (
+              <>
+                Connect a Solana wallet to own this name directly. Without one,
+                Turbo can hold it for you instead — that costs a little more and
+                limits what you can change.
+              </>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                cardPlan.kind === 'reconnect'
+                  ? promptReconnect()
+                  : setShowLinkModal(true)
+              }
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Wallet className="h-4 w-4" />
+              {cardPlan.kind === 'reconnect'
+                ? 'Reconnect wallet'
+                : 'Connect a Solana wallet'}
+            </button>
+            {/* Taking no for an answer — custody exists for people who
+                genuinely have no Solana wallet and don't want one. */}
+            {cardPlan.kind === 'link' && (
+              <button
+                type="button"
+                onClick={() => setDeclinedLink(true)}
+                className="rounded-full border border-border/20 px-5 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                Continue without one
+              </button>
+            )}
+          </div>
+        </div>
+      ) : needsPaymentStep ? (
         <button
           onClick={() => setShowPayment(true)}
           disabled={
@@ -668,6 +740,10 @@ export function ArNSPurchaseCard({
 
       {/* Card settles server-side in one step — quote, charge, on-chain write —
           so it gets the dedicated checkout rather than the top-up shell. */}
+      {showLinkModal && (
+        <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
+      )}
+
       {showPayment && custodialCard && (
         <ArNSCardPaymentModal
           displayName={name}

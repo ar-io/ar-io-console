@@ -25,6 +25,17 @@ describe('buildPaymentOptions', () => {
     expect(first.detail).toBe('with Stripe');
   });
 
+  it('says on the Card option when Turbo will hold the name', () => {
+    // Custody changes WHAT you get, not just how you pay, so it belongs at the
+    // point of choice rather than in the breakdown underneath.
+    const normal = buildPaymentOptions({ ...base, walletType: 'solana' });
+    expect(normal.find((o) => o.kind === 'card')?.detail).toBe('with Stripe');
+    const custodial = buildPaymentOptions({
+      ...base, walletType: 'solana', cardIsCustodial: true,
+    });
+    expect(custodial.find((o) => o.kind === 'card')?.detail).toMatch(/turbo holds/i);
+  });
+
   it('drops card when the payment service has fiat disabled', () => {
     // The bundler 503s when Stripe is off (normal on testnet); offering Card
     // there would be a dead end.
