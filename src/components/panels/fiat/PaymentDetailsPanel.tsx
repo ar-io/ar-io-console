@@ -19,6 +19,15 @@ interface PaymentDetailsPanelProps {
   onNext: () => void;
   targetAddress: string; // NEW - address receiving credits
   targetWalletType: 'arweave' | 'ethereum' | 'solana'; // NEW - type of target wallet
+  /**
+   * What this payment buys, when it isn't a general top-up — e.g. an ArNS name.
+   *
+   * These panels were written for one job: buying storage credits. Reused for a
+   * name purchase they still talked about storage power, which is both wrong
+   * and confusing at the moment someone is entering card details for a domain.
+   * Absent means the original generic top-up, unchanged.
+   */
+  purpose?: { kind: 'arns-name'; name: string };
 }
 
 const isValidPromoCode = async (
@@ -38,7 +47,7 @@ const isValidPromoCode = async (
   }
 };
 
-const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, onNext, targetAddress, targetWalletType }) => {
+const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, onNext, targetAddress, targetWalletType, purpose }) => {
   const countries = useCountries();
   const wincForOneGiB = useWincForOneGiB();
   const { address } = useStore();
@@ -207,8 +216,14 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <CreditCard className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Payment Details</h3>
-          <p className="text-sm text-foreground/80">We do not save credit card information. See our T&C for more info.</p>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
+            {purpose ? `Pay for ${purpose.name}.ar.io` : 'Payment Details'}
+          </h3>
+          <p className="text-sm text-foreground/80">
+            {purpose
+              ? 'You\u2019ll confirm the registration right after paying. We do not save credit card information.'
+              : 'We do not save credit card information. See our T&C for more info.'}
+          </p>
         </div>
       </div>
 
@@ -247,7 +262,8 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
                   <span className="text-foreground/80">{discountAmount}</span>
                 )}
               </div>
-              {storageAmount > 0 && (
+              {/* Storage equivalence means nothing when the credits buy a name. */}
+              {!purpose && storageAmount > 0 && (
                 <div className="text-xs text-foreground/80 mt-1">
                   ≈ {formatStorage(storageAmount)} storage power
                 </div>

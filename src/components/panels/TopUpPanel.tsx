@@ -40,6 +40,12 @@ interface TopUpPanelProps {
    */
   initialCreditAmount?: number;
   /**
+   * What these credits are for, when it isn't a general top-up. Forwarded to
+   * the fiat panels so their copy stops describing storage during a name
+   * purchase.
+   */
+  purpose?: { kind: 'arns-name'; name: string };
+  /**
    * Open straight onto card or crypto. The ArNS checkout asks "how do you want
    * to pay" once, up front, so re-presenting the same tabs here would be asking
    * the user the same question twice.
@@ -68,6 +74,7 @@ export default function TopUpPanel({
   embedded = false,
   initialUsdAmount,
   initialCreditAmount,
+  purpose,
   initialPaymentMethod,
   initialToken,
   onComplete,
@@ -664,6 +671,7 @@ export default function TopUpPanel({
       case 'details':
         return (
           <PaymentDetailsPanel
+            purpose={purpose}
             usdAmount={getCheckoutUsdAmount()}
             onBack={handleFiatBackToAmount}
             onNext={handleFiatPaymentDetailsNext}
@@ -674,6 +682,7 @@ export default function TopUpPanel({
       case 'confirmation':
         return (
           <PaymentConfirmationPanel
+            purpose={purpose}
             usdAmount={getCheckoutUsdAmount()}
             onBack={() => setFiatFlowStep('details')}
             onSuccess={handleFiatPaymentSuccess}
@@ -684,6 +693,7 @@ export default function TopUpPanel({
       case 'success':
         return (
           <PaymentSuccessPanel
+            purpose={purpose}
             onComplete={handleFiatComplete}
             targetAddress={targetAddress || ''}
           />
@@ -715,6 +725,7 @@ export default function TopUpPanel({
       case 'complete':
         return (
           <PaymentSuccessPanel
+            purpose={purpose}
             cryptoAmount={cryptoAmount}
             tokenType={selectedTokenType}
             transactionId={cryptoPaymentResult?.transactionId || cryptoPaymentResult?.id}

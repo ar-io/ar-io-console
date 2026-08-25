@@ -20,7 +20,7 @@ import {
   ArNSFundingSource,
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
-import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
+import { isTokenSelectable, minUSDAmount, tokenLabels, type SupportedTokenType } from '../../../constants';
 import {
   buildPaymentOptions,
   defaultPaymentOption,
@@ -300,12 +300,19 @@ export function ArNSPurchaseCard({
 
   // What a card / token payment has to cover: the whole price when there is no
   // balance to draw on, or just the gap when there is.
-  const creditShortfall = creditsPrice
-    ? Math.max(0, creditsPrice.credits - balances.credits)
-    : 0;
+  /*
+    The FULL name price, matching the token route. Balance is its own option, so
+    choosing Card means "charge my card for this name" — not "top up whatever is
+    missing", which would drain a balance the user just passed over.
+
+    It also kept the targeted UI from engaging at all: `targetedTopUp` requires
+    an amount, so a user with enough credits got `undefined` here and fell all
+    the way back to the generic storage top-up panel — presets, custom amount,
+    min/max and all.
+  */
   const topUpUsd =
-    creditShortfall > 0 && creditsForOneUSD
-      ? Math.ceil(creditShortfall / creditsForOneUSD)
+    creditsPrice && creditsForOneUSD
+      ? Math.max(minUSDAmount, Math.ceil(creditsPrice.credits / creditsForOneUSD))
       : undefined;
   // Only offer a credits top-up when SOL gas is sufficient — buying credits
   // can't make the purchase succeed if SOL for rent is also short. Gate on being
@@ -370,6 +377,56 @@ export function ArNSPurchaseCard({
 
   const tokenStepLabel = stepLabel(tokenTopUp.step);
 
+  /**
+   * Register once the money has landed, reporting a failure as "funded, not
+   * registered" rather than a plain error — they hold spendable credits and
+   * must not be told to pay again.
+   */
+  const registerAfterFunding = useCallback(async () => {
+    onTokenFunded();
+    try {
+      const settled = await onBuy({
+        name,
+        type,
+        years: type === 'lease' ? years : undefined,
+        fundFrom: 'turbo',
+      });
+      if (settled === undefined) {
+        tokenTopUp.failAfterFunding(
+          'Your credits arrived but the name was not registered.',
+        );
+        return;
+      }
+      tokenTopUp.reset();
+    } catch (err) {
+      tokenTopUp.failAfterFunding(
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }, [onBuy, name, type, years, onTokenFunded, tokenTopUp]);
+
+  /**
+   * A card payment settled. Finish the purchase instead of just closing:
+   * leaving the user on a checkout whose button still says "Continue" invited
+   * them to open the payment modal and pay a SECOND time for a name they had
+   * already funded.
+   */
+  const finishCardPurchase = useCallback(async () => {
+    setShowPayment(false);
+    try {
+      await tokenTopUp.awaitCredits({
+        creditsNeeded: balances.credits + (creditsPrice?.credits ?? 0),
+        readCredits: async () => {
+          window.dispatchEvent(new CustomEvent('refresh-balance'));
+          return useStore.getState().creditBalance ?? 0;
+        },
+      });
+    } catch {
+      return; // `awaitCredits` recorded that the money landed.
+    }
+    await registerAfterFunding();
+  }, [tokenTopUp, balances.credits, creditsPrice?.credits, registerAfterFunding]);
+
   const runTokenPurchase = useCallback(async () => {
     if (route.kind !== 'topup' || !tokenAmountForName) return;
     try {
@@ -399,43 +456,10 @@ export function ArNSPurchaseCard({
     } catch {
       return; // `fund` already recorded whether any money moved.
     }
-    // Money has left the wallet and is now credits. Tell the host before
-    // registering, so the fact survives this card being torn down.
-    onTokenFunded();
-    /*
-      Hold the funded state until registration actually settles. Resetting here
-      would drop the fact that the user has already paid — and "purchase failed"
-      after we took their money implies a refund that is never coming, when what
-      they actually hold is spendable credits and an unfinished registration.
-    */
-    try {
-      const settled = await onBuy({
-        name,
-        type,
-        years: type === 'lease' ? years : undefined,
-        fundFrom: 'turbo',
-      });
-      /*
-        The host catches rejections and resolves `undefined`, so this covers
-        EVERY failure, not just the insufficient-credits one — which is what we
-        want here: any unregistered outcome after a successful top-up must keep
-        the funded state rather than read as a plain failure.
-      */
-      if (settled === undefined) {
-        tokenTopUp.failAfterFunding(
-          'Your credits arrived but the name was not registered.',
-        );
-        return;
-      }
-      tokenTopUp.reset();
-    } catch (err) {
-      tokenTopUp.failAfterFunding(
-        err instanceof Error ? err.message : String(err),
-      );
-    }
+    await registerAfterFunding();
   }, [
     route, tokenAmountForName, tokenTopUp, creditsPrice?.credits,
-    onBuy, name, type, years, onTokenFunded, balances.credits,
+    balances.credits, registerAfterFunding,
   ]);
 
   /**
@@ -706,18 +730,30 @@ export function ArNSPurchaseCard({
           onClick={() => setShowPayment(true)}
           disabled={
             isBusy ||
+            // Once a card payment has settled the purchase finishes on its own.
+            // Leaving this live would let the user reopen the payment modal and
+            // pay a SECOND time for a name they have already funded.
+            tokenStepLabel !== undefined ||
             // A custodial card buy is quoted server-side, so neither our
             // credits price nor the SOL estimate needs to have loaded.
             (!custodialCard && (!priceReady || gasUnavailable))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {route.kind === 'card' ? (
-            <CreditCard className="h-4 w-4" />
+          {tokenStepLabel ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> {tokenStepLabel}
+            </>
           ) : (
-            <Wallet className="h-4 w-4" />
-          )}{' '}
-          Continue
+            <>
+              {route.kind === 'card' ? (
+                <CreditCard className="h-4 w-4" />
+              ) : (
+                <Wallet className="h-4 w-4" />
+              )}{' '}
+              Continue
+            </>
+          )}
         </button>
       ) : (
         <SolanaGateButton
@@ -842,7 +878,8 @@ export function ArNSPurchaseCard({
       {showPayment && ((route.kind === 'card' && !custodialCard) || route.kind === 'topup') && (
         <ArNSPaymentModal
           initialUsdAmount={topUpUsd}
-          shortfallCredits={creditShortfall}
+          shortfallCredits={creditsPrice?.credits}
+          arnsName={name}
           paymentMethod={route.kind === 'card' ? 'fiat' : 'crypto'}
           token={route.kind === 'topup' ? (route.token as SupportedTokenType) : undefined}
           tokenLabel={
@@ -851,7 +888,7 @@ export function ArNSPurchaseCard({
               : undefined
           }
           onClose={() => setShowPayment(false)}
-          onComplete={() => setShowPayment(false)}
+          onComplete={() => void finishCardPurchase()}
         />
       )}
     </div>

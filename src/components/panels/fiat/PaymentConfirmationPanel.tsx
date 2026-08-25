@@ -15,6 +15,15 @@ interface PaymentConfirmationPanelProps {
   onSuccess: () => void;
   targetAddress: string; // NEW - address receiving credits
   targetWalletType: 'arweave' | 'ethereum' | 'solana'; // NEW - type of target wallet
+  /**
+   * What this payment buys, when it isn't a general top-up — e.g. an ArNS name.
+   *
+   * These panels were written for one job: buying storage credits. Reused for a
+   * name purchase they still talked about storage power, which is both wrong
+   * and confusing at the moment someone is entering card details for a domain.
+   * Absent means the original generic top-up, unchanged.
+   */
+  purpose?: { kind: 'arns-name'; name: string };
 }
 
 const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
@@ -22,6 +31,7 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
   onBack,
   onSuccess,
   targetAddress,
+  purpose,
   targetWalletType
 }) => {
   const stripe = useStripe();
@@ -185,7 +195,8 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
                   {credits.toFixed(4)}
                 </div>
                 <div className="text-sm text-foreground/80">Credits</div>
-                {storageAmount > 0 && (
+                {/* Storage equivalence means nothing when the credits buy a name. */}
+                {!purpose && storageAmount > 0 && (
                   <div className="text-xs text-foreground/80 mt-1">
                     ≈ {formatStorage(storageAmount)} storage power
                   </div>

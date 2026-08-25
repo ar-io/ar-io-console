@@ -103,10 +103,53 @@ export function useArNSTokenTopUp() {
     [signer, solanaConfig],
   );
 
+  /**
+   * Wait for a payment to appear as credits, then hand off to registration.
+   *
+   * Shared with the card path: Stripe settles server-side and the credits are
+   * applied a moment later, exactly like a token transfer. Registering into
+   * that gap fails for insufficient credits having already charged the user.
+   */
+  const awaitCredits = useCallback(
+    async ({
+      creditsNeeded,
+      readCredits,
+    }: {
+      creditsNeeded: number;
+      readCredits: () => Promise<number>;
+    }): Promise<void> => {
+      fundedRef.current = true;
+      setStep({ phase: 'crediting' });
+      const deadline = Date.now() + CREDIT_POLL_TIMEOUT_MS;
+      for (;;) {
+        let balance = 0;
+        try {
+          balance = await readCredits();
+        } catch {
+          // Transient read failure — the payment still landed; keep waiting.
+        }
+        if (balance >= creditsNeeded) break;
+        if (Date.now() >= deadline) {
+          setStep({
+            phase: 'failed',
+            funded: true,
+            message:
+              'Your payment went through, but the credits are taking longer than usual to appear.',
+          });
+          throw new Error('Credits did not arrive in time');
+        }
+        await new Promise((r) => setTimeout(r, CREDIT_POLL_INTERVAL_MS));
+      }
+      setStep({ phase: 'registering' });
+      window.dispatchEvent(new CustomEvent('refresh-balance'));
+    },
+    [],
+  );
+
   /** Report a registration failure without implying the payment was lost. */
   const failAfterFunding = useCallback((message: string) => {
     setStep({ phase: 'failed', message, funded: fundedRef.current });
   }, []);
 
-  return { fund, reset, failAfterFunding, step };
+  return { fund, awaitCredits, reset, failAfterFunding, step };
 }

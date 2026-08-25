@@ -21,6 +21,8 @@ export function stepLabel(step: TopUpStep): string | undefined {
     case 'funding':
       return 'Step 1 of 2 — confirm the payment in your wallet';
     case 'crediting':
+      // Reached by BOTH paths: a card settles server-side and a transfer
+      // settles on-chain, and either way the credits land a moment later.
       return 'Payment received — adding credits';
     case 'registering':
       return 'Step 2 of 2 — confirm the registration';

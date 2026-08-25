@@ -16,6 +16,15 @@ interface PaymentSuccessPanelProps {
   // Cross-wallet top-up fields (from SDK v1.34.0+)
   owner?: string; // Who paid
   recipient?: string; // Who received credits
+  /**
+   * What this payment bought, when it isn't a general top-up.
+   *
+   * Matters most here: for a name purchase the credits have landed but the NAME
+   * is not registered yet, so "your credits are now available" reads as done
+   * when there is still a step to take — and "Upload a file / Deploy a site"
+   * points away from the thing they were in the middle of buying.
+   */
+  purpose?: { kind: 'arns-name'; name: string };
 }
 
 const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
@@ -24,6 +33,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
   tokenType,
   transactionId,
   creditsReceived,
+  purpose,
   targetAddress,
   owner,
   recipient
@@ -81,12 +91,15 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-success" />
           </div>
-          <h4 className="text-2xl font-heading font-extrabold text-success mb-2">Payment Complete!</h4>
+          <h4 className="text-2xl font-heading font-extrabold text-success mb-2">
+            Payment Complete!
+          </h4>
           <p className="text-foreground/80">
-            {isCryptoPayment && tokenType === 'arweave'
-              ? 'Your account will be credited in 15-30 minutes.'
-              : 'Your credits are now available.'
-            }
+            {purpose
+              ? `Your credits are ready. Confirm the registration to claim ${purpose.name}.ar.io.`
+              : isCryptoPayment && tokenType === 'arweave'
+                ? 'Your account will be credited in 15-30 minutes.'
+                : 'Your credits are now available.'}
           </p>
         </div>
 
@@ -178,7 +191,10 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           </div>
         </div>
 
-        {/* Next Steps - Call to Actions */}
+        {/* Next Steps — suppressed for a purchase in flight: pointing at Upload
+            or Deploy mid-registration sends the user away from what they came
+            for, and the host closes this panel to finish the buy. */}
+        {!purpose && (
         <div className="bg-card rounded-2xl p-4 mb-6">
           <h5 className="text-foreground mb-4">What's Next?</h5>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -247,6 +263,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             </button>
           </div>
         </div>
+        )}
 
         {/* Support Link */}
         <div className="text-center mt-4 sm:mt-6">

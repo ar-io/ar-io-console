@@ -17,6 +17,8 @@ interface ArNSPaymentModalProps {
   token?: SupportedTokenType;
   /** Ticker for the header, e.g. "SOL". */
   tokenLabel?: string;
+  /** The name being bought — makes the fiat panels speak about it, not storage. */
+  arnsName?: string;
   onClose: () => void;
   /** Fired when payment completes (credits landed). */
   onComplete: () => void;
@@ -43,6 +45,7 @@ export default function ArNSPaymentModal({
   paymentMethod,
   token,
   tokenLabel,
+  arnsName,
   onClose,
   onComplete,
 }: ArNSPaymentModalProps) {
@@ -89,6 +92,7 @@ export default function ArNSPaymentModal({
             // to the panel's 0.01 default instead of the name's price.
             initialCreditAmount={shortfallCredits}
             initialPaymentMethod={paymentMethod}
+            purpose={arnsName ? { kind: 'arns-name', name: arnsName } : undefined}
             initialToken={token}
             onComplete={onComplete}
             onBusyChange={setBusy}
