@@ -116,7 +116,13 @@ export function useBuyReturnedName() {
       name,
       type,
       years,
-      fundFrom = 'turbo',
+      /*
+        Auctions settle in ARIO at the premium price — the picker is ARIO-only,
+        so a real source is always passed and this default never ran. It said
+        'turbo' regardless, which @ar.io/sdk ignores while spending ARIO. Naming
+        the source that is actually used keeps the lie from being copied.
+      */
+      fundFrom = 'balance',
     }: BuyReturnedNameInput): Promise<BuyReturnedNameResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);

@@ -140,7 +140,14 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
   const setPrimaryName = useCallback(
     async ({
       name,
-      fundFrom = 'turbo',
+      /*
+        ARIO, explicitly. This defaulted to 'turbo' — which reads as "pay with
+        credits" and is not: @ar.io/sdk accepts the value and ignores it,
+        spending the wallet's ARIO. And it could not be credits anyway, because
+        turbo-sdk has no primary-name intent to settle one. Naming the real
+        source stops the code claiming something it never did.
+      */
+      fundFrom = 'balance',
     }: SetPrimaryNameInput): Promise<string | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
@@ -183,7 +190,14 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
   const requestPrimaryName = useCallback(
     async ({
       name,
-      fundFrom = 'turbo',
+      /*
+        ARIO, explicitly. This defaulted to 'turbo' — which reads as "pay with
+        credits" and is not: @ar.io/sdk accepts the value and ignores it,
+        spending the wallet's ARIO. And it could not be credits anyway, because
+        turbo-sdk has no primary-name intent to settle one. Naming the real
+        source stops the code claiming something it never did.
+      */
+      fundFrom = 'balance',
     }: SetPrimaryNameInput): Promise<string | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);

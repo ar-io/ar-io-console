@@ -26,6 +26,7 @@ import {
   defaultPaymentOption,
 } from '../purchase/paymentOptions';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
+import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { planCardPurchase } from '../purchase/cardPlan';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
@@ -197,7 +198,13 @@ export function ArNSPurchaseCard({
   // Which unit the price is quoted in. Card and token top-ups both land as
   // credits, so they price like credits — only ARIO prices in ARIO.
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
-  const fundFrom = route.kind === 'ario' ? route.fundFrom : 'turbo';
+  /**
+   * ARIO-only: the source the cost/gas estimate prices against. Anything not
+   * paying in ARIO estimates against 'balance', which is what the SDK's
+   * estimator understands.
+   */
+  const fundFrom: ArNSFundFrom =
+    route.kind === 'ario' ? route.fundFrom : 'balance';
 
   // Credits price (winc → credits) for the credits method display.
   const {
@@ -217,6 +224,10 @@ export function ArNSPurchaseCard({
     type,
     years,
     fundFrom,
+    // Credits pay the name, so the wallet's ARIO shortfall is not a blocker.
+    // Derived from the route, not the mechanism: this query runs before custody
+    // is resolved, and only ARIO-vs-not affects the estimate.
+    payWithCredits: route.kind !== 'ario',
     fromAddress: address,
   });
 
@@ -285,6 +296,16 @@ export function ArNSPurchaseCard({
     declinedLink,
   });
   const custodialCard = route.kind === 'card' && cardPlan.kind === 'custodial';
+  /*
+    How this actually settles — which SDK does the write.
+
+    `fundFrom: 'turbo'` used to stand in for "pay with credits", but
+    `@ar.io/sdk` accepts that value and ignores it: every Solana branch treats
+    it as 'balance' and debits the wallet's ARIO. Credits are debited only by
+    turbo-sdk, so the mechanism, not a funding label, picks the path.
+  */
+  const mechanism = settlementMechanismFor(route, custodialCard);
+
   /** Card is chosen but a cheaper, self-owned route is one click away. */
   const cardNeedsWallet =
     route.kind === 'card' &&
@@ -423,7 +444,9 @@ export function ArNSPurchaseCard({
         name,
         type,
         years: type === 'lease' ? years : undefined,
-        fundFrom: 'turbo',
+        // The token became credits, so this settles through Turbo — NOT through
+        // the ARIO SDK, which would charge the wallet's ARIO on top.
+        mechanism: { kind: 'turbo-credits' },
       });
       if (settled === undefined) {
         tokenTopUp.failAfterFunding(
@@ -851,7 +874,7 @@ export function ArNSPurchaseCard({
                   name,
                   type,
                   years: type === 'lease' ? years : undefined,
-                  fundFrom,
+                  mechanism,
                 })
           }
           disabled={

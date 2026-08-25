@@ -20,9 +20,9 @@ describe('buildBuyRecordArgs', () => {
 
   it('includes years for a lease', () => {
     expect(
-      buildBuyRecordArgs({ name: 'abc', type: 'lease', years: 3, fundFrom: 'turbo', referrer: 'R' }),
+      buildBuyRecordArgs({ name: 'abc', type: 'lease', years: 3, fundFrom: 'balance', referrer: 'R' }),
     ).toMatchObject({
-      name: 'abc', type: 'lease', years: 3, fundFrom: 'turbo', referrer: 'R',
+      name: 'abc', type: 'lease', years: 3, fundFrom: 'balance', referrer: 'R',
     });
   });
 
@@ -30,13 +30,13 @@ describe('buildBuyRecordArgs', () => {
     // Not `years: undefined` — the key must be absent, or the SDK sees a
     // permabuy carrying a lease term.
     const args = buildBuyRecordArgs({
-      name: 'abc', type: 'permabuy', years: 3, fundFrom: 'turbo', referrer: 'R',
+      name: 'abc', type: 'permabuy', years: 3, fundFrom: 'balance', referrer: 'R',
     });
     expect('years' in args).toBe(false);
   });
 
   it('omits years for a lease with no term given', () => {
-    const args = buildBuyRecordArgs({ name: 'abc', type: 'lease', fundFrom: 'turbo', referrer: 'R' });
+    const args = buildBuyRecordArgs({ name: 'abc', type: 'lease', fundFrom: 'balance', referrer: 'R' });
     expect('years' in args).toBe(false);
   });
 
@@ -72,9 +72,22 @@ describe('toSettlement', () => {
   });
 });
 
+describe('fundFrom is narrowed to what the ARIO SDK acts on', () => {
+  it('never carries the ignored \'turbo\' value', () => {
+    // `@ar.io/sdk` accepts 'turbo' and treats it as 'balance', spending the
+    // wallet's ARIO. The type excludes it so this cannot be constructed; this
+    // asserts the runtime shape matches.
+    const args = buildBuyRecordArgs({
+      name: 'abc', type: 'permabuy', fundFrom: 'stakes', referrer: 'R',
+    });
+    expect(args.fundFrom).toBe('stakes');
+    expect(['balance', 'stakes', 'any', undefined]).toContain(args.fundFrom);
+  });
+});
+
 describe('routeBuyError', () => {
   it('routes to top-up only when paying with credits AND short on credits', () => {
-    expect(routeBuyError({ fundFrom: 'turbo', isInsufficientCredits: true })).toEqual({
+    expect(routeBuyError({ mechanism: 'turbo-credits', isInsufficientCredits: true })).toEqual({
       kind: 'insufficient-credits',
     });
   });
@@ -88,7 +101,7 @@ describe('routeBuyError', () => {
   });
 
   it('treats any other credits-path failure as a normal error', () => {
-    expect(routeBuyError({ fundFrom: 'turbo', isInsufficientCredits: false })).toEqual({
+    expect(routeBuyError({ mechanism: 'turbo-credits', isInsufficientCredits: false })).toEqual({
       kind: 'error',
     });
   });

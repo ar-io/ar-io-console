@@ -16,7 +16,7 @@ import BaseModal from '../../../components/modals/BaseModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { daysUntil } from '../../../utils/domainExpiry';
 import { useArNSPrice } from '../hooks/useArNSPrice';
-import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
+import { useArNSCostDetails, type ArNSFundFrom } from '../hooks/useArNSCostDetails';
 import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
@@ -28,6 +28,7 @@ import {
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
 import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
+import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
@@ -111,7 +112,19 @@ export default function ManageDomainModal({
     ? resolveSettlementRoute(selectedOption, fundingSource)
     : ({ kind: 'credits' } as const);
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
-  const fundFrom = route.kind === 'ario' ? route.fundFrom : 'turbo';
+  /** ARIO-only: what the cost estimate prices against. */
+  const fundFrom: ArNSFundFrom =
+    route.kind === 'ario' ? route.fundFrom : 'balance';
+  /*
+    Which SDK settles this. `fundFrom: 'turbo'` was accepted by @ar.io/sdk and
+    ignored — it debited the wallet's ARIO — so renewing or upgrading with
+    credits charged the wrong asset. Credits go through turbo-sdk.
+
+    No custody argument: these intents act on a name that already exists, so
+    nothing is provisioned, and the card route settles through the fiat quote
+    before this hook is ever called.
+  */
+  const mechanism = settlementMechanismFor(route);
 
   const { manage, phase, statusMessage, error, insufficientCredits, isBusy } =
     useManageArNSName();
@@ -142,6 +155,8 @@ export default function ManageDomainModal({
     years: action === 'Extend-Lease' ? years : undefined,
     increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
     fundFrom,
+    // Credits pay the name, so the wallet's ARIO shortfall is not a blocker.
+    payWithCredits: mechanism.kind !== 'ario-direct',
     fromAddress: address,
     enabled: active,
   });
@@ -225,7 +240,7 @@ export default function ManageDomainModal({
         intent: action,
         years: action === 'Extend-Lease' ? years : undefined,
         increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
-        fundFrom,
+        mechanism,
       });
       if (res) onSuccess?.();
     } catch {
