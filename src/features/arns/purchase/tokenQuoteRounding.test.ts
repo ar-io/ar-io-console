@@ -48,3 +48,38 @@ describe('tokenUnitsForWinc', () => {
     ).toBe(0n);
   });
 });
+
+describe('smallest-unit amounts must stay integers', () => {
+  const LAMPORTS_PER_SOL = 1_000_000_000n;
+  const WEI_PER_ETH = 1_000_000_000_000_000_000n;
+
+  it('returns a whole number of lamports, never a fraction', () => {
+    // `topUpWithTokens` takes the SMALLEST unit and rejects a decimal:
+    // "0.019876422 cannot be converted to a BigInt because it is not an
+    // integer". Passing whole SOL is what produced that.
+    const units = tokenUnitsForWinc({
+      winc: 576541443107n,
+      wincPerToken: 28662173913043n,
+      tokenSmallestUnit: LAMPORTS_PER_SOL,
+      roundUp: true,
+    });
+    expect(typeof units).toBe('bigint');
+    expect(units % 1n).toBe(0n);
+    // ~0.0201 SOL expressed in lamports — an integer in the tens of millions.
+    expect(units).toBeGreaterThan(20_000_000n);
+    expect(units).toBeLessThan(21_000_000n);
+  });
+
+  it('stays exact at 18 decimals, where a float round-trip would not', () => {
+    // Scaling a display figure back up goes through a float: harmless at SOL's
+    // 1e9, lossy at ETH's 1e18. Integer arithmetic end to end avoids it.
+    const units = tokenUnitsForWinc({
+      winc: 1n,
+      wincPerToken: 3n,
+      tokenSmallestUnit: WEI_PER_ETH,
+      roundUp: true,
+    });
+    expect(units).toBe(WEI_PER_ETH / 3n + 1n);
+    expect(units.toString()).not.toContain('e');
+  });
+});

@@ -46,8 +46,14 @@ export function useArNSTokenTopUp() {
       readCredits,
     }: {
       token: SupportedTokenType;
-      /** Whole-token amount, already priced from the credits required. */
-      tokenAmount: number;
+      /**
+       * Amount in the token's SMALLEST unit (lamports for SOL).
+       *
+       * Typed as bigint on purpose: the SDK documents this field the same way,
+       * and passing whole tokens produced "0.019876422 cannot be converted to a
+       * BigInt because it is not an integer" — a failure a cast had hidden.
+       */
+      tokenAmount: bigint;
       creditsNeeded: number;
       /** Reads the live credit balance; injected so this stays testable. */
       readCredits: () => Promise<number>;
@@ -64,7 +70,7 @@ export function useArNSTokenTopUp() {
           walletAdapter: signer.walletAdapter,
           ...solanaConfig,
         });
-        await turbo.topUpWithTokens({ tokenAmount: tokenAmount as never });
+        await turbo.topUpWithTokens({ tokenAmount: tokenAmount.toString() });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         // Nothing left the wallet — say so, or they will assume it did.

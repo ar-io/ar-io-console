@@ -33,7 +33,7 @@ import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
-import { useCryptoPriceForWinc } from '../../../hooks/useCryptoPrice';
+import { useSmallestUnitForWinc } from '../../../hooks/useCryptoPrice';
 import { useStore } from '../../../store/useStore';
 import { stepLabel, failureAdvice } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
@@ -365,15 +365,14 @@ export function ArNSPurchaseCard({
     token amount was computed and "Register name" greyed out with no reason
     given.
   */
-  const tokenAmountForName = useCryptoPriceForWinc(
+  /** Charged amount, in the token's smallest unit — what the SDK requires. */
+  const tokenSmallestUnitForName = useSmallestUnitForWinc(
     route.kind === 'topup' && creditsPrice?.credits
       ? creditsPrice.credits * 1e12
       : undefined,
     route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
-    // This figure is charged, not displayed — truncating it under-funds the
-    // registration it exists to pay for.
-    true,
   );
+
 
   const tokenStepLabel = stepLabel(tokenTopUp.step);
 
@@ -428,11 +427,11 @@ export function ArNSPurchaseCard({
   }, [tokenTopUp, balances.credits, creditsPrice?.credits, registerAfterFunding]);
 
   const runTokenPurchase = useCallback(async () => {
-    if (route.kind !== 'topup' || !tokenAmountForName) return;
+    if (route.kind !== 'topup' || !tokenSmallestUnitForName) return;
     try {
       await tokenTopUp.fund({
         token: route.token as SupportedTokenType,
-        tokenAmount: tokenAmountForName,
+        tokenAmount: tokenSmallestUnitForName,
         /*
           Wait for the top-up to LAND, not merely for the balance to cover the
           price — which it may already do. Starting balance plus the price is
@@ -458,7 +457,7 @@ export function ArNSPurchaseCard({
     }
     await registerAfterFunding();
   }, [
-    route, tokenAmountForName, tokenTopUp, creditsPrice?.credits,
+    route, tokenSmallestUnitForName, tokenTopUp, creditsPrice?.credits,
     balances.credits, registerAfterFunding,
   ]);
 
@@ -509,7 +508,7 @@ export function ArNSPurchaseCard({
       reason — otherwise it greys out silently, which is what a zero shortfall
       used to do. A missing quote is the only case the checks above don't cover.
     */
-    if (route.kind === 'topup' && !tokenAmountForName) {
+    if (route.kind === 'topup' && !tokenSmallestUnitForName) {
       return {
         text: `Still pricing this name in ${tokenLabels[route.token as SupportedTokenType]}…`,
       };
@@ -521,7 +520,7 @@ export function ArNSPurchaseCard({
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
     insufficientFunds, route, cost, balances.sol, custodialCard,
-    tokenAmountForName,
+    tokenSmallestUnitForName,
   ]);
 
   // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
@@ -770,7 +769,7 @@ export function ArNSPurchaseCard({
           disabled={
             route.kind === 'topup'
               ? !priceReady || gasUnavailable || insufficientSol || isBusy ||
-                !tokenAmountForName || tokenStepLabel !== undefined
+                !tokenSmallestUnitForName || tokenStepLabel !== undefined
               : !canPay
           }
           busy={isBusy || tokenStepLabel !== undefined}
