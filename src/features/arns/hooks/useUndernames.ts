@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getANT, getWritableANT } from '../../../utils';
+import { useRecordWriter } from './useRecordWriter';
+import { mapRecordWriteError } from '../custody/recordWriter';
 import { useArNSConfigKey } from './useArNSConfigKey';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 
@@ -113,8 +115,15 @@ export type UndernameWritePhase = 'idle' | 'submitting' | 'success' | 'error';
  * adding an undername beyond the name's undername limit fails on-chain — surface
  * the error and point the user at "Add undernames" (increase the limit).
  */
-export function useUndernameWrites() {
+export function useUndernameWrites(name?: string, processIdForCustody?: string) {
   const signer = useArNSTurboSigner();
+  // Resolves to the ANT writer for a name the user owns, or to Turbo's
+  // custodial route for one it holds. Callers pass the same processId they
+  // already pass per-op; the extra arg only seeds custody lookup.
+  const { getWriter, isCustodial, isResolving } = useRecordWriter(
+    name,
+    processIdForCustody,
+  );
   const [phase, setPhase] = useState<UndernameWritePhase>('idle');
   /** The undername currently being written (for per-row busy state). */
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -142,16 +151,19 @@ export function useUndernameWrites() {
       setPhase('submitting');
       setBusyKey(undername);
       try {
-        const ant = (await getWritableANT(
-          processId,
-          signer.getSolanaSigner(),
-        )) as unknown as ANTUndernameWriteable;
-        await ant.setUndernameRecord({ undername, ...record });
+        const writer = await getWriter(processId);
+        await writer.setRecord({
+          undername,
+          transactionId: record.transactionId ?? '',
+          ttlSeconds: record.ttlSeconds ?? 0,
+        });
         setPhase('success');
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
-        const normalized = err instanceof Error ? err : new Error(String(err));
+        // Custodial failures arrive as HTTP statuses whose raw text misleads —
+        // a 404 reads as "your name is gone" when it means "wrong wallet".
+        const normalized = new Error(mapRecordWriteError(err));
         setPhase('error');
         setError(normalized);
         throw normalized;
@@ -159,7 +171,7 @@ export function useUndernameWrites() {
         setBusyKey(null);
       }
     },
-    [ensureSigner, signer],
+    [ensureSigner, getWriter],
   );
 
   const transferUndernameOwnership = useCallback(
@@ -182,7 +194,9 @@ export function useUndernameWrites() {
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
-        const normalized = err instanceof Error ? err : new Error(String(err));
+        // Still mapped: the undername-limit remedy arrives from the chain on
+        // this path too, and non-HTTP errors pass through unchanged.
+        const normalized = new Error(mapRecordWriteError(err));
         setPhase('error');
         setError(normalized);
         throw normalized;
@@ -200,16 +214,13 @@ export function useUndernameWrites() {
       setPhase('submitting');
       setBusyKey(undername);
       try {
-        const ant = (await getWritableANT(
-          processId,
-          signer.getSolanaSigner(),
-        )) as unknown as ANTUndernameWriteable;
-        await ant.removeUndernameRecord({ undername });
+        const writer = await getWriter(processId);
+        await writer.removeRecord({ undername });
         setPhase('success');
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
-        const normalized = err instanceof Error ? err : new Error(String(err));
+        const normalized = new Error(mapRecordWriteError(err));
         setPhase('error');
         setError(normalized);
         throw normalized;
@@ -217,7 +228,7 @@ export function useUndernameWrites() {
         setBusyKey(null);
       }
     },
-    [ensureSigner, signer],
+    [ensureSigner, getWriter],
   );
 
   const reset = useCallback(() => {
@@ -230,6 +241,10 @@ export function useUndernameWrites() {
     saveUndername,
     removeUndername,
     transferUndernameOwnership,
+    /** Turbo holds this ANT — record-owner transfer has no custodial route. */
+    isCustodial,
+    /** Custody unresolved; writes must wait rather than guess a writer. */
+    isResolving,
     reset,
     phase,
     busyKey,

@@ -45,6 +45,8 @@ const APEX = '@';
  */
 interface RecordsTableProps {
   processId: string;
+  /** The ArNS name — seeds the custody lookup that picks a record writer. */
+  name?: string;
   ant: ANTDetails | undefined;
   undernames: UndernameRecord[] | undefined;
   /** Owner or controller — both may edit records. */
@@ -76,6 +78,7 @@ function TargetValue({ target }: { target: string | null | undefined }) {
 
 export default function RecordsTable({
   processId,
+  name,
   ant,
   undernames,
   canManage,
@@ -90,7 +93,7 @@ export default function RecordsTable({
   const [newName, setNewName] = useState('');
   const [rowError, setRowError] = useState<string | null>(null);
 
-  const undernameWrites = useUndernameWrites();
+  const undernameWrites = useUndernameWrites(name, processId);
   const metadata = useSetArNSMetadata();
 
   const rows = useMemo<Row[]>(() => {

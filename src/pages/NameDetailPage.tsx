@@ -25,6 +25,7 @@ import type { ArNSName } from '@/types';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import {
   CustodialNamePanel,
+  isActionAvailable,
   useTurboNameCustody,
   ManageDomainModal,
   EditDetailsModal,
@@ -161,7 +162,20 @@ export default function NameDetailPage() {
    * paid for, listed, and with no action available anywhere.
    */
   const { custodyOf } = useTurboNameCustody(arnsAddress ?? undefined);
-  const isCustodial = custodyOf(name ?? '') === 'turbo-custodial';
+  const custody = custodyOf(name ?? '');
+  const isCustodial = custody === 'turbo-custodial';
+
+  /**
+   * Records stay editable on a Turbo-held name.
+   *
+   * `canManage` is an on-chain owner/controller check, which a custodial name
+   * fails — Turbo is the owner. But Turbo will set and remove records on the
+   * buyer's behalf, so gating the table on `canManage` alone hides an editor
+   * that works. The write path resolves the same way (see `recordWriter`), so
+   * the control and the capability cannot drift apart.
+   */
+  const canEditRecords =
+    canManage || (isCustodial && isActionAvailable('set-record', custody));
   const isPrimary = !!primary?.current && primary.current.name === name;
 
   // A minimal ArNSName the action modals consume (they read name/displayName/
@@ -461,9 +475,10 @@ export default function NameDetailPage() {
               modal. */}
           <RecordsTable
             processId={record.processId}
+            name={name ?? undefined}
             ant={ant}
             undernames={undernames}
-            canManage={canManage}
+            canManage={canEditRecords}
             undernameLimit={record.undernameLimit}
             onSuccess={refresh}
           />
