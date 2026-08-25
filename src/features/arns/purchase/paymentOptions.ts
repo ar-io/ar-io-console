@@ -99,9 +99,10 @@ export function buildPaymentOptions({
   const options: PaymentOption[] = [];
 
   /*
-    An existing balance leads when there is one: it is preselected (see
-    `defaultPaymentOption`), costs nothing new, and the eye should land on the
-    option already chosen rather than hunt for it at the end of the row.
+    An existing balance leads when there is one: it is preselected WHEN IT
+    COVERS THE PRICE (see `defaultPaymentOption`, which skips an insufficient
+    balance), costs nothing new, and the eye should land on the likely choice
+    rather than hunt for it at the end of the row.
 
     With no balance — the common case — Card leads instead. It is the only
     option that works with no crypto at all, and the one a newcomer is looking

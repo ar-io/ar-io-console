@@ -191,9 +191,29 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           </div>
         </div>
 
-        {/* Next Steps — suppressed for a purchase in flight: pointing at Upload
-            or Deploy mid-registration sends the user away from what they came
-            for, and the host closes this panel to finish the buy. */}
+        {/*
+          A purchase in flight gets one action, not a menu.
+
+          Upload/Deploy point away from what the user came for — but suppressing
+          them alone stranded the flow, because EVERY one of those buttons was
+          also the only caller of `onComplete`, which is what continues to
+          registration. Hiding them removed the exit as well as the detours.
+        */}
+        {purpose && (
+          <div className="mb-6">
+            <button
+              onClick={onComplete}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Continue to registration
+            </button>
+            <p className="mt-2 text-center text-xs text-foreground/70">
+              You&apos;ll confirm {purpose.name}.ar.io next. Your credits stay on
+              your balance until then.
+            </p>
+          </div>
+        )}
+
         {!purpose && (
         <div className="bg-card rounded-2xl p-4 mb-6">
           <h5 className="text-foreground mb-4">What's Next?</h5>
