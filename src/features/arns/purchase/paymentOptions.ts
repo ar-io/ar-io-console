@@ -28,6 +28,8 @@ export interface PaymentOption {
   token?: SupportedTokenType;
   /** False when the option exists but cannot cover this purchase. */
   sufficient: boolean;
+  /** Short chip, e.g. "Best price". Absent for most options. */
+  badge?: string;
 }
 
 const TOKEN_LABEL: Partial<Record<SupportedTokenType, string>> = {
@@ -127,6 +129,14 @@ export function buildPaymentOptions({
               maximumFractionDigits: 4,
             })} available`,
       token,
+      /*
+        ARIO pays the ARIO registry directly and never touches the Turbo infra
+        fee, so it is cheaper than every other route BY CONSTRUCTION — not by a
+        market rate that could invert. Measured live: ARIO $1.36 vs SOL $2.09
+        vs card $4.16 for the same name. Worth stating, since the whole point of
+        correcting the ARIO rate was to make that difference visible.
+      */
+      badge: token === 'ario' ? 'Best price' : undefined,
       // Unknown holdings or unknown price must NOT read as insufficient — the
       // same conflation that made a funded wallet look empty elsewhere.
       sufficient: held === undefined || price === undefined ? true : held >= price,

@@ -27,7 +27,7 @@ import {
 export function useRecordWriter(name: string | undefined, processId: string | undefined) {
   const signer = useArNSTurboSigner();
   const turboConfig = useTurboConfig('solana');
-  const { custodyOf, isLoading } = useTurboNameCustody(signer.address ?? undefined);
+  const { custodyOf, isLoading } = useTurboNameCustody();
 
   const custody = custodyOf(name ?? '');
   const kind = writerKindForWrite(custody);

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useElements, useStripe } from '@stripe/react-stripe-js';
 import { CardElement } from '@stripe/react-stripe-js';
 import type { ArNSFiatPurchaseQuote } from '@ardrive/turbo-sdk/web';
@@ -56,6 +57,7 @@ export interface UseArNSFiatPurchaseResult {
 export function useArNSFiatPurchase(): UseArNSFiatPurchaseResult {
   const client = useTurboArNSClient();
   const stripe = useStripe();
+  const queryClient = useQueryClient();
   const elements = useElements();
 
   const [state, setState] = useState<PurchaseState>({ status: 'idle' });
@@ -193,6 +195,10 @@ export function useArNSFiatPurchase(): UseArNSFiatPurchaseResult {
       dispatch({ type: 'SETTLED', messageId: outcome.messageId });
       // The purchase debited server-side; the balance display may have moved.
       window.dispatchEvent(new CustomEvent('refresh-balance'));
+      // A custodial buy just created a name Turbo holds. Without this the
+      // 5-minute cache means the detail page shows no custodial panel, no
+      // transfer, and mis-gated records for minutes after paying.
+      void queryClient.invalidateQueries({ queryKey: ['turbo-arns-names'] });
     } else if (outcome.kind === 'failed') {
       // Settlement failed after the card cleared — the service refunds it.
       dispatch({ type: 'SETTLE_FAILED' });
@@ -202,7 +208,7 @@ export function useArNSFiatPurchase(): UseArNSFiatPurchaseResult {
       // reported as a failure.
       dispatch({ type: 'GAVE_UP' });
     }
-  }, [stripe, elements, quote, client, dispatch, requestQuote]);
+  }, [stripe, elements, quote, client, dispatch, requestQuote, queryClient]);
 
   return {
     state,

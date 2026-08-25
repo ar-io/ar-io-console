@@ -161,7 +161,7 @@ export default function NameDetailPage() {
    * disappears. Without this the name a card purchase just bought looks inert:
    * paid for, listed, and with no action available anywhere.
    */
-  const { custodyOf } = useTurboNameCustody(arnsAddress ?? undefined);
+  const { custodyOf } = useTurboNameCustody();
   const custody = custodyOf(name ?? '');
   const isCustodial = custody === 'turbo-custodial';
 

@@ -95,7 +95,14 @@ function OptionCard({
         <OptionIcon option={option} active={active} />
       </span>
       <span className="min-w-0">
-        <span className="block font-medium text-foreground">{option.label}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="font-medium text-foreground">{option.label}</span>
+          {option.badge && (
+            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+              {option.badge}
+            </span>
+          )}
+        </span>
         {option.detail && (
           <span className="block truncate text-xs text-foreground/60">
             {option.detail}
