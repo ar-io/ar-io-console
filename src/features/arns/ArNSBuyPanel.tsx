@@ -148,7 +148,14 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
       {/* Configure + buy. The buy button itself gates on a Solana signer (via
           SolanaGateButton), so the user configures freely and meets the wallet
           step only at the moment of purchase — no upfront wall. */}
-      {selectedName && buyState.phase === 'idle' && (
+      {/*
+        Stays mounted while the purchase is in flight. Swapping the whole
+        checkout for a status screen mid-write was jarring — and inconsistent
+        with the token path, which reports progress on the button the user just
+        pressed. Terminal states still get their own surface, because a receipt
+        really is a different screen.
+      */}
+      {selectedName && (buyState.phase === 'idle' || buyState.phase === 'submitting') && (
         <ArNSPurchaseCard
           name={selectedName}
           isBusy={buyState.isBusy}
@@ -168,7 +175,6 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
       {selectedName && (
         <ArNSPurchaseStatus
           phase={buyState.phase}
-          statusMessage={buyState.statusMessage}
           result={buyState.result}
           error={buyState.error}
           insufficientCredits={buyState.insufficientCredits}

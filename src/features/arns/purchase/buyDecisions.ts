@@ -46,7 +46,24 @@ export interface BuyRecordArgs {
    */
   fundFrom?: FundFrom;
   referrer: string;
+  /**
+   * Initial ANT metadata and `@` target, applied on the atomic buy path.
+   * Ignored when a `processId` is supplied, since that ANT already exists.
+   */
+  antState?: { transactionId?: string };
 }
+
+/**
+ * Where a freshly bought name points before its owner sets anything.
+ *
+ * Without an explicit `antState.transactionId`, the SDK falls back to
+ * `DEFAULT_ANT_TRANSACTION_ID` — which is the AR.IO **logo** image, chosen only
+ * because an empty string fails the on-chain `is_valid_arweave_id` check. It is
+ * a validation placeholder, not a destination, so a brand-new name resolved to
+ * a picture of a logo. This points it at the real landing page instead.
+ */
+export const DEFAULT_ARNS_TARGET_TX =
+  'T9_V2HfiAq5qlLzObfyayj2-cjPujxpg25TRi4OZbe4';
 
 export function buildBuyRecordArgs({
   name,
@@ -61,6 +78,9 @@ export function buildBuyRecordArgs({
     ...(type === 'lease' && years ? { years } : {}),
     fundFrom,
     referrer,
+    // Only meaningful on the atomic path (no `processId`), which is the one
+    // this app uses — a supplied ANT keeps whatever target it already has.
+    antState: { transactionId: DEFAULT_ARNS_TARGET_TX },
   };
 }
 

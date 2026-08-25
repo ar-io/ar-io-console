@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_ARNS_TARGET_TX,
   buildBuyRecordArgs,
   routeBuyError,
   submittingMessage,
@@ -8,10 +9,21 @@ import {
 } from './buyDecisions';
 
 describe('buildBuyRecordArgs', () => {
+  it('points a new name at the real landing page, not the logo placeholder', () => {
+    // Without this the SDK falls back to DEFAULT_ANT_TRANSACTION_ID — the AR.IO
+    // logo image, picked only to satisfy `is_valid_arweave_id` — so a
+    // freshly-bought name resolved to a picture.
+    expect(
+      buildBuyRecordArgs({ name: 'abc', type: 'permabuy', referrer: 'r' }).antState,
+    ).toEqual({ transactionId: DEFAULT_ARNS_TARGET_TX });
+  });
+
   it('includes years for a lease', () => {
     expect(
       buildBuyRecordArgs({ name: 'abc', type: 'lease', years: 3, fundFrom: 'turbo', referrer: 'R' }),
-    ).toEqual({ name: 'abc', type: 'lease', years: 3, fundFrom: 'turbo', referrer: 'R' });
+    ).toMatchObject({
+      name: 'abc', type: 'lease', years: 3, fundFrom: 'turbo', referrer: 'R',
+    });
   });
 
   it('OMITS the years key entirely for a permabuy', () => {
