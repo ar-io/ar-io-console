@@ -46,6 +46,27 @@ export function failureAdvice(step: TopUpStep): string | undefined {
     : 'Nothing was charged.';
 }
 
+/**
+ * What the user should do while this runs.
+ *
+ * The button label names the STEP; this names the expectation. A two-signature
+ * flow with a minutes-long gap in the middle looks stalled otherwise, and the
+ * most costly reaction to a screen that looks stalled is to leave it.
+ */
+export function waitingNotice(step: TopUpStep): string | undefined {
+  switch (step.phase) {
+    case 'funding':
+      return 'Keep this tab open — this takes two wallet prompts.';
+    case 'crediting':
+      // The one stretch with nothing to approve, so it looks the most stuck.
+      return 'Keep this tab open. Credits can take a few minutes to arrive; your payment is safe either way.';
+    case 'registering':
+      return 'Keep this tab open — approve the second prompt to claim the name.';
+    default:
+      return undefined;
+  }
+}
+
 /** Money is committed from the moment the transfer is signed. */
 export function isMoneyAtRisk(step: TopUpStep): boolean {
   return step.phase === 'funding' || step.phase === 'crediting' || step.phase === 'registering';

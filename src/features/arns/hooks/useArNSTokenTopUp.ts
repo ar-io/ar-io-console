@@ -1,10 +1,10 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import type { SupportedTokenType } from '../../../constants';
-import type { TopUpStep } from '../purchase/topUpSteps';
+import { isMoneyAtRisk, type TopUpStep } from '../purchase/topUpSteps';
 
 /**
  * Credits lag the payment: a Solana transfer needs finality and Turbo then
@@ -37,6 +37,27 @@ export function useArNSTokenTopUp() {
   const [step, setStep] = useState<TopUpStep>({ phase: 'idle' });
   const fundedRef = useRef(false);
   const solanaConfig = useTurboConfig('solana');
+
+  /*
+    Warn before the tab closes while a purchase is mid-flight.
+
+    This is the longest and most exposed wait in the app: two wallet prompts
+    with a crediting gap between them that can run minutes. Leaving during it
+    doesn't lose the money — the credits land regardless — but it does abandon
+    the registration those credits were bought for, and the user would come back
+    to a balance rather than a name.
+  */
+  const atRisk = isMoneyAtRisk(step);
+  useEffect(() => {
+    if (!atRisk) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Browsers show their own wording; a non-empty value is what triggers it.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [atRisk]);
 
   const reset = useCallback(() => {
     fundedRef.current = false;

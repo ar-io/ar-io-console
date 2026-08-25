@@ -38,7 +38,11 @@ import {
   useSmallestUnitForWinc,
 } from '../../../hooks/useCryptoPrice';
 import { getTurboBalance } from '../../../utils';
-import { stepLabel, failureAdvice } from '../purchase/topUpSteps';
+import {
+  failureAdvice,
+  stepLabel,
+  waitingNotice,
+} from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
 
@@ -216,13 +220,34 @@ export function ArNSPurchaseCard({
     fromAddress: address,
   });
 
+  /** Charged amount, in the token's smallest unit — what the SDK requires. */
+  const tokenSmallestUnitForName = useSmallestUnitForWinc(
+    route.kind === 'topup' && creditsPrice?.credits
+      ? creditsPrice.credits * 1e12
+      : undefined,
+    route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
+  );
+
+  /**
+   * SOL the wallet must hold: rent and fees, PLUS the name itself when SOL is
+   * what's paying for it.
+   *
+   * Checking gas alone let a wallet through that could cover the deposit but
+   * not the purchase — it passed the gate, signed, and failed on the transfer.
+   */
+  const solNeededTotal =
+    (cost?.gasTotalSol ?? 0) +
+    (route.kind === 'topup' && tokenSmallestUnitForName
+      ? Number(tokenSmallestUnitForName) /
+        Number(getTokenSmallestUnit(route.token as SupportedTokenType))
+      : 0);
   const insufficientSol =
     // Only a KNOWN balance can block the action. `undefined` means the lookup
     // failed or never ran — blocking on that told funded users to go buy SOL.
     !!cost &&
     !balances.loading &&
     balances.sol !== undefined &&
-    balances.sol < cost.gasTotalSol;
+    balances.sol < solNeededTotal;
   /**
    * Whether the CHOSEN method is short — not whether some other one is.
    *
@@ -368,13 +393,6 @@ export function ArNSPurchaseCard({
     token amount was computed and "Register name" greyed out with no reason
     given.
   */
-  /** Charged amount, in the token's smallest unit — what the SDK requires. */
-  const tokenSmallestUnitForName = useSmallestUnitForWinc(
-    route.kind === 'topup' && creditsPrice?.credits
-      ? creditsPrice.credits * 1e12
-      : undefined,
-    route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
-  );
 
 
   const tokenStepLabel = stepLabel(tokenTopUp.step);
@@ -520,7 +538,7 @@ export function ArNSPurchaseCard({
     if (insufficientSol) {
       const need =
         cost && balances.sol !== undefined
-          ? Math.max(0, cost.gasTotalSol - balances.sol)
+          ? Math.max(0, solNeededTotal - balances.sol)
           : 0;
       // Format first, then decide. A shortfall under 0.00005 SOL is real but
       // rounds to "0" at 4dp, and "you need about 0 more SOL" reads as a bug.
@@ -548,7 +566,7 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route, cost, balances.sol, custodialCard,
+    insufficientFunds, route, cost, balances.sol, custodialCard, solNeededTotal,
     tokenSmallestUnitForName,
   ]);
 
@@ -628,15 +646,16 @@ export function ArNSPurchaseCard({
       {/* Lease-vs-permabuy decision aid */}
       {permabuyBreakEvenYears !== undefined && (
         <p className="-mt-2 mb-4 text-xs text-foreground/60">
+          {/*
+            Each option explains ITSELF. This line used to pitch permabuy while
+            the user was sitting on Lease — answering a question they hadn't
+            asked, and saying nothing about the choice they had made. The
+            break-even figure stays, because that is the number the decision
+            actually turns on.
+          */}
           {type === 'permabuy'
             ? `Own it forever — no renewals, ever. Roughly the cost of ${permabuyBreakEvenYears} years of leasing.`
-            : /*
-                 Was "Permabuy ≈ N years of leasing — own it forever, never
-                 renew", which reads as a DURATION and so contradicts its own
-                 second half. It's a price comparison: say "costs about as much
-                 as", and never put "≈" next to a span of years.
-              */
-              `Permabuy costs about as much as ${permabuyBreakEvenYears} years of leasing, and never needs renewing.`}
+            : `Costs less up front, and you can renew or switch to permanent later. Permabuy is about ${permabuyBreakEvenYears} years of leasing, paid once.`}
         </p>
       )}
 
@@ -824,6 +843,13 @@ export function ArNSPurchaseCard({
         >
           <Wallet className="h-4 w-4" /> Register name
         </SolanaGateButton>
+      )}
+
+      {/* Says what to DO while it runs; the button only says where it is. */}
+      {waitingNotice(tokenTopUp.step) && (
+        <p className="mt-2 text-center text-xs text-foreground/70">
+          {waitingNotice(tokenTopUp.step)}
+        </p>
       )}
 
       {/* Funded but not registered must never read as "payment failed". */}
