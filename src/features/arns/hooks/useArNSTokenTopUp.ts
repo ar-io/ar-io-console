@@ -6,9 +6,18 @@ import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import type { SupportedTokenType } from '../../../constants';
 import type { TopUpStep } from '../purchase/topUpSteps';
 
-/** Credits can lag the on-chain transfer; bounded so it can't hang forever. */
-const CREDIT_POLL_INTERVAL_MS = 2_000;
-const CREDIT_POLL_TIMEOUT_MS = 90_000;
+/**
+ * Credits lag the payment: a Solana transfer needs finality and Turbo then
+ * credits it, and a card settles through a Stripe webhook. Ninety seconds was
+ * optimistic — real SOL top-ups exceeded it and reported "taking longer than
+ * usual" for a payment that was merely still in progress.
+ *
+ * Slower interval too: this used to dispatch `refresh-balance` every 2s, which
+ * fans out to every balance consumer in the app — 45 rounds of that during one
+ * purchase.
+ */
+const CREDIT_POLL_INTERVAL_MS = 5_000;
+const CREDIT_POLL_TIMEOUT_MS = 5 * 60_000;
 
 /**
  * Fund a name purchase with tokens, inline — no dialog.

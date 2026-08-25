@@ -8,7 +8,8 @@ import { useTurboConfig } from './useTurboConfig';
 /**
  * Get the smallest unit for a token type (e.g., 10^18 wei for ETH)
  */
-const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
+/** Smallest unit per whole token (lamports per SOL, wei per ETH, …). */
+export const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
   switch (tokenType) {
     case 'arweave':
       return BigInt(10 ** 12); // winston

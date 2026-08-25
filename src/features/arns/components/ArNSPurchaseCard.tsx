@@ -33,8 +33,11 @@ import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
-import { useSmallestUnitForWinc } from '../../../hooks/useCryptoPrice';
-import { useStore } from '../../../store/useStore';
+import {
+  getTokenSmallestUnit,
+  useSmallestUnitForWinc,
+} from '../../../hooks/useCryptoPrice';
+import { getTurboBalance } from '../../../utils';
 import { stepLabel, failureAdvice } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
@@ -377,6 +380,20 @@ export function ArNSPurchaseCard({
   const tokenStepLabel = stepLabel(tokenTopUp.step);
 
   /**
+   * Spendable credits, straight from the payment service.
+   *
+   * `effectiveBalance` includes credits shared with this wallet, which is what
+   * a purchase can actually draw on — using the owned balance alone would wait
+   * for credits that were already available.
+   */
+  const readTurboCredits = useCallback(async (): Promise<number> => {
+    if (!address) return 0;
+    const balance = await getTurboBalance(address, 'solana');
+    const winc = balance?.effectiveBalance ?? balance?.winc ?? 0;
+    return Number(winc) / 1e12;
+  }, [address]);
+
+  /**
    * Register once the money has landed, reporting a failure as "funded, not
    * registered" rather than a plain error — they hold spendable credits and
    * must not be told to pay again.
@@ -415,16 +432,24 @@ export function ArNSPurchaseCard({
     try {
       await tokenTopUp.awaitCredits({
         creditsNeeded: balances.credits + (creditsPrice?.credits ?? 0),
-        readCredits: async () => {
-          window.dispatchEvent(new CustomEvent('refresh-balance'));
-          return useStore.getState().creditBalance ?? 0;
-        },
+        /*
+          Ask the payment service, rather than dispatching `refresh-balance` and
+          reading the store. That route is debounce -> invalidate -> refetch ->
+          effect -> store, so a synchronous read always trailed by a cycle, and
+          firing it every couple of seconds pulled every balance consumer in the
+          app along with it.
+        */
+        readCredits: readTurboCredits,
       });
     } catch {
       return; // `awaitCredits` recorded that the money landed.
     }
     await registerAfterFunding();
-  }, [tokenTopUp, balances.credits, creditsPrice?.credits, registerAfterFunding]);
+  }, [
+    tokenTopUp, balances.credits, creditsPrice?.credits, registerAfterFunding,
+    readTurboCredits,
+  ]);
+
 
   const runTokenPurchase = useCallback(async () => {
     if (route.kind !== 'topup' || !tokenSmallestUnitForName) return;
@@ -447,10 +472,14 @@ export function ArNSPurchaseCard({
           and registering into that gap fails for "insufficient credits" having
           already taken the money.
         */
-        readCredits: async () => {
-          window.dispatchEvent(new CustomEvent('refresh-balance'));
-          return useStore.getState().creditBalance ?? 0;
-        },
+        /*
+          Ask the payment service, rather than dispatching `refresh-balance` and
+          reading the store. That route is debounce -> invalidate -> refetch ->
+          effect -> store, so a synchronous read always trailed by a cycle, and
+          firing it every couple of seconds pulled every balance consumer in the
+          app along with it.
+        */
+        readCredits: readTurboCredits,
       });
     } catch {
       return; // `fund` already recorded whether any money moved.
@@ -458,7 +487,7 @@ export function ArNSPurchaseCard({
     await registerAfterFunding();
   }, [
     route, tokenSmallestUnitForName, tokenTopUp, creditsPrice?.credits,
-    balances.credits, registerAfterFunding,
+    balances.credits, registerAfterFunding, readTurboCredits,
   ]);
 
   /**
@@ -671,6 +700,16 @@ export function ArNSPurchaseCard({
           solBalance={balances.sol}
           insufficientFunds={insufficientFunds}
           insufficientSol={insufficientSol}
+          tokenForName={
+            route.kind === 'topup' && tokenSmallestUnitForName
+              ? {
+                  amount:
+                    Number(tokenSmallestUnitForName) /
+                    Number(getTokenSmallestUnit(route.token as SupportedTokenType)),
+                  label: tokenLabels[route.token as SupportedTokenType],
+                }
+              : undefined
+          }
           networkCostCovered={custodialCard}
           custodialAnt={custodialCard}
         />

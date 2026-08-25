@@ -90,6 +90,15 @@ interface Props {
    * that includes spawning it.
    */
   custodialAnt?: boolean;
+  /**
+   * Token spent on the NAME itself, when paying with a token that must become
+   * credits first.
+   *
+   * Without it "SOL needed" showed only the rent and fee — so a user paying
+   * ~0.02 SOL for the name on top of ~0.015 SOL of gas saw 0.015 and was asked
+   * to sign 0.02. The figure was never wrong, it was simply never shown.
+   */
+  tokenForName?: { amount: number; label: string };
 }
 
 /**
@@ -169,6 +178,7 @@ export function ArNSCostBreakdown({
   insufficientSol,
   networkCostCovered = false,
   custodialAnt = false,
+  tokenForName,
 }: Props) {
   const currency = useStore((s) => s.priceDisplayCurrency);
   // Credits per $1, inverted. Shown with "~" because this is an indicative
@@ -311,7 +321,7 @@ export function ArNSCostBreakdown({
               <span
                 className={`text-sm font-semibold ${insufficientSol ? 'text-error' : 'text-foreground'}`}
               >
-                ~{fmtSol(gasTotalSol)} SOL
+                ~{fmtSol(gasTotalSol + (tokenForName?.amount ?? 0))} SOL
               </span>
             </Row>
             <p
