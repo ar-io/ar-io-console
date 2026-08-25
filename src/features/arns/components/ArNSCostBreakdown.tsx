@@ -1,4 +1,3 @@
-import { MAINNET_ARIO_MINT } from "@ar.io/sdk/web";
 import {
   AlertTriangle,
   Check,
@@ -16,26 +15,21 @@ import { useCreditsForFiat } from "../../../hooks/useCreditsForFiat";
 /** Where to send users who need SOL for the network deposit. Configurable. */
 const GET_SOL_URL = "https://www.coinbase.com/how-to-buy/solana";
 
-/** Wrapped SOL — Raydium's input side for a SOL -> ARIO swap. */
-const WSOL_MINT = "So11111111111111111111111111111111111111112";
 
 /**
- * Swap SOL for ARIO on Raydium, prefilled.
+ * Where to send someone who needs ARIO.
  *
- * The SOL shortfall has had a "Get SOL" link for a while; the ARIO one said
- * "Not enough ARIO in this source" and stopped there — a dead end on the
- * CHEAPEST payment route, which is the worst place to have one.
+ * ar.io's own token page, not a DEX directly. A first attempt deep-linked a
+ * prefilled Raydium swap and failed in the field — Raydium's documented form
+ * uses the `sol` shorthand for the input side, not the wrapped-SOL mint, and
+ * that was never tested against the live site.
  *
- * The mint comes from `@ar.io/sdk` rather than being pasted in: an incorrect
- * mint would send someone to swap real SOL for the wrong token, and a constant
- * copied by hand cannot follow the SDK if the token ever moves.
- *
- * Deliberately mainnet-only. Devnet ARIO has no Raydium market, so a
- * config-derived devnet link would lead to an empty pool.
+ * The deeper reason to stay here: this page is maintained by ar.io and already
+ * lists both Raydium and Jupiter, so it survives liquidity moving venues. A
+ * hardcoded pool link rots silently and strands the user on the one route that
+ * is meant to be cheapest.
  */
-const GET_ARIO_URL =
-  `https://raydium.io/swap/?inputMint=${WSOL_MINT}` +
-  `&outputMint=${MAINNET_ARIO_MINT.toString()}`;
+const GET_ARIO_URL = "https://ar.io/token";
 
 const fmtSol = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 4 });
@@ -254,7 +248,7 @@ export function ArNSCostBreakdown({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
               >
-                Swap for ARIO
+                Get ARIO
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
