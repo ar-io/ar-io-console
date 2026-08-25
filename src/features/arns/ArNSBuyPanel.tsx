@@ -20,6 +20,12 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   const [selectedName, setSelectedName] = useState<string | undefined>();
 
   const buyState = useBuyArNSName();
+  /**
+   * The user paid for credits but the registration hasn't settled. Lives here,
+   * not on the purchase card: that card is unmounted the instant `phase` leaves
+   * 'idle', which is exactly when this matters.
+   */
+  const [tokenFunded, setTokenFunded] = useState(false);
 
   const handleBuy = (input: BuyArNSNameInput) => {
     /*
@@ -33,6 +39,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   };
 
   const handleDone = () => {
+    setTokenFunded(false);
     buyState.reset();
     setSelectedName(undefined);
     setSearch('');
@@ -41,6 +48,13 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   // Retry the same name: clear the terminal buy state but keep the selection,
   // so the purchase card re-appears for another attempt.
   const handleRetry = () => {
+    /*
+      Deliberately does NOT clear `tokenFunded`. Retrying re-runs only the
+      registration — the credits are already bought and still theirs, so if it
+      fails again they should see the same "you already paid" guidance rather
+      than a bare error. It clears when the flow actually ends (`handleDone`) or
+      the user picks a different name.
+    */
     buyState.reset();
   };
 
@@ -121,6 +135,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
         <button
           onClick={() => {
             setSelectedName(undefined);
+            setTokenFunded(false);
             buyState.reset();
           }}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
@@ -138,6 +153,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           name={selectedName}
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
+          onTokenFunded={() => setTokenFunded(true)}
           onCardSuccess={(messageId) =>
             buyState.markExternalSuccess({
               nonce: '',
@@ -156,6 +172,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           result={buyState.result}
           error={buyState.error}
           insufficientCredits={buyState.insufficientCredits}
+          alreadyFunded={tokenFunded}
           name={selectedName}
           onDone={handleDone}
           onRetry={handleRetry}

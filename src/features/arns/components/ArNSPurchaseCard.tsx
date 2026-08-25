@@ -48,6 +48,13 @@ interface ArNSPurchaseCardProps {
    * receipt a credits/ARIO purchase gets, instead of silently closing.
    */
   onCardSuccess: (messageId: string) => void;
+  /**
+   * A token top-up landed — the user has paid, before registration is
+   * attempted. Reported upward because this card unmounts the moment the buy
+   * fails (the host renders it only while idle), so any "you already paid"
+   * guidance set here would never render. The host outlives it.
+   */
+  onTokenFunded: () => void;
 }
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -122,6 +129,7 @@ export function ArNSPurchaseCard({
   isBusy,
   onBuy,
   onCardSuccess,
+  onTokenFunded,
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
@@ -375,6 +383,9 @@ export function ArNSPurchaseCard({
     } catch {
       return; // `fund` already recorded whether any money moved.
     }
+    // Money has left the wallet and is now credits. Tell the host before
+    // registering, so the fact survives this card being torn down.
+    onTokenFunded();
     /*
       Hold the funded state until registration actually settles. Resetting here
       would drop the fact that the user has already paid — and "purchase failed"
@@ -408,7 +419,7 @@ export function ArNSPurchaseCard({
     }
   }, [
     route, tokenAmountForName, tokenTopUp, creditsPrice?.credits,
-    onBuy, name, type, years,
+    onBuy, name, type, years, onTokenFunded,
   ]);
 
   /**

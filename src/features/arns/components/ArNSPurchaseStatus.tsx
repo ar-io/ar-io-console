@@ -23,6 +23,12 @@ interface ArNSPurchaseStatusProps {
   result: ArNSSettlementResult | undefined;
   error: Error | undefined;
   insufficientCredits: boolean;
+  /**
+   * The user already paid — a token top-up landed and only the registration
+   * failed. Changes the whole message: they hold spendable credits and need no
+   * second payment, where a bare failure implies a refund that isn't coming.
+   */
+  alreadyFunded?: boolean;
   name: string;
   /** Reset the whole flow (clears the selected name). Used by "Register another". */
   onDone: () => void;
@@ -41,6 +47,7 @@ export function ArNSPurchaseStatus({
   result,
   error,
   insufficientCredits,
+  alreadyFunded = false,
   name,
   onDone,
   onRetry,
@@ -158,6 +165,35 @@ export function ArNSPurchaseStatus({
   }
 
   // phase === 'error'
+  if (alreadyFunded) {
+    return (
+      <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">
+        <div className="flex items-start gap-3">
+          <CreditCard className="w-6 h-6 text-warning flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-foreground">
+              Paid — but &quot;{name}&quot; isn&apos;t registered yet
+            </p>
+            <p className="text-sm text-foreground/70 mt-1">
+              Your payment went through and the credits are on your balance.
+              Nothing was lost and you don&apos;t need to pay again — try
+              registering once more to finish.
+            </p>
+            {error && (
+              <p className="mt-2 text-xs text-foreground/60">{error.message}</p>
+            )}
+            <button
+              onClick={onRetry}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Finish registering
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (insufficientCredits) {
     return (
       <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">
