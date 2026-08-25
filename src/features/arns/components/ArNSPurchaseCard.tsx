@@ -449,7 +449,18 @@ export function ArNSPurchaseCard({
     setShowPayment(false);
     try {
       await tokenTopUp.awaitCredits({
-        creditsNeeded: balances.credits + (creditsPrice?.credits ?? 0),
+        /*
+          What registering actually requires — the name's price — not
+          "starting balance + price". That sum had to be hit exactly, and its
+          two halves come from different sources (our price lookup, the payment
+          service's balance), so a rounding difference of 1e-12 left the
+          condition false for the full five minutes.
+
+          If the balance already covers the price the wait ends immediately and
+          registration proceeds; the credits just bought replenish what it
+          spends, so the user still pays in the token they chose.
+        */
+        creditsNeeded: creditsPrice?.credits ?? 0,
         /*
           Ask the payment service, rather than dispatching `refresh-balance` and
           reading the store. That route is debounce -> invalidate -> refetch ->
@@ -464,8 +475,7 @@ export function ArNSPurchaseCard({
     }
     await registerAfterFunding();
   }, [
-    tokenTopUp, balances.credits, creditsPrice?.credits, registerAfterFunding,
-    readTurboCredits,
+    tokenTopUp, creditsPrice?.credits, registerAfterFunding, readTurboCredits,
   ]);
 
 
@@ -481,7 +491,18 @@ export function ArNSPurchaseCard({
           the threshold that proves this payment arrived. Safe because the token
           amount is rounded up, so the credits received are never less.
         */
-        creditsNeeded: balances.credits + (creditsPrice?.credits ?? 0),
+        /*
+          What registering actually requires — the name's price — not
+          "starting balance + price". That sum had to be hit exactly, and its
+          two halves come from different sources (our price lookup, the payment
+          service's balance), so a rounding difference of 1e-12 left the
+          condition false for the full five minutes.
+
+          If the balance already covers the price the wait ends immediately and
+          registration proceeds; the credits just bought replenish what it
+          spends, so the user still pays in the token they chose.
+        */
+        creditsNeeded: creditsPrice?.credits ?? 0,
         /*
           Credits live in the store and are refreshed by the app-wide
           `refresh-balance` event, so ask for a refresh and read what landed.
@@ -505,7 +526,7 @@ export function ArNSPurchaseCard({
     await registerAfterFunding();
   }, [
     route, tokenSmallestUnitForName, tokenTopUp, creditsPrice?.credits,
-    balances.credits, registerAfterFunding, readTurboCredits,
+    registerAfterFunding, readTurboCredits,
   ]);
 
   /**

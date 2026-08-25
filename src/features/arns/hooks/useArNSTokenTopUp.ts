@@ -120,7 +120,10 @@ export function useArNSTokenTopUp() {
         } catch {
           // Transient read failure — the payment still landed; keep waiting.
         }
-        if (balance >= creditsNeeded) break;
+        // A hair of tolerance: `creditsNeeded` and `balance` come from
+        // different sources (our price lookup vs the payment service), so an
+        // exact >= on floats can sit just under forever.
+        if (balance >= creditsNeeded - 1e-9) break;
         if (Date.now() >= deadline) {
           setStep({
             phase: 'failed',
@@ -164,7 +167,10 @@ export function useArNSTokenTopUp() {
         } catch {
           // Transient read failure — the payment still landed; keep waiting.
         }
-        if (balance >= creditsNeeded) break;
+        // A hair of tolerance: `creditsNeeded` and `balance` come from
+        // different sources (our price lookup vs the payment service), so an
+        // exact >= on floats can sit just under forever.
+        if (balance >= creditsNeeded - 1e-9) break;
         if (Date.now() >= deadline) {
           setStep({
             phase: 'failed',

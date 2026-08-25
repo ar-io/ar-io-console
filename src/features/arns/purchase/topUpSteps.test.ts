@@ -11,7 +11,11 @@ describe('stepLabel', () => {
   });
 
   it('explains the gap where nothing is being signed', () => {
-    expect(stepLabel({ phase: 'crediting' })).toMatch(/adding credits/i);
+    // And says the name is NOT bought yet — the thing a user staring at a
+    // spinner most wants to know.
+    const label = stepLabel({ phase: 'crediting' })!;
+    expect(label).toMatch(/waiting for credits/i);
+    expect(label).toMatch(/not bought yet/i);
   });
 
   it('says nothing when idle or failed — those render their own UI', () => {

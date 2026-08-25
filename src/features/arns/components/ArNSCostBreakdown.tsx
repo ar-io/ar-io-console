@@ -198,7 +198,17 @@ export function ArNSCostBreakdown({
         internal unit. It is also the only figure carrying the infra fee, so the
         credits view would understate what we are about to charge.
      */
-  cardUsdPrice != null ? (
+  tokenForName ? (
+    // Priced in the token actually handed over; USD stays on the toggle.
+    <span className="text-lg font-bold text-foreground">
+      {currency === 'usd' && usdPerCredit != null && creditsPrice != null
+        ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`
+        : `${fmtSol(tokenForName.amount)} ${tokenForName.label}`}
+    </span>
+  ) : cardUsdPrice != null ? (
     <span className="text-lg font-bold text-foreground">
       {`$${cardUsdPrice.toLocaleString(undefined, {
         minimumFractionDigits: 2,
@@ -240,9 +250,23 @@ export function ArNSCostBreakdown({
                 nothing to someone paying by card — arguably the USD view
                 matters MORE here than on the token path, where the holder
                 already knows what ARIO is worth. */}
-              <PriceDisplayToggle
-                nativeLabel={priceUnit === 'credits' ? 'Credits' : 'ARIO'}
-              />
+              {/*
+                A card charge is dollars and has no second unit, so the switch
+                has nothing to switch to. Otherwise name the unit being SPENT:
+                offering "Credits" to someone paying SOL surfaces our billing
+                plumbing at the one moment they are thinking in SOL.
+              */}
+              {cardUsdPrice == null && (
+                <PriceDisplayToggle
+                  nativeLabel={
+                    tokenForName
+                      ? tokenForName.label
+                      : priceUnit === 'credits'
+                        ? 'Credits'
+                        : 'ARIO'
+                  }
+                />
+              )}
             </span>
           }
           strong

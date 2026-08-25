@@ -19,13 +19,19 @@ export type TopUpStep =
 export function stepLabel(step: TopUpStep): string | undefined {
   switch (step.phase) {
     case 'funding':
-      return 'Step 1 of 2 — confirm the payment in your wallet';
+      return 'Step 1 of 2 — approve the payment in your wallet';
     case 'crediting':
-      // Reached by BOTH paths: a card settles server-side and a transfer
-      // settles on-chain, and either way the credits land a moment later.
-      return 'Payment received — adding credits';
+      /*
+        Reached by BOTH paths: a card settles server-side and a transfer settles
+        on-chain, and either way the credits land a moment later.
+
+        Says the name is NOT bought yet. "Adding credits" left users watching a
+        spinner unsure whether the purchase was already happening — the one
+        thing they most want to know while waiting.
+      */
+      return 'Payment confirmed — waiting for credits (the name is not bought yet)';
     case 'registering':
-      return 'Step 2 of 2 — confirm the registration';
+      return 'Step 2 of 2 — approve the registration to claim the name';
     default:
       return undefined;
   }
@@ -58,8 +64,12 @@ export function waitingNotice(step: TopUpStep): string | undefined {
     case 'funding':
       return 'Keep this tab open — this takes two wallet prompts.';
     case 'crediting':
-      // The one stretch with nothing to approve, so it looks the most stuck.
-      return 'Keep this tab open. Credits can take a few minutes to arrive; your payment is safe either way.';
+      /*
+        The one stretch with nothing to approve, so it looks the most stuck.
+        Name what we are doing (checking, on a timer) rather than only asking
+        for patience — a silent wait with no stated mechanism reads as a hang.
+      */
+      return 'Checking every few seconds for your credits. Your payment is safe — if this takes too long you can finish registering later without paying again.';
     case 'registering':
       return 'Keep this tab open — approve the second prompt to claim the name.';
     default:
