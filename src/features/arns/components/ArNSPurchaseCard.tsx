@@ -348,9 +348,19 @@ export function ArNSPurchaseCard({
    * then registers: two signatures, nothing typed in between.
    */
   const tokenTopUp = useArNSTokenTopUp();
+  /*
+    The FULL name price, not the shortfall.
+
+    Balance is its own option in the picker, so choosing SOL is an explicit
+    "spend SOL, not my credits" — funding only the gap would quietly drain a
+    balance the user deliberately passed over. It also fixes a dead button: a
+    user whose credits already covered the name had a shortfall of zero, so no
+    token amount was computed and "Register name" greyed out with no reason
+    given.
+  */
   const tokenAmountForName = useCryptoPriceForWinc(
-    route.kind === 'topup' && creditShortfall > 0
-      ? creditShortfall * 1e12
+    route.kind === 'topup' && creditsPrice?.credits
+      ? creditsPrice.credits * 1e12
       : undefined,
     route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
     // This figure is charged, not displayed — truncating it under-funds the
@@ -366,7 +376,13 @@ export function ArNSPurchaseCard({
       await tokenTopUp.fund({
         token: route.token as SupportedTokenType,
         tokenAmount: tokenAmountForName,
-        creditsNeeded: creditsPrice?.credits ?? 0,
+        /*
+          Wait for the top-up to LAND, not merely for the balance to cover the
+          price — which it may already do. Starting balance plus the price is
+          the threshold that proves this payment arrived. Safe because the token
+          amount is rounded up, so the credits received are never less.
+        */
+        creditsNeeded: balances.credits + (creditsPrice?.credits ?? 0),
         /*
           Credits live in the store and are refreshed by the app-wide
           `refresh-balance` event, so ask for a refresh and read what landed.
@@ -419,7 +435,7 @@ export function ArNSPurchaseCard({
     }
   }, [
     route, tokenAmountForName, tokenTopUp, creditsPrice?.credits,
-    onBuy, name, type, years, onTokenFunded,
+    onBuy, name, type, years, onTokenFunded, balances.credits,
   ]);
 
   /**
@@ -464,13 +480,24 @@ export function ArNSPurchaseCard({
             : 'You need a little more SOL for the network deposit.',
       };
     }
+    /*
+      The token route disables on its own conditions, so it needs its own
+      reason — otherwise it greys out silently, which is what a zero shortfall
+      used to do. A missing quote is the only case the checks above don't cover.
+    */
+    if (route.kind === 'topup' && !tokenAmountForName) {
+      return {
+        text: `Still pricing this name in ${tokenLabels[route.token as SupportedTokenType]}…`,
+      };
+    }
     if (insufficientFunds && route.kind === 'ario') {
       return { text: 'Not enough ARIO in this source.', canSwitchToCredits: true };
     }
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route.kind, cost, balances.sol, custodialCard,
+    insufficientFunds, route, cost, balances.sol, custodialCard,
+    tokenAmountForName,
   ]);
 
   // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
