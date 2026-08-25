@@ -702,11 +702,20 @@ export function ArNSPurchaseCard({
           // Card only: the fee-inclusive charge. Every other route settles at
           // the fee-free winc price, so passing it there would overstate.
           cardUsdPrice={
-            custodialCard
-              ? // Turbo spawns the ANT and recovers its rent — the surcharge is
-                // part of the charge, so quoting without it under-quotes by ~2x.
-                creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
-              : undefined
+            /*
+              Set for EVERY card route, not just the custodial one. A card price
+              is dollars and has no second unit, so offering "Credits / USD"
+              there is a switch with nothing to switch to — and credits are how
+              we settle it, not what the buyer hands over.
+
+              Custodial adds the ANT-spawn surcharge Turbo recovers; quoting
+              without it under-charges the display by roughly half.
+            */
+            route.kind !== 'card'
+              ? undefined
+              : custodialCard
+                ? creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
+                : creditsPrice?.usd
           }
           arioPrice={cost?.arioCost}
           priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
