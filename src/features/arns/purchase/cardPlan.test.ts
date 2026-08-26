@@ -24,15 +24,11 @@ describe('planCardPurchase', () => {
       .toEqual({ kind: 'reconnect' });
   });
 
-  it('offers linking before custody when there is no wallet at all', () => {
+  it('buys custodially when there is no wallet, without asking about one', () => {
+    // The gate that used to sit here asked someone paying by card to make a
+    // Solana decision before they owned anything that made it matter.
     expect(planCardPurchase({ ...base, needsLinking: true }))
-      .toEqual({ kind: 'link' });
-  });
-
-  it('falls back to custody only once linking is declined', () => {
-    expect(
-      planCardPurchase({ ...base, needsLinking: true, declinedLink: true }),
-    ).toEqual({ kind: 'custodial', reason: 'no-wallet' });
+      .toEqual({ kind: 'custodial', reason: 'no-wallet' });
   });
 
   it('goes custodial for a live wallet that genuinely cannot pay rent', () => {
@@ -47,10 +43,17 @@ describe('planCardPurchase', () => {
       .toEqual({ kind: 'self-custody' });
   });
 
-  it('prefers linking over custody even when SOL is unknown', () => {
+  it('goes custodial with no wallet even when SOL is unknown', () => {
+    // No wallet means no signer, so the balance cannot rescue the purchase.
     expect(
       planCardPurchase({ needsLinking: true, signerLive: false, solCoversGas: undefined }),
-    ).toEqual({ kind: 'link' });
+    ).toEqual({ kind: 'custodial', reason: 'no-wallet' });
+  });
+
+  it('still wakes a wallet that exists but is asleep', () => {
+    // Distinct from having no wallet: this user already chose self-custody.
+    expect(planCardPurchase({ ...base, signerLive: false }))
+      .toEqual({ kind: 'reconnect' });
   });
 
   it('distinguishes the two custodial reasons, since they are told differently', () => {
@@ -63,6 +66,5 @@ describe('planCardPurchase', () => {
   it('reports non-custodial plans as such', () => {
     expect(isCustodialPlan({ kind: 'self-custody' })).toBe(false);
     expect(isCustodialPlan({ kind: 'reconnect' })).toBe(false);
-    expect(isCustodialPlan({ kind: 'link' })).toBe(false);
-  });
+      });
 });

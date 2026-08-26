@@ -19,8 +19,6 @@ export type CardPlan =
   | { kind: 'self-custody' }
   /** A linked wallet exists but is cold — reconnect beats giving custody away. */
   | { kind: 'reconnect' }
-  /** No Solana wallet at all; offer to link one before falling back. */
-  | { kind: 'link' }
   /** Turbo holds the ANT. `reason` drives what the user is told. */
   | { kind: 'custodial'; reason: 'no-wallet' | 'no-sol' };
 
@@ -28,7 +26,6 @@ export function planCardPurchase({
   needsLinking,
   signerLive,
   solCoversGas,
-  declinedLink = false,
 }: {
   /** No Solana wallet is linked (and this isn't a Solana session). */
   needsLinking: boolean;
@@ -36,16 +33,23 @@ export function planCardPurchase({
   signerLive: boolean;
   /** `undefined` when the balance is unknown — see below. */
   solCoversGas: boolean | undefined;
-  /** They were offered linking and chose to continue without it. */
-  declinedLink?: boolean;
 }): CardPlan {
-  // No wallet to sign with. Linking is a better outcome than custody for
-  // everyone, so ask first — but take no for an answer.
-  if (needsLinking) {
-    return declinedLink
-      ? { kind: 'custodial', reason: 'no-wallet' }
-      : { kind: 'link' };
-  }
+  /*
+    No Solana wallet at all — buy it custodially, and say nothing about wallets.
+
+    This used to stop and ask the user to link one first. That gate sat in front
+    of the people least able to answer it: someone buying a domain with a card
+    has no reason to know what Solana is, and the question arrives before they
+    own anything that would make the answer matter. Custody is a legitimate
+    destination for them, not a booby prize — the name works, records work,
+    renewals work, and moving it to their own wallet later is free and needs no
+    SOL. The offer belongs after the purchase, against a name they already own.
+
+    A wallet that EXISTS but is asleep is a different case and still gets woken
+    below: that user has already chosen self-custody, so reconnecting gives them
+    what they picked rather than quietly deciding otherwise for them.
+  */
+  if (needsLinking) return { kind: 'custodial', reason: 'no-wallet' };
 
   // A wallet exists; it just isn't awake. This is the case that was silently
   // costing users their ANT and an extra ~$2.06.

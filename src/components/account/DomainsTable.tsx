@@ -151,22 +151,6 @@ export default function DomainsTable({
                     >
                       {domain.displayName}.ar.io
                     </Link>
-                    {/*
-                      Custody was invisible here: mergeCustodialNames puts these
-                      rows in the list, but nothing marked them, so a custodial
-                      name looked identical to one the wallet owns — and the
-                      explanation only arrived as a disabled control on the
-                      detail page, at the moment of frustration rather than
-                      before it.
-                    */}
-                    {domain.custodial && (
-                      <span
-                        className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
-                        title="Turbo holds this name's ANT, which is why you didn't need SOL to buy it. You can set its records and transfer it to your own wallet; owner-only actions unlock once you do."
-                      >
-                        Custodial
-                      </span>
-                    )}
                     {role === 'controller' && (
                       <span
                         className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"

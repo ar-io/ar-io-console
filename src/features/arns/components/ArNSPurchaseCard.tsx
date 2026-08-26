@@ -46,6 +46,7 @@ import {
 } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
+import { useStore } from '@/store/useStore';
 
 interface ArNSPurchaseCardProps {
   name: string;
@@ -155,6 +156,23 @@ export function ArNSPurchaseCard({
 
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
+
+  /*
+    Who owns a custodially-bought name.
+
+    Everything else on this card is addressed by the Solana identity, because
+    every ArNS write needs a Solana signature. A custodial purchase is the one
+    route where the buyer may have no Solana identity at all — that is the
+    reason they are on it — and passing `''` made the quote fail before it was
+    sent, breaking exactly the case custody exists to serve.
+
+    Their session identity owns it instead. The service accepts a non-Solana
+    owner, and its custody signature is typed per request (defaulting to
+    Arweave), so an Arweave or Ethereum buyer can prove ownership later and
+    move the name out without ever holding SOL.
+  */
+  const sessionAddress = useStore((s) => s.address);
+  const custodialOwner = address ?? sessionAddress ?? '';
   const balances = useArNSPaymentBalances(address);
 
   /**
@@ -295,7 +313,6 @@ export function ArNSPurchaseCard({
     setShowLinkModal,
   } = useLinkedSolanaWallet();
   /** Set only when the user is offered linking and chooses to go without. */
-  const [declinedLink, setDeclinedLink] = useState(false);
 
   const cardPlan = planCardPurchase({
     needsLinking,
@@ -306,7 +323,6 @@ export function ArNSPurchaseCard({
       balances.loading || balances.sol === undefined || !cost
         ? undefined
         : balances.sol >= cost.gasTotalSol,
-    declinedLink,
   });
   const custodialCard = route.kind === 'card' && cardPlan.kind === 'custodial';
   /*
@@ -319,10 +335,15 @@ export function ArNSPurchaseCard({
   */
   const mechanism = settlementMechanismFor(route, custodialCard);
 
-  /** Card is chosen but a cheaper, self-owned route is one click away. */
+  /*
+    Card is chosen but a cheaper, self-owned route is one click away.
+
+    Only `reconnect` now: that user already has a Solana wallet and picked
+    self-custody, so waking it gives them what they chose. Someone with no
+    wallet at all is no longer stopped to be asked about one — see cardPlan.
+  */
   const cardNeedsWallet =
-    route.kind === 'card' &&
-    (cardPlan.kind === 'link' || cardPlan.kind === 'reconnect');
+    route.kind === 'card' && cardPlan.kind === 'reconnect';
 
   const paymentOptions = useMemo(
     () =>
@@ -846,21 +867,8 @@ export function ArNSPurchaseCard({
               className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Wallet className="h-4 w-4" />
-              {cardPlan.kind === 'reconnect'
-                ? 'Reconnect wallet'
-                : 'Connect a Solana wallet'}
+              Reconnect wallet
             </button>
-            {/* Taking no for an answer — custody exists for people who
-                genuinely have no Solana wallet and don't want one. */}
-            {cardPlan.kind === 'link' && (
-              <button
-                type="button"
-                onClick={() => setDeclinedLink(true)}
-                className="rounded-full border border-border/20 px-5 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-foreground"
-              >
-                Continue without one
-              </button>
-            )}
           </div>
         </div>
       ) : needsPaymentStep ? (
@@ -999,7 +1007,7 @@ export function ArNSPurchaseCard({
           displayName={name}
           quoteInput={{
             name,
-            address: address ?? '',
+            address: custodialOwner,
             intent: 'Buy-Name',
             type,
             years: type === 'lease' ? years : undefined,
