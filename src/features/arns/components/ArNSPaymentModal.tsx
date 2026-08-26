@@ -19,6 +19,14 @@ interface ArNSPaymentModalProps {
   tokenLabel?: string;
   /** The name being bought — makes the fiat panels speak about it, not storage. */
   arnsName?: string;
+  /**
+   * SOL the wallet still pays for network costs, on top of this payment.
+   *
+   * This route funds the NAME only; the ANT's account rent is paid by the
+   * user's own Solana wallet at registration. "This covers your name" is true
+   * and easy to read as "this covers everything", which it does not.
+   */
+  networkSol?: number;
   onClose: () => void;
   /** Fired when payment completes (credits landed). */
   onComplete: () => void;
@@ -46,6 +54,7 @@ export default function ArNSPaymentModal({
   token,
   tokenLabel,
   arnsName,
+  networkSol,
   onClose,
   onComplete,
 }: ArNSPaymentModalProps) {
@@ -78,8 +87,18 @@ export default function ArNSPaymentModal({
           </div>
           {shortfallCredits != null && shortfallCredits > 0 && (
             <p className="mt-1 text-sm text-foreground/70">
-              This covers your name. You&apos;ll confirm the registration right
-              after.
+              This covers the name only. You&apos;ll confirm the registration
+              right after
+              {networkSol != null && networkSol > 0 ? (
+                <>
+                  , which your Solana wallet pays about{' '}
+                  {networkSol.toLocaleString(undefined, {
+                    maximumFractionDigits: 4,
+                  })}{' '}
+                  SOL of network costs for
+                </>
+              ) : null}
+              .
             </p>
           )}
         </div>

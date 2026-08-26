@@ -1,3 +1,4 @@
+import { resolveArNSAddress } from '../utils/arnsIdentity';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TurboCryptoFundResponse } from '@ardrive/turbo-sdk/web';
@@ -585,8 +586,7 @@ export const useStore = create<StoreState>()(
       },
       getArNSAddress: () => {
         const { walletType, address, linkedSolanaAddress } = get();
-        if (walletType === 'solana') return address;
-        return linkedSolanaAddress;
+        return resolveArNSAddress({ walletType, address, linkedSolanaAddress });
       },
       setCreditBalance: (balance) => set({ creditBalance: balance }),
       setArNSName: (address, name, logo) => {

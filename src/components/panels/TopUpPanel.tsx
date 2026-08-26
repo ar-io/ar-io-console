@@ -1403,6 +1403,7 @@ export default function TopUpPanel({
                         figure, not a decision. The full top-up page remains the
                         place to buy an arbitrary amount.
                       */
+                      <div className="flex flex-col gap-1">
                       <div className="flex items-baseline gap-1">
                         <span className="text-2xl font-bold text-foreground">
                           ${usdAmount.toLocaleString(undefined, {
@@ -1410,6 +1411,23 @@ export default function TopUpPanel({
                             maximumFractionDigits: 2,
                           })}
                         </span>
+                      </div>
+                      {/*
+                        Say WHY $5 when the name costs less. This route funds
+                        the purchase through the top-up flow, which floors at
+                        `minUSDAmount` — so a $2 name is a $5 charge, and an
+                        unexplained overcharge is what generates chargebacks.
+                        (The custodial card path quotes server-side and floors
+                        at ~$0.50, so it never shows this.)
+                      */}
+                      {initialUsdAmount != null &&
+                        usdAmount > initialUsdAmount && (
+                          <span className="text-xs text-foreground/70">
+                            ${minUSDAmount} card minimum — the extra $
+                            {(usdAmount - initialUsdAmount).toFixed(2)} stays in
+                            your balance.
+                          </span>
+                        )}
                       </div>
                     ) : (
                     <div className="flex items-center gap-3">
@@ -1778,8 +1796,15 @@ export default function TopUpPanel({
           )}
         </div>
 
-        {/* Purchase Summary - Shopping Cart Style */}
-        {((paymentMethod === 'fiat' && ((inputType === 'dollars' && usdAmount > 0) || (inputType === 'storage' && storageAmount > 0))) || (paymentMethod === 'crypto' && ((inputType === 'dollars' && cryptoAmount > 0) || (inputType === 'storage' && storageAmount > 0)))) && (
+        {/*
+          Purchase Summary — suppressed for a targeted top-up.
+
+          It restates the amount shown directly above it and adds a Credits
+          figure, which is our billing unit rather than anything the buyer
+          chose: on a card purchase for a NAME it reads as a second, unrelated
+          product. The host modal already names the purpose and the charge.
+        */}
+        {!targetedTopUp && ((paymentMethod === 'fiat' && ((inputType === 'dollars' && usdAmount > 0) || (inputType === 'storage' && storageAmount > 0))) || (paymentMethod === 'crypto' && ((inputType === 'dollars' && cryptoAmount > 0) || (inputType === 'storage' && storageAmount > 0)))) && (
           <div className="bg-card border-2 border-foreground rounded-2xl p-6 mb-6">
             {/* Header */}
             <div className="text-sm text-foreground/80 mb-4">Purchase Summary</div>
@@ -1867,12 +1892,11 @@ export default function TopUpPanel({
               number that is true for about ten seconds. Showing the purpose
               beats showing an intermediate balance.
             */}
-            {targetedTopUp && (
-              <div className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-foreground/80">
-                This covers your name. You&apos;ll confirm the registration
-                next, and anything left over stays in your balance.
-              </div>
-            )}
+            {/*
+              No repeat of "this covers your name" — the host modal's header
+              already says it, and saying it twice on one screen reads as filler
+              rather than emphasis.
+            */}
             {!targetedTopUp && (
             <>
             {/* Balance Section */}

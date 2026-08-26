@@ -1004,6 +1004,7 @@ export function ArNSPurchaseCard({
           initialUsdAmount={topUpUsd}
           shortfallCredits={creditsPrice?.credits}
           arnsName={name}
+          networkSol={cost?.gasTotalSol}
           paymentMethod={route.kind === 'card' ? 'fiat' : 'crypto'}
           token={route.kind === 'topup' ? (route.token as SupportedTokenType) : undefined}
           tokenLabel={
