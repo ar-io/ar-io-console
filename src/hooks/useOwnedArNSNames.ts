@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getARIO, getANT, getWritableANT, createWalletAdapterTransactionSendingSigner } from '../utils';
@@ -6,6 +6,13 @@ import { ArNSName } from '@/types';
 // Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
 // URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
 import { toUnicodeName as decodePunycode } from '../utils/punycode';
+import { useTurboNameCustody } from '../features/arns/hooks/useNameCustody';
+import { useCustodyOwnerClient } from '../features/arns/hooks/useCustodyOwnerClient';
+import { mergeCustodialNames } from '../features/arns/custody/mergeCustodialNames';
+import {
+  turboRecordWriter,
+  type TurboRecordClient,
+} from '../features/arns/custody/writers';
 
 interface ArNSUpdateResult {
   success: boolean;
@@ -41,6 +48,29 @@ export function useOwnedArNSNames() {
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const { connection: solanaConnection } = useConnection();
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction } = useWallet();
+
+  /*
+    Custodial names are invisible to everything above.
+
+    `names` is derived from the ANT ACL, which indexes each ANT's OWNER — and
+    for a Turbo-held name that is Turbo. So a name bought by card was missing
+    from every picker built on this hook: Deploy Site, Capture and Assign
+    Domain all offered a list that could not contain it. Pointing a name at a
+    deployment is the main thing anyone does with one, so the buyer this route
+    exists for could not do the main thing.
+  */
+  const { custodyOf, rows: custodyRows } = useTurboNameCustody();
+  const { getClient: getOwnerClient } = useCustodyOwnerClient();
+
+  /*
+    Folded in at the boundary so every consumer sees them, rather than each
+    picker remembering to merge — MyDomainsPage already had to do this by hand.
+  */
+  const namesWithCustodial = useMemo(
+    () => mergeCustodialNames(names, custodyRows),
+    [names, custodyRows],
+  ) as ArNSName[];
+
 
   // Fetch names owned by the ArNS address (primary Solana or linked Solana)
   const fetchOwnedNames = useCallback(
@@ -156,7 +186,7 @@ export function useOwnedArNSNames() {
   // Update ArNS name to point to new manifest
   const updateArNSRecord = useCallback(
     async (name: string, manifestId: string, undername?: string, customTTL?: number): Promise<ArNSUpdateResult> => {
-      const nameRecord = names.find((n) => n.name === name);
+      const nameRecord = namesWithCustodial.find((n) => n.name === name);
       if (!nameRecord) {
         return {
           success: false,
@@ -167,6 +197,30 @@ export function useOwnedArNSNames() {
       setUpdating((prev) => ({ ...prev, [name]: true }));
 
       try {
+        /*
+          A Turbo-held name cannot be written this way at all: the ANT belongs
+          to Turbo, so signing the transaction with the user's wallet is
+          rejected on-chain — and the buyer may hold no Solana wallet to sign
+          with, that being why they are on this route. Turbo performs the write
+          on their behalf instead, authenticated by the owner's signature.
+        */
+        if (custodyOf(name) === 'turbo-custodial') {
+          const antId = nameRecord.processId;
+          const turbo = (await getOwnerClient()) as unknown as TurboRecordClient;
+          const writer = turboRecordWriter(antId, turbo);
+          const ttlForTurbo =
+            customTTL ??
+            (undername ? nameRecord.undernameTTLs?.[undername] : nameRecord.ttl) ??
+            600;
+          const res = await writer.setRecord({
+            // The base name is '@' on the wire; the callers pass '' for it.
+            undername: undername || '@',
+            transactionId: manifestId,
+            ttlSeconds: ttlForTurbo,
+          });
+          return { success: true, transactionId: res.id };
+        }
+
         if (!solanaPublicKey || !solanaSignTransaction) {
           return {
             success: false,
@@ -223,7 +277,7 @@ export function useOwnedArNSNames() {
           setTimeout(async () => {
             try {
               // Get fresh ANT state for just this name
-              const nameRecord = names.find((n) => n.name === name);
+              const nameRecord = namesWithCustodial.find((n) => n.name === name);
               if (nameRecord) {
                 const ant = await getANT(nameRecord.processId);
                 const freshState = await ant.getState();
@@ -292,7 +346,9 @@ export function useOwnedArNSNames() {
       }
     },
     [
-      names,
+      namesWithCustodial,
+      custodyOf,
+      getOwnerClient,
       arnsAddress,
       fetchOwnedNames,
       getOwnedArNSNames,
@@ -306,7 +362,7 @@ export function useOwnedArNSNames() {
   // Fetch ANT details for a specific name (on-demand)
   const fetchNameDetails = useCallback(
     async (name: string): Promise<ArNSName | null> => {
-      const nameRecord = names.find((n) => n.name === name);
+      const nameRecord = namesWithCustodial.find((n) => n.name === name);
       if (!nameRecord) return null;
 
       // Check if we already have complete details (both currentTarget and undernames defined)
@@ -411,7 +467,7 @@ export function useOwnedArNSNames() {
         setLoadingDetails((prev) => ({ ...prev, [name]: false }));
       }
     },
-    [names, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
+    [namesWithCustodial, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
 
   // Refresh a specific ArNS name's state
@@ -420,7 +476,7 @@ export function useOwnedArNSNames() {
       if (!arnsAddress) return false;
 
       console.log('Refreshing specific ArNS name:', name);
-      const nameRecord = names.find((n) => n.name === name);
+      const nameRecord = namesWithCustodial.find((n) => n.name === name);
 
       if (!nameRecord) {
         console.warn('Name not found in local state:', name);
@@ -493,7 +549,7 @@ export function useOwnedArNSNames() {
         return false;
       }
     },
-    [names, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
+    [namesWithCustodial, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
 
   // Auto-fetch when ArNS address is available (primary Solana or linked wallet)
@@ -504,7 +560,7 @@ export function useOwnedArNSNames() {
   }, [arnsAddress, fetchOwnedNames]);
 
   return {
-    names,
+    names: namesWithCustodial,
     loading,
     fetchError,
     updating,
