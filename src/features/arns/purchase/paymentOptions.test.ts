@@ -157,3 +157,56 @@ describe('defaultPaymentOption', () => {
     expect(defaultPaymentOption([])).toBeUndefined();
   });
 });
+
+describe('network-cost blocking', () => {
+  const withSol = (solBalance: number | undefined) =>
+    buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 50, extraTokens: ['ario'],
+      networkSolRequired: 0.015, solBalance,
+    });
+
+  it('blocks every route that needs SOL when the wallet is short', () => {
+    // Creating a name costs account rent whoever pays for the name, so an
+    // ARIO-rich wallet with no SOL previously saw ARIO as usable and failed
+    // at signing.
+    const o = withSol(0);
+    for (const id of ['token:ario', 'token:solana', 'balance']) {
+      expect(o.find((x) => x.id === id)?.blockedReason).toMatch(/network costs/i);
+    }
+  });
+
+  it('leaves the CUSTODIAL card usable — it is the escape hatch', () => {
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 0, cardIsCustodial: true,
+      networkSolRequired: 0.015, solBalance: 0,
+    });
+    const card = o.find((x) => x.kind === 'card')!;
+    expect(card.blockedReason).toBeUndefined();
+    // Named for why it works, not for the processor.
+    expect(card.detail).toMatch(/no crypto needed/i);
+  });
+
+  it('blocks a SELF-CUSTODY card, which still needs the wallet to pay rent', () => {
+    const card = withSol(0).find((x) => x.kind === 'card')!;
+    expect(card.blockedReason).toMatch(/network costs/i);
+  });
+
+  it('blocks nothing when the SOL balance is UNKNOWN', () => {
+    // Blocking on a failed lookup would tell a funded user to buy SOL — a
+    // mistake this app has shipped once already.
+    for (const o of withSol(undefined)) expect(o.blockedReason).toBeUndefined();
+  });
+
+  it('blocks nothing when the wallet covers the rent', () => {
+    for (const o of withSol(1)) expect(o.blockedReason).toBeUndefined();
+  });
+
+  it('never preselects a blocked option', () => {
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 50, extraTokens: ['ario'],
+      cardIsCustodial: true, networkSolRequired: 0.015, solBalance: 0,
+    });
+    // Balance would normally lead; it is blocked, so the card wins.
+    expect(defaultPaymentOption(o)?.kind).toBe('card');
+  });
+});

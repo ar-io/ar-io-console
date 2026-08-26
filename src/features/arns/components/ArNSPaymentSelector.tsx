@@ -80,7 +80,7 @@ function OptionCard({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || !!option.blockedReason}
       className={`flex flex-1 items-start gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 sm:basis-0 ${
         active
           ? 'border-primary bg-primary/10'
@@ -108,10 +108,19 @@ function OptionCard({
             {option.detail}
           </span>
         )}
-        {/* Say it's short here rather than only failing on submit. */}
-        {!option.sufficient && (
+        {/*
+          Say why it cannot be used, here rather than on submit. A blocked
+          reason outranks "Not enough": running out of SOL for network costs is
+          a different problem from not holding enough of this asset, and needs a
+          different remedy.
+        */}
+        {option.blockedReason ? (
+          <span className="block text-xs text-foreground/60">
+            {option.blockedReason}
+          </span>
+        ) : !option.sufficient ? (
           <span className="block text-xs text-foreground/60">Not enough</span>
-        )}
+        ) : null}
       </span>
     </button>
   );

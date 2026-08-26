@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Calendar,
@@ -187,6 +187,19 @@ export function ArNSPurchaseCard({
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
     defaultPaymentOption(routingOptions);
+
+  /*
+    Commit the first real default, then stop.
+
+    Balances and prices arrive asynchronously, so `defaultPaymentOption`
+    re-evaluates as they land — which would let the selection move under the
+    user's cursor mid-click. Writing it once freezes it; the user can still
+    change it, and their choice is never overridden.
+  */
+  useEffect(() => {
+    if (selectedId || balances.loading || !selectedOption) return;
+    setSelectedId(selectedOption.id);
+  }, [selectedId, balances.loading, selectedOption]);
   const route = useMemo(
     () =>
       selectedOption
@@ -321,6 +334,10 @@ export function ArNSPurchaseCard({
         // next to a silent SOL row states a fact we don't have and reads as
         // "you're broke" to someone who simply hasn't connected yet.
         cardIsCustodial: cardPlan.kind === 'custodial',
+        // Creating a name costs account rent whoever pays for the name, so it
+        // gates every route except a custodial card.
+        networkSolRequired: cost?.gasTotalSol,
+        solBalance: balances.loading ? undefined : balances.sol,
         tokenBalances: address
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
@@ -331,6 +348,7 @@ export function ArNSPurchaseCard({
     [
       address, balances.credits, balances.sol, balances.totalArio,
       creditsPrice?.credits, cardEnabled, cardPlan.kind,
+      cost?.gasTotalSol, balances.loading,
     ],
   );
 
