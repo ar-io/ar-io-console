@@ -1,4 +1,5 @@
-import { CheckCircle, ExternalLink, Upload, Zap, Globe, Share2, Mail, Users } from 'lucide-react';
+import { CheckCircle, ExternalLink, Upload, Zap, Globe, Share2, Mail, Users, Loader2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useStore } from '../../../store/useStore';
 import { tokenLabels, SupportedTokenType } from '../../../constants';
 import { useNavigate } from 'react-router-dom';
@@ -81,6 +82,31 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
     ? transactionId || ''
     : paymentIntentResult?.paymentIntent?.id || '';
 
+  /*
+    A name purchase continues on its own.
+
+    "Continue to registration" gated a step that needed no decision:
+    finishCardPurchase closes this modal, polls until the credits land, and
+    then registers. All of that already handles the asynchronous settlement
+    that makes the balance read 0 for a few seconds, so the button was asking
+    the user to press Go on a machine that was going to run anyway.
+
+    The beat before it fires is deliberate — long enough to read "Payment
+    received", short enough not to feel like a wait. Ref-guarded because
+    StrictMode double-invokes effects in dev, and firing this twice would run
+    a second registration.
+  */
+  const continuedRef = useRef(false);
+  useEffect(() => {
+    if (!purpose || continuedRef.current) return;
+    const t = setTimeout(() => {
+      if (continuedRef.current) return;
+      continuedRef.current = true;
+      onComplete();
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [purpose, onComplete]);
+
   return (
     <div>
       {/* Main Content Container with Gradient */}
@@ -92,11 +118,13 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             <CheckCircle className="w-8 h-8 text-success" />
           </div>
           <h4 className="text-2xl font-heading font-extrabold text-success mb-2">
-            Payment Complete!
+            {/* "Complete!" overclaims mid-purchase — the payment completed, the
+                registration has not, and the user still has a step to take. */}
+            {purpose ? 'Payment received' : 'Payment Complete!'}
           </h4>
           <p className="text-foreground/80">
             {purpose
-              ? `Your credits are ready. Confirm the registration to claim ${purpose.name}.ar.io.`
+              ? `$${paymentAmount.toFixed(2)} charged. One step left — confirm the registration to claim ${purpose.name}.ar.io.`
               : isCryptoPayment && tokenType === 'arweave'
                 ? 'Your account will be credited in 15-30 minutes.'
                 : 'Your credits are now available.'}
@@ -133,7 +161,17 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           </div>
         )}
 
-        {/* Payment Summary */}
+        {/*
+          Suppressed mid-purchase.
+
+          "Current Balance" is the problem: card credits settle asynchronously,
+          so at this instant the store usually still reads 0 — and it was
+          rendered bold, large, in success green, one line under "your credits
+          are ready". A buyer who has just been charged $5 reads that as the
+          money having vanished. The amount now lives in the sentence above,
+          and the payment id below, so nothing here is lost.
+        */}
+        {!purpose && (
         <div className="bg-card rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -190,6 +228,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             )}
           </div>
         </div>
+        )}
 
         {/*
           A purchase in flight gets one action, not a menu.
@@ -201,16 +240,23 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
         */}
         {purpose && (
           <div className="mb-6">
-            <button
-              onClick={onComplete}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              Continue to registration
-            </button>
-            <p className="mt-2 text-center text-xs text-foreground/70">
-              You&apos;ll confirm {purpose.name}.ar.io next. Your credits stay on
-              your balance until then.
-            </p>
+            <div className="flex items-center justify-center gap-2 text-sm text-foreground/80">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Continuing to registration…
+            </div>
+            {/*
+              The line that used to sit here repeated the sentence under the
+              heading almost word for word, with the receipt sandwiched between
+              them. One statement of what happens next is enough; what belongs
+              this low is the reference number you would quote to support.
+            */}
+            {paymentId && (
+              <div className="mt-3 flex items-center justify-center gap-2 text-xs text-foreground/60">
+                <span>Payment ID</span>
+                <span className="font-mono">{formatTxId(paymentId, true)}</span>
+                <CopyButton textToCopy={paymentId} />
+              </div>
+            )}
           </div>
         )}
 
