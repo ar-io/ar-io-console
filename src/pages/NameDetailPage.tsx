@@ -23,6 +23,7 @@ import CopyButton from '@/components/CopyButton';
 import { daysUntil } from '@/utils/domainExpiry';
 import type { ArNSName } from '@/types';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
+import { useArNSTurboSigner } from '@/features/arns/hooks/useArNSTurboSigner';
 import {
   CustodialNamePanel,
   ClaimToContinueModal,
@@ -141,6 +142,7 @@ export default function NameDetailPage() {
   const navigate = useNavigate();
   const configMode = useStore((s) => s.configMode);
   const { arnsAddress } = useLinkedSolanaWallet();
+  const arnsSigner = useArNSTurboSigner();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
   /*
@@ -552,7 +554,18 @@ export default function NameDetailPage() {
                 Manage
               </h2>
               <div className="flex flex-wrap gap-2">
-                <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
+                {/*
+                  Renewing is a registry payment, so custody does not block it
+                  — but useManageArNSName still settles it through a Solana
+                  signer, which a custodial buyer may not have. Offering the
+                  button anyway would dead-end them on "connect a Solana
+                  wallet", which is worse than not offering it. Hidden only in
+                  that exact combination; a custodial name with a live wallet
+                  renews normally.
+                */}
+                {(!isCustodial || arnsSigner.isReady) && (
+                  <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
+                )}
                 <ActionBtn icon={Pencil} label="Edit details" onClick={() => openOwnerAction('edit', 'edit its details')} />
                 <ActionBtn icon={Star} label="Set as primary" onClick={() => openOwnerAction('primary', 'set it as primary')} />
                 {(ownerOnly || isCustodial) && (

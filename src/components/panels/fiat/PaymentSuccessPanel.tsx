@@ -98,13 +98,28 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
   */
   const continuedRef = useRef(false);
   useEffect(() => {
-    if (!purpose || continuedRef.current) return;
+    if (!purpose) return;
     const t = setTimeout(() => {
       if (continuedRef.current) return;
       continuedRef.current = true;
       onComplete();
     }, 1500);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      /*
+        Continue even if this unmounts first.
+
+        The screen is dismissible — busy deliberately excludes success — so a
+        user can close it inside the beat, and the card has already been
+        charged by then. Letting the timer die with the component would leave
+        them paid up with no name and nothing running to finish the job. The
+        ref keeps this to exactly one call whichever path gets there first.
+      */
+      if (!continuedRef.current) {
+        continuedRef.current = true;
+        onComplete();
+      }
+    };
   }, [purpose, onComplete]);
 
   return (
