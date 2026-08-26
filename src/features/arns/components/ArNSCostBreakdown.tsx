@@ -443,6 +443,27 @@ export function ArNSCostBreakdown({
                 )}
               </span>
             </Row>
+            {/*
+              Why a card purchase still asks for SOL.
+
+              This is the one genuinely surprising thing in the flow: "pay by
+              card" implies no crypto, and then a Solana wallet prompt appears.
+              The custodial branch above explains its side ("Turbo holds the
+              ANT so you don't need SOL"); without the matching sentence here,
+              the self-custody side just looks broken.
+
+              Framed as the trade it is, rather than as an apology — the fee
+              buys self-ownership, and that is the reason the ladder works this
+              hard to reach this branch at all. Card-only: a SOL or ARIO payer
+              is not surprised to need SOL.
+            */}
+            {isCardRoute && (
+              <p className="pb-1 text-[11px] leading-snug text-foreground/60">
+                Your card pays for the name. Creating it is a Solana
+                transaction, so your wallet covers the network cost — that
+                is what puts the name in your wallet rather than ours.
+              </p>
+            )}
             <p
               className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
             >
