@@ -74,7 +74,7 @@ export default function ArNSPaymentModal({
     */
     <BaseModal onClose={onClose} showCloseButton dismissible={!busy}>
       <div className="w-[92vw] max-w-xl p-6">
-        <div className="mb-5">
+        <div className="mb-4">
           <div className="flex items-center gap-2">
             {payingByCard ? (
               <CreditCard className="h-5 w-5 text-primary" />
@@ -91,18 +91,17 @@ export default function ArNSPaymentModal({
           </div>
           {shortfallCredits != null && shortfallCredits > 0 && (
             <p className="mt-1 text-sm text-foreground/70">
-              This covers the name only. You&apos;ll confirm the registration
-              right after
+              Covers the name only — you&apos;ll confirm registration next
               {networkSol != null && networkSol > 0 ? (
                 <>
-                  , which your Solana wallet pays about{' '}
+                  , and your Solana wallet pays ~
                   {networkSol.toLocaleString(undefined, {
                     maximumFractionDigits: 4,
                   })}{' '}
-                  SOL of network costs for
+                  SOL of network costs
                 </>
               ) : null}
-              .{payingByCard && ' We do not save credit card information.'}
+              .
             </p>
           )}
         </div>

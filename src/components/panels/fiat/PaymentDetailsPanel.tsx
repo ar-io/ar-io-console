@@ -217,38 +217,35 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
-      <div className="flex items-start gap-3 mb-6">
-        {/* The icon belongs to the header. With a host framing the purchase the
-            header is gone, and the icon was left floating beside nothing. */}
-        {!purpose && (
+      {/*
+        Inline header — dropped entirely when a host has already framed the
+        purchase. The ArNS modal names the domain and the terms, so this
+        repeated them; gating only the TEXT left an empty flex row still
+        spending its 24px margin, which is padding you can see and not read.
+      */}
+      {!purpose && (
+        <div className="flex items-start gap-3 mb-6">
           <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
             <CreditCard className="w-5 h-5 text-primary" />
           </div>
-        )}
-        <div>
-          {/*
-            No header when a host has already framed the purchase. Embedded in
-            the ArNS payment modal this produced two stacked headers saying the
-            same thing — the modal names the domain and the terms, so repeating
-            them here was pure duplication.
-          */}
-          {!purpose && (
-            <>
-              <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
-                Payment Details
-              </h3>
-              <p className="text-sm text-foreground/80">
-                We do not save credit card information. See our T&amp;C for more
-                info.
-              </p>
-            </>
-          )}
+          <div>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
+              Payment Details
+            </h3>
+            <p className="text-sm text-foreground/80">
+              We do not save credit card information. See our T&amp;C for more
+              info.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content Container with Gradient */}
-      <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+      <div
+        className={`bg-card rounded-2xl border border-border/20 mb-4 sm:mb-6 ${
+          purpose ? 'p-4 sm:p-5' : 'p-4 sm:p-6'
+        }`}
+      >
 
         {/* Show recipient info if funding another wallet */}
         {targetAddress && targetAddress !== address && (
@@ -270,7 +267,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         )}
 
         {/* Credits Summary */}
-        <div className="grid grid-cols-2 mb-8">
+        <div className={`grid grid-cols-2 ${purpose ? 'mb-5' : 'mb-8'}`}>
           {estimatedCredits ? (
             <div className="flex flex-col">
               {/*
