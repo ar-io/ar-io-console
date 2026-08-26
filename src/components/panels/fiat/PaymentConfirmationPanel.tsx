@@ -190,11 +190,23 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
         <div className="bg-card p-6 rounded-2xl mb-6">
           {estimatedCredits ? (
             <>
+              {/*
+                On a name purchase the hero figure is what the card gets
+                charged. Credits are the unit we settle in, not the thing the
+                buyer is deciding about — leading with them put the number that
+                matters ("Total: $5.00") in the smallest text on the screen,
+                one click before the charge. A generic top-up still leads with
+                credits, because there the credits ARE the product.
+              */}
               <div className="flex flex-col items-center py-4 mb-4">
                 <div className="text-4xl font-bold text-foreground mb-1">
-                  {credits.toFixed(4)}
+                  {purpose
+                    ? `$${actualPaymentAmount.toFixed(2)}`
+                    : credits.toFixed(4)}
                 </div>
-                <div className="text-sm text-foreground/80">Credits</div>
+                <div className="text-sm text-foreground/80">
+                  {purpose ? `${credits.toFixed(4)} credits` : 'Credits'}
+                </div>
                 {/* Storage equivalence means nothing when the credits buy a name. */}
                 {!purpose && storageAmount > 0 && (
                   <div className="text-xs text-foreground/80 mt-1">

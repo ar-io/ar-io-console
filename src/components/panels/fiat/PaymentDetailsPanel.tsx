@@ -28,6 +28,13 @@ interface PaymentDetailsPanelProps {
    * Absent means the original generic top-up, unchanged.
    */
   purpose?: { kind: 'arns-name'; name: string };
+  /**
+   * Why the charge is larger than the thing being bought — e.g. Stripe's floor
+   * rounding a $2 name up to $5. It used to sit on the amount step, which a
+   * targeted card purchase now skips; an unexplained overcharge on the card
+   * form is exactly what generates chargebacks, so it follows the amount here.
+   */
+  minimumNote?: string;
 }
 
 const isValidPromoCode = async (
@@ -47,7 +54,7 @@ const isValidPromoCode = async (
   }
 };
 
-const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, onNext, targetAddress, targetWalletType, purpose }) => {
+const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, onNext, targetAddress, targetWalletType, purpose, minimumNote }) => {
   const countries = useCountries();
   const wincForOneGiB = useWincForOneGiB();
   const { address } = useStore();
@@ -212,9 +219,13 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
     <div className="px-4 sm:px-6">
       {/* Inline Header with Description */}
       <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <CreditCard className="w-5 h-5 text-primary" />
-        </div>
+        {/* The icon belongs to the header. With a host framing the purchase the
+            header is gone, and the icon was left floating beside nothing. */}
+        {!purpose && (
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+            <CreditCard className="w-5 h-5 text-primary" />
+          </div>
+        )}
         <div>
           {/*
             No header when a host has already framed the purchase. Embedded in
@@ -262,15 +273,30 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         <div className="grid grid-cols-2 mb-8">
           {estimatedCredits ? (
             <div className="flex flex-col">
+              {/*
+                The dollar figure leads. Credits were the headline and the
+                charge the small print — but the card is charged dollars, and
+                credits are the unit we settle in. Reversed for a purchase; the
+                generic top-up still leads with what it is buying.
+              */}
               <div className="text-2xl font-bold text-foreground">
-                {((Number(estimatedCredits?.winc ?? 0)) / wincPerCredit).toFixed(4)} Credits
+                {purpose
+                  ? `$${actualPaymentAmount}`
+                  : `${(Number(estimatedCredits?.winc ?? 0) / wincPerCredit).toFixed(4)} Credits`}
               </div>
               <div className="text-sm text-foreground/80">
-                ${actualPaymentAmount}{' '}
+                {purpose
+                  ? `${(Number(estimatedCredits?.winc ?? 0) / wincPerCredit).toFixed(4)} credits`
+                  : `$${actualPaymentAmount}`}{' '}
                 {discountAmount && (
                   <span className="text-foreground/80">{discountAmount}</span>
                 )}
               </div>
+              {minimumNote && (
+                <div className="text-xs text-foreground/70 mt-1">
+                  {minimumNote}
+                </div>
+              )}
               {/* Storage equivalence means nothing when the credits buy a name. */}
               {!purpose && storageAmount > 0 && (
                 <div className="text-xs text-foreground/80 mt-1">

@@ -58,6 +58,12 @@ interface TopUpPanelProps {
    * stranding the user on an unusable token.
    */
   initialToken?: SupportedTokenType;
+  /**
+   * Fired when the user backs out of the first screen of an embedded flow —
+   * i.e. there is no previous step inside the panel to return to. Hosts wire
+   * this to close themselves.
+   */
+  onCancel?: () => void;
   /** Fired once a top-up reaches a success terminal state (credits landed). */
   onComplete?: () => void;
   /**
@@ -77,6 +83,7 @@ export default function TopUpPanel({
   purpose,
   initialPaymentMethod,
   initialToken,
+  onCancel,
   onComplete,
   onBusyChange,
 }: TopUpPanelProps = {}) {
@@ -107,8 +114,18 @@ export default function TopUpPanel({
     initialPaymentMethod ?? 'fiat',
   );
   const [inputType, setInputType] = useState<'dollars' | 'storage'>('dollars');
-  const [usdAmount, setUsdAmount] = useState(defaultUSDAmount);
-  const [usdAmountInput, setUsdAmountInput] = useState(String(defaultUSDAmount));
+  /*
+    Seeded lazily, not just by the effect below: a targeted top-up renders the
+    card form on its FIRST paint, so an amount applied one frame later would
+    quote $10, flash, and re-quote. The effect still runs (and is idempotent)
+    for anything that mounts on the amount step.
+  */
+  const seededUsdAmount =
+    initialUsdAmount != null
+      ? Math.min(Math.max(initialUsdAmount, minUSDAmount), maxUSDAmount)
+      : defaultUSDAmount;
+  const [usdAmount, setUsdAmount] = useState(seededUsdAmount);
+  const [usdAmountInput, setUsdAmountInput] = useState(String(seededUsdAmount));
   const [storageAmount, setStorageAmount] = useState(1);
   const [storageUnit, setStorageUnit] = useState<'MiB' | 'GiB' | 'TiB'>('GiB');
 
@@ -133,8 +150,23 @@ export default function TopUpPanel({
   // Wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
 
+  /*
+    The amount step is a decision screen. On a targeted card top-up there is no
+    decision left — the host already picked the name, the term and the card, and
+    the figure is the purchase's shortfall floored at Stripe's minimum. Showing
+    it re-states the price the host modal is already showing and puts a Continue
+    button between the user and the card form, so open straight on the form.
+
+    Crypto keeps its amount step: token amounts still move with quotes, and that
+    screen carries the transfer's own confirmation.
+  */
+  const skipAmountStep =
+    embedded && initialUsdAmount != null && initialPaymentMethod === 'fiat';
+
   // Payment flow state
-  const [fiatFlowStep, setFiatFlowStep] = useState<'amount' | 'details' | 'confirmation' | 'success'>('amount');
+  const [fiatFlowStep, setFiatFlowStep] = useState<'amount' | 'details' | 'confirmation' | 'success'>(
+    skipAmountStep ? 'details' : 'amount',
+  );
 
   // Crypto flow state
   const [cryptoFlowStep, setCryptoFlowStep] = useState<'selection' | 'confirmation' | 'manual-payment' | 'complete'>('selection');
@@ -463,8 +495,18 @@ export default function TopUpPanel({
 
   // Fiat flow handlers
   const handleFiatBackToAmount = () => {
-    setFiatFlowStep('amount');
     clearAllPaymentState();
+    /*
+      With the amount step skipped there is nothing behind the card form, and
+      sending the user there would strand them on a screen the flow re-skips.
+      Back means "out of this payment" — the host closes and the checkout
+      behind it is where the term and payment method can actually be changed.
+    */
+    if (skipAmountStep) {
+      onCancel?.();
+      return;
+    }
+    setFiatFlowStep('amount');
   };
 
   const handleFiatPaymentDetailsNext = () => {
@@ -640,9 +682,18 @@ export default function TopUpPanel({
   }, [initialUsdAmount]);
 
   // Clear payment state when wallet changes
+  const lastAddressRef = useRef(address);
   useEffect(() => {
     clearAllPaymentState();
-    setFiatFlowStep('amount');
+    /*
+      Only on an ACTUAL wallet change. This effect also runs on mount, where
+      resetting the step would drop a skip-to-card-form flow straight back onto
+      the amount screen it was meant to skip.
+    */
+    if (lastAddressRef.current !== address) {
+      lastAddressRef.current = address;
+      setFiatFlowStep('amount');
+    }
   }, [address, clearAllPaymentState]);
 
 
@@ -673,6 +724,11 @@ export default function TopUpPanel({
           <PaymentDetailsPanel
             purpose={purpose}
             usdAmount={getCheckoutUsdAmount()}
+            minimumNote={
+              initialUsdAmount != null && usdAmount > initialUsdAmount
+                ? `$${minUSDAmount} card minimum — the extra $${(usdAmount - initialUsdAmount).toFixed(2)} stays in your balance.`
+                : undefined
+            }
             onBack={handleFiatBackToAmount}
             onNext={handleFiatPaymentDetailsNext}
             targetAddress={targetAddress || ''}

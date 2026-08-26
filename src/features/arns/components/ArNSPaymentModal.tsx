@@ -117,6 +117,9 @@ export default function ArNSPaymentModal({
             initialPaymentMethod={paymentMethod}
             purpose={arnsName ? { kind: 'arns-name', name: arnsName } : undefined}
             initialToken={token}
+            // The card flow opens on the card form; its Back has nothing behind
+            // it inside the panel, so it closes the modal instead.
+            onCancel={onClose}
             onComplete={onComplete}
             onBusyChange={setBusy}
           />
