@@ -434,7 +434,10 @@ export function ArNSPurchaseCard({
   */
 
 
-  const tokenStepLabel = stepLabel(tokenTopUp.step);
+  // Card buyers get one wallet prompt, not two — see FundingSource. Distinct
+  // from `fundingSource` above, which is the ARIO balance/stakes choice.
+  const promptSource = route.kind === 'card' ? 'card' : 'wallet';
+  const tokenStepLabel = stepLabel(tokenTopUp.step, promptSource);
 
   /**
    * Spendable credits, straight from the payment service.
@@ -924,9 +927,9 @@ export function ArNSPurchaseCard({
       )}
 
       {/* Says what to DO while it runs; the button only says where it is. */}
-      {waitingNotice(tokenTopUp.step) && (
+      {waitingNotice(tokenTopUp.step, promptSource) && (
         <p className="mt-2 text-center text-xs text-foreground/70">
-          {waitingNotice(tokenTopUp.step)}
+          {waitingNotice(tokenTopUp.step, promptSource)}
         </p>
       )}
 

@@ -15,8 +15,21 @@ export type TopUpStep =
   | { phase: 'registering' }
   | { phase: 'failed'; message: string; funded: boolean };
 
+/**
+ * How the payment was made, because it changes how many prompts are left.
+ *
+ * A token purchase is two signatures; a card purchase is one. The card path
+ * never enters `funding` — it starts at `crediting` — so counting steps for it
+ * announced "Step 2 of 2" to someone who had never been shown a step 1, and
+ * asked them to approve "the second prompt" when they only ever get one.
+ */
+export type FundingSource = 'wallet' | 'card';
+
 /** What the button says. Naming the step beats a bare spinner across two signatures. */
-export function stepLabel(step: TopUpStep): string | undefined {
+export function stepLabel(
+  step: TopUpStep,
+  funding: FundingSource = 'wallet',
+): string | undefined {
   switch (step.phase) {
     case 'funding':
       return 'Step 1 of 2 — approve the payment in your wallet';
@@ -31,7 +44,9 @@ export function stepLabel(step: TopUpStep): string | undefined {
       */
       return 'Payment confirmed — waiting for credits (the name is not bought yet)';
     case 'registering':
-      return 'Step 2 of 2 — approve the registration to claim the name';
+      return funding === 'card'
+        ? 'Approve the registration to claim the name'
+        : 'Step 2 of 2 — approve the registration to claim the name';
     default:
       return undefined;
   }
@@ -59,7 +74,10 @@ export function failureAdvice(step: TopUpStep): string | undefined {
  * flow with a minutes-long gap in the middle looks stalled otherwise, and the
  * most costly reaction to a screen that looks stalled is to leave it.
  */
-export function waitingNotice(step: TopUpStep): string | undefined {
+export function waitingNotice(
+  step: TopUpStep,
+  funding: FundingSource = 'wallet',
+): string | undefined {
   switch (step.phase) {
     case 'funding':
       return 'Keep this tab open — this takes two wallet prompts.';
@@ -71,7 +89,9 @@ export function waitingNotice(step: TopUpStep): string | undefined {
       */
       return 'Checking every few seconds for your credits. Your payment is safe — if this takes too long you can finish registering later without paying again.';
     case 'registering':
-      return 'Keep this tab open — approve the second prompt to claim the name.';
+      return funding === 'card'
+        ? 'Keep this tab open — approve the prompt in your Solana wallet to claim the name.'
+        : 'Keep this tab open — approve the second prompt to claim the name.';
     default:
       return undefined;
   }

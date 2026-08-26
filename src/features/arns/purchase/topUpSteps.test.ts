@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { failureAdvice, isMoneyAtRisk, stepLabel, type TopUpStep } from './topUpSteps';
+import {
+  failureAdvice,
+  isMoneyAtRisk,
+  stepLabel,
+  waitingNotice,
+  type TopUpStep,
+} from './topUpSteps';
 
 describe('stepLabel', () => {
   it('names which of the two signatures is being asked for', () => {
@@ -54,5 +60,33 @@ describe('isMoneyAtRisk', () => {
   it('is false before starting and after settling', () => {
     expect(isMoneyAtRisk({ phase: 'idle' })).toBe(false);
     expect(isMoneyAtRisk({ phase: 'failed', message: 'x', funded: true })).toBe(false);
+  });
+});
+
+describe('funding source changes how many prompts remain', () => {
+  it('does not count steps for a card buyer who never saw step 1', () => {
+    // The card path starts at `crediting`, so "Step 2 of 2" would be the first
+    // step label it ever shows.
+    expect(stepLabel({ phase: 'registering' }, 'card')).toBe(
+      'Approve the registration to claim the name',
+    );
+    expect(stepLabel({ phase: 'registering' }, 'wallet')).toBe(
+      'Step 2 of 2 — approve the registration to claim the name',
+    );
+  });
+
+  it('never promises a card buyer a second prompt', () => {
+    expect(waitingNotice({ phase: 'registering' }, 'card')).not.toContain(
+      'second',
+    );
+    expect(waitingNotice({ phase: 'registering' }, 'wallet')).toContain(
+      'second prompt',
+    );
+  });
+
+  it('defaults to the two-signature wording', () => {
+    expect(stepLabel({ phase: 'registering' })).toBe(
+      stepLabel({ phase: 'registering' }, 'wallet'),
+    );
   });
 });
