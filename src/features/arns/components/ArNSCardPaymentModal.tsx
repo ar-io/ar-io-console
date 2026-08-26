@@ -98,9 +98,18 @@ function CardCheckout({
           <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
           <span>
             <span className="font-medium text-foreground">
-              {displayName} is yours.
+              {displayName} is registered.
             </span>{' '}
-            Your card was charged and the name is registered.
+            {/*
+              "is yours" alone set up a surprise. Turbo holds the ANT on this
+              route — the cost panel says so before the charge, but this is the
+              screen people actually read, and it dropped the caveat. Naming it
+              here, with the way out, beats discovering it later as a greyed
+              control.
+            */}
+            Turbo holds its ANT for now — that&apos;s why you didn&apos;t need
+            SOL. Transfer it to your own wallet any time from the name&apos;s
+            page; that doesn&apos;t need SOL either.
           </span>
         </div>
       )}
