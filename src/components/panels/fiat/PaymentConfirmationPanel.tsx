@@ -276,7 +276,12 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
           </button>
         </div>
 
-        {/* Terms of Service Message */}
+        {/*
+          The host modal already carries this line directly under the pay
+          button, so an embedded purchase showed it twice — once above the
+          buttons and once below them.
+        */}
+        {!purpose && (
         <div className="text-center bg-card/30 rounded-2xl p-4 mb-6">
           <p className="text-xs text-foreground/80">
             By continuing, you agree to our{' '}
@@ -290,6 +295,7 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
             </a>
           </p>
         </div>
+        )}
 
         {/* Error Message */}
         {paymentError && (

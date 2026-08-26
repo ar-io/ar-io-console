@@ -826,7 +826,9 @@ export default function CryptoConfirmationPanel({
               </div>
             </div>
 
-            {/* Terms */}
+            {/* Host-owned when embedded — see PaymentConfirmationPanel. Its
+                "By uploading" wording is also wrong for a name purchase. */}
+            {!purpose && (
             <div className="text-center bg-card/30 rounded-2xl p-4 mb-6">
               <p className="text-xs text-foreground/80">
                 By uploading, you agree to our{' '}
@@ -840,6 +842,7 @@ export default function CryptoConfirmationPanel({
                 </a>
               </p>
             </div>
+            )}
 
             {/* Error Message */}
             {paymentError && (
