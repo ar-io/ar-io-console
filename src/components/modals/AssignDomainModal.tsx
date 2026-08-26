@@ -166,14 +166,17 @@ export default function AssignDomainModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            {/* Matches ModalHeader's scale. This modal keeps its own header
+                BAR — it is a scrolling sheet with a sticky head — but the type
+                and the tile should not differ from every other modal. */}
+            <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
               <Globe className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-extrabold text-foreground">
+              <h3 className="text-lg font-extrabold text-foreground">
                 {existingArnsName ? 'Change Domain' : 'Assign Domain'}
               </h3>
-              <p className="text-sm text-foreground/80">
+              <p className="text-xs text-foreground/80">
                 {existingArnsName
                   ? 'Update the domain assignment for this deployment'
                   : 'Connect your deployment to an ArNS domain'}

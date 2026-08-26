@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import BaseModal from './BaseModal';
+import ModalHeader from './ModalHeader';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 
 interface LinkSolanaWalletModalProps {
@@ -30,24 +31,21 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
   );
 
   return (
-    <BaseModal onClose={onClose} showCloseButton={false}>
-      <div className="flex flex-col text-foreground p-6 sm:p-8" style={{ minWidth: 'min(85vw, 400px)', maxWidth: '95vw' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-xl font-heading font-extrabold text-foreground">
-              {isReconnect ? 'Reconnect Solana Wallet' : 'Link Solana Wallet'}
-            </h3>
-            <p className="text-sm text-foreground/80 mt-1">
-              {isReconnect
-                ? 'Reconnect to sign ArNS transactions'
-                : 'Connect a Solana wallet to manage your ArNS domains'}
-            </p>
-          </div>
-          <button onClick={onClose} aria-label="Close" className="p-2 hover:bg-card rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal onClose={onClose}>
+      <div
+        className="flex flex-col p-4 text-foreground sm:p-5"
+        style={{ minWidth: 'min(85vw, 400px)', maxWidth: '95vw' }}
+      >
+        {/* BaseModal supplies the close button; this used to hand-roll one. */}
+        <ModalHeader
+          icon={Wallet}
+          title={isReconnect ? 'Reconnect Solana Wallet' : 'Link Solana Wallet'}
+          description={
+            isReconnect
+              ? 'Reconnect to sign ArNS transactions'
+              : 'Connect a Solana wallet to manage your ArNS domains'
+          }
+        />
 
         {/* Error state */}
         {linkError && (
