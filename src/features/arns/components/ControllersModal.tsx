@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Info, Loader2, Plus, Trash2, XCircle } from 'lucide-react';
+import { Info, Loader2, Plus, Trash2, Users, XCircle } from 'lucide-react';
 
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
+import ModalHeader from '../../../components/modals/ModalHeader';
 import {
   MAX_CONTROLLERS,
   isControllerLimitReached,
@@ -81,15 +82,19 @@ export default function ControllersModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-6">
-        <div className="mb-4">
-          <h3 className="font-heading text-xl font-extrabold text-foreground">
-            Controllers for{' '}
-            <span className="break-all font-mono text-primary">
-              {domain.displayName}.ar.io
-            </span>
-          </h3>
-        </div>
+      <div className="w-[92vw] max-w-lg p-4 sm:p-5">
+        <ModalHeader
+          icon={Users}
+          title={
+            <>
+              Controllers for{' '}
+              <span className="break-all font-mono text-primary">
+                {domain.displayName}.ar.io
+              </span>
+            </>
+          }
+          description="Who can edit this name's records"
+        />
 
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />

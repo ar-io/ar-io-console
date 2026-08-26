@@ -15,6 +15,7 @@ import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
 import { usePrimaryNameActions } from '../hooks/usePrimaryNameActions';
 import { parsePrimaryName } from '../utils';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 export type PrimaryNameModalMode = 'set' | 'change' | 'approve';
 
@@ -140,20 +141,12 @@ export default function PrimaryNameModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-6">
-        <div className="mb-4 flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-card">
-            <Star className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-heading text-xl font-extrabold text-foreground">
-              {TITLES[mode]}
-            </h3>
-            <p className="text-sm text-foreground/70">
-              The one name that stands for your wallet across ar.io apps.
-            </p>
-          </div>
-        </div>
+      <div className="w-[92vw] max-w-lg p-4 sm:p-5">
+        <ModalHeader
+          icon={Star}
+          title={TITLES[mode]}
+          description="The one name that stands for your wallet across ar.io apps."
+        />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">

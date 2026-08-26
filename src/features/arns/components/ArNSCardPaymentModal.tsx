@@ -10,6 +10,7 @@ import StripeElementsProvider from '../../../components/StripeElementsProvider';
 import { useArNSFiatPurchase, type FiatQuoteInput } from '../hooks/useArNSFiatPurchase';
 import { formatFiatAmount, hasMinimumChargeExcess } from '../purchase/fiatQuote';
 import { isMoneyAtRisk } from '../purchase/purchaseMachine';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 /** Matches the app's other card input; Stripe's iframe can't read our CSS vars. */
 const cardElementOptions: StripeCardElementOptions = {
@@ -77,13 +78,8 @@ function CardCheckout({
     : undefined;
 
   return (
-    <div className="w-[92vw] max-w-md p-6">
-      <div className="mb-5 flex items-center gap-2">
-        <CreditCard className="h-5 w-5 text-primary" />
-        <h3 className="font-heading text-xl font-extrabold text-foreground">
-          Pay with card
-        </h3>
-      </div>
+    <div className="w-[92vw] max-w-md p-4 sm:p-5">
+      <ModalHeader icon={CreditCard} title="Pay with card" />
 
       {state.status === 'quoting' && (
         <p className="flex items-center gap-2 text-sm text-foreground/70">

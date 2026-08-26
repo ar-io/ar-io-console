@@ -22,6 +22,8 @@ import { getTurboBalance } from '../../utils';
 import { availableTokensForWallet } from '../../utils/walletTokens';
 
 
+export type TopUpHostStep = 'amount' | 'details' | 'review' | 'success';
+
 interface TopUpPanelProps {
   /** Hide the page header, recipient section and recovery banner, and tighten
    *  layout, for embedding
@@ -64,6 +66,13 @@ interface TopUpPanelProps {
    * this to close themselves.
    */
   onCancel?: () => void;
+  /**
+   * Reports which screen the panel is showing, so a host modal can adapt its
+   * own chrome. Both payment methods collapse onto one vocabulary: a host
+   * cares that the user is reviewing or finished, not whether the underlying
+   * step is called `confirmation` or `manual-payment`.
+   */
+  onStepChange?: (step: TopUpHostStep) => void;
   /** Fired once a top-up reaches a success terminal state (credits landed). */
   onComplete?: () => void;
   /**
@@ -84,6 +93,7 @@ export default function TopUpPanel({
   initialPaymentMethod,
   initialToken,
   onCancel,
+  onStepChange,
   onComplete,
   onBusyChange,
 }: TopUpPanelProps = {}) {
@@ -696,6 +706,21 @@ export default function TopUpPanel({
     }
   }, [address, clearAllPaymentState]);
 
+
+  const hostStep: TopUpHostStep =
+    paymentMethod === 'fiat'
+      ? fiatFlowStep === 'confirmation'
+        ? 'review'
+        : fiatFlowStep
+      : cryptoFlowStep === 'complete'
+        ? 'success'
+        : cryptoFlowStep === 'selection'
+          ? 'amount'
+          : 'review';
+
+  useEffect(() => {
+    onStepChange?.(hostStep);
+  }, [hostStep, onStepChange]);
 
   // Render fiat flow screens
   /**

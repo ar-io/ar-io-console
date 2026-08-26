@@ -32,6 +32,7 @@ import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 const UNDERNAME_QTY_OPTIONS = [1, 5, 10, 25, 50];
@@ -250,17 +251,20 @@ export default function ManageDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-6">
+      <div className="w-[92vw] max-w-lg p-4 sm:p-5">
         {/* Header */}
-        <div className="mb-5">
-          <h3 className="font-heading text-xl font-extrabold text-foreground">
-            Manage{' '}
-            <span className="break-all font-mono text-primary">
-              {domain.displayName}.ar.io
-            </span>
-          </h3>
-          <p className="mt-1 text-sm text-foreground/70">{expiryLabel}</p>
-        </div>
+        <ModalHeader
+          icon={Layers}
+          title={
+            <>
+              Manage{' '}
+              <span className="break-all font-mono text-primary">
+                {domain.displayName}.ar.io
+              </span>
+            </>
+          }
+          description={expiryLabel}
+        />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">

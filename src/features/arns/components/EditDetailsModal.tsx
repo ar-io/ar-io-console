@@ -24,6 +24,7 @@ import {
   useSetArNSMetadata,
 } from '../hooks/useSetArNSMetadata';
 import LogoUploadField from './LogoUploadField';
+import ModalHeader from '../../../components/modals/ModalHeader';
 import {
 } from '../recordFields';
 
@@ -140,15 +141,19 @@ export default function EditDetailsModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-6">
-        <div className="mb-4">
-          <h3 className="font-heading text-xl font-extrabold text-foreground">
-            Edit details{' '}
-            <span className="break-all font-mono text-primary">
-              {domain.displayName}.ar.io
-            </span>
-          </h3>
-        </div>
+      <div className="w-[92vw] max-w-lg p-4 sm:p-5">
+        <ModalHeader
+          icon={Tag}
+          title={
+            <>
+              Edit details{' '}
+              <span className="break-all font-mono text-primary">
+                {domain.displayName}.ar.io
+              </span>
+            </>
+          }
+          description="Name metadata stored on the ANT"
+        />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">

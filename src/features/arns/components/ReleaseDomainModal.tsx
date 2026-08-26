@@ -14,6 +14,7 @@ import BaseModal from '../../../components/modals/BaseModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { lowerCaseDomain } from '../utils';
 import { useReleaseName } from '../hooks/useReleaseName';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 interface ReleaseDomainModalProps {
   domain: ArNSName;
@@ -60,15 +61,19 @@ export default function ReleaseDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-md p-6">
-        <div className="mb-5">
-          <h3 className="font-heading text-xl font-extrabold text-foreground">
-            Release{' '}
-            <span className="break-all font-mono text-primary">
-              {domain.displayName}.ar.io
-            </span>
-          </h3>
-        </div>
+      <div className="w-[92vw] max-w-md p-4 sm:p-5">
+        <ModalHeader
+          icon={Flame}
+          title={
+            <>
+              Release{' '}
+              <span className="break-all font-mono text-primary">
+                {domain.displayName}.ar.io
+              </span>
+            </>
+          }
+          description="Give up the name to a 14-day auction"
+        />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">

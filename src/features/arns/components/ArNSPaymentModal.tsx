@@ -3,8 +3,11 @@ import { CreditCard, Wallet } from 'lucide-react';
 
 import BaseModal from '../../../components/modals/BaseModal';
 import StripeElementsProvider from '../../../components/StripeElementsProvider';
-import TopUpPanel from '../../../components/panels/TopUpPanel';
+import TopUpPanel, {
+  type TopUpHostStep,
+} from '../../../components/panels/TopUpPanel';
 import type { SupportedTokenType } from '../../../constants';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 interface ArNSPaymentModalProps {
   /** USD to pre-seed the amount (rounded up to cover the name's price). */
@@ -59,6 +62,7 @@ export default function ArNSPaymentModal({
   onComplete,
 }: ArNSPaymentModalProps) {
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<TopUpHostStep>('details');
   const payingByCard = paymentMethod === 'fiat';
 
   return (
@@ -73,38 +77,44 @@ export default function ArNSPaymentModal({
       an accident, not to remove the exit.
     */
     <BaseModal onClose={onClose} showCloseButton dismissible={!busy}>
-      <div className="w-[92vw] max-w-xl p-6">
-        <div className="mb-4">
-          <div className="flex items-center gap-2">
-            {payingByCard ? (
-              <CreditCard className="h-5 w-5 text-primary" />
-            ) : (
-              <Wallet className="h-5 w-5 text-primary" />
-            )}
-            <h3 className="font-heading text-xl font-extrabold text-foreground">
-              {arnsName
-                ? `Pay for ${arnsName}.ar.io`
-                : payingByCard
-                  ? 'Pay with card'
-                  : `Pay with ${tokenLabel ?? 'crypto'}`}
-            </h3>
-          </div>
-          {shortfallCredits != null && shortfallCredits > 0 && (
-            <p className="mt-1 text-sm text-foreground/70">
-              Covers the name only — you&apos;ll confirm registration next
-              {networkSol != null && networkSol > 0 ? (
-                <>
-                  , and your Solana wallet pays ~
-                  {networkSol.toLocaleString(undefined, {
-                    maximumFractionDigits: 4,
-                  })}{' '}
-                  SOL of network costs
-                </>
-              ) : null}
-              .
-            </p>
-          )}
-        </div>
+      <div className="w-[92vw] max-w-xl p-4 sm:p-5">
+        {/*
+          Gone once the payment lands. "Pay for name.ar.io — you'll confirm
+          registration next" is a promise about a step the user has just
+          finished paying for, and reads as stale instructions on the screen
+          that reports success. That screen brings its own heading (a green
+          check and "Payment Complete!"), so the modal steps out of its way
+          rather than competing with a second title.
+        */}
+        {step !== 'success' && (
+        <ModalHeader
+          icon={payingByCard ? CreditCard : Wallet}
+          title={
+            arnsName
+              ? `Pay for ${arnsName}.ar.io`
+              : payingByCard
+                ? 'Pay with card'
+                : `Pay with ${tokenLabel ?? 'crypto'}`
+          }
+          description={
+            shortfallCredits != null && shortfallCredits > 0 ? (
+              <>
+                Covers the name only — you&apos;ll confirm registration next
+                {networkSol != null && networkSol > 0 ? (
+                  <>
+                    , and your Solana wallet pays ~
+                    {networkSol.toLocaleString(undefined, {
+                      maximumFractionDigits: 4,
+                    })}{' '}
+                    SOL of network costs
+                  </>
+                ) : null}
+                .
+              </>
+            ) : undefined
+          }
+        />
+        )}
 
         <StripeElementsProvider>
           <TopUpPanel
@@ -119,6 +129,7 @@ export default function ArNSPaymentModal({
             // The card flow opens on the card form; its Back has nothing behind
             // it inside the panel, so it closes the modal instead.
             onCancel={onClose}
+            onStepChange={setStep}
             onComplete={onComplete}
             onBusyChange={setBusy}
           />
