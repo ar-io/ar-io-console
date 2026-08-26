@@ -92,6 +92,14 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
 
   const submitPayment = async () => {
     if (!stripe || !paymentIntent?.client_secret || !paymentInformation) {
+      /*
+        This used to return silently, so a missing PaymentIntent presented as a
+        Pay button that did nothing at all — no spinner, no error, no clue.
+        Whatever the cause, say so rather than swallowing the click.
+      */
+      setPaymentError(
+        'This payment session expired before it could be charged. Go back and re-enter your card details.',
+      );
       return;
     }
 

@@ -173,10 +173,15 @@ export default function TopUpPanel({
   const skipAmountStep =
     embedded && initialUsdAmount != null && initialPaymentMethod === 'fiat';
 
-  // Payment flow state
-  const [fiatFlowStep, setFiatFlowStep] = useState<'amount' | 'details' | 'confirmation' | 'success'>(
-    skipAmountStep ? 'details' : 'amount',
-  );
+  /*
+    Still starts on 'amount' even when skipping it. Jumping straight to
+    'details' also jumped over handleCheckout, which is where the Stripe
+    PaymentIntent is created — so the card form and review screen rendered
+    fine, and the Pay button then hit `!paymentIntent?.client_secret` and
+    returned without a word. The step is skipped by RUNNING that handler on
+    mount, not by bypassing it.
+  */
+  const [fiatFlowStep, setFiatFlowStep] = useState<'amount' | 'details' | 'confirmation' | 'success'>('amount');
 
   // Crypto flow state
   const [cryptoFlowStep, setCryptoFlowStep] = useState<'selection' | 'confirmation' | 'manual-payment' | 'complete'>('selection');
@@ -504,6 +509,20 @@ export default function TopUpPanel({
   };
 
   // Fiat flow handlers
+  /*
+    Ref-guarded because StrictMode double-invokes effects in dev, and each run
+    would mint a second PaymentIntent.
+  */
+  const autoCheckoutRef = useRef(false);
+  useEffect(() => {
+    if (!skipAmountStep || autoCheckoutRef.current) return;
+    if (fiatFlowStep !== 'amount') return;
+    autoCheckoutRef.current = true;
+    void handleCheckout();
+    // handleCheckout is re-created every render; the ref is the real guard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skipAmountStep, fiatFlowStep]);
+
   const handleFiatBackToAmount = () => {
     clearAllPaymentState();
     /*
@@ -737,6 +756,30 @@ export default function TopUpPanel({
   useEffect(() => {
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
+
+  if (skipAmountStep && paymentMethod === 'fiat' && fiatFlowStep === 'amount') {
+    // Mid-skip: the intent is being created. Never show the amount UI here —
+    // it is the screen the user was promised they would not see.
+    return (
+      <div className="px-1 py-10 text-center">
+        {errorMessage ? (
+          <>
+            <p className="text-sm text-error">{errorMessage}</p>
+            <button
+              onClick={() => void handleCheckout()}
+              className="mt-3 rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Try again
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center justify-center gap-2 text-sm text-foreground/70">
+            <Loader2 className="h-4 w-4 animate-spin" /> Preparing payment…
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (paymentMethod === 'fiat' && fiatFlowStep !== 'amount') {
     // Determine target address for payment (use target if set, otherwise connected wallet)
