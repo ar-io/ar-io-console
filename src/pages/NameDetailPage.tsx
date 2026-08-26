@@ -25,7 +25,10 @@ import type { ArNSName } from '@/types';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import {
   CustodialNamePanel,
+  ClaimToContinueModal,
   isActionAvailable,
+  actionAvailability,
+  type ArNSAction,
   useTurboNameCustody,
   ManageDomainModal,
   EditDetailsModal,
@@ -46,6 +49,22 @@ import { isArweaveTxId, isValidArNSName } from '@/features/arns/utils';
 import { toUnicodeName } from '@/utils/punycode';
 
 /** Which action modal is open, if any. */
+/**
+ * Which custody-gated action each modal performs.
+ *
+ * The page names its modals after the UI ('edit', 'primary'); nameCustody
+ * names actions after what they touch on-chain. Mapping them here keeps one
+ * authority for what custody blocks rather than a second list that can drift.
+ */
+const OWNER_ACTION_FOR_MODAL: Record<string, ArNSAction | undefined> = {
+  edit: 'details',
+  primary: 'primary-name',
+  controllers: 'controllers',
+  reassign: 'reassign',
+  release: 'release',
+  transfer: 'transfer',
+};
+
 type OpenModal =
   | 'manage'
   | 'edit'
@@ -124,6 +143,15 @@ export default function NameDetailPage() {
   const { arnsAddress } = useLinkedSolanaWallet();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
+  /*
+    An owner-only control clicked on a Turbo-held name. Holding WHICH one lets
+    the claim run the thing the user actually wanted, instead of dropping them
+    back on the page to find the button again.
+  */
+  const [claimFor, setClaimFor] = useState<{
+    modal: OpenModal;
+    label: string;
+  } | null>(null);
 
   const name = (rawName ?? '').toLowerCase();
   const displayName = toUnicodeName(name);
@@ -152,6 +180,21 @@ export default function NameDetailPage() {
   // STRICT role — the name may be one you don't own or control (public view),
   // so there is NO optimistic "assume controller" fallback here.
   const role = deriveAntRoleStrict(summary, arnsAddress);
+  /*
+    Route an owner-only control through the claim when Turbo still holds the
+    name, and straight to its modal when it doesn't. `actionAvailability` is
+    the authority on which is which, so this cannot drift from the rules the
+    rest of the app enforces.
+  */
+  const openOwnerAction = (modal: OpenModal, label: string) => {
+    const action = OWNER_ACTION_FOR_MODAL[modal as string];
+    if (action && actionAvailability(action, custody).kind === 'unavailable') {
+      setClaimFor({ modal, label });
+      return;
+    }
+    setOpen(modal);
+  };
+
   const ownerOnly = role === 'owner';
   const canManage = role === 'owner' || role === 'controller';
 
@@ -494,23 +537,35 @@ export default function NameDetailPage() {
             />
           )}
 
-          {/* Actions (only for names you own or control) */}
-          {!isCustodial && canManage && (
+          {/*
+            Actions for names you own, control, or hold custodially.
+
+            A custodial name used to render NO action panel at all — it simply
+            had fewer buttons than a self-owned one, with nothing saying why.
+            It now shows the same set: registry actions are payments and work
+            regardless of custody, records go through Turbo, and the owner-only
+            rest lead to the claim rather than to nothing.
+          */}
+          {(isCustodial || canManage) && (
             <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
               <h2 className="mb-2 font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
                 Manage
               </h2>
               <div className="flex flex-wrap gap-2">
                 <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
-                <ActionBtn icon={Pencil} label="Edit details" onClick={() => setOpen('edit')} />
-                <ActionBtn icon={Star} label="Set as primary" onClick={() => setOpen('primary')} />
-                {ownerOnly && (
+                <ActionBtn icon={Pencil} label="Edit details" onClick={() => openOwnerAction('edit', 'edit its details')} />
+                <ActionBtn icon={Star} label="Set as primary" onClick={() => openOwnerAction('primary', 'set it as primary')} />
+                {(ownerOnly || isCustodial) && (
                   <>
-                    <ActionBtn icon={Users} label="Controllers" onClick={() => setOpen('controllers')} />
-                    <ActionBtn icon={Send} label="Transfer" danger onClick={() => setOpen('transfer')} />
-                    <ActionBtn icon={Shuffle} label="Reassign" danger onClick={() => setOpen('reassign')} />
+                    <ActionBtn icon={Users} label="Controllers" onClick={() => openOwnerAction('controllers', 'set controllers')} />
+                    {/* Transfer on a custodial name IS the claim, and the panel
+                        above already offers it as the headline action. */}
+                    {!isCustodial && (
+                      <ActionBtn icon={Send} label="Transfer" danger onClick={() => setOpen('transfer')} />
+                    )}
+                    <ActionBtn icon={Shuffle} label="Reassign" danger onClick={() => openOwnerAction('reassign', 'reassign it')} />
                     {record.type === 'permabuy' && (
-                      <ActionBtn icon={Trash2} label="Release" danger onClick={() => setOpen('release')} />
+                      <ActionBtn icon={Trash2} label="Release" danger onClick={() => openOwnerAction('release', 'release it')} />
                     )}
                   </>
                 )}
@@ -546,6 +601,27 @@ export default function NameDetailPage() {
           )}
           {open === 'transfer' && (
             <TransferDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+          )}
+
+          {/*
+            The claim standing in front of an owner-only control. On success the
+            name is the user's, so the modal they originally asked for opens —
+            the click is honoured rather than spent on the detour.
+          */}
+          {claimFor && (
+            <ClaimToContinueModal
+              name={name ?? ''}
+              antId={record?.processId ?? ''}
+              targetAddress={arnsAddress ?? undefined}
+              actionLabel={claimFor.label}
+              onClose={() => setClaimFor(null)}
+              onClaimed={() => {
+                const next = claimFor.modal;
+                setClaimFor(null);
+                refresh();
+                setOpen(next);
+              }}
+            />
           )}
           {open === 'reassign' && (
             <ReassignDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />

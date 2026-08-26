@@ -26,6 +26,8 @@ export type ArNSAction =
   | 'details'
   | 'release'
   | 'primary-name'
+  /** Repoint the name at a different ANT — the current ANT's owner signs. */
+  | 'reassign'
   // Registry operations — a payment, not an ANT mutation.
   | 'extend'
   | 'upgrade'
