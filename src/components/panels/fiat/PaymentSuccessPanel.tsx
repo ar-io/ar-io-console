@@ -331,7 +331,13 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
         </div>
         )}
 
-        {/* Support Link */}
+        {/*
+          Not during a name purchase: the screen is mid-flow and auto-advancing
+          to registration, so an escape hatch to email is the wrong last thing
+          on it — and an ardrive.io address is the wrong support route for a
+          .ar.io name bought on console.ar.io.
+        */}
+        {!purpose && (
         <div className="text-center mt-4 sm:mt-6">
           <p className="text-xs text-foreground/80 mb-2">
             Need help? Contact our support team
@@ -346,6 +352,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             <Mail className="w-3 h-3" />
           </a>
         </div>
+        )}
       </div>
     </div>
   );
