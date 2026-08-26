@@ -37,6 +37,24 @@ interface PaymentDetailsPanelProps {
   minimumNote?: string;
 }
 
+/*
+  One geometry for every control on this form.
+
+  The native inputs and Stripe's iframe do not measure the same: a 16px input
+  line-box is 24px, Stripe's card iframe is ~20px, so identical padding left the
+  card field visibly shorter than the fields above and below it. The card
+  wrapper carries 2px more padding on each side to land both on 46px.
+
+  16px text is a floor, not a preference — iOS Safari zooms the page when a
+  focused input is under 16px, so shrink these with padding, never font-size.
+*/
+const FIELD_BASE =
+  'w-full bg-card border border-border/20 rounded-2xl px-4 text-foreground';
+const FIELD_CLASS = `${FIELD_BASE} py-2.5`;
+// min-h pins the match rather than trusting Stripe's iframe to measure exactly
+// 20px — a floor cannot make the field short, which is the failure we had.
+const CARD_FIELD_CLASS = `${FIELD_BASE} py-3 min-h-[46px]`;
+
 const isValidPromoCode = async (
   paymentAmount: number,
   promoCode: string,
@@ -326,10 +344,10 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         </div>
 
         {/* Payment Form */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <FormEntry name="name" label="Name on Card *" errorText={nameError}>
             <input
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={FIELD_CLASS}
               type="text"
               id="name"
               name="name"
@@ -348,7 +366,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="card" label="Credit Card *" errorText={cardError}>
             <CardElement
               options={cardElementOptions}
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={CARD_FIELD_CLASS}
               onChange={(e) => {
                 setCardError(e.error?.message || '');
               }}
@@ -358,7 +376,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="country" label="Country *" errorText={countryError}>
             <select
               id="country"
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={FIELD_CLASS}
               value={country}
               onChange={(e) => {
                 setCountry(e.target.value);
@@ -419,7 +437,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
             <FormEntry name="promoCode" label="Promo Code" errorText={promoCodeError}>
               <div className="relative">
                 <input
-                  className="peer w-full bg-card border border-border/20 px-4 py-3 pr-16 text-foreground rounded-2xl"
+                  className={`${FIELD_CLASS} peer pr-16`}
                   type="text"
                   id="promoCode"
                   name="promoCode"
@@ -469,7 +487,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="email" label="Email (optional - for receipt)" errorText={emailError}>
             <input
               type="email"
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={FIELD_CLASS}
               id="email"
               name="email"
               value={email}
