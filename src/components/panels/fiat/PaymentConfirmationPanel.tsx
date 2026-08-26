@@ -153,16 +153,24 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <CheckCircle className="w-5 h-5 text-primary" />
+      {/*
+        One title per modal, and the host owns it. These panels each carry a
+        page-level header because they were written as sections of /topup,
+        where they ARE the page; embedded, every one of them restates the
+        modal's own title. The step is legible from the content and the pay
+        button, which names the amount.
+      */}
+      {!purpose && (
+        <div className="flex items-start gap-3 mb-6">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+            <CheckCircle className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Review Payment</h3>
+            <p className="text-sm text-foreground/80">Confirm your credit card payment details</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Review Payment</h3>
-          <p className="text-sm text-foreground/80">Confirm your credit card payment details</p>
-        </div>
-      </div>
+      )}
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
@@ -229,10 +237,18 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
                 </>
               )}
 
-              <div className="flex justify-between pt-4 text-sm text-foreground border-t border-border/20 font-medium">
-                <div>Total:</div>
-                <div>${actualPaymentAmount.toFixed(2)}</div>
-              </div>
+              {/*
+                Redundant once the hero reads in dollars — the screen said
+                "$5.00 / 1.4908 credits / Total: $5.00". A generic top-up still
+                needs it, because there the hero is a credit figure and this is
+                the only place the charge appears.
+              */}
+              {!purpose && (
+                <div className="flex justify-between pt-4 text-sm text-foreground border-t border-border/20 font-medium">
+                  <div>Total:</div>
+                  <div>${actualPaymentAmount.toFixed(2)}</div>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex flex-col items-center py-4">
@@ -302,7 +318,7 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
                 Processing...
               </>
             ) : (
-              'Complete Payment'
+              purpose ? `Pay $${actualPaymentAmount.toFixed(2)}` : 'Complete Payment'
             )}
           </button>
         </div>

@@ -31,6 +31,8 @@ interface CryptoConfirmationPanelProps {
   cryptoAmount: number;
   tokenType: SupportedTokenType;
   onBack: () => void;
+  /** Set when a host modal owns the title; suppresses this panel's header. */
+  purpose?: { kind: 'arns-name'; name: string };
   onPaymentComplete: (result: any) => void;
 }
 
@@ -38,6 +40,7 @@ export default function CryptoConfirmationPanel({
   cryptoAmount,
   tokenType,
   onBack,
+  purpose,
   onPaymentComplete,
 }: CryptoConfirmationPanelProps) {
   const { address, walletType, paymentTargetAddress, paymentTargetType } = useStore();
@@ -619,16 +622,18 @@ export default function CryptoConfirmationPanel({
 
   return (
     <div className="px-4 sm:px-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <Wallet className="w-5 h-5 text-primary" />
+      {/* Suppressed when a host modal already carries the title. */}
+      {!purpose && (
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+            <Wallet className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Review Payment</h3>
+            <p className="text-sm text-foreground/80">Confirm your crypto payment details</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Review Payment</h3>
-          <p className="text-sm text-foreground/80">Confirm your crypto payment details</p>
-        </div>
-      </div>
+      )}
 
       {/* Single Main Container - All elements inside like Stripe */}
       <div className="bg-card rounded-2xl border border-border/20 p-6">

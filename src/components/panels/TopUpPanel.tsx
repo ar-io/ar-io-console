@@ -763,6 +763,7 @@ export default function TopUpPanel({
       case 'confirmation':
         return (
           <CryptoConfirmationPanel
+            purpose={purpose}
             cryptoAmount={inputType === 'storage' && cryptoForStorage !== undefined ? cryptoForStorage : cryptoAmount}
             tokenType={selectedTokenType}
             onBack={handleCryptoBackToSelection}
@@ -772,6 +773,7 @@ export default function TopUpPanel({
       case 'manual-payment':
         return (
           <CryptoManualPaymentPanel
+            purpose={purpose}
             cryptoTopupValue={cryptoPaymentResult?.quote?.tokenAmount || 0}
             tokenType={selectedTokenType}
             onBack={handleCryptoBackToSelection}

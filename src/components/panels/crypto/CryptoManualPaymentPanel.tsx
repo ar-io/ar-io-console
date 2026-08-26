@@ -15,6 +15,8 @@ interface CryptoManualPaymentPanelProps {
   cryptoTopupValue: number; // Amount in tokens, not quote object
   tokenType: SupportedTokenType; // The selected token type (ethereum, base-eth, etc.)
   onBack: () => void;
+  /** Set when a host modal owns the title; suppresses this panel's header. */
+  purpose?: { kind: 'arns-name'; name: string };
   onComplete: () => void;
 }
 
@@ -22,6 +24,7 @@ export default function CryptoManualPaymentPanel({
   cryptoTopupValue,
   tokenType,
   onBack,
+  purpose,
   onComplete
 }: CryptoManualPaymentPanelProps) {
   const address = useAddressState();
@@ -143,16 +146,18 @@ export default function CryptoManualPaymentPanel({
 
   return (
     <div className="px-4 sm:px-6 space-y-6">
-      {/* Header matching your design system */}
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-          <Copy className="w-5 h-5 text-primary" />
+      {/* Suppressed when a host modal already carries the title. */}
+      {!purpose && (
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+            <Copy className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Submit Transactions</h3>
+            <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to ar.io</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Submit Transactions</h3>
-          <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to ar.io</p>
-        </div>
-      </div>
+      )}
 
       {/* Amount Summary in your gradient container style */}
       <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-border/20 p-6">
