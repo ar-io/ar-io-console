@@ -216,14 +216,23 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <CreditCard className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
-            {purpose ? `Pay for ${purpose.name}.ar.io` : 'Payment Details'}
-          </h3>
-          <p className="text-sm text-foreground/80">
-            {purpose
-              ? 'You\u2019ll confirm the registration right after paying. We do not save credit card information.'
-              : 'We do not save credit card information. See our T&C for more info.'}
-          </p>
+          {/*
+            No header when a host has already framed the purchase. Embedded in
+            the ArNS payment modal this produced two stacked headers saying the
+            same thing — the modal names the domain and the terms, so repeating
+            them here was pure duplication.
+          */}
+          {!purpose && (
+            <>
+              <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
+                Payment Details
+              </h3>
+              <p className="text-sm text-foreground/80">
+                We do not save credit card information. See our T&amp;C for more
+                info.
+              </p>
+            </>
+          )}
         </div>
       </div>
 

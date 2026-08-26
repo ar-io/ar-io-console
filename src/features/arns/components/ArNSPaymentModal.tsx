@@ -82,7 +82,11 @@ export default function ArNSPaymentModal({
               <Wallet className="h-5 w-5 text-primary" />
             )}
             <h3 className="font-heading text-xl font-extrabold text-foreground">
-              {payingByCard ? 'Pay with card' : `Pay with ${tokenLabel ?? 'crypto'}`}
+              {arnsName
+                ? `Pay for ${arnsName}.ar.io`
+                : payingByCard
+                  ? 'Pay with card'
+                  : `Pay with ${tokenLabel ?? 'crypto'}`}
             </h3>
           </div>
           {shortfallCredits != null && shortfallCredits > 0 && (
@@ -98,7 +102,7 @@ export default function ArNSPaymentModal({
                   SOL of network costs for
                 </>
               ) : null}
-              .
+              .{payingByCard && ' We do not save credit card information.'}
             </p>
           )}
         </div>
