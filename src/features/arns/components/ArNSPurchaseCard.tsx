@@ -166,13 +166,22 @@ export function ArNSPurchaseCard({
     reason they are on it — and passing `''` made the quote fail before it was
     sent, breaking exactly the case custody exists to serve.
 
-    Their session identity owns it instead. The service accepts a non-Solana
-    owner, and its custody signature is typed per request (defaulting to
-    Arweave), so an Arweave or Ethereum buyer can prove ownership later and
-    move the name out without ever holding SOL.
+    Their session identity owns it — always, even when a Solana wallet is
+    linked. Owner and signer have to be the same identity or the name is
+    unreachable: the service derives the owner from the request signature, and
+    useCustodyOwnerClient signs as the SESSION wallet. Keying the purchase to a
+    linked Solana address while signing as Arweave meant an Arweave user with a
+    linked wallet but no SOL bought a name that then rejected their own claim,
+    records and renewals.
+
+    It is also the identity that actually paid: the credit balance is read for
+    the session address, not the linked one.
+
+    The linked Solana wallet is still where the name GOES — it is the transfer
+    target when they claim it — it just isn't who holds it meanwhile.
   */
   const sessionAddress = useStore((s) => s.address);
-  const custodialOwner = address ?? sessionAddress ?? '';
+  const custodialOwner = sessionAddress ?? '';
   const balances = useArNSPaymentBalances(address);
 
   /**
