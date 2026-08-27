@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isCustodialPlan, planCardPurchase } from './cardPlan';
+import { isCustodialPlan, planCardPurchase, custodialPurchaseEnabled } from './cardPlan';
 
 const base = { needsLinking: false, signerLive: true, solCoversGas: true };
 
@@ -67,4 +67,49 @@ describe('planCardPurchase', () => {
     expect(isCustodialPlan({ kind: 'self-custody' })).toBe(false);
     expect(isCustodialPlan({ kind: 'reconnect' })).toBe(false);
       });
+});
+
+describe('with custody switched off for launch', () => {
+  const off = { ...base, custodialEnabled: false };
+
+  it('asks a wallet-less buyer to connect one instead of selling custody', () => {
+    expect(planCardPurchase({ ...off, needsLinking: true })).toEqual({
+      kind: 'link',
+    });
+  });
+
+  it('falls through to self-custody when SOL is short, so the balance gating speaks', () => {
+    // Deliberately NOT a bespoke blocked kind: buildPaymentOptions already
+    // blocks this and names the shortfall, and one rule beats two.
+    expect(planCardPurchase({ ...off, solCoversGas: false })).toEqual({
+      kind: 'self-custody',
+    });
+  });
+
+  it('never returns a custodial plan by any route', () => {
+    const inputs = [
+      { ...off, needsLinking: true },
+      { ...off, signerLive: false },
+      { ...off, solCoversGas: false },
+      { ...off, solCoversGas: undefined },
+      off,
+    ];
+    for (const i of inputs) {
+      expect(planCardPurchase(i).kind).not.toBe('custodial');
+    }
+  });
+
+  it('still sells custody when the switch is on', () => {
+    expect(planCardPurchase({ ...base, needsLinking: true }).kind).toBe(
+      'custodial',
+    );
+  });
+});
+
+describe('custodialPurchaseEnabled', () => {
+  it('is off in production and on everywhere else', () => {
+    expect(custodialPurchaseEnabled('production')).toBe(false);
+    expect(custodialPurchaseEnabled('development')).toBe(true);
+    expect(custodialPurchaseEnabled('custom')).toBe(true);
+  });
 });

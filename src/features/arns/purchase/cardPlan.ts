@@ -19,6 +19,8 @@ export type CardPlan =
   | { kind: 'self-custody' }
   /** A linked wallet exists but is cold — reconnect beats giving custody away. */
   | { kind: 'reconnect' }
+  /** No Solana wallet, and custody is switched off: linking is the only path. */
+  | { kind: 'link' }
   /** Turbo holds the ANT. `reason` drives what the user is told. */
   | { kind: 'custodial'; reason: 'no-wallet' | 'no-sol' };
 
@@ -26,6 +28,7 @@ export function planCardPurchase({
   needsLinking,
   signerLive,
   solCoversGas,
+  custodialEnabled = true,
 }: {
   /** No Solana wallet is linked (and this isn't a Solana session). */
   needsLinking: boolean;
@@ -33,6 +36,16 @@ export function planCardPurchase({
   signerLive: boolean;
   /** `undefined` when the balance is unknown — see below. */
   solCoversGas: boolean | undefined;
+  /**
+   * Whether Turbo-custodied purchases may be sold at all.
+   *
+   * Off, every route that would have ended in custody instead asks for what
+   * self-custody actually needs: a Solana wallet, and enough SOL for the rent.
+   * The no-SOL case deliberately falls through to `self-custody` rather than
+   * getting a bespoke blocked kind — the balance gating already stops that
+   * purchase and names the shortfall, so this stays one rule instead of two.
+   */
+  custodialEnabled?: boolean;
 }): CardPlan {
   /*
     No Solana wallet at all — buy it custodially, and say nothing about wallets.
@@ -49,7 +62,11 @@ export function planCardPurchase({
     below: that user has already chosen self-custody, so reconnecting gives them
     what they picked rather than quietly deciding otherwise for them.
   */
-  if (needsLinking) return { kind: 'custodial', reason: 'no-wallet' };
+  if (needsLinking) {
+    return custodialEnabled
+      ? { kind: 'custodial', reason: 'no-wallet' }
+      : { kind: 'link' };
+  }
 
   // A wallet exists; it just isn't awake. This is the case that was silently
   // costing users their ANT and an extra ~$2.06.
@@ -57,7 +74,9 @@ export function planCardPurchase({
 
   // Known to be short on rent: they cannot complete a self-custody buy, so
   // Turbo covering it is the only route that works.
-  if (solCoversGas === false) return { kind: 'custodial', reason: 'no-sol' };
+  if (solCoversGas === false && custodialEnabled) {
+    return { kind: 'custodial', reason: 'no-sol' };
+  }
 
   // Known-good, or unknown. Unknown resolves to self-custody deliberately: an
   // underfunded attempt fails before any charge, while a custodial purchase
@@ -69,4 +88,23 @@ export function planCardPurchase({
 /** True when Turbo will end up holding the name — drives price and disclosure. */
 export function isCustodialPlan(plan: CardPlan): boolean {
   return plan.kind === 'custodial';
+}
+
+/**
+ * Whether Turbo-custodied purchases are offered, by environment.
+ *
+ * OFF in production, deliberately, and this is a launch gate rather than a
+ * verdict on the feature. Every custodial sub-flow reviewed before launch was
+ * broken as written — the quote address, the transfer signature, record
+ * writes, assigning a name to a deployment, renewals, and owner/signer
+ * agreement — each found by reading, none by running, because no custodial
+ * purchase has ever executed. Selling one in that state risks the worst
+ * failure this product has: money taken, and a name the buyer cannot reach.
+ *
+ * ON everywhere else, so the path can be exercised on devnet with test cards
+ * and free SOL. Flip production on once a real purchase has been walked end
+ * to end — buy, assign, renew, claim.
+ */
+export function custodialPurchaseEnabled(configMode: string): boolean {
+  return configMode !== 'production';
 }

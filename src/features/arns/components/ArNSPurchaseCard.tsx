@@ -27,7 +27,8 @@ import {
 } from '../purchase/paymentOptions';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
-import { planCardPurchase } from '../purchase/cardPlan';
+import { planCardPurchase,
+  custodialPurchaseEnabled } from '../purchase/cardPlan';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
@@ -182,6 +183,14 @@ export function ArNSPurchaseCard({
   */
   const sessionAddress = useStore((s) => s.address);
   const custodialOwner = sessionAddress ?? '';
+
+  /*
+    Custody is a launch gate, not a preference — see custodialPurchaseEnabled.
+    Off, the card route asks for what self-custody needs instead: a Solana
+    wallet, and enough SOL for the rent.
+  */
+  const configMode = useStore((s) => s.configMode);
+  const custodialEnabled = custodialPurchaseEnabled(configMode);
   const balances = useArNSPaymentBalances(address);
 
   /**
@@ -325,6 +334,7 @@ export function ArNSPurchaseCard({
 
   const cardPlan = planCardPurchase({
     needsLinking,
+    custodialEnabled,
     // A cold adapter is NOT a missing wallet — conflating them is what used to
     // hand Turbo the ANT for a user who only needed to reconnect.
     signerLive: isSolanaConnected && signer.isReady && !!signer.walletAdapter,
@@ -876,7 +886,9 @@ export function ArNSPurchaseCard({
               className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Wallet className="h-4 w-4" />
-              Reconnect wallet
+              {cardPlan.kind === 'reconnect'
+                ? 'Reconnect wallet'
+                : 'Connect a Solana wallet'}
             </button>
           </div>
         </div>
