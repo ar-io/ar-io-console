@@ -185,12 +185,11 @@ export function ArNSPurchaseCard({
   const custodialOwner = sessionAddress ?? '';
 
   /*
-    Custody is a launch gate, not a preference — see custodialPurchaseEnabled.
+    Custody is retired pending sponsored gas — see custodialPurchaseEnabled.
     Off, the card route asks for what self-custody needs instead: a Solana
     wallet, and enough SOL for the rent.
   */
-  const configMode = useStore((s) => s.configMode);
-  const custodialEnabled = custodialPurchaseEnabled(configMode);
+  const custodialEnabled = custodialPurchaseEnabled();
   const balances = useArNSPaymentBalances(address);
 
   /**
