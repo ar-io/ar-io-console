@@ -99,14 +99,18 @@ export default function ArNSPaymentModal({
           description={
             shortfallCredits != null && shortfallCredits > 0 ? (
               <>
-                Covers the name only — you&apos;ll confirm registration next
+                {/* Trimmed: this was the tallest thing in the modal, and at
+                    ~110 characters it wrapped to three lines and pushed the
+                    terms link below the fold. */}
+                Covers the name only
                 {networkSol != null && networkSol > 0 ? (
                   <>
-                    , and your Solana wallet pays ~
+                    {' '}
+                    — your wallet pays ~
                     {networkSol.toLocaleString(undefined, {
                       maximumFractionDigits: 4,
                     })}{' '}
-                    SOL of network costs
+                    SOL in network costs next
                   </>
                 ) : null}
                 .
