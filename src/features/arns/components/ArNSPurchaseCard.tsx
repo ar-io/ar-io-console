@@ -856,22 +856,39 @@ export function ArNSPurchaseCard({
       </div>
 
       {/*
-        Custody is the last rung, not the default. A user with a Solana wallet
-        gets a cheaper, self-owned name — so offer that before Turbo holds it.
+        What this screen offers depends on whether custody is on the menu.
+
+        With it on, connecting is the better of two options and the copy says
+        so. With it off there is no second option, so promising that "Turbo can
+        hold it for you instead" would describe a route the user cannot take —
+        and "skip the setup fee" names a fee no alternative charges.
       */}
       {cardNeedsWallet ? (
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
           <p className="mb-3 text-sm text-foreground/80">
             {cardPlan.kind === 'reconnect' ? (
-              <>
-                Reconnect your Solana wallet to buy this name outright — you
-                &apos;ll own it directly and skip the setup fee.
-              </>
-            ) : (
+              custodialEnabled ? (
+                <>
+                  Reconnect your Solana wallet to buy this name outright — you
+                  &apos;ll own it directly and skip the setup fee.
+                </>
+              ) : (
+                <>
+                  Reconnect your Solana wallet to buy this name. It holds the
+                  name once registered, and signs the changes you make to it.
+                </>
+              )
+            ) : custodialEnabled ? (
               <>
                 Connect a Solana wallet to own this name directly. Without one,
                 Turbo can hold it for you instead — that costs a little more and
                 limits what you can change.
+              </>
+            ) : (
+              <>
+                Connect a Solana wallet to buy this name. The name lives in your
+                wallet, and registering it costs a small amount of SOL in
+                network fees — your card only covers the name itself.
               </>
             )}
           </p>

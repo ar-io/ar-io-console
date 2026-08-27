@@ -247,6 +247,7 @@ export class TurboArNSClient {
   public async purchaseWithCredits({
     walletAdapter,
     client,
+    allowServiceCustody = false,
     name,
     intent = 'Buy-Name',
     type,
@@ -276,10 +277,30 @@ export class TurboArNSClient {
     type?: 'lease' | 'permabuy';
     years?: number;
     increaseQty?: number;
-    /** User-owned ANT for a Buy. Omit ONLY when Turbo should custody it. */
+    /** User-owned ANT for a Buy. Omitting it makes the SERVICE spawn one. */
     processId?: string;
+    /**
+     * Permit a Buy with no `processId`, which hands the new ANT to Turbo.
+     *
+     * Guarded rather than implied. Omitting `processId` was the difference
+     * between a name the buyer owns and one Turbo holds, expressed as an
+     * absent field — so any upstream bug that let it fall through as undefined
+     * would have quietly sold custody, in an environment where custody is
+     * switched off and nothing downstream would notice. The custodial route
+     * does not even come through here; it quotes and settles via
+     * `getFiatQuote`. So this stays off, and a missing id is a crash rather
+     * than a silent change of ownership.
+     */
+    allowServiceCustody?: boolean;
     paidBy?: string | string[];
   }): Promise<ArNSPurchaseResponse> {
+    if (intent === 'Buy-Name' && !processId && !allowServiceCustody) {
+      throw new Error(
+        'Refusing to buy a name with no ANT: without a processId the service ' +
+          'spawns and keeps one. Pass the spawned ANT, or set ' +
+          'allowServiceCustody when custody is genuinely intended.',
+      );
+    }
     if (!client && !walletAdapter) {
       throw new Error(
         'purchaseWithCredits needs either an authenticated client or a Solana wallet adapter.',
