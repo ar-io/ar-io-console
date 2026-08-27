@@ -114,6 +114,6 @@ export function isCustodialPlan(plan: CardPlan): boolean {
  * Kept as one switch rather than deleted so the decision has a single home,
  * and the code beneath it stays reachable for whoever revisits this.
  */
-export function custodialPurchaseEnabled(_configMode: string): boolean {
+export function custodialPurchaseEnabled(): boolean {
   return false;
 }
