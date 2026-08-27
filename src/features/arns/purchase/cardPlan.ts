@@ -101,10 +101,19 @@ export function isCustodialPlan(plan: CardPlan): boolean {
  * purchase has ever executed. Selling one in that state risks the worst
  * failure this product has: money taken, and a name the buyer cannot reach.
  *
- * ON everywhere else, so the path can be exercised on devnet with test cards
- * and free SOL. Flip production on once a real purchase has been walked end
- * to end — buy, assign, renew, claim.
+ * OFF everywhere, including testnet — this is not an environment gate.
+ *
+ * Custody solved the wrong half of the problem. It removed the need to hold
+ * SOL, but never the need for a wallet to sign with: `needsLinking` always
+ * meant "no SOLANA wallet", and a session identity is required to reach the
+ * checkout at all. Sponsored gas removes the SOL requirement without handing
+ * Turbo the asset, a surcharge, a reduced action set, or a claim flow — so
+ * custody is retired rather than fixed, and this stays false until that
+ * replacement ships.
+ *
+ * Kept as one switch rather than deleted so the decision has a single home,
+ * and the code beneath it stays reachable for whoever revisits this.
  */
-export function custodialPurchaseEnabled(configMode: string): boolean {
-  return configMode !== 'production';
+export function custodialPurchaseEnabled(_configMode: string): boolean {
+  return false;
 }

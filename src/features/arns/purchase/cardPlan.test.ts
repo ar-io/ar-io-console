@@ -107,9 +107,11 @@ describe('with custody switched off for launch', () => {
 });
 
 describe('custodialPurchaseEnabled', () => {
-  it('is off in production and on everywhere else', () => {
-    expect(custodialPurchaseEnabled('production')).toBe(false);
-    expect(custodialPurchaseEnabled('development')).toBe(true);
-    expect(custodialPurchaseEnabled('custom')).toBe(true);
+  it('is off in every environment, not just production', () => {
+    // Retired pending sponsored gas, which removes the SOL requirement without
+    // giving the asset away. Not an environment gate.
+    for (const mode of ['production', 'development', 'custom']) {
+      expect(custodialPurchaseEnabled(mode)).toBe(false);
+    }
   });
 });
