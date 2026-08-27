@@ -144,7 +144,12 @@ function AppRoutes() {
 export function App() {
   return (
     <WalletProviders>
-      <BrowserRouter>
+      {/*
+        Matches Vite's base, so a build served from a subpath (GitHub Pages
+        staging) routes correctly without a second source of truth. '/' in
+        every other build, where this is a no-op.
+      */}
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AppRoutes />
       </BrowserRouter>
     </WalletProviders>

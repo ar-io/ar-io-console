@@ -12,6 +12,10 @@ name: Deploy to Arweave (console.ar.io)
 # staging_console.ar.io — never the live base record. Choose `@` to publish live console.ar.io.
 
 on:
+  # Merging to main publishes the live console. Manual dispatch stays for
+  # re-deploys, for shipping a specific ref, and for staging undernames.
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       undername:
@@ -26,8 +30,14 @@ on:
         type: string
 
 # Serialize deploys per target so two runs can't race on the same ArNS record.
+# A push to main IS the live deploy, so its target is '@' and its ref is the
+# pushed commit. Manual runs keep their inputs, which default to staging.
+env:
+  TARGET_UNDERNAME: ${{ inputs.undername || '@' }}
+  TARGET_REF: ${{ inputs.ref || github.sha }}
+
 concurrency:
-  group: deploy-arweave-${{ inputs.undername }}
+  group: deploy-arweave-${{ inputs.undername || '@' }}
   cancel-in-progress: false
 
 jobs:
@@ -41,7 +51,7 @@ jobs:
       # (which interpolates it into a shell step). Fail fast on anything unexpected.
       - name: Validate inputs
         env:
-          UNDERNAME: ${{ inputs.undername }}
+          UNDERNAME: ${{ env.TARGET_UNDERNAME }}
           # Presence check only — the value is never echoed.
           SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
         run: |
@@ -65,7 +75,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ env.TARGET_REF }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -101,7 +111,7 @@ jobs:
           deploy-key: ${{ secrets.DEPLOY_KEY }}
           arns-key: ${{ secrets.ARNS_KEY }}
           arns-name: ${{ vars.ARNS_NAME }}
-          undername: ${{ inputs.undername }}
+          undername: ${{ env.TARGET_UNDERNAME }}
           sig-type: solana
           deploy-folder: ./dist
           ttl-seconds: '300'
@@ -114,7 +124,7 @@ jobs:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
           TX_ID: ${{ steps.deploy.outputs.tx-id }}
           UNDERNAME_USED: ${{ steps.deploy.outputs.undername-used }}
-          DEPLOY_REF: ${{ inputs.ref }}
+          DEPLOY_REF: ${{ env.TARGET_REF }}
         run: |
           {
             printf '%s\n' '### Deployed 🎉' ''

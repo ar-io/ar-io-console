@@ -1,0 +1,73 @@
+name: Deploy staging (GitHub Pages)
+
+# Every push to `develop` publishes to GitHub Pages, giving the
+# feature -> develop -> main flow a shared place to test before anything
+# reaches console.ar.io.
+#
+# Base path: a GitHub Pages PROJECT site is served from /<repo>/, not a domain
+# root, while the app is built for a root (`base: '/'` — nested routes resolve
+# assets on direct navigation). VITE_BASE_PATH bridges that for this build only;
+# the router reads the same value through import.meta.env.BASE_URL so the two
+# cannot drift. Point a custom domain at Pages later and this becomes '/'.
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+# Never let two staging deploys race; the newer one wins.
+concurrency:
+  group: pages-staging
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      # Same gate as CI — staging should never be the first place a break shows.
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm test
+
+      - name: Build
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_NODE_ENV: production
+          VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
+          VITE_WALLETCONNECT_PROJECT_ID: ${{ secrets.VITE_WALLETCONNECT_PROJECT_ID }}
+          VITE_SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
+        run: npm run build:staging
+
+      # Pages serves static files, so a deep link like /domains/foo would 404
+      # before the SPA ever loads. Serving index.html as the 404 hands those
+      # URLs to the router instead.
+      - name: SPA fallback for deep links
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
