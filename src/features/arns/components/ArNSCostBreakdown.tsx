@@ -426,7 +426,7 @@ export function ArNSCostBreakdown({
               label={
                 <span className="inline-flex items-center gap-1.5">
                   Network deposit
-                  <InfoTip text="Solana account rent, held on-chain while the name is registered." />
+                  <InfoTip text="Solana account rent, held on-chain while the name is registered. The figure is an upper bound — the network usually charges less, so your wallet may quote a smaller amount." />
                 </span>
               }
             >
@@ -461,7 +461,7 @@ export function ArNSCostBreakdown({
                 <span
                   className={`text-lg font-bold ${insufficientSol ? 'text-error' : 'text-foreground'}`}
                 >
-                  ~{fmtSol(gasTotalSol + (tokenForName?.amount ?? 0))} SOL
+                  up to ~{fmtSol(gasTotalSol + (tokenForName?.amount ?? 0))} SOL
                 </span>
                 {nameCostSummary && (
                   <span className="text-[11px] font-normal text-foreground/60">
