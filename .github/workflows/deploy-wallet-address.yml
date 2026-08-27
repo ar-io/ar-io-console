@@ -12,6 +12,14 @@ name: Show deploy wallet address
 
 on:
   workflow_dispatch:
+  # workflow_dispatch only registers from the DEFAULT branch, so this would
+  # otherwise be unrunnable until it reached main — and the address is needed
+  # before main can deploy at all (the wallet has to hold SOL and control the
+  # name first). Path-filtered so it runs when this file lands and stays quiet
+  # on every other push.
+  push:
+    branches: [develop]
+    paths: ['.github/workflows/deploy-wallet-address.yml']
 
 jobs:
   show:
