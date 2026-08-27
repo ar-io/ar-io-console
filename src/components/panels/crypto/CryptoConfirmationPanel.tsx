@@ -635,8 +635,20 @@ export default function CryptoConfirmationPanel({
         </div>
       )}
 
-      {/* Single Main Container - All elements inside like Stripe */}
-      <div className="bg-card rounded-2xl border border-border/20 p-6">
+      {/*
+        No inner card inside a modal. BaseModal is already
+        `bg-card border border-border/20 rounded-2xl`, so this wrapper repeated
+        the same surface, border and radius one level in — a frame around a
+        frame, which Deploy Site's modal doesn't do. Standing alone on /topup
+        it IS the card that lifts the form off the page, so it stays there.
+      */}
+      <div
+        className={
+          purpose
+            ? ''
+            : 'bg-card rounded-2xl border border-border/20 p-6'
+        }
+      >
         {pricingLoading ? (
           <div className="text-center py-8">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />

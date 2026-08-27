@@ -160,7 +160,8 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
     : 0;
 
   return (
-    <div className="px-4 sm:px-6">
+    <div className={purpose ? '' : 'px-4 sm:px-6'}>
+      {/* The host modal already pads; doubling it inset the form by ~44px. */}
       {/*
         One title per modal, and the host owns it. These panels each carry a
         page-level header because they were written as sections of /topup,
@@ -180,8 +181,20 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
         </div>
       )}
 
-      {/* Main Content Container with Gradient */}
-      <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+      {/*
+        No inner card inside a modal. BaseModal is already
+        `bg-card border border-border/20 rounded-2xl`, so this wrapper repeated
+        the same surface, border and radius one level in — a frame around a
+        frame, which Deploy Site's modal doesn't do. Standing alone on /topup
+        it IS the card that lifts the form off the page, so it stays there.
+      */}
+      <div
+        className={
+          purpose
+            ? 'mb-4 sm:mb-6'
+            : 'bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6'
+        }
+      >
 
         {/* Show recipient info if funding another wallet */}
         {targetAddress && targetAddress !== address && (
