@@ -50,6 +50,12 @@ jobs:
           VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
           VITE_WALLETCONNECT_PROJECT_ID: ${{ secrets.VITE_WALLETCONNECT_PROJECT_ID }}
           VITE_SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
+          # Same optional EVM overrides the live deploy takes — without these,
+          # staging hits the free public endpoints and rate-limits differently
+          # from production, which makes it a poor rehearsal.
+          VITE_ETHEREUM_RPC: ${{ secrets.VITE_ETHEREUM_RPC }}
+          VITE_BASE_RPC: ${{ secrets.VITE_BASE_RPC }}
+          VITE_POLYGON_RPC: ${{ secrets.VITE_POLYGON_RPC }}
         run: npm run build:staging
 
       # Pages serves static files, so a deep link like /domains/foo would 404
