@@ -62,56 +62,37 @@ describe('formatUsdAmount', () => {
 });
 
 describe('formatPriceDisplay', () => {
-  it("currency 'ario' with a rate → ARIO primary + $ secondary", () => {
-    const out = formatPriceDisplay({ ario: 1772, usdPerArio: 0.05, currency: 'ario' });
-    expect(out.primary).toBe('1,772 ARIO');
-    expect(out.secondary).toBe('≈ $88.60');
-  });
-
-  it("currency 'ario' without a rate → ARIO primary, no secondary", () => {
-    const out = formatPriceDisplay({ ario: 1772, usdPerArio: undefined, currency: 'ario' });
+  it("without a rate → ARIO primary, no secondary", () => {
+    const out = formatPriceDisplay({ ario: 1772, usdPerArio: undefined });
     expect(out.primary).toBe('1,772 ARIO');
     expect(out.secondary).toBeUndefined();
   });
 
-  it("currency 'usd' with a rate → $ primary + ARIO secondary", () => {
-    const out = formatPriceDisplay({ ario: 1000, usdPerArio: 0.05, currency: 'usd' });
+  it("with a rate → $ primary + ARIO secondary", () => {
+    const out = formatPriceDisplay({ ario: 1000, usdPerArio: 0.05 });
     expect(out.primary).toBe('$50.00');
     expect(out.secondary).toBe('≈ 1,000 ARIO');
   });
 
-  it("currency 'usd' without a rate → graceful ARIO fallback, no secondary", () => {
-    const out = formatPriceDisplay({ ario: 1000, usdPerArio: undefined, currency: 'usd' });
+  it("without a rate → graceful ARIO fallback, no secondary", () => {
+    const out = formatPriceDisplay({ ario: 1000, usdPerArio: undefined });
     expect(out.primary).toBe('1,000 ARIO');
     expect(out.secondary).toBeUndefined();
   });
 
   it('undefined/non-finite ario → em dash primary, no secondary', () => {
-    expect(formatPriceDisplay({ ario: undefined, usdPerArio: 0.05, currency: 'ario' })).toEqual({
+    expect(formatPriceDisplay({ ario: undefined, usdPerArio: 0.05 })).toEqual({
       primary: '—',
     });
-    expect(formatPriceDisplay({ ario: NaN, usdPerArio: 0.05, currency: 'usd' })).toEqual({
+    expect(formatPriceDisplay({ ario: NaN, usdPerArio: 0.05 })).toEqual({
       primary: '—',
     });
-  });
-
-  it('drops the ARIO suffix when withUnit is false (dense tables)', () => {
-    const out = formatPriceDisplay({
-      ario: 1772,
-      usdPerArio: 0.05,
-      currency: 'ario',
-      withUnit: false,
-    });
-    expect(out.primary).toBe('1,772');
-    // The disambiguating secondary line keeps its unit.
-    expect(out.secondary).toContain('$');
   });
 
   it('keeps the $ on the USD primary regardless of withUnit', () => {
     const out = formatPriceDisplay({
       ario: 1000,
       usdPerArio: 0.05,
-      currency: 'usd',
       withUnit: false,
     });
     expect(out.primary).toBe('$50.00');
@@ -125,7 +106,6 @@ describe('formatPriceDisplay', () => {
     const out = formatPriceDisplay({
       ario: 1000,
       usdPerArio: undefined,
-      currency: 'usd',
       withUnit: false,
     });
     expect(out.primary).toBe('1,000 ARIO');

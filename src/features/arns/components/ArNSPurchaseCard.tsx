@@ -639,21 +639,13 @@ export function ArNSPurchaseCard({
     if (custodialCard) return null;
     if (!priceReady) return null;
     if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
-    if (insufficientSol) {
-      const need =
-        cost && balances.sol !== undefined
-          ? Math.max(0, solNeededTotal - balances.sol)
-          : 0;
-      // Format first, then decide. A shortfall under 0.00005 SOL is real but
-      // rounds to "0" at 4dp, and "you need about 0 more SOL" reads as a bug.
-      const needText = need.toLocaleString(undefined, { maximumFractionDigits: 4 });
-      return {
-        text:
-          need > 0 && Number(needText) > 0
-            ? `You need about ${needText} more SOL for the network deposit.`
-            : 'You need a little more SOL for the network deposit.',
-      };
-    }
+    /*
+      Deliberately silent: the cost breakdown directly above already says what
+      you hold and how much more you need, with a link to get it. Repeating it
+      here put the same sentence on screen twice with the useful number split
+      between them.
+    */
+    if (insufficientSol) return null;
     /*
       The token route disables on its own conditions, so it needs its own
       reason — otherwise it greys out silently, which is what a zero shortfall
@@ -670,7 +662,7 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route, cost, balances.sol, custodialCard, solNeededTotal,
+    insufficientFunds, route, custodialCard,
     tokenSmallestUnitForName,
   ]);
 

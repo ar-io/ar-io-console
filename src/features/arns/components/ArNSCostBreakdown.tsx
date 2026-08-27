@@ -9,8 +9,6 @@ import {
 
 import type { ArNSPriceUnit } from './ArNSPaymentSelector';
 import PriceAmount from './PriceAmount';
-import PriceDisplayToggle from './PriceDisplayToggle';
-import { useStore } from '../../../store/useStore';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
 /** Where to send users who need SOL for the network deposit. Configurable. */
@@ -34,6 +32,21 @@ const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
 const GET_ARIO_URL =
   `https://raydium.io/swap/?inputMint=sol` +
   `&outputMint=${MAINNET_ARIO_MINT.toString()}`;
+
+/**
+ * How much more SOL is needed, formatted — or undefined when it rounds to
+ * nothing. A real shortfall under 0.00005 SOL renders as "0" at 4dp, and
+ * "need 0 more" reads as a bug rather than a rounding artefact.
+ */
+function solShortfall(
+  required: number,
+  balance: number | undefined,
+): string | undefined {
+  if (balance === undefined) return undefined;
+  const need = Math.max(0, required - balance);
+  const text = need.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  return need > 0 && Number(text) > 0 ? text : undefined;
+}
 
 const fmtSol = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 4 });
@@ -190,7 +203,6 @@ export function ArNSCostBreakdown({
   custodialAnt = false,
   tokenForName,
 }: Props) {
-  const currency = useStore((s) => s.priceDisplayCurrency);
   // Credits per $1, inverted. Shown with "~" because this is an indicative
   // rate, not the amount that will be charged — minimums and rounding apply.
   const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
@@ -226,6 +238,12 @@ export function ArNSCostBreakdown({
     return undefined;
   })();
 
+  // Same total the panel renders below: the name's SOL leg plus network costs.
+  const solShortfallText = solShortfall(
+    gasTotalSol + (tokenForName?.amount ?? 0),
+    solBalance,
+  );
+
   const priceNode = priceLoading ? (
     <span className="flex items-center gap-2 text-sm text-foreground/70">
       <Loader2 className="h-4 w-4 animate-spin" /> Fetching…
@@ -241,14 +259,29 @@ export function ArNSCostBreakdown({
     // Card price not resolved yet — wait rather than quoting another unit.
     <span className="text-sm text-foreground/50">…</span>
   ) : tokenForName ? (
-    // Priced in the token actually handed over; USD stays on the toggle.
-    <span className="text-sm font-medium text-foreground">
-      {currency === 'usd' && usdPerCredit != null && creditsPrice != null
-        ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+    /*
+      Dollars lead, the token amount beneath — the two answer different
+      questions ("what does this cost" vs "what leaves my wallet") and both are
+      wanted, which is why the toggle that hid one behind the other went.
+    */
+    <span className="flex flex-col items-end">
+      {usdPerCredit != null && creditsPrice != null && (
+        <span className="text-sm font-medium text-foreground">
+          {`~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-          })}`
-        : `${fmtSol(tokenForName.amount)} ${tokenForName.label}`}
+          })}`}
+        </span>
+      )}
+      <span
+        className={
+          usdPerCredit != null && creditsPrice != null
+            ? 'text-xs text-foreground/50'
+            : 'text-sm font-medium text-foreground'
+        }
+      >
+        {`${fmtSol(tokenForName.amount)} ${tokenForName.label}`}
+      </span>
     </span>
   ) : cardUsdPrice != null ? (
     <span className="text-sm font-medium text-foreground">
@@ -263,13 +296,24 @@ export function ArNSCostBreakdown({
       // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
       // lowercase "credits" is the unit that follows an amount. Keep it lowercase
       // here — it's a unit, not the product name.
-      <span className="text-sm font-medium text-foreground">
-        {currency === 'usd' && usdPerCredit != null
-          ? `~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+      <span className="flex flex-col items-end">
+        {usdPerCredit != null && (
+          <span className="text-sm font-medium text-foreground">
+            {`~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
-            })}`
-          : `${fmtNum(creditsPrice)} credits`}
+            })}`}
+          </span>
+        )}
+        <span
+          className={
+            usdPerCredit != null
+              ? 'text-xs text-foreground/50'
+              : 'text-sm font-medium text-foreground'
+          }
+        >
+          {`${fmtNum(creditsPrice)} credits`}
+        </span>
       </span>
     ) : (
       <span className="text-sm text-foreground/50">—</span>
@@ -303,23 +347,6 @@ export function ArNSCostBreakdown({
                 offering "Credits" to someone paying SOL surfaces our billing
                 plumbing at the one moment they are thinking in SOL.
               */}
-              {/*
-                Gated on the ROUTE, not on the price being resolved. Testing
-                `cardUsdPrice == null` inverted the intent: while the fiat
-                estimate loaded, a card route briefly offered a Credits/USD
-                switch — the leak `isCardRoute` was added to close.
-              */}
-              {!isCardRoute && (
-                <PriceDisplayToggle
-                  nativeLabel={
-                    tokenForName
-                      ? tokenForName.label
-                      : priceUnit === 'credits'
-                        ? 'Credits'
-                        : 'ARIO'
-                  }
-                />
-              )}
             </span>
           }
           strong
@@ -469,10 +496,20 @@ export function ArNSCostBreakdown({
             >
               {insufficientSol ? (
                 <>
+                  {/*
+                    Holdings and shortfall in ONE line. "You have 0.1044 SOL —
+                    add more" sat directly above "You need about 0.0218 more
+                    SOL", which is the same sentence twice with the useful
+                    number split across them. What you hold and what you're
+                    short belong together; the button's reason no longer
+                    repeats it.
+                  */}
                   <span className="flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> You have{' '}
                     {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL —
-                    add more to cover the deposit
+                    {solShortfallText
+                      ? ` need ${solShortfallText} more`
+                      : ' add more to cover the deposit'}
                   </span>
                   <a
                     href={GET_SOL_URL}

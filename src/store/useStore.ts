@@ -13,7 +13,6 @@ import {
 import { SupportedTokenType } from '../constants';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
-import type { PriceDisplayCurrency } from '../features/arns/priceDisplay';
 
 /**
  * Production RPC endpoints, each overridable at build time.
@@ -324,7 +323,6 @@ interface StoreState {
   smartDeployEnabled: boolean;
 
   // Price-display preference (ARIO ⇄ USD toggle on priced surfaces)
-  priceDisplayCurrency: PriceDisplayCurrency;
 
   // App Details state (deployed apps history)
   deployedApps: Record<string, DeployedAppEntry>; // Keyed by app name
@@ -458,7 +456,6 @@ interface StoreState {
   getFileHashEntry: (hash: string) => FileHashEntry | null;
   clearFileHashCache: () => void;
   setSmartDeployEnabled: (enabled: boolean) => void;
-  setPriceDisplayCurrency: (currency: PriceDisplayCurrency) => void;
 
   // App Details actions
   saveDeployedApp: (appName: string, appVersion: string) => void;
@@ -506,7 +503,6 @@ export const useStore = create<StoreState>()(
       smartDeployEnabled: true, // Default ON
 
       // Price-display preference — ARIO by default (native ArNS currency)
-      priceDisplayCurrency: 'ario',
 
       // App Details state (deployed apps history)
       deployedApps: {},
@@ -986,8 +982,6 @@ export const useStore = create<StoreState>()(
       },
       clearFileHashCache: () => set({ fileHashCache: {} }),
       setSmartDeployEnabled: (enabled) => set({ smartDeployEnabled: enabled }),
-      setPriceDisplayCurrency: (priceDisplayCurrency) =>
-        set({ priceDisplayCurrency }),
 
       // App Details actions
       saveDeployedApp: (appName, appVersion) => {
@@ -1068,7 +1062,6 @@ export const useStore = create<StoreState>()(
         fileHashCache: state.fileHashCache,
         smartDeployEnabled: state.smartDeployEnabled,
         // Price-display preference
-        priceDisplayCurrency: state.priceDisplayCurrency,
         // App Details state
         deployedApps: state.deployedApps,
         lastDeployedAppName: state.lastDeployedAppName,
