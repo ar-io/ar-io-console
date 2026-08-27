@@ -316,7 +316,6 @@ export default function ReturnedNamesPanel() {
                   <span className="font-sans text-xs text-foreground/50 sm:hidden">Est. price</span>
                   <PriceAmount
                     ario={priceOf(r)}
-                    compact
                     primaryClassName="text-sm text-foreground/80 tabular-nums"
                   />
                 </div>

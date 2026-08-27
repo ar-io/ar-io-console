@@ -142,7 +142,6 @@ export default function ArNSPriceTable() {
                       <div className="flex justify-end">
                         <PriceAmount
                           ario={tier.pricesInARIO.year1}
-                          compact
                           primaryClassName="text-sm font-semibold text-foreground tabular-nums"
                         />
                       </div>
@@ -155,7 +154,6 @@ export default function ArNSPriceTable() {
                             0,
                             tier.pricesInARIO.year2 - tier.pricesInARIO.year1,
                           )}
-                          compact
                           primaryClassName="text-sm font-medium text-foreground/80 tabular-nums"
                         />
                       </div>
@@ -164,7 +162,6 @@ export default function ArNSPriceTable() {
                       <div className="flex justify-end">
                         <PriceAmount
                           ario={tier.pricesInARIO.permabuy}
-                          compact
                           primaryClassName="text-sm font-semibold text-foreground tabular-nums"
                         />
                       </div>
@@ -173,7 +170,6 @@ export default function ArNSPriceTable() {
                       <div className="flex justify-end">
                         <PriceAmount
                           ario={arnsUndernameFees(tier.pricesInARIO.year1).lease}
-                          compact
                           primaryClassName="text-sm font-medium text-foreground/80 tabular-nums"
                         />
                       </div>
@@ -184,7 +180,6 @@ export default function ArNSPriceTable() {
                           ario={
                             arnsUndernameFees(tier.pricesInARIO.year1).permabuy
                           }
-                          compact
                           primaryClassName="text-sm font-medium text-foreground/80 tabular-nums"
                         />
                       </div>
