@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useStore } from '@/store/useStore';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Globe, ExternalLink, Flame } from 'lucide-react';
+import { ArrowLeft, Globe, ExternalLink, Flame, Tag, Settings2 } from 'lucide-react';
 
 import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
@@ -16,6 +17,7 @@ import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
  * and non-credit payment methods are deferred.
  */
 export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {}) {
+  const address = useStore((s) => s.address);
   const [search, setSearch] = useState(initialSearch ?? '');
   const [selectedName, setSelectedName] = useState<string | undefined>();
 
@@ -129,6 +131,27 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
             >
               <Flame className="h-4 w-4" /> Returned-name auctions
             </Link>
+            {/*
+              The two questions this page raises but doesn't answer: what a
+              name costs before you search for one, and where the names you
+              already own live. Both were a nav hunt from here.
+            */}
+            <Link
+              to="/pricing?type=domains"
+              className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+            >
+              <Tag className="h-4 w-4" /> See name prices
+            </Link>
+            {/* Signed out, /my-domains redirects to the homepage — so the
+                link would silently throw away whatever you were doing here. */}
+            {address && (
+              <Link
+                to="/my-domains"
+                className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+              >
+                <Settings2 className="h-4 w-4" /> Manage my domains
+              </Link>
+            )}
           </div>
         </>
       ) : (
