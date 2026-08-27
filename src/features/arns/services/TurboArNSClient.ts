@@ -7,6 +7,7 @@ import {
   TokenType,
   TurboFactory,
   TurboUnauthenticatedClient,
+  TurboAuthenticatedClient,
 } from '@ardrive/turbo-sdk/web';
 
 import { lowerCaseDomain } from '../utils';
@@ -245,6 +246,7 @@ export class TurboArNSClient {
    */
   public async purchaseWithCredits({
     walletAdapter,
+    client,
     name,
     intent = 'Buy-Name',
     type,
@@ -253,13 +255,22 @@ export class TurboArNSClient {
     processId,
     paidBy,
   }: {
-    /** Solana wallet adapter — the credit balance debited is this signer's. */
     /**
      * Typed against the SDK's own adapter rather than this file's looser
      * local alias — a cast here would silence the compiler on a call that
      * spends money.
      */
-    walletAdapter: TurboSolanaWalletAdapter;
+    walletAdapter?: TurboSolanaWalletAdapter;
+    /**
+     * A client already authenticated as the payer. Preferred.
+     *
+     * The service identifies the payer from the request SIGNATURE — its
+     * middleware accepts Arweave, Ethereum, Solana and ED25519 — and debits
+     * that identity's credits. Building a Solana client here regardless meant
+     * an Arweave or Ethereum holder could not spend their own credits on a
+     * name they own, which is every custodial buyer.
+     */
+    client?: TurboAuthenticatedClient;
     name: string;
     intent?: TurboArNSIntent;
     type?: 'lease' | 'permabuy';
@@ -269,13 +280,20 @@ export class TurboArNSClient {
     processId?: string;
     paidBy?: string | string[];
   }): Promise<ArNSPurchaseResponse> {
-    const turbo = TurboFactory.authenticated({
-      token: 'solana',
-      walletAdapter,
-      paymentServiceConfig: { url: this.paymentUrl },
-      uploadServiceConfig: { url: this.uploadUrl },
-      gatewayUrl: this.gatewayUrl,
-    });
+    if (!client && !walletAdapter) {
+      throw new Error(
+        'purchaseWithCredits needs either an authenticated client or a Solana wallet adapter.',
+      );
+    }
+    const turbo =
+      client ??
+      TurboFactory.authenticated({
+        token: 'solana',
+        walletAdapter: walletAdapter as TurboSolanaWalletAdapter,
+        paymentServiceConfig: { url: this.paymentUrl },
+        uploadServiceConfig: { url: this.uploadUrl },
+        gatewayUrl: this.gatewayUrl,
+      });
     const params = {
       ...intentParams({ name, intent, type, years, increaseQty }),
       ...(processId ? { processId } : {}),

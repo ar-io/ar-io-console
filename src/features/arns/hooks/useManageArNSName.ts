@@ -5,6 +5,7 @@ import { getWritableARIO } from '../../../utils';
 import { ArNSSettlementResult } from '../services/TurboArNSClient';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
+import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import { useTurboArNSClient } from './useTurboArNSClient';
 import type {
   ArioFundFrom,
@@ -92,6 +93,7 @@ export function isInsufficientCredits(err: unknown): boolean {
  */
 export function useManageArNSName(): UseManageArNSNameResult {
   const signer = useArNSTurboSigner();
+  const { getClient: getOwnerClient } = useCustodyOwnerClient();
   const client = useTurboArNSClient();
 
   const [phase, setPhase] = useState<ManagePhase>('idle');
@@ -121,8 +123,21 @@ export function useManageArNSName(): UseManageArNSNameResult {
       setInsufficientCredits(false);
       setResult(undefined);
 
+      /*
+        Only the ARIO route needs a Solana signer — it moves ARIO on-chain.
+
+        Paying with credits does not: the service identifies the payer from the
+        request signature (its middleware takes Arweave, Ethereum, Solana or
+        ED25519) and debits that identity. Demanding Solana for both meant a
+        custodial buyer — who is on that route precisely because they have no
+        Solana wallet — could not renew or upgrade the name they own. On a
+        lease, that is a name they eventually lose.
+      */
       const owner = signer.address;
-      if (!signer.isReady || !owner || !signer.walletAdapter) {
+      if (
+        mechanism.kind !== 'turbo-credits' &&
+        (!signer.isReady || !owner || !signer.walletAdapter)
+      ) {
         const e = new Error(
           'Connect a Solana wallet with a live signer to pay for this change.',
         );
@@ -145,7 +160,8 @@ export function useManageArNSName(): UseManageArNSNameResult {
           */
           if (!client) throw new Error('Payment service is unavailable.');
           const purchase = await client.purchaseWithCredits({
-            walletAdapter: signer.walletAdapter,
+            // Signs as whoever is connected, so the credits debited are theirs.
+            client: await getOwnerClient(),
             name: lowered,
             intent,
             years,
@@ -211,7 +227,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
         throw normalized;
       }
     },
-    [signer, client],
+    [signer, client, getOwnerClient],
   );
 
   return {
