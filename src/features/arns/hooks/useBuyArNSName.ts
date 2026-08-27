@@ -23,6 +23,7 @@ import { useTurboArNSClient } from './useTurboArNSClient';
 import { useStore } from '../../../store/useStore';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
+import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import type { ArNSRegistrationType } from './useArNSPrice';
 
 export type BuyPhase = 'idle' | 'submitting' | 'success' | 'error';
@@ -87,6 +88,7 @@ function isInsufficientCredits(err: unknown): boolean {
  */
 export function useBuyArNSName(): UseBuyArNSNameResult {
   const signer = useArNSTurboSigner();
+  const { getClient: getOwnerClient } = useCustodyOwnerClient();
   const client = useTurboArNSClient();
   const config = useStore((st) => st.getCurrentConfig());
 
@@ -212,7 +214,16 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
 
           setStatusMessage(submittingMessage(lowered, type));
           const res = await client.purchaseWithCredits({
-            walletAdapter: signer.walletAdapter,
+            /*
+              Signed by the SESSION identity, whose credits these are.
+
+              Authenticating with the linked Solana adapter debited that
+              address instead — so an Arweave or Ethereum user saw their own
+              balance on the checkout, chose Balance, and the purchase spent an
+              address holding nothing. The balance shown and the balance spent
+              have to be the same one. Same fix as the renewal path.
+            */
+            client: await getOwnerClient(),
             name: lowered,
             intent: 'Buy-Name',
             type,
@@ -253,7 +264,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         throw normalized;
       }
     },
-    [signer, client, config.antProgramId, config.tokenMap.solana],
+    [signer, client, getOwnerClient, config.antProgramId, config.tokenMap.solana],
   );
 
   return {
