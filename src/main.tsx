@@ -8,6 +8,9 @@ import './styles/globals.css';
 import { suppressPrivyDOMWarnings } from './utils/suppressPrivyWarnings';
 suppressPrivyDOMWarnings();
 
+// Service worker registration moved to BrowsePage to avoid affecting main bundle
+// The SW will be registered when user first visits /browse
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

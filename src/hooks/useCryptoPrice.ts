@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { TurboFactory } from '@ardrive/turbo-sdk/web';
+
+import { usdPerArioFromLegs } from '../features/arns/priceRate';
+import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { SupportedTokenType } from '../constants';
 import { useTurboConfig } from './useTurboConfig';
 
 /**
  * Get the smallest unit for a token type (e.g., 10^18 wei for ETH)
  */
-const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
+/** Smallest unit per whole token (lamports per SOL, wei per ETH, …). */
+export const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
   switch (tokenType) {
     case 'arweave':
       return BigInt(10 ** 12); // winston
@@ -41,12 +44,22 @@ const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
  */
 export function useCryptoPriceForWinc(
   wincAmount: number | undefined,
-  tokenType: SupportedTokenType
+  tokenType: SupportedTokenType,
+  /**
+   * Round the token amount UP to the next smallest unit.
+   *
+   * The conversion below is integer division, which truncates — so an exact
+   * "how much SOL buys N credits" answer lands just BELOW N. Fine for a display
+   * estimate, not fine when the number is what we actually charge: the top-up
+   * then buys slightly too few credits and the purchase it was funding fails
+   * for want of a fraction, after taking the user's money.
+   */
+  roundUp = false,
 ): number | undefined {
   const turboConfig = useTurboConfig(tokenType);
 
   const { data: tokenAmount } = useQuery({
-    queryKey: ['cryptoPriceForWinc', wincAmount, tokenType, turboConfig.paymentServiceConfig.url],
+    queryKey: ['cryptoPriceForWinc', wincAmount, tokenType, roundUp, turboConfig.paymentServiceConfig.url],
     queryFn: async () => {
       if (!wincAmount || wincAmount <= 0) return undefined;
 
@@ -66,7 +79,11 @@ export function useCryptoPriceForWinc(
 
       // Calculate token amount: (wincAmount / wincForOneToken) * oneToken
       // Then convert to display units by dividing by smallest unit
-      const tokenInSmallestUnit = (BigInt(Math.round(wincAmount)) * oneToken) / wincForOneTokenBigInt;
+      const numerator = BigInt(Math.round(wincAmount)) * oneToken;
+      let tokenInSmallestUnit = numerator / wincForOneTokenBigInt;
+      if (roundUp && numerator % wincForOneTokenBigInt !== 0n) {
+        tokenInSmallestUnit += 1n;
+      }
 
       // Convert to display units (e.g., wei to ETH)
       return Number(tokenInSmallestUnit) / Number(oneToken);
@@ -78,6 +95,60 @@ export function useCryptoPriceForWinc(
   });
 
   return tokenAmount;
+}
+
+/**
+ * Token amount for a given winc, in the token's SMALLEST unit.
+ *
+ * `useCryptoPriceForWinc` returns display units (whole SOL, whole ETH), which
+ * is right for showing a price and wrong for spending one: `topUpWithTokens`
+ * documents `tokenAmount` as "the smallest unit value" and rejects a decimal —
+ * "0.019876422 cannot be converted to a BigInt because it is not an integer".
+ *
+ * Returned as a bigint straight from the integer arithmetic rather than scaling
+ * the display figure back up, because that round-trip goes through a float:
+ * harmless at SOL's 1e9, lossy at ETH's 1e18.
+ *
+ * Rounds UP for the same reason the display quote does — a unit over is
+ * invisible, a unit short is a purchase that fails after taking the money.
+ */
+export function useSmallestUnitForWinc(
+  wincAmount: number | undefined,
+  tokenType: SupportedTokenType,
+): bigint | undefined {
+  const turboConfig = useTurboConfig(tokenType);
+
+  const { data } = useQuery({
+    queryKey: [
+      'smallestUnitForWinc',
+      wincAmount,
+      tokenType,
+      turboConfig.paymentServiceConfig.url,
+    ],
+    queryFn: async () => {
+      if (!wincAmount || wincAmount <= 0) return null;
+      const turbo = TurboFactory.unauthenticated({
+        ...turboConfig,
+        token: tokenType as any,
+      });
+      const oneToken = getTokenSmallestUnit(tokenType);
+      const { winc: wincForOneToken } = await turbo.getWincForToken({
+        tokenAmount: oneToken,
+      });
+      const wincPerToken = BigInt(wincForOneToken);
+      if (wincPerToken <= 0n) return null;
+      const numerator = BigInt(Math.round(wincAmount)) * oneToken;
+      const floor = numerator / wincPerToken;
+      return (numerator % wincPerToken === 0n ? floor : floor + 1n).toString();
+    },
+    enabled: !!wincAmount && wincAmount > 0,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+  });
+
+  // Serialized as a string through the query cache — bigint isn't JSON-safe.
+  return data == null ? undefined : BigInt(data);
 }
 
 /**
@@ -117,4 +188,68 @@ export function useWincForCrypto(
   });
 
   return wincAmount;
+}
+
+/**
+ * USD value of 1 ARIO, derived at runtime from Turbo's own rates — the same
+ * primitives the credit-pricing flows already trust (`getWincForToken` /
+ * `getWincForFiat`). Because winc is the common denominator, it cancels out:
+ *
+ *   usdPerArio = wincForOneArio / wincForOneUsd
+ *
+ * This keeps the toggle's USD consistent with what the user actually pays via
+ * Turbo (no hardcoded rate, no separate CoinGecko call). Returns `undefined`
+ * while loading or when either denominator is zero/non-finite, so display code
+ * degrades to ARIO-only rather than showing a broken value.
+ */
+export function useArioUsdRate(): number | undefined {
+  const turboConfig = useTurboConfig('ario');
+
+  const { data } = useQuery({
+    // Key on the ARIO gateway too: it can change independently of the
+    // payment-service URL, and a stale cached rate would otherwise survive it.
+    queryKey: [
+      'arioUsdRate',
+      turboConfig.paymentServiceConfig.url,
+      turboConfig.gatewayUrl,
+    ],
+    queryFn: async () => {
+      const turbo = TurboFactory.unauthenticated({
+        ...turboConfig,
+        token: 'ario' as any,
+      });
+
+      // 1 ARIO = 1,000,000 mARIO (smallest unit).
+      const oneArio = BigInt(10 ** 6);
+      const [{ winc: wincForOneArio }, usdQuote] = await Promise.all([
+        turbo.getWincForToken({ tokenAmount: oneArio }),
+        turbo.getWincForFiat({ amount: USD(1), promoCodes: [] }),
+      ]);
+      const wincForOneUsd = usdQuote.winc;
+
+      const wincPerArio = Number(wincForOneArio);
+      const wincPerUsd = Number(wincForOneUsd);
+      /*
+        The two legs are NOT quoted on the same footing: the token leg comes
+        back fee-free (`fees: []`) while the fiat leg is net of the ~35%
+        infrastructure fee, so a raw ratio keeps the fee instead of cancelling
+        it and overstates ARIO by ~1.54x. Measured live, that rendered a
+        1,734-ARIO name as $2.09 — the fee-inclusive CARD price — when the
+        tokens are worth $1.36, making ARIO look no cheaper than a card and
+        hiding the discount that is the point of holding it.
+      */
+      const rate = usdPerArioFromLegs({
+        wincPerArio,
+        wincPerUsd,
+        usdFees: usdQuote.fees,
+      });
+      // TanStack Query v5 forbids a queryFn resolving `undefined`.
+      return rate ?? null;
+    },
+    staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: 2, // Retry failed requests twice
+  });
+
+  return data ?? undefined;
 }

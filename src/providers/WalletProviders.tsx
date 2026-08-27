@@ -1,16 +1,14 @@
 import { ReactNode } from 'react';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, http } from 'wagmi';
 import { mainnet, base, polygon, polygonAmoy } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { Elements } from '@stripe/react-stripe-js';
-import { STRIPE_PROMISE } from '../services/paymentService';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 import '@solana/wallet-adapter-react-ui/styles.css';
+import { RPC_ENDPOINTS } from '../store/useStore';
 
 // WalletConnect Project ID - get one from https://cloud.walletconnect.com/
 const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '9f180997f87a0c8e1ddd5bcd92ae5363';
@@ -21,7 +19,17 @@ const wagmiConfig = getDefaultConfig({
   appName: 'ar.io',
   projectId: WALLETCONNECT_PROJECT_ID,
   chains: [mainnet, base, polygon, polygonAmoy],
+  transports: {
+    // Same endpoints the tokenMap uses (RPC_ENDPOINTS) — balance reads and wallet
+    // operations hit one provider per chain, so rate limits and rotation apply
+    // in one place instead of two that can drift.
+    [mainnet.id]: http(RPC_ENDPOINTS.ethereum),
+    [base.id]: http(RPC_ENDPOINTS.base),
+    [polygon.id]: http(RPC_ENDPOINTS.polygon),
+    [polygonAmoy.id]: http('https://rpc-amoy.polygon.technology'),
+  },
   ssr: false,
+  pollingInterval: 600_000, // 10 min — app fetches balances on-demand, not via wagmi polling
 });
 
 // Custom RainbowKit theme to match ar.io's dark theme
@@ -32,11 +40,11 @@ const arioRainbowTheme = darkTheme({
   fontStack: 'system',
 });
 
-// Configure Solana wallets - explicitly exclude MetaMask to prevent conflicts
-const solanaWallets = [
-  new PhantomWalletAdapter(),
-  new SolflareWalletAdapter(),
-].filter(wallet => !wallet.name.toLowerCase().includes('metamask'));
+// Empty array: modern wallets (Phantom, Solflare, Backpack) self-register via
+// the Wallet Standard protocol. Importing explicit adapters (e.g. SolflareWalletAdapter)
+// triggers MetaMask Snap detection side-effects that corrupt the wallet registry.
+// This matches the approach used in ar-io-network-portal.
+const solanaWallets: never[] = [];
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,7 +66,14 @@ export function WalletProviders({ children }: WalletProvidersProps) {
       config={{
         embeddedWallets: {
           ethereum: {
-            createOnLogin: 'all-users', // Create wallet for all users who log in
+            // Only mint an embedded wallet for users who arrive WITHOUT one,
+            // i.e. the email/"try it now" flow. 'all-users' also minted one for
+            // people connecting MetaMask, producing a second, empty address the
+            // user never asked for and did not know existed — and payment code
+            // that reached for "the Privy wallet" would then sign from that
+            // empty address while the UI displayed the connected wallet's
+            // balance.
+            createOnLogin: 'users-without-wallets',
           },
           // Disable wallet UIs to prevent signature prompts during file uploads
           showWalletUIs: false,
@@ -74,12 +89,10 @@ export function WalletProviders({ children }: WalletProvidersProps) {
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider theme={arioRainbowTheme}>
-            <ConnectionProvider endpoint={import.meta.env.VITE_SOLANA_RPC || 'https://api.mainnet-beta.solana.com'}>
+            <ConnectionProvider endpoint={RPC_ENDPOINTS.solana}>
               <WalletProvider wallets={solanaWallets} autoConnect={false}>
                 <WalletModalProvider>
-                  <Elements stripe={STRIPE_PROMISE}>
-                    {children}
-                  </Elements>
+                  {children}
                 </WalletModalProvider>
               </WalletProvider>
             </ConnectionProvider>

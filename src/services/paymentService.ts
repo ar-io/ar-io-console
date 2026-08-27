@@ -18,7 +18,7 @@ export const getPaymentServiceConfig = () => {
   // Fallback to legacy behavior
   const isProd = import.meta.env.VITE_NODE_ENV === 'production';
   return {
-    paymentServiceUrl: isProd ? 'https://payment.ardrive.io' : 'https://payment.ardrive.dev',
+    paymentServiceUrl: isProd ? 'https://payment.ardrive.io' : 'https://payment.services.ar-io.dev',
     stripeKey: isProd 
       ? 'pk_live_51JUAtwC8apPOWkDLMQqNF9sPpfneNSPnwX8YZ8y1FNDl6v94hZIwzgFSYl27bWE4Oos8CLquunUswKrKcaDhDO6m002Yj9AeKj'
       : 'pk_test_51JUAtwC8apPOWkDLh2FPZkQkiKZEkTo6wqgLCtQoClL6S4l2jlbbc5MgOdwOUdU9Tn93NNvqAGbu115lkJChMikG00XUfTmo2z',
@@ -36,9 +36,6 @@ export const getStripePromise = () => {
   
   return stripePromiseCache;
 };
-
-// Legacy exports for backwards compatibility
-export const STRIPE_PROMISE = getStripePromise();
 
 export const getPaymentIntent = async (
   address: string,
@@ -122,34 +119,6 @@ export const submitCryptoTransaction = async (
   return res.json();
 };
 
-export const getGiftPaymentIntent = async ({
-  amount,
-  recipientEmail,
-  giftMessage,
-}: {
-  amount: number;
-  recipientEmail: string;
-  giftMessage?: string;
-}) => {
-  const config = getPaymentServiceConfig();
-  const url = `${config.paymentServiceUrl}/v1/top-up/payment-intent/${recipientEmail}/usd/${amount * 100}`;
-
-  const queryParams = new URLSearchParams({
-    destinationAddressType: 'email',
-    ...(giftMessage && { giftMessage }),
-  });
-
-  const res = await fetch(`${url}?${queryParams}`);
-
-  if (!res.ok) {
-    throw new Error('Failed to create gift payment intent');
-  }
-
-  return res.json() as Promise<{
-    topUpQuote: { quotedPaymentAmount: number };
-    paymentSession: PaymentIntent;
-  }>;
-};
 
 export const getCheckoutSessionUrl = async ({
   amount,

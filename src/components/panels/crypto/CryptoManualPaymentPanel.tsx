@@ -7,6 +7,7 @@ import { useStore } from '../../../store/useStore';
 import useAddressState, { TransferTransactionResult } from '../../../hooks/useAddressState';
 import useTurboWallets from '../../../hooks/useTurboWallets';
 import CopyButton from '../../CopyButton';
+import { isSdkToken } from '../../../constants';
 
 
 
@@ -14,6 +15,8 @@ interface CryptoManualPaymentPanelProps {
   cryptoTopupValue: number; // Amount in tokens, not quote object
   tokenType: SupportedTokenType; // The selected token type (ethereum, base-eth, etc.)
   onBack: () => void;
+  /** Set when a host modal owns the title; suppresses this panel's header. */
+  purpose?: { kind: 'arns-name'; name: string };
   onComplete: () => void;
 }
 
@@ -21,6 +24,7 @@ export default function CryptoManualPaymentPanel({
   cryptoTopupValue,
   tokenType,
   onBack,
+  purpose,
   onComplete
 }: CryptoManualPaymentPanelProps) {
   const address = useAddressState();
@@ -36,7 +40,11 @@ export default function CryptoManualPaymentPanel({
   const [signingMessage, setSigningMessage] = useState<string>();
   const [isRetrying, setIsRetrying] = useState(false);
 
-  const turboWallet = address && turboWallets ? turboWallets[tokenType] : undefined;
+  // base-ario is retired from the SDK, so it has no Turbo wallet to show.
+  const turboWallet =
+    address && turboWallets && isSdkToken(tokenType)
+      ? turboWallets[tokenType]
+      : undefined;
 
   // Get unauthenticated Turbo client for submitting fund transactions
   const turboUnauthenticatedClient = TurboFactory.unauthenticated(turboConfig);
@@ -138,16 +146,18 @@ export default function CryptoManualPaymentPanel({
 
   return (
     <div className="px-4 sm:px-6 space-y-6">
-      {/* Header matching your design system */}
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-          <Copy className="w-5 h-5 text-primary" />
+      {/* Suppressed when a host modal already carries the title. */}
+      {!purpose && (
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+            <Copy className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Submit Transactions</h3>
+            <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to ar.io</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Submit Transactions</h3>
-          <p className="text-sm text-foreground/80">Complete your {tokenLabels[tokenType]} payment on {tokenNetworkLabels[tokenType]} to ar.io</p>
-        </div>
-      </div>
+      )}
 
       {/* Amount Summary in your gradient container style */}
       <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-border/20 p-6">
@@ -171,7 +181,7 @@ export default function CryptoManualPaymentPanel({
               {transferTransactionResult ? '✓' : '1'}
             </div>
             <div>
-              <h4 className="font-heading font-medium text-foreground">
+              <h4 className="text-foreground">
                 Send {tokenLabels[tokenType]} to ar.io
               </h4>
               <p className="text-sm text-foreground/80">
@@ -296,7 +306,7 @@ export default function CryptoManualPaymentPanel({
                 {transactionSubmitted ? '✓' : '2'}
               </div>
               <div>
-                <h4 className="font-heading font-medium text-foreground">Submit Transaction to ar.io</h4>
+                <h4 className="text-foreground">Submit Transaction to ar.io</h4>
                 <p className="text-sm text-foreground/80">
                   Confirm your transaction with ar.io's payment service
                 </p>

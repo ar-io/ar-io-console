@@ -1,20 +1,21 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
+import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { useImagePreviews } from '../../hooks/useImagePreviews';
 import { wincPerCredit, SupportedTokenType } from '../../constants';
-import { useStore } from '../../store/useStore';
-import { CheckCircle, XCircle, Upload, ExternalLink, Shield, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
+import { useStore, type UploadResult } from '../../store/useStore';
+import { CheckCircle, XCircle, Upload, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
+import UploadSuccessCard from './UploadSuccessCard';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
 import BaseModal from '../modals/BaseModal';
-import { getArweaveUrl } from '../../utils';
+import { getArweaveUrl, promptSignIn } from '../../utils';
 import UploadProgressSummary from '../UploadProgressSummary';
 import { JitTokenSelector } from '../JitTokenSelector';
 import { supportsJitPayment, getTokenConverter, calculateRequiredTokenAmount, formatTokenAmount } from '../../utils/jitPayment';
@@ -22,6 +23,7 @@ import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { tokenLabels } from '../../constants';
 import { Loader2 } from 'lucide-react';
 import X402OnlyBanner from '../X402OnlyBanner';
+import ModalHeader from '../modals/ModalHeader';
 
 // Helper function to get contextual file icon based on content type or file name
 // size: 'sm' (16px) for inline use, 'lg' (24px) for file list thumbnails
@@ -315,7 +317,7 @@ function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:outline-none focus:border-foreground"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:border-foreground"
                   />
                   <span className="text-xs text-foreground/80">%</span>
                 </div>
@@ -345,7 +347,10 @@ export default function UploadPanel() {
   } = useStore();
 
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — everything is billed per-item in USDC.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -356,6 +361,10 @@ export default function UploadPanel() {
   const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showAssignDomainModal, setShowAssignDomainModal] = useState<string | null>(null);
+  // The just-completed single-file upload, surfaced as a result card. Only for
+  // one file: with several there is no single URL to feature, so Recent is the
+  // right home and we simply expand it.
+  const [lastSingleUpload, setLastSingleUpload] = useState<UploadResult | null>(null);
   const [showUploadResults, setShowUploadResults] = useState(true);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
   const [uploadsToShow, setUploadsToShow] = useState(20); // Start with 20 uploads
@@ -385,12 +394,14 @@ export default function UploadPanel() {
   });
 
   const wincForOneGiB = useWincForOneGiB();
+  const perDataItemFeeWinc = usePerDataItemFee();
 
   // Calculate total file size and billable size (excluding free files)
   const totalFileSize = files.reduce((acc, file) => acc + file.size, 0);
-  const billableFileSize = files.reduce((acc, file) => {
-    return isFileFree(file.size, freeUploadLimitBytes) ? acc : acc + file.size;
-  }, 0);
+  // Per-file free flags, consuming the shared allowance cumulatively across the batch.
+  const freeFlags = computeFreeFlags(files.map(f => f.size), effectiveFreeLimit, bytesRemaining);
+  const billableFiles = files.filter((_, i) => !freeFlags[i]);
+  const billableFileSize = billableFiles.reduce((acc, file) => acc + file.size, 0);
 
   // Get x402 pricing ONLY when user has opened the "Pay with Crypto" section
   // This ensures we show CREDITS by default and only fetch x402 pricing when user clicks "Pay with Crypto"
@@ -444,12 +455,14 @@ export default function UploadPanel() {
     
     const droppedFiles = Array.from(e.dataTransfer.files);
     setFiles(prev => [...prev, ...droppedFiles]);
+    setLastSingleUpload(null);
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...newFiles]);
+      setLastSingleUpload(null);
       // Reset input value after processing to allow re-selecting the same file
       setTimeout(() => {
         e.target.value = '';
@@ -540,26 +553,44 @@ export default function UploadPanel() {
   };
 
 
-  const calculateUploadCost = (bytes: number) => {
-    if (isFileFree(bytes, freeUploadLimitBytes)) return 0; // Free tier: Files under bundler's free limit
+  const calculateUploadCost = (bytes: number, isFree: boolean) => {
+    if (isFree) return 0; // Free tier: Files under bundler's per-item limit
 
     // Always return credit-based pricing for file list display
     // x402 pricing is only used in the payment modal for USDC payment option
     if (!wincForOneGiB) return null;
 
     const gibSize = bytes / (1024 * 1024 * 1024);
-    const wincCost = gibSize * Number(wincForOneGiB);
+    let wincCost = gibSize * Number(wincForOneGiB);
+    // Add per-data-item fee if available
+    if (perDataItemFeeWinc) {
+      wincCost += Number(perDataItemFeeWinc);
+    }
     const creditCost = wincCost / wincPerCredit;
     return creditCost;
   };
 
-  // Use billableFileSize (sum of non-free files) to respect per-file free tiers
-  const totalCost = calculateUploadCost(billableFileSize);
+  // Total cost: sum of each billable file's storage + per-item fee
+  const totalCost = (() => {
+    if (billableFiles.length === 0) return 0;
+    if (!wincForOneGiB) return null;
+    let totalWinc = 0;
+    for (const file of billableFiles) {
+      const gibSize = file.size / (1024 * 1024 * 1024);
+      totalWinc += gibSize * Number(wincForOneGiB);
+      if (perDataItemFeeWinc) {
+        totalWinc += Number(perDataItemFeeWinc);
+      }
+    }
+    return totalWinc / wincPerCredit;
+  })();
 
   // Auto-switch to crypto tab when user has insufficient credits
-  // This guides users to the crypto payment option when credits won't cover the upload
+  // This guides users to the crypto payment option when credits won't cover the upload.
+  // Arweave wallets have no JIT/crypto upload path, so never switch them into a crypto
+  // tab that can only fail — they stay on Credits and are prompted to buy credits.
   useEffect(() => {
-    if (showConfirmModal && totalCost !== null) {
+    if (showConfirmModal && totalCost !== null && walletType !== 'arweave') {
       const creditsNeeded = Math.max(0, totalCost - creditBalance);
       if (creditsNeeded > 0) {
         setLocalJitEnabled(true); // Enable JIT payment option
@@ -567,11 +598,14 @@ export default function UploadPanel() {
         setJitSectionExpanded(true); // Expand the JIT section
       }
     }
-  }, [showConfirmModal, totalCost, creditBalance, setPaymentTab, setJitSectionExpanded]);
+  }, [showConfirmModal, totalCost, creditBalance, walletType, setPaymentTab, setJitSectionExpanded, setLocalJitEnabled]);
 
   const handleUpload = () => {
+    // Clear any prior result so the header can't claim success while the next
+    // upload is still running.
+    setLastSingleUpload(null);
     if (!address) {
-      setUploadMessage({ type: 'error', text: 'Please connect your wallet to upload files' });
+      setUploadMessage({ type: 'error', text: 'Please sign in to upload files' });
       return;
     }
     setShowConfirmModal(true);
@@ -616,6 +650,17 @@ export default function UploadPanel() {
       jitMaxTokenAmountSmallest = converter ? converter(localJitMax) : 0;
     }
 
+    console.log('[DEBUG] upload params:', {
+      shouldEnableJit,
+      jitMaxTokenAmountSmallest,
+      selectedJitToken,
+      localJitMax,
+      paymentTab,
+      creditsNeeded,
+      totalCost,
+      creditBalance,
+    });
+
     try {
       // Pre-topup flow for crypto payments (one payment for all files)
       const { results, failedFiles } = await uploadMultipleFiles(files, {
@@ -642,10 +687,20 @@ export default function UploadPanel() {
         // Upload successful
 
         if (failedFiles.length === 0) {
-          setUploadMessage({
-            type: 'success',
-            text: `Successfully uploaded ${results.length} file${results.length !== 1 ? 's' : ''}!`
-          });
+          if (results.length === 1) {
+            // The card carries the confirmation, the link and the naming CTA,
+            // so a toast saying the same thing would just be noise above it.
+            setLastSingleUpload(results[0]);
+            setUploadMessage(null);
+          } else {
+            setLastSingleUpload(null);
+            setUploadMessage({
+              type: 'success',
+              text: `Successfully uploaded ${results.length} files!`
+            });
+          }
+          // Whatever just landed, make it reachable without hunting for a chevron.
+          setShowUploadResults(true);
         }
       }
       
@@ -670,25 +725,37 @@ export default function UploadPanel() {
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
+      {/* Inline Header with Description. On a completed single-file upload this
+          swaps to a success header, the same way DeploySitePanel does, so the
+          panel itself reports the outcome instead of a throwaway toast. */}
       <div className="flex items-start gap-3 mb-4 sm:mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <Upload className="w-5 h-5 text-primary" />
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20 ${
+          lastSingleUpload ? 'bg-success/20' : 'bg-primary/20'
+        }`}>
+          {lastSingleUpload
+            ? <CheckCircle className="w-5 h-5 text-success" />
+            : <Upload className="w-5 h-5 text-primary" />}
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Upload Files</h3>
-          <p className="text-sm text-foreground/80">Store your files permanently on the Arweave network</p>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
+            {lastSingleUpload
+              ? (lastSingleUpload.arnsName ? 'File Uploaded with Domain' : 'File Uploaded')
+              : 'Upload Files'}
+          </h3>
+          <p className="text-sm text-foreground/80">
+            {lastSingleUpload
+              ? 'Success! Your file is live on the permanent cloud.'
+              : 'Store your files permanently on the Arweave network'}
+          </p>
         </div>
       </div>
 
-      {/* Connection Warning */}
-      {!address && (
-        <div className="mb-4 sm:mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-warning" />
-            <span className="text-sm text-warning">Connect your wallet to upload files</span>
-          </div>
-        </div>
+      {lastSingleUpload && (
+        <UploadSuccessCard
+          result={lastSingleUpload}
+          onConnectDomain={() => setShowAssignDomainModal(lastSingleUpload.id)}
+          onUploadAnother={() => setLastSingleUpload(null)}
+        />
       )}
 
       {/* Upload Message */}
@@ -716,8 +783,11 @@ export default function UploadPanel() {
         </div>
       )}
 
-      {/* Main Content Container with Gradient - Hide during upload */}
-      {!uploading && (
+      {/* Main Content Container with Gradient - hidden during upload, and while a
+          single-file result is on screen: the success card's "Upload Another"
+          brings this back, so showing both would be two controls competing for
+          the same job. DeploySitePanel hides its picker on success the same way. */}
+      {!uploading && !lastSingleUpload && (
         <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
           {/* Upload Area - Show when no files selected */}
           {files.length === 0 && (
@@ -737,9 +807,12 @@ export default function UploadPanel() {
                   Drop files here or click to browse
                 </p>
                 <p className="text-sm text-foreground/80">
-                  {freeUploadLimitBytes > 0 ? (
-                    <>Files under {formatFreeLimit(freeUploadLimitBytes)} are <span className="text-success font-semibold">FREE</span> • </>
-                  ) : null}
+                  {(() => {
+                    const summary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
+                    if (!summary) return null;
+                    const usedUp = bytesRemaining === 0;
+                    return <><span className={usedUp ? 'text-foreground/60' : 'text-success font-semibold'}>{summary}</span> • </>;
+                  })()}
                   Max 10GiB per file
                 </p>
               </div>
@@ -763,7 +836,7 @@ export default function UploadPanel() {
           {files.length > 0 && (
             <div>
               <div className="mb-3 flex justify-between items-center">
-                <h4 className="font-medium">Selected Files ({files.length})</h4>
+                <div className="font-medium">Selected Files ({files.length})</div>
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="file-upload-add"
@@ -805,8 +878,8 @@ export default function UploadPanel() {
 
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {files.map((file, index) => {
-                  const cost = calculateUploadCost(file.size);
-                  const isFree = isFileFree(file.size, freeUploadLimitBytes);
+                  const isFree = freeFlags[index];
+                  const cost = calculateUploadCost(file.size, isFree);
                   const previewUrl = getPreviewUrl(index);
                   const isImage = isPreviewableImage(file);
 
@@ -867,14 +940,23 @@ export default function UploadPanel() {
                 </div>
               </div>
 
-              {/* Upload Button */}
+              {/* Upload Button — the CTA is the sign-in gate when logged out */}
               <button
-                onClick={handleUpload}
-                disabled={files.length === 0}
+                onClick={address ? handleUpload : promptSignIn}
+                disabled={!!address && files.length === 0}
                 className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <Upload className="w-5 h-5" />
-                Upload {files.length} File{files.length !== 1 ? 's' : ''}
+                {address ? (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Upload {files.length} File{files.length !== 1 ? 's' : ''}
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-5 h-5" />
+                    Sign in to upload files
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -1032,16 +1114,14 @@ export default function UploadPanel() {
                         >
                           <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                         </button>
-                        {/* Only show Assign Domain for Arweave and Ethereum wallets */}
-                        {(walletType === 'arweave' || walletType === 'ethereum') && (
-                          <button
-                            onClick={() => setShowAssignDomainModal(result.id)}
-                            className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                            title="Assign Domain"
-                          >
-                            <Globe className="w-4 h-4" />
-                          </button>
-                        )}
+                        {/* Assign Domain — modal handles wallet linking/reconnect */}
+                        <button
+                          onClick={() => setShowAssignDomainModal(result.id)}
+                          className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                          title="Assign ArNS Domain"
+                        >
+                          <Globe className="w-4 h-4" />
+                        </button>
                         <a
                           href={getArweaveUrl(result.id, result.dataCaches)}
                           target="_blank"
@@ -1126,19 +1206,17 @@ export default function UploadPanel() {
                                   <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                                   Check Status
                                 </button>
-                                {/* Only show Assign Domain for Arweave and Ethereum wallets */}
-                                {(walletType === 'arweave' || walletType === 'ethereum') && (
-                                  <button
-                                    onClick={() => {
-                                      setShowAssignDomainModal(result.id);
-                                      close();
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                  >
-                                    <Globe className="w-4 h-4" />
-                                    Assign Domain
-                                  </button>
-                                )}
+                                {/* Assign Domain — modal handles wallet linking/reconnect */}
+                                <button
+                                  onClick={() => {
+                                    setShowAssignDomainModal(result.id);
+                                    close();
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                >
+                                  <Globe className="w-4 h-4" />
+                                  Assign Domain
+                                </button>
                                 <a
                                   href={getArweaveUrl(result.id, result.dataCaches)}
                                   target="_blank"
@@ -1184,14 +1262,21 @@ export default function UploadPanel() {
                     <div className="flex items-center gap-2 text-sm text-foreground/80">
                       <span>
                         {(() => {
-                          if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
-                            return <span className="text-success">FREE</span>;
-                          } else if (wincForOneGiB && result.winc) {
-                            const credits = Number(result.winc) / wincPerCredit;
-                            return `${credits.toFixed(6)} Credits`;
-                          } else {
-                            return 'Unknown Cost';
+                          // The receipt's winc is the immutable ground truth for a
+                          // completed upload: a small file that used up the free
+                          // allowance was billed (winc > 0) and must not read FREE.
+                          // Fall back to the fixed size cap only for legacy records
+                          // that predate winc capture (never the mutable allowance).
+                          const winc = result.winc ? Number(result.winc) : NaN;
+                          if (Number.isFinite(winc) && winc > 0) {
+                            // Converting a recorded winc to credits needs only the
+                            // wincPerCredit constant — not the live storage rate.
+                            return `${(winc / wincPerCredit).toFixed(6)} Credits`;
                           }
+                          if ((Number.isFinite(winc) && winc === 0) || (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes))) {
+                            return <span className="text-success">FREE</span>;
+                          }
+                          return 'Unknown Cost';
                         })()}
                       </span>
                       <span>•</span>
@@ -1245,6 +1330,13 @@ export default function UploadPanel() {
           onSuccess={(arnsName: string, undername?: string, transactionId?: string) => {
             // Update the upload item with ArNS assignment
             updateUploadWithArNS(showAssignDomainModal, arnsName, undername, transactionId);
+            // The card renders from local state, so mirror the store write or
+            // the freshly-connected domain wouldn't show until a remount.
+            setLastSingleUpload((prev) =>
+              prev && prev.id === showAssignDomainModal
+                ? { ...prev, arnsName, undername }
+                : prev
+            );
 
             setShowAssignDomainModal(null);
 
@@ -1264,15 +1356,11 @@ export default function UploadPanel() {
           setJitSectionExpanded(false); // Reset JIT section when modal closes
         }}>
           <div className="p-4 sm:p-5 w-full max-w-2xl mx-auto min-w-[90vw] sm:min-w-[500px]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Upload className="w-5 h-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <h3 className="text-lg font-bold text-foreground">Ready to Upload</h3>
-                <p className="text-xs text-foreground/80">Confirm your upload details</p>
-              </div>
-            </div>
+            <ModalHeader
+              icon={Upload}
+              title="Ready to Upload"
+              description="Confirm your upload details"
+            />
 
             {/* X402-Only Mode Banner */}
             {x402OnlyMode && <X402OnlyBanner />}
@@ -1286,7 +1374,7 @@ export default function UploadPanel() {
                     <span className="text-xs text-foreground">
                       {files.length} file{files.length !== 1 ? 's' : ''}
                       {(() => {
-                        const freeFilesCount = files.filter(file => isFileFree(file.size, freeUploadLimitBytes)).length;
+                        const freeFilesCount = freeFlags.filter(Boolean).length;
                         return freeFilesCount > 0 ? (
                           <span className="text-success"> ({freeFilesCount} free)</span>
                         ) : null;
@@ -1307,7 +1395,9 @@ export default function UploadPanel() {
             {(() => {
               const creditsNeeded = typeof totalCost === 'number' ? Math.max(0, totalCost - creditBalance) : 0;
               const hasSufficientCredits = creditsNeeded === 0;
-              const canUseJit = selectedJitToken && supportsJitPayment(selectedJitToken);
+              // Arweave wallets can't pay JIT/crypto (no supported token), so never
+              // offer the crypto tab for them — it would only fail at signing.
+              const canUseJit = walletType !== 'arweave' && selectedJitToken && supportsJitPayment(selectedJitToken);
 
               // Check if upload is completely free (all files under free limit)
               const isFreeUpload = typeof totalCost === 'number' && totalCost === 0;

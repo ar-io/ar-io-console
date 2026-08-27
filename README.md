@@ -1,15 +1,14 @@
-# ar.io App
+# ar.io Console
 
 A unified web application for uploading and accessing permanent data through the ar.io Network. Built with React 18, TypeScript, Vite, and multi-chain wallet support.
 
 ## Overview
 
-The ar.io App provides a streamlined interface for:
+The ar.io Console provides a streamlined interface for:
 - **File uploads** to the permaweb with instant confirmation
 - **Site deployment** with ArNS domain support
 - **Credit management** (purchase, share, gift)
 - **ArNS domain** search and management
-- **Developer tools** and API documentation
 
 ## Quick Start
 
@@ -38,7 +37,7 @@ npm run dev       # Start dev server at http://localhost:3000
 - **Wallets**: Arweave (Wander), Ethereum (Wagmi/RainbowKit/Privy), Solana (wallet-adapter)
 - **Payments**: Stripe (fiat), native crypto, X402 protocol (Base USDC)
 - **Styling**: Tailwind CSS, Besley + Plus Jakarta Sans fonts
-- **Key SDKs**: `@ardrive/turbo-sdk` ^1.39.2, `@ar.io/sdk` ^3.19.0-alpha.10
+- **Key SDKs**: `@ardrive/turbo-sdk`, `@ar.io/sdk` 4.0.2
 
 ## Environment Variables
 
@@ -48,8 +47,15 @@ Create a `.env` file:
 VITE_NODE_ENV=production              # Controls mainnet vs testnet
 VITE_PRIVY_APP_ID=...                 # Required for email auth
 VITE_WALLETCONNECT_PROJECT_ID=...     # Optional
-VITE_SOLANA_RPC=...                   # Optional, has default
+VITE_SOLANA_RPC=...                   # Required for prod — full provider URL incl. token
 ```
+
+`VITE_SOLANA_RPC` is the single Solana RPC for both the store config and the wallet
+adapter. It falls back to public `api.mainnet-beta.solana.com`, which is fine for
+local work and heavily rate-limited for anything else — live deploys fail closed if
+it is unset. Vite inlines it into the bundle, so the provider token in it is public
+once shipped; the endpoint is protected by referrer and method whitelists on the
+provider side rather than by hiding the URL.
 
 ## Routes
 
@@ -68,9 +74,13 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 /balances      # Balance checker
 /calculator    # Pricing calculator
 /services-calculator  # Storage + ArNS calculator
-/developer     # API docs and dev tools
-/gateway-info  # Gateway information
+/settings      # Configuration and gateway info
+/try           # Try it now (quick upload demo)
 ```
+
+External resources are available via the navigation menu:
+- **Developer Docs**: [docs.ar.io](https://docs.ar.io)
+- **Network Dashboard**: [gateways.ar.io](https://gateways.ar.io)
 
 ## Wallet Capabilities
 
@@ -79,11 +89,20 @@ VITE_SOLANA_RPC=...                   # Optional, has default
 | Buy Credits (Fiat/Crypto) | ✅ | ✅ | ✅ |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ✅ | ❌ | ❌ |
+| Update ArNS Records | ❌ | ❌ | ✅ |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
 ## Documentation
 
 For detailed development guidance including architecture, hooks reference, state management patterns, and critical implementation details, see **[CLAUDE.md](./CLAUDE.md)**.
 
-For styling patterns and component guidelines, see **[STYLE_GUIDE.md](./STYLE_GUIDE.md)**.
+For styling patterns and component guidelines, see **[STYLE_GUIDE.md](./docs/STYLE_GUIDE.md)**.
+
+## Links
+
+- **ar.io Console**: [console.ar.io](https://console.ar.io)
+- **ar.io Website**: [ar.io](https://ar.io)
+- **Documentation**: [docs.ar.io](https://docs.ar.io)
+- **GitHub**: [github.com/ar-io](https://github.com/ar-io)
+- **Discord**: [discord.gg/HGG52EtTc2](https://discord.com/invite/HGG52EtTc2)
+- **Twitter/X**: [@ar_io_network](https://twitter.com/ar_io_network)

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
+import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFolderUpload } from '../../hooks/useFolderUpload';
-import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags } from '../../hooks/useFreeUploadLimit';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { wincPerCredit, SupportedTokenType, tokenLabels } from '../../constants';
 import { useStore } from '../../store/useStore';
@@ -10,9 +10,10 @@ import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { supportsJitPayment, calculateRequiredTokenAmount, formatTokenAmount, getTokenConverter } from '../../utils/jitPayment';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
-import { getArweaveUrl, getArweaveRawUrl } from '../../utils';
+import { getArweaveUrl, getArweaveRawUrl, promptSignIn } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { useNavigate } from 'react-router-dom';
 import ReceiptModal from '../modals/ReceiptModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
@@ -21,6 +22,7 @@ import BaseModal from '../modals/BaseModal';
 import UploadProgressSummary from '../UploadProgressSummary';
 import { JitTokenSelector } from '../JitTokenSelector';
 import X402OnlyBanner from '../X402OnlyBanner';
+import ModalHeader from '../modals/ModalHeader';
 
 // Helper function moved outside component to prevent recreation on every render
 function getFileIcon(filename: string) {
@@ -131,7 +133,7 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
           }}
           placeholder="My Awesome App"
           maxLength={100}
-          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:outline-none focus:border-primary/50 transition-colors"
+          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:border-primary/50 transition-colors"
         />
         {/* Suggestions Dropdown */}
         {showSuggestions && filteredSuggestions.length > 0 && (
@@ -163,7 +165,7 @@ const AppDetailsFields = React.memo(function AppDetailsFields({
           onBlur={() => onAppVersionChange(localVersion)} // Sync to parent on blur
           placeholder="1.0.0"
           maxLength={50}
-          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:outline-none focus:border-primary/50 transition-colors"
+          className="w-full px-3 py-2 bg-card border border-border/20 rounded-lg text-foreground text-sm placeholder:text-foreground/40 focus:border-primary/50 transition-colors"
         />
         {currentApp && localVersion !== currentApp.appVersion && (
           <p className="mt-1 text-xs text-foreground/80">Last: v{currentApp.appVersion}</p>
@@ -426,7 +428,7 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
                         setBufferPercentage(value);
                       }
                     }}
-                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:outline-none focus:border-foreground"
+                    className="w-20 px-2 py-1.5 text-xs rounded border border-border/20 bg-card text-foreground focus:border-foreground"
                   />
                   <span className="text-xs text-foreground/80">%</span>
                 </div>
@@ -448,6 +450,9 @@ interface DeployConfirmationModalProps {
   files: FileList;
   totalSize: number;
   totalCost: number;
+  // False while storage rates are still loading. totalCost is 0 until rates
+  // arrive, which would otherwise read as a genuine "FREE" deployment.
+  pricingReady: boolean;
   indexFile: string;
   fallbackFile: string;
   // ArNS specific props
@@ -513,13 +518,17 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
   billableSize,
   appName,
   appVersion,
+  pricingReady,
 }: DeployConfirmationModalProps) {
   const creditsNeeded = Math.max(0, totalCost - currentBalance);
   const hasSufficientCredits = creditsNeeded === 0;
   const canUseJit = selectedJitToken && supportsJitPayment(selectedJitToken);
 
   // Get free upload limit to count free files
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — treat nothing as free so USDC quotes aren't undercharged
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   // Check if deployment is completely free (all files under free limit)
   const isFreeDeployment = totalCost === 0;
@@ -551,15 +560,11 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
   return (
     <BaseModal onClose={onClose}>
       <div className="p-4 sm:p-5 w-full max-w-2xl mx-auto min-w-[90vw] sm:min-w-[500px]">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5 text-primary" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-lg font-bold text-foreground">Ready to Deploy</h3>
-            <p className="text-xs text-foreground/80">Confirm your deployment details</p>
-          </div>
-        </div>
+        <ModalHeader
+          icon={Zap}
+          title="Ready to Deploy"
+          description="Confirm your deployment details"
+        />
 
         {/* X402-Only Mode Banner */}
         {x402OnlyMode && <X402OnlyBanner />}
@@ -597,7 +602,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                 <span className="text-xs text-foreground">
                   {fileCount} file{fileCount !== 1 ? 's' : ''}
                   {(() => {
-                    const freeFilesCount = Array.from(files).filter(file => isFileFree(file.size, freeUploadLimitBytes)).length;
+                    const freeFilesCount = computeFreeFlags(Array.from(files).map(f => f.size), effectiveFreeLimit, bytesRemaining).filter(Boolean).length;
                     const parts: React.ReactNode[] = [];
                     if (smartDeployEnabled && cachedFilesCount > 0) {
                       parts.push(<span key="cached">{cachedFilesCount} cached</span>);
@@ -698,12 +703,12 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-foreground/80">Cost:</span>
                         <span className="text-sm text-foreground font-medium">
-                          {totalCost === 0 ? (
-                            <span className="text-success font-medium">FREE</span>
-                          ) : typeof totalCost === 'number' ? (
-                            <>{totalCost.toFixed(6)} Credits</>
-                          ) : (
+                          {!pricingReady ? (
                             'Calculating...'
+                          ) : totalCost === 0 ? (
+                            <span className="text-success font-medium">FREE</span>
+                          ) : (
+                            <>{totalCost.toFixed(6)} Credits</>
                           )}
                         </span>
                       </div>
@@ -810,12 +815,12 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-foreground/80">Cost:</span>
                         <span className="text-sm text-foreground font-medium">
-                          {totalCost === 0 ? (
-                            <span className="text-success font-medium">FREE</span>
-                          ) : typeof totalCost === 'number' ? (
-                            <>{totalCost.toFixed(6)} Credits</>
-                          ) : (
+                          {!pricingReady ? (
                             'Calculating...'
+                          ) : totalCost === 0 ? (
+                            <span className="text-success font-medium">FREE</span>
+                          ) : (
+                            <>{totalCost.toFixed(6)} Credits</>
                           )}
                         </span>
                       </div>
@@ -908,6 +913,9 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
           <button
             onClick={onConfirm}
             disabled={
+              // Disable until storage rates load — otherwise totalCost is 0 and a
+              // billable deploy looks free and confirmable.
+              !pricingReady ||
               // Disable if on Credits tab and insufficient credits
               (paymentTab === 'credits' && creditsNeeded > 0) ||
               // Disable if on Crypto tab and insufficient crypto balance
@@ -917,7 +925,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
             }
             className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
           >
-            {paymentTab === 'crypto' && creditsNeeded > 0 ? 'Deploy & Auto-Pay' : 'Deploy Now'}
+            {!pricingReady ? 'Calculating...' : paymentTab === 'crypto' && creditsNeeded > 0 ? 'Deploy & Auto-Pay' : 'Deploy Now'}
           </button>
         </div>
       </div>
@@ -945,8 +953,12 @@ export default function DeploySitePanel() {
     lastDeployedAppName,
   } = useStore();
 
+  const { hasArNSAccess } = useLinkedSolanaWallet();
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — treat nothing as free so USDC quotes aren't undercharged
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
@@ -968,6 +980,9 @@ export default function DeploySitePanel() {
   const [appVersion, setAppVersion] = useState('');
   const [showDeployResults, setShowDeployResults] = useState(true);
   const [deploySuccessInfo, setDeploySuccessInfo] = useState<{manifestId: string; arnsConfigured: boolean; arnsName?: string; undername?: string; arnsTransactionId?: string} | null>(null);
+  // Paths of files that failed to upload while the deploy still proceeded — so the
+  // success screen warns about a partial site instead of claiming a clean success.
+  const [deployPartialFailures, setDeployPartialFailures] = useState<string[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [currentDeployResult, setCurrentDeployResult] = useState<any>(null);
   const [postDeployArNSName, setPostDeployArNSName] = useState('');
@@ -975,7 +990,7 @@ export default function DeploySitePanel() {
   const [postDeployShowUndername, setPostDeployShowUndername] = useState(false);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
   const [postDeployArNSUpdating, setPostDeployArNSUpdating] = useState(false);
-  // Post-deployment ArNS enabled state (disabled by default, user can enable)
+  // Post-deployment ArNS enabled state — auto-enabled when user has ArNS names
   const [postDeployArNSEnabled, setPostDeployArNSEnabled] = useState(false);
   const [postDeployCustomTTL, setPostDeployCustomTTL] = useState<number | undefined>(undefined);
   // Domain assignment modal state
@@ -1023,6 +1038,7 @@ export default function DeploySitePanel() {
   }, [showConfirmModal, x402OnlyMode]);
 
   const wincForOneGiB = useWincForOneGiB();
+  const perDataItemFeeWinc = usePerDataItemFee();
   const {
     deployFolder,
     deploying,
@@ -1038,7 +1054,6 @@ export default function DeploySitePanel() {
     uploadErrors,
     totalSize,
     uploadedSize,
-    retryFailedFiles,
     cancelUploads,
     // Smart Deploy
     analyzeFolder,
@@ -1056,6 +1071,13 @@ export default function DeploySitePanel() {
     initializeFromCache
   } = useUploadStatus();
   const { updateArNSRecord, refreshSpecificName, names: userArnsNames } = useOwnedArNSNames();
+
+  // Auto-enable post-deploy ArNS panel when deploy succeeds and user has ArNS names
+  useEffect(() => {
+    if (deploySuccessInfo && !deploySuccessInfo.arnsConfigured && userArnsNames.length > 0) {
+      setPostDeployArNSEnabled(true);
+    }
+  }, [deploySuccessInfo, userArnsNames.length]);
 
   // Smart Deploy: Analyze folder when selected (hash files for deduplication)
   // Always analyze to show potential savings - toggle only affects actual deploy
@@ -1119,9 +1141,10 @@ export default function DeploySitePanel() {
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
+    const urls = previewUrlsRef.current;
     return () => {
-      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-      previewUrlsRef.current.clear();
+      urls.forEach(url => URL.revokeObjectURL(url));
+      urls.clear();
     };
   }, []);
 
@@ -1388,24 +1411,27 @@ export default function DeploySitePanel() {
 
   const calculateTotalCost = (): number => {
     if (!wincForOneGiB || !selectedFolder) return 0;
+    const itemFee = perDataItemFeeWinc ? Number(perDataItemFeeWinc) : 0;
 
     // If Smart Deploy is enabled and we have stats, use pre-calculated billableSize
     // This accounts for cached files being skipped
     if (smartDeployEnabled && deduplicationStats) {
       const gibSize = deduplicationStats.billableSize / (1024 ** 3);
-      const totalWinc = gibSize * Number(wincForOneGiB);
+      const billableFileCount = deduplicationStats.billableFiles ?? computeFreeFlags(Array.from(selectedFolder).map(f => f.size), effectiveFreeLimit, bytesRemaining).filter(f => !f).length;
+      const totalWinc = gibSize * Number(wincForOneGiB) + billableFileCount * itemFee;
       return totalWinc / wincPerCredit;
     }
 
-    // Smart Deploy disabled OR no stats yet: charge for ALL files (minus free tier)
+    // Smart Deploy disabled OR no stats yet: charge for ALL files (minus free tier).
+    // Consume the shared allowance cumulatively so a partial tier can't free-ride
+    // every file.
     let totalWinc = 0;
-    Array.from(selectedFolder).forEach(file => {
-      if (isFileFree(file.size, freeUploadLimitBytes)) {
-        return; // FREE - under free limit
-      }
+    const files = Array.from(selectedFolder);
+    const freeFlags = computeFreeFlags(files.map(f => f.size), effectiveFreeLimit, bytesRemaining);
+    files.forEach((file, i) => {
+      if (freeFlags[i]) return; // FREE
       const gibSize = file.size / (1024 ** 3);
-      const fileWinc = gibSize * Number(wincForOneGiB);
-      totalWinc += fileWinc;
+      totalWinc += gibSize * Number(wincForOneGiB) + itemFee;
     });
 
     return totalWinc / wincPerCredit;
@@ -1414,9 +1440,9 @@ export default function DeploySitePanel() {
   // Calculate billable size when Smart Deploy is OFF (all files minus free tier)
   const calculateBillableSizeWithoutSmartDeploy = (): number => {
     if (!selectedFolder) return 0;
-    return Array.from(selectedFolder)
-      .filter(file => !isFileFree(file.size, freeUploadLimitBytes))
-      .reduce((sum, file) => sum + file.size, 0);
+    const files = Array.from(selectedFolder);
+    const freeFlags = computeFreeFlags(files.map(f => f.size), effectiveFreeLimit, bytesRemaining);
+    return files.reduce((sum, file, i) => (freeFlags[i] ? sum : sum + file.size), 0);
   };
 
   // Organize files into folder structure
@@ -1639,7 +1665,7 @@ export default function DeploySitePanel() {
     }
 
     if (!address) {
-      setDeployMessage({ type: 'error', text: 'Please connect your wallet first' });
+      setDeployMessage({ type: 'error', text: 'Please sign in first' });
       return;
     }
 
@@ -1674,6 +1700,7 @@ export default function DeploySitePanel() {
     try {
       setDeployMessage(null);
       setDeploySuccessInfo(null); // Clear any previous success info
+      setDeployPartialFailures([]); // Clear any previous partial-failure state
       setArnsUpdateCancelled(false); // Reset cancel state for new deployment
       // Pre-topup flow for crypto payments (one payment for all files)
       const result = await deployFolder(Array.from(selectedFolder), {
@@ -1692,6 +1719,10 @@ export default function DeploySitePanel() {
       }
       
       if (result.manifestId) {
+        // Record any files that failed to upload so the success screen can warn
+        // that the deployed site is missing assets (rather than reporting clean).
+        setDeployPartialFailures((result as any)?.failedFiles ?? []);
+
         // Add results to store for persistence
         addDeployResults(result.results || []);
         
@@ -1804,39 +1835,64 @@ export default function DeploySitePanel() {
     }
   };
 
-  if (!address) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-xl font-heading font-bold mb-4">Connect Wallet Required</h3>
-        <p className="text-foreground/80">Connect your wallet to deploy sites</p>
-      </div>
-    );
-  }
-
   const totalFileSize = calculateTotalSize();
   const totalCost = calculateTotalCost();
+  // Storage rates are ready only when the rate is a finite, positive number
+  // (useWincForOneGiB returns string | undefined — see CLAUDE.md gotcha #1). Until
+  // then totalCost is 0, which must not read as a genuine "FREE" deployment.
+  const pricingReady = Number.isFinite(Number(wincForOneGiB)) && Number(wincForOneGiB) > 0;
   const folderName = selectedFolder?.[0]?.webkitRelativePath?.split('/')[0] || '';
 
   return (
     <div className="px-4 sm:px-6">
       {/* Success-focused header when deployment is complete */}
       {deploySuccessInfo ? (
-        <div className="flex items-start gap-3 mb-6">
-          <div className="w-10 h-10 bg-success/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-            <CheckCircle className="w-5 h-5 text-success" />
+        <>
+          <div className="flex items-start gap-3 mb-6">
+            <div className="w-10 h-10 bg-success/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+              <CheckCircle className="w-5 h-5 text-success" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
+                {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
+                  'Site Deployed with Domain' :
+                  'Site Deployed'
+                }
+              </h3>
+              <p className="text-sm text-foreground/80">
+                {deployPartialFailures.length > 0
+                  ? 'Your site is live, but some files are missing.'
+                  : 'Success! Your site is live on the permanent cloud.'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">
-              {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                'Site Deployed with Domain' :
-                'Site Deployed'
-              }
-            </h3>
-            <p className="text-sm text-foreground/80">
-              Success! Your site is live on the permanent cloud.
-            </p>
-          </div>
-        </div>
+          {deployPartialFailures.length > 0 && (
+            <div className="mb-6 rounded-2xl border border-warning/30 bg-warning/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                <div className="text-sm min-w-0">
+                  <p className="font-semibold text-foreground mb-1">
+                    {deployPartialFailures.length} file{deployPartialFailures.length === 1 ? '' : 's'} didn&apos;t upload
+                  </p>
+                  <p className="text-foreground/80">
+                    Your site was deployed without {deployPartialFailures.length === 1 ? 'this asset' : 'these assets'}, so it may be incomplete. Re-deploy the folder to upload the missing {deployPartialFailures.length === 1 ? 'file' : 'files'}.
+                    {smartDeployEnabled
+                      ? ' Smart Deploy skips the files that already uploaded, so it’s fast and low-cost.'
+                      : ' Enable Smart Deploy first to skip the files that already uploaded on the retry.'}
+                  </p>
+                  <ul className="mt-2 max-h-32 list-disc overflow-auto pl-5 text-foreground/70">
+                    {deployPartialFailures.slice(0, 10).map((p) => (
+                      <li key={p} className="truncate">{p}</li>
+                    ))}
+                    {deployPartialFailures.length > 10 && (
+                      <li>…and {deployPartialFailures.length - 10} more</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         /* Normal deploy header when not showing success */
         <div className="flex items-start gap-3 mb-6">
@@ -1844,7 +1900,7 @@ export default function DeploySitePanel() {
             <Zap className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Deploy Site</h3>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Deploy Site</h3>
             <p className="text-sm text-foreground/80">
               Deploy NFT collections, static sites and apps to the permanent cloud
             </p>
@@ -1895,7 +1951,7 @@ export default function DeploySitePanel() {
           </div>
         ) : (
           /* Selected Folder Card - replaces drop zone */
-          <div className="bg-card rounded-xl border border-primary/20 p-4">
+          <div className="bg-card rounded-2xl border border-primary/20 p-4">
               {/* Folder Header Row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2015,7 +2071,15 @@ export default function DeploySitePanel() {
                       {(() => {
                         const structure = organizeFolderStructure();
                         const sortedFolders = Object.keys(structure).sort();
-                        
+
+                        // Per-file FREE flags computed cumulatively over the whole
+                        // deploy (same basis as the cost totals). Using per-file
+                        // isFileFree against the full allowance would badge every
+                        // small file FREE while the totals bill most of them.
+                        const allFiles = selectedFolder ? Array.from(selectedFolder) : [];
+                        const freeFlags = computeFreeFlags(allFiles.map(f => f.size), effectiveFreeLimit, bytesRemaining);
+                        const freeByFile = new Map<File, boolean>(allFiles.map((f, i) => [f, freeFlags[i]]));
+
                         return sortedFolders.map(folderPath => (
                           <div key={folderPath}>
                             {/* Folder Header */}
@@ -2126,7 +2190,7 @@ export default function DeploySitePanel() {
 
                                         <span className="text-foreground/60 text-xs">
                                           {fileSize}
-                                          {isFileFree(file.size, freeUploadLimitBytes) && <span className="ml-1 text-success">• FREE</span>}
+                                          {freeByFile.get(file) && <span className="ml-1 text-success">• FREE</span>}
                                         </span>
                                         
                                       </div>
@@ -2161,9 +2225,10 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* ArNS Association Panel - Show for all users, but only Arweave wallets can actually update records */}
-      {selectedFolder && selectedFolder.length > 0 && (walletType === 'arweave' || walletType === 'ethereum') && !deploySuccessInfo && !deploying && (
+      {/* ArNS Association Panel - shown for all wallet types; panel handles linking/reconnection internally */}
+      {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
         <ArNSAssociationPanel
+          suggestedName={appName}
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
           selectedName={selectedArnsName}
@@ -2187,7 +2252,9 @@ export default function DeploySitePanel() {
             <div className="flex justify-between">
               <span className="text-xs text-foreground/80">Estimated Cost:</span>
               <span className="text-xs text-foreground">
-                {totalCost === 0 ? (
+                {!pricingReady ? (
+                  <span className="text-foreground/60">Calculating…</span>
+                ) : totalCost === 0 ? (
                   <span className="text-success font-medium">FREE</span>
                 ) : (
                   <span>{totalCost.toFixed(6)} Credits</span>
@@ -2201,11 +2268,16 @@ export default function DeploySitePanel() {
       {/* Deploy Button - Hide during success display and deployment */}
       {selectedFolder && selectedFolder.length > 0 && !deploySuccessInfo && !deploying && (
         <button
-          onClick={() => setShowConfirmModal(true)}
-          disabled={deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername)}
-          className="w-full mt-4 py-4 px-6 rounded-lg bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          onClick={address ? () => setShowConfirmModal(true) : promptSignIn}
+          disabled={!!address && (deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
+          className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {deploying ? (
+          {!address ? (
+            <>
+              <Wallet className="w-5 h-5" />
+              Sign in to deploy site
+            </>
+          ) : deploying ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               Deploying Site...
@@ -2231,7 +2303,6 @@ export default function DeploySitePanel() {
             errors={uploadErrors}
             totalSize={totalSize}
             uploadedSize={uploadedSize}
-            onRetryFailed={retryFailedFiles}
             onCancel={cancelUploads}
           />
         </div>
@@ -2277,7 +2348,7 @@ export default function DeploySitePanel() {
                 )}
                 {deployStage === 'updating-arns' && (
                   <>
-                    <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                     <span>Connecting {selectedUndername ? selectedUndername + '_' : ''}{selectedArnsName}.ar.io to your site...</span>
                   </>
                 )}
@@ -2315,7 +2386,7 @@ export default function DeploySitePanel() {
 
       {/* Rich Success Display */}
       {deploySuccessInfo && (
-        <div className="border border-success rounded-xl p-6 bg-card">
+        <div className="border border-success rounded-2xl p-6 bg-card">
 
 
           {/* Site Details */}
@@ -2324,15 +2395,15 @@ export default function DeploySitePanel() {
               <div className="text-sm text-foreground/80 mb-2">Your site URL:</div>
               <div className="flex items-center gap-2 p-3 bg-card rounded border border-border/10">
                 <span className="font-mono text-sm text-foreground flex-1 min-w-0 truncate">
-                  {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ? 
+                  {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
                     `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                    `https://arweave.net/${deploySuccessInfo.manifestId}`
+                    getArweaveUrl(deploySuccessInfo.manifestId)
                   }
                 </span>
                 <CopyButton textToCopy={
-                  deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ? 
+                  deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
                     `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                    `https://arweave.net/${deploySuccessInfo.manifestId}`
+                    getArweaveUrl(deploySuccessInfo.manifestId)
                 } />
               </div>
             </div>
@@ -2366,9 +2437,9 @@ export default function DeploySitePanel() {
           <div className="flex gap-3 mb-4">
             <button
               onClick={() => window.open(
-                deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ? 
+                deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
                   `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
-                  `https://arweave.net/${deploySuccessInfo.manifestId}`,
+                  getArweaveUrl(deploySuccessInfo.manifestId),
                 '_blank'
               )}
               className="flex-1 py-3 px-4 bg-success text-white rounded-lg font-medium hover:bg-success/90 transition-colors"
@@ -2394,73 +2465,75 @@ export default function DeploySitePanel() {
         </div>
       )}
 
-      {/* ArNS Discovery Section - Only for users without ArNS names */}
-      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       ((walletType !== 'arweave' && walletType !== 'ethereum') || userArnsNames.length === 0) && (
+      {/* No name yet (or no ArNS access) after deploy — the same domain-first push as
+          pre-deploy: sell the smart domain and route to registration. Only shows when
+          a name wasn't already assigned, so a pre-deploy assigner never sees it. */}
+      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
+       (!hasArNSAccess || userArnsNames.length === 0) && (
         <div className="mt-6">
-          <div className="bg-gradient-to-br from-warning/5 to-warning/5 rounded-xl border border-warning/20 p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-warning/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                <Globe className="w-5 h-5 text-warning" />
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                <Globe className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-foreground mb-1">Want a Friendly Domain Name?</h4>
+                <h4 className="text-lg font-extrabold text-foreground mb-1">Give your site a name people remember</h4>
                 <p className="text-sm text-foreground/80">
-                  Your site is live, but you can make it even better with an ArNS domain name
+                  Your site is live at a permanent URL. Point an ArNS{' '}
+                  <span className="font-medium text-primary">smart domain</span> at it — a name you own
+                  on-chain, backed by a smart contract.
                 </p>
               </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-3 mb-4 text-xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Human-readable URLs</span>
+            <div className="bg-card/50 rounded-lg p-4 mb-4 text-xs">
+              <div className="text-foreground/60 mb-1">Instead of</div>
+              <div className="font-mono text-foreground/60 mb-3 break-all">
+                {getArweaveUrl(deploySuccessInfo.manifestId)}
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Lease or Permanently own</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-3 h-3 text-success" />
-                <span className="text-foreground/80">Global propagation across the AR.IO Network</span>
-              </div>
+              <div className="text-foreground/60 mb-1">Get</div>
+              <div className="font-mono text-sm text-primary font-medium">https://yourname.ar.io</div>
             </div>
-            
-            <div className="bg-card/50 rounded-lg p-4 mb-4">
-              <div className="text-sm text-foreground/80 mb-2">Instead of:</div>
-              <div className="font-mono text-xs text-foreground/60 mb-3 break-all">
-                https://arweave.net/{deploySuccessInfo.manifestId}
-              </div>
-              
-              <div className="text-sm text-foreground/80 mb-2">Get something like:</div>
-              <div className="font-mono text-sm text-warning font-medium">
-                https://mysite.ar.io
-              </div>
-            </div>
-            
+
+            <ul className="mb-4 space-y-2">
+              <li className="flex items-start gap-2 text-xs text-foreground/80">
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span><span className="font-medium text-foreground">You own it.</span> No registrar, no yearly renewal to a company.</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground/80">
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span><span className="font-medium text-foreground">Update forever.</span> Repoint it at new versions anytime; the link never changes.</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground/80">
+                <CheckCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span><span className="font-medium text-foreground">Yours everywhere.</span> Resolves through any ar.io gateway, permanently.</span>
+              </li>
+            </ul>
+
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => window.location.href = '/domains'}
-                className="flex-1 py-3 px-4 bg-warning text-foreground rounded-lg font-medium hover:bg-warning/90 transition-colors"
+                onClick={() => navigate('/arns')}
+                className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
-                Search for Your Name
+                Find a name
               </button>
               <button
-                onClick={() => window.open('https://docs.ar.io/arns', '_blank')}
+                onClick={() => window.open('https://docs.ar.io/learn/arns', '_blank', 'noopener,noreferrer')}
                 className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card transition-colors"
               >
-                Learn More
+                How ArNS works
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS names */}
-      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured && 
-       (walletType === 'arweave' || walletType === 'ethereum') && userArnsNames.length > 0 && (
+      {/* Post-Deploy ArNS Enhancement - Show ArNS panel for users who have ArNS access */}
+      {deploySuccessInfo && !deploySuccessInfo.arnsConfigured &&
+       hasArNSAccess && userArnsNames.length > 0 && (
         <div className="mt-6">
           <ArNSAssociationPanel
+            suggestedName={appName}
             enabled={postDeployArNSEnabled}
             onEnabledChange={setPostDeployArNSEnabled}
             selectedName={postDeployArNSName}
@@ -2545,7 +2618,7 @@ export default function DeploySitePanel() {
                   setPostDeployArNSUpdating(false);
                 }}
                 disabled={!postDeployArNSName || postDeployArNSUpdating || (postDeployShowUndername && !postDeployUndername)}
-                className="w-full py-3 px-4 bg-warning text-foreground rounded-lg hover:bg-warning/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+                className="w-full py-3 px-4 bg-foreground text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
               >
                 {postDeployArNSUpdating ? (
                   <>
@@ -2763,16 +2836,14 @@ export default function DeploySitePanel() {
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
-                            {/* Assign Domain Button - Always show for compatible wallets */}
-                            {(walletType === 'arweave' || walletType === 'ethereum') && (
-                              <button
-                                onClick={() => setShowAssignDomainModal(manifestId)}
-                                className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                                title={arnsAssociation ? "Change Domain" : "Assign Domain"}
-                              >
-                                <Globe className="w-4 h-4" />
-                              </button>
-                            )}
+                            {/* Assign Domain — modal handles wallet linking/reconnect */}
+                            <button
+                              onClick={() => setShowAssignDomainModal(manifestId)}
+                              className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                              title={arnsAssociation ? "Change Domain" : "Assign Domain"}
+                            >
+                              <Globe className="w-4 h-4" />
+                            </button>
                           </div>
 
                           {/* Mobile: Status + 3-dot menu */}
@@ -2866,19 +2937,17 @@ export default function DeploySitePanel() {
                                       <ExternalLink className="w-4 h-4" />
                                       Visit Deployed Site
                                     </a>
-                                    {/* Assign/Change Domain - Mobile Menu */}
-                                    {(walletType === 'arweave' || walletType === 'ethereum') && (
-                                      <button
-                                        onClick={() => {
-                                          setShowAssignDomainModal(manifestId);
-                                          close();
-                                        }}
-                                        className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                      >
-                                        <Globe className="w-4 h-4" />
-                                        {arnsAssociation ? "Change Domain" : "Assign Domain"}
-                                      </button>
-                                    )}
+                                    {/* Assign Domain — modal handles wallet linking/reconnect */}
+                                    <button
+                                      onClick={() => {
+                                        setShowAssignDomainModal(manifestId);
+                                        close();
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                    >
+                                      <Globe className="w-4 h-4" />
+                                      {arnsAssociation ? "Change Domain" : "Assign Domain"}
+                                    </button>
                                   </>
                                 )}
                               </PopoverPanel>
@@ -3070,10 +3139,12 @@ export default function DeploySitePanel() {
                                     {/* Row 3: Cost + Deploy Timestamp */}
                                     <div className="flex items-center gap-2 text-sm text-foreground/80">
                                       <span>
+                                        {/* Completed deploy: label from the fixed size cap, not the
+                                            current allowance (which mutates and would flip past records). */}
                                         {isFileFree(file.size, freeUploadLimitBytes) ? (
                                           <span className="text-success">FREE</span>
                                         ) : wincForOneGiB ? (
-                                          `${((file.size / (1024 ** 3)) * Number(wincForOneGiB) / wincPerCredit).toFixed(6)} Credits`
+                                          `${(((file.size / (1024 ** 3)) * Number(wincForOneGiB) + (perDataItemFeeWinc ? Number(perDataItemFeeWinc) : 0)) / wincPerCredit).toFixed(6)} Credits`
                                         ) : (
                                           'Unknown Cost'
                                         )}
@@ -3141,6 +3212,7 @@ export default function DeploySitePanel() {
           files={selectedFolder}
           totalSize={totalFileSize}
           totalCost={totalCost}
+          pricingReady={pricingReady}
           indexFile={indexFile}
           fallbackFile={fallbackFile}
           arnsEnabled={arnsEnabled}
@@ -3172,6 +3244,7 @@ export default function DeploySitePanel() {
       {/* Assign Domain Modal */}
       {showAssignDomainModal && (
         <AssignDomainModal
+          suggestedName={appName}
           onClose={() => setShowAssignDomainModal(null)}
           manifestId={showAssignDomainModal}
           existingArnsName={getArNSAssociation(showAssignDomainModal)?.arnsName}

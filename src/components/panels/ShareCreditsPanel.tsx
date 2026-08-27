@@ -7,10 +7,12 @@ import {
 import { useStore } from '../../store/useStore';
 import { wincPerCredit } from '../../constants';
 import { useTurboConfig } from '../../hooks/useTurboConfig';
-import { ExternalLink, Shield, ArrowRight, Share2, Book, Lightbulb, Code, CheckCircle } from 'lucide-react';
+import { ExternalLink, Shield, ArrowRight, Share2, Book, Lightbulb, Code, CheckCircle, Wallet } from 'lucide-react';
+import { promptSignIn } from '../../utils';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface Approval {
   approvedAddress: string;
@@ -22,7 +24,8 @@ export default function ShareCreditsPanel() {
   const { address, walletType, creditBalance } = useStore();
   const wincForOneGiB = useWincForOneGiB();
   const turboConfig = useTurboConfig();
-  const { createEthereumTurboClient } = useEthereumTurboClient(); // Shared Ethereum client with custom connect message
+  const { createEthereumTurboClient } = useEthereumTurboClient();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
 
   // Create authenticated turbo client based on wallet type
   const createTurboClient = async (): Promise<TurboAuthenticatedClient> => {
@@ -46,13 +49,13 @@ export default function ShareCreditsPanel() {
         return createEthereumTurboClient('ethereum');
 
       case 'solana':
-        if (!window.solana) {
-          throw new Error('Solana wallet extension not found. Please install Phantom or Solflare');
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
 
         return TurboFactory.authenticated({
           token: "solana",
-          walletAdapter: window.solana,
+          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...turboConfig,
         });
 
@@ -158,8 +161,14 @@ export default function ShareCreditsPanel() {
   if (!address) {
     return (
       <div className="text-center py-12">
-        <h3 className="text-xl font-heading font-bold mb-4">Connect Wallet Required</h3>
-        <p className="text-foreground/80">Connect your wallet to share credits</p>
+        <h3 className="text-xl font-heading font-extrabold mb-3">Sign in required</h3>
+        <p className="text-foreground/80 mb-5">Sign in to share credits with another wallet.</p>
+        <button
+          onClick={promptSignIn}
+          className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
+        >
+          <Wallet className="w-4 h-4" /> Sign in to share credits
+        </button>
       </div>
     );
   }
@@ -177,7 +186,7 @@ export default function ShareCreditsPanel() {
           <Share2 className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Share Credits</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Share Credits</h3>
           <p className="text-sm text-foreground/80">
             Delegate credits to other wallets for collaborative uploads and distributed payments
           </p>
@@ -240,7 +249,7 @@ export default function ShareCreditsPanel() {
                 setCreditAmount(finalAmount);
                 setCreditAmountInput(String(finalAmount));
               }}
-              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
+              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground transition-colors"
               placeholder="Minimum 0.01 credits"
               inputMode="decimal"
             />
@@ -289,7 +298,7 @@ export default function ShareCreditsPanel() {
                   setRecipientWalletType(null);
                 }
               }}
-              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-foreground focus:outline-none transition-colors"
+              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-foreground transition-colors"
               placeholder="Arweave, Ethereum, or Solana address"
             />
             {recipientWalletType && recipientWalletType !== 'unknown' && (
@@ -355,14 +364,16 @@ export default function ShareCreditsPanel() {
               Never
             </button>
           </div>
-          <input
-            type="number"
-            value={expiresBySeconds}
-            onChange={(e) => setExpiresBySeconds(Number(e.target.value))}
-            className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground focus:outline-none transition-colors"
-            placeholder="Custom time in seconds (0 = no expiration)"
-            min="0"
-          />
+          {expiresBySeconds > 0 && (
+            <input
+              type="number"
+              value={expiresBySeconds}
+              onChange={(e) => setExpiresBySeconds(Math.max(0, Number(e.target.value)))}
+              className="w-full p-3 rounded-2xl border border-border/20 bg-card text-foreground focus:border-foreground transition-colors"
+              placeholder="Custom time in seconds"
+              min="1"
+            />
+          )}
           {expiresBySeconds > 0 && (
             <p className="text-xs text-foreground/80 mt-1">
               Expires in {expiresBySeconds < 3600
@@ -416,7 +427,7 @@ export default function ShareCreditsPanel() {
       {/* Active Approvals */}
       {givenApprovals.length > 0 && (
         <div className="mt-8 pt-8 border-t border-border/20">
-          <h4 className="font-semibold mb-4">Active Approvals</h4>
+          <h4 className="mb-4">Active Approvals</h4>
           <div className="space-y-3">
             {givenApprovals.map((approval: Approval) => (
               <div key={approval.approvedAddress} className="bg-card rounded-2xl p-3">
@@ -469,7 +480,7 @@ export default function ShareCreditsPanel() {
 
       {/* Resource Links */}
       <div className="mt-8">
-        <h4 className="font-semibold mb-4">Learn More</h4>
+        <h4 className="mb-4">Learn More</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Documentation */}
           <a

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import fs from 'fs';
 
@@ -10,7 +11,17 @@ const packageJson = JSON.parse(
 );
 
 export default defineConfig({
-  base: './', // Relative paths for Arweave subpath compatibility
+  /*
+    Absolute paths — required so nested routes (/domains/:name) resolve assets
+    correctly on direct navigation.
+
+    Overridable for one case only: GitHub Pages serves a project site from
+    /<repo>/, not a domain root, so the staging build sets VITE_BASE_PATH to
+    that prefix. Everything else — production, dev, an ArNS name root — stays
+    at '/'. The router reads the same value via import.meta.env.BASE_URL, so
+    the two cannot disagree.
+  */
+  base: process.env.VITE_BASE_PATH || '/',
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version),
     // Use date only (not full timestamp) to avoid cache-busting on every build
@@ -27,6 +38,23 @@ export default defineConfig({
       // Essential polyfills for multi-chain unified app (based on actual errors seen)
       include: ['buffer', 'crypto', 'stream', 'os', 'util', 'process', 'fs'],
       protocolImports: true,
+    }),
+    // Service worker for Browse Data verification feature
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src/features/browse/service-worker',
+      filename: 'service-worker.ts',
+      injectManifest: {
+        globPatterns: [],
+        injectionPoint: undefined,
+        rollupFormat: 'iife',
+      },
+      injectRegister: null,
+      manifest: false,
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
     }),
   ],
   resolve: {
@@ -64,41 +92,8 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Manual chunk splitting for stable vendor bundles
-        // Vendor code rarely changes, so these chunks stay cached between deploys
-        manualChunks: {
-          // React core - very stable
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Ethereum wallet SDKs
-          'vendor-ethereum': [
-            '@privy-io/react-auth',
-            'wagmi',
-            '@wagmi/core',
-            '@wagmi/connectors',
-            'viem',
-            '@rainbow-me/rainbowkit',
-          ],
-          // Solana wallet SDKs
-          'vendor-solana': [
-            '@solana/wallet-adapter-base',
-            '@solana/wallet-adapter-react',
-            '@solana/wallet-adapter-react-ui',
-            '@solana/wallet-adapter-wallets',
-            '@solana/web3.js',
-          ],
-          // Arweave/Turbo SDKs
-          'vendor-arweave': [
-            '@ardrive/turbo-sdk',
-            '@ar.io/sdk',
-          ],
-          // UI libraries
-          'vendor-ui': [
-            'lucide-react',
-            '@tanstack/react-query',
-            'zustand',
-            '@stripe/react-stripe-js',
-          ],
-        },
+        // Let Rollup decide chunking - manual chunks can cause circular dependency issues
+        // when packages have complex interdependencies (like @ar.io/sdk)
       },
     },
   },

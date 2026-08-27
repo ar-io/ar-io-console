@@ -1,0 +1,156 @@
+import { describe, it, expect } from 'vitest';
+import {
+  daysUntil,
+  toEpochMs,
+  isExpiringSoon,
+  getExpiringDomains,
+  expirySortKey,
+  expiryLabel,
+  EXPIRY_WARNING_DAYS,
+  domainStatus,
+} from './domainExpiry';
+
+const NOW = 1_700_000_000_000; // fixed reference (ms epoch)
+const DAY = 86_400_000;
+const nameAt = (name: string, opts: { type?: string; days?: number } = {}) => ({
+  name,
+  displayName: name,
+  type: opts.type,
+  endTimestamp: opts.days === undefined ? undefined : NOW + opts.days * DAY,
+});
+
+describe('toEpochMs', () => {
+  it('leaves millisecond values untouched', () => {
+    expect(toEpochMs(NOW)).toBe(NOW);
+  });
+
+  it('scales second values to milliseconds', () => {
+    // The actual bug: a 2027 expiry in seconds read as ms lands in 1970, so
+    // the countdown said "0 days" beside a correctly-rendered 2027 date.
+    const marchSeconds = 1_804_395_600;
+    expect(toEpochMs(marchSeconds)).toBe(marchSeconds * 1000);
+    expect(new Date(toEpochMs(marchSeconds)).getUTCFullYear()).toBe(2027);
+  });
+
+  it('passes through zero and invalid values unchanged', () => {
+    // Callers already treat these as "unknown"; inventing 1970 would be worse.
+    expect(toEpochMs(0)).toBe(0);
+    expect(toEpochMs(-1)).toBe(-1);
+    expect(Number.isNaN(toEpochMs(NaN))).toBe(true);
+  });
+});
+
+describe('daysUntil', () => {
+  it('accepts seconds as readily as milliseconds', () => {
+    // Five call sites pass this value; one disagreeing on units is how a
+    // 2027 expiry reported "in 0 days".
+    const inFiveDaysMs = NOW + 5 * DAY;
+    expect(daysUntil(Math.floor(inFiveDaysMs / 1000), NOW)).toBe(5);
+    expect(daysUntil(inFiveDaysMs, NOW)).toBe(5);
+  });
+
+  it('rounds up to whole days and goes negative once past', () => {
+    expect(daysUntil(NOW + 5 * DAY, NOW)).toBe(5);
+    expect(daysUntil(NOW + 0.2 * DAY, NOW)).toBe(1);
+    expect(daysUntil(NOW - 3 * DAY, NOW)).toBe(-3);
+    // Even a fraction past is "expired" (-1), never rounded up to 0 / "today".
+    expect(daysUntil(NOW - 0.2 * DAY, NOW)).toBe(-1);
+    expect(daysUntil(NOW - 1, NOW)).toBe(-1);
+  });
+});
+
+describe('isExpiringSoon', () => {
+  it('flags leases within the threshold and in grace, not those beyond it', () => {
+    expect(isExpiringSoon(nameAt('a', { type: 'lease', days: 10 }), NOW)).toBe(true);
+    expect(isExpiringSoon(nameAt('b', { type: 'lease', days: EXPIRY_WARNING_DAYS }), NOW)).toBe(true);
+    expect(isExpiringSoon(nameAt('c', { type: 'lease', days: -2 }), NOW)).toBe(true); // grace
+    expect(isExpiringSoon(nameAt('d', { type: 'lease', days: 45 }), NOW)).toBe(false);
+  });
+
+  it('never flags permabuy or names without an endTimestamp', () => {
+    expect(isExpiringSoon(nameAt('perma', { type: 'permabuy' }), NOW)).toBe(false);
+    expect(isExpiringSoon(nameAt('unknown', { type: 'lease' }), NOW)).toBe(false);
+    expect(isExpiringSoon({ name: 'x', displayName: 'x' }, NOW)).toBe(false);
+  });
+});
+
+describe('getExpiringDomains', () => {
+  it('returns only soon-expiring leases, soonest-first', () => {
+    const names = [
+      nameAt('far', { type: 'lease', days: 200 }),
+      nameAt('soon', { type: 'lease', days: 3 }),
+      nameAt('perma', { type: 'permabuy' }),
+      nameAt('grace', { type: 'lease', days: -1 }),
+      nameAt('mid', { type: 'lease', days: 20 }),
+    ];
+    const result = getExpiringDomains(names, NOW);
+    expect(result.map((d) => d.name)).toEqual(['grace', 'soon', 'mid']);
+    expect(result[0].daysRemaining).toBe(-1);
+  });
+
+  it('respects a custom threshold', () => {
+    const names = [nameAt('a', { type: 'lease', days: 10 })];
+    expect(getExpiringDomains(names, NOW, 7)).toHaveLength(0);
+    expect(getExpiringDomains(names, NOW, 14)).toHaveLength(1);
+  });
+});
+
+describe('expirySortKey', () => {
+  it('gives expiring-soon leases their day count and everything else Infinity', () => {
+    expect(expirySortKey(nameAt('soon', { type: 'lease', days: 3 }), NOW)).toBe(3);
+    expect(expirySortKey(nameAt('grace', { type: 'lease', days: -1 }), NOW)).toBe(-1);
+    expect(expirySortKey(nameAt('far', { type: 'lease', days: 200 }), NOW)).toBe(Infinity);
+    expect(expirySortKey(nameAt('perma', { type: 'permabuy' }), NOW)).toBe(Infinity);
+  });
+
+  it('sorts a mixed list soonest-expiring first, others stable', () => {
+    const names = [
+      nameAt('far', { type: 'lease', days: 200 }),
+      nameAt('soon', { type: 'lease', days: 3 }),
+      nameAt('perma', { type: 'permabuy' }),
+      nameAt('grace', { type: 'lease', days: -1 }),
+    ];
+    const sorted = [...names].sort((a, b) => expirySortKey(a, NOW) - expirySortKey(b, NOW));
+    expect(sorted.map((n) => n.name)).toEqual(['grace', 'soon', 'far', 'perma']);
+  });
+});
+
+describe('expiryLabel', () => {
+  it('renders compact human labels', () => {
+    expect(expiryLabel(-2)).toBe('expired');
+    expect(expiryLabel(0)).toBe('today');
+    expect(expiryLabel(1)).toBe('in 1 day');
+    expect(expiryLabel(9)).toBe('in 9 days');
+  });
+});
+
+describe('domainStatus', () => {
+  const now = Date.UTC(2026, 0, 1);
+  const inDays = (d: number) => now + d * 86_400_000;
+
+  it('treats permabuy and unknown end dates as permanent', () => {
+    expect(domainStatus({ name: 'a', displayName: 'a', type: 'permabuy' }, now)).toBe('permanent');
+    expect(domainStatus({ name: 'a', displayName: 'a', type: 'lease' }, now)).toBe('permanent');
+    expect(
+      domainStatus({ name: 'a', displayName: 'a', type: 'lease', endTimestamp: 0 }, now),
+    ).toBe('permanent');
+  });
+
+  it('classifies a lease by days remaining', () => {
+    const at = (d: number) =>
+      domainStatus({ name: 'a', displayName: 'a', type: 'lease', endTimestamp: inDays(d) }, now);
+    expect(at(365)).toBe('active');
+    expect(at(31)).toBe('active');
+    expect(at(30)).toBe('expiring'); // threshold is inclusive, like isExpiringSoon
+    expect(at(1)).toBe('expiring');
+    expect(at(-1)).toBe('expired');
+  });
+
+  it('never disagrees with isExpiringSoon', () => {
+    for (const d of [400, 31, 30, 7, 0, -1, -20]) {
+      const n = { name: 'a', displayName: 'a', type: 'lease', endTimestamp: inDays(d) };
+      const s = domainStatus(n, now);
+      expect(isExpiringSoon(n, now)).toBe(s === 'expiring' || s === 'expired');
+    }
+  });
+});

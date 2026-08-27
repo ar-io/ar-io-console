@@ -1,23 +1,34 @@
 import { tokenToBaseMap, TurboFactory, ETHToTokenAmount, SOLToTokenAmount, ARToTokenAmount, ARIOToTokenAmount, POLToTokenAmount } from "@ardrive/turbo-sdk/web";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTurboConfig } from "./useTurboConfig";
 
-export function useWincForOneGiB() {
-  const [wincForOneGiB, setWincForOneGiB] = useState<string | undefined>(
-    undefined,
-  );
+/**
+ * Shared React Query hook for Turbo fiat rates. Both useWincForOneGiB and
+ * usePerDataItemFee derive from this single cached fetch, so only ONE
+ * getFiatRates() request fires per mount even when both hooks are used.
+ */
+function useFiatRates() {
   const turboConfig = useTurboConfig();
+  return useQuery({
+    queryKey: ['turbo-fiat-rates', turboConfig.paymentServiceConfig?.url],
+    queryFn: () => TurboFactory.unauthenticated(turboConfig).getFiatRates(),
+    staleTime: 5 * 60_000, // 5 minutes — rates change slowly
+  });
+}
 
-  // On first render, get winc for 1 GiB for conversions
-  useEffect(() => {
-    TurboFactory.unauthenticated(turboConfig)
-      .getFiatRates()
-      .then(({ winc }) => {
-        setWincForOneGiB(winc);
-      });
-  }, [turboConfig]);
+export function useWincForOneGiB(): string | undefined {
+  const { data } = useFiatRates();
+  return data?.winc;
+}
 
-  return wincForOneGiB;
+/**
+ * Hook to get the per-data-item fee in winc.
+ * Each data item uploaded incurs this fixed fee on top of storage costs.
+ */
+export function usePerDataItemFee(): string | undefined {
+  const { data } = useFiatRates();
+  return (data as any)?.perDataItemFeeWinc;
 }
 
 export function useWincForToken(token: "arweave" | "ario", amount: number) {

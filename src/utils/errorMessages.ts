@@ -7,6 +7,13 @@ export function formatUploadError(error: Error | string): string {
   const message = typeof error === 'string' ? error : error.message;
   const lowerMessage = message.toLowerCase();
 
+  // X402 bundler: upload endpoint returned 402 with x402 payment requirements
+  // Check this FIRST because the 402 JSON body contains keywords like "network" that
+  // would false-match more generic error handlers below
+  if (lowerMessage.includes('status 402') && lowerMessage.includes('x402version')) {
+    return 'This upload service requires X402 payments (Base USDC via an Ethereum wallet). Please connect an Ethereum wallet, switch to a different upload service, or enable x402-only mode in Developer Resources.';
+  }
+
   // Insufficient balance errors
   if (lowerMessage.includes('insufficient balance') || lowerMessage.includes('insufficient funds')) {
     return 'Insufficient credits. Please top up your balance or increase your JIT payment limit.';
@@ -21,7 +28,7 @@ export function formatUploadError(error: Error | string): string {
   }
 
   // Network/connection errors
-  if (lowerMessage.includes('network') || lowerMessage.includes('fetch failed') || lowerMessage.includes('failed to fetch')) {
+  if (lowerMessage.includes('fetch failed') || lowerMessage.includes('failed to fetch')) {
     return 'Network error. Please check your connection and try again.';
   }
 
@@ -45,7 +52,7 @@ export function formatUploadError(error: Error | string): string {
 
   // X402 specific errors
   if (lowerMessage.includes('x402')) {
-    if (lowerMessage.includes('network') || lowerMessage.includes('switch')) {
+    if (lowerMessage.includes('switch')) {
       return 'Wrong network. Please switch to Base network in your wallet.';
     }
     if (lowerMessage.includes('usdc')) {

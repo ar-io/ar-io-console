@@ -31,10 +31,7 @@ const getArioGatewayUrl = (): string => {
   return 'https://turbo-gateway.com';
 };
 
-export const getTurboBalance = async (
-  address: string,
-  tokenType: string = 'arweave',
-) => {
+export const getTurboBalance = async (address: string, tokenType: string = 'arweave') => {
   const paymentServiceUrl = getPaymentServiceUrl();
   const url = `${paymentServiceUrl}/v1/account/balance/${tokenType}?address=${address}`;
 
@@ -47,10 +44,7 @@ export const getTurboBalance = async (
   return response.json();
 };
 
-export const getWincForToken = async (
-  amount: number,
-  tokenType: string = 'arweave',
-): Promise<{ winc: string }> => {
+export const getWincForToken = async (amount: number, tokenType: string = 'arweave'): Promise<{ winc: string }> => {
   const paymentServiceUrl = getPaymentServiceUrl();
   const url = `${paymentServiceUrl}/v1/price/${tokenType}/${amount}`;
 
@@ -75,9 +69,7 @@ export const getWincForFiat = async ({
   const paymentServiceUrl = getPaymentServiceUrl();
   const url = `${paymentServiceUrl}/v1/price/usd/${amount.amount}`;
   const queryString =
-    promoCode && destinationAddress
-      ? `?${new URLSearchParams({ promoCode, destinationAddress }).toString()}`
-      : '';
+    promoCode && destinationAddress ? `?${new URLSearchParams({ promoCode, destinationAddress }).toString()}` : '';
   const response = await fetch(url.concat(queryString));
 
   if (response.status == 404) {
@@ -97,15 +89,12 @@ export const formatWalletAddress = (address: string, shownCount = 4) => {
   if (!address || typeof address !== 'string') {
     return 'Invalid Address';
   }
-  
+
   if (address.length <= shownCount * 2) {
     return address; // Return full address if it's too short to truncate
   }
-  
-  return `${address.slice(0, shownCount)}...${address.slice(
-    address.length - shownCount,
-    address.length,
-  )}`;
+
+  return `${address.slice(0, shownCount)}...${address.slice(address.length - shownCount, address.length)}`;
 };
 
 export const wincToCredits = (winc: number) => {
@@ -178,6 +167,15 @@ export const getGatewayBaseUrl = (): string => {
   // For non-subdomain access (direct domain), use current domain
   const baseUrl = port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`;
   return baseUrl;
+};
+
+/**
+ * Open the sign-in (wallet selection) modal from anywhere. The Header listens for
+ * the `open-signin` event and shows the one wallet modal, so any CTA ("Sign in
+ * to …") can trigger sign-in without owning its own modal.
+ */
+export const promptSignIn = (): void => {
+  window.dispatchEvent(new CustomEvent('open-signin'));
 };
 
 export const getArweaveUrl = (txId: string, dataCaches?: string[]): string => {
@@ -311,8 +309,32 @@ export const getCurrentChainId = async (provider: any): Promise<number> => {
 };
 
 // Export address validation utilities
-export { validateWalletAddress, getWalletTypeLabel, formatWalletAddress as formatWalletAddressLong, resolveEthereumAddress } from './addressValidation';
+export {
+  validateWalletAddress,
+  getWalletTypeLabel,
+  formatWalletAddress as formatWalletAddressLong,
+  resolveEthereumAddress,
+} from './addressValidation';
 export type { WalletAddressType, AddressValidationResult } from './addressValidation';
 
 // Export AR.IO configuration helpers
-export { getARIO, getANT, WRITE_OPTIONS, createContractSigner } from './arIOConfig';
+export {
+  getARIO,
+  getANT,
+  getWritableARIO,
+  getWritableANT,
+  getSolanaReadRpc,
+  getANTRegistry,
+  removePrimaryName,
+  WRITE_OPTIONS,
+  createWalletAdapterTransactionSendingSigner,
+} from './arIOConfig';
+
+export const daysRemaining = (expirationDate: Date): number => {
+  if (!Number.isFinite(expirationDate.getTime())) {
+    return 0;
+  }
+  const now = new Date();
+  const timeDiff = expirationDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
+};

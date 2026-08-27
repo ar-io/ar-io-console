@@ -9,7 +9,6 @@ export const useTurboConfig = (tokenType?: string): any => {
     const baseConfig = {
       paymentServiceConfig: { url: config.paymentServiceUrl },
       uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
     };
 
     // If token type is provided and has a custom RPC, pass it as gatewayUrl

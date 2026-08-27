@@ -9,10 +9,11 @@ import {
 import { useStore } from '../store/useStore';
 import { useWallets } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 // supportsJitPayment import removed - using pre-topup flow instead of per-file JIT
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
-import { useFreeUploadLimit, isFileFree } from './useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree } from './useFreeUploadLimit';
 import { hashFilesAsync } from '../utils/fileHash';
 
 // Deduplication stats for Smart Deploy
@@ -23,6 +24,7 @@ export interface DeduplicationStats {
   cachedSize: number;
   newSize: number;
   billableSize: number; // newSize minus files under free limit
+  billableFiles: number; // new files that are NOT free — the ones that incur the per-item fee
 }
 
 interface DeployResult {
@@ -39,12 +41,15 @@ interface DeployResult {
   receipt?: any; // Store receipt for manifest
   appName?: string; // User's app/site name
   appVersion?: string; // User's app/site version
+  failedFiles?: string[]; // Paths of files that failed to upload on a partial deploy
 }
 
 export interface ActiveUpload {
   name: string;
   progress: number;
   size: number;
+  /** True once bytes are fully sent and the bundler is finalizing the upload. */
+  finalizing?: boolean;
 }
 
 export interface RecentFile {
@@ -66,8 +71,10 @@ export function useFolderUpload() {
   const { address, walletType } = store;
   const { wallets } = useWallets();
   const ethAccount = useAccount();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const { createEthereumTurboClient } = useEthereumTurboClient();
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
   const [deploying, setDeploying] = useState(false);
   const [deployProgress, setDeployProgress] = useState<number>(0);
   const [fileProgress, setFileProgress] = useState<Record<string, number>>({});
@@ -84,7 +91,11 @@ export function useFolderUpload() {
   const [totalSize, setTotalSize] = useState<number>(0);
   const [uploadedSize, setUploadedSize] = useState<number>(0);
   const [failedFiles, setFailedFiles] = useState<File[]>([]);
-  const [isCancelled, setIsCancelled] = useState<boolean>(false);
+  // Per-deploy cancellation is tracked via the AbortController below
+  // (controller.signal.aborted) — a synchronous signal a running deploy loop can
+  // see. A React state flag can't: an already-executing deployFolder closure
+  // captured the old value, so after a cancel the *next* deploy would read a
+  // stale `true` and silently no-op. (Same fix as useFileUpload.)
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Smart Deploy state
@@ -122,12 +133,12 @@ export function useFolderUpload() {
         }
         break;
       case 'solana':
-        if (!window.solana || !window.solana.isConnected) {
+        if (!solanaPublicKey || !solanaSignMessage) {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         break;
     }
-  }, [address, walletType, wallets, ethAccount.isConnected]);
+  }, [address, walletType, wallets, ethAccount.isConnected, solanaPublicKey, solanaSignMessage]);
 
   // Analyze folder for Smart Deploy deduplication
   // Always hashes files to show potential savings, regardless of toggle state
@@ -182,6 +193,10 @@ export function useFolderUpload() {
       let newFilesCount = 0;
       let newSize = 0;
       let billableSize = 0;
+      let billableFilesCount = 0;
+      // The free allowance is shared across the batch — consume it as we find free
+      // files so a partial allowance can't make every file look free.
+      let remaining = bytesRemaining;
 
       files.forEach(file => {
         const path = file.webkitRelativePath || file.name;
@@ -194,9 +209,11 @@ export function useFolderUpload() {
         } else {
           newFilesCount++;
           newSize += file.size;
-          // Only add to billable if over free limit
-          if (!isFileFree(file.size, freeUploadLimitBytes)) {
+          if (isFileFree(file.size, freeUploadLimitBytes, remaining)) {
+            if (typeof remaining === 'number') remaining -= file.size;
+          } else {
             billableSize += file.size;
+            billableFilesCount++;
           }
         }
       });
@@ -208,6 +225,7 @@ export function useFolderUpload() {
         cachedSize,
         newSize,
         billableSize,
+        billableFiles: billableFilesCount,
       });
       setHashingStage('complete');
     } catch (error) {
@@ -223,10 +241,15 @@ export function useFolderUpload() {
       // Calculate billable size for all files (fallback when hashing fails)
       let totalSizeCalc = 0;
       let billableSize = 0;
+      let billableFilesCount = 0;
+      let remaining = bytesRemaining; // shared allowance, consumed cumulatively
       files.forEach(f => {
         totalSizeCalc += f.size;
-        if (!isFileFree(f.size, freeUploadLimitBytes)) {
+        if (isFileFree(f.size, freeUploadLimitBytes, remaining)) {
+          if (typeof remaining === 'number') remaining -= f.size;
+        } else {
           billableSize += f.size;
+          billableFilesCount++;
         }
       });
       setDeduplicationStats({
@@ -236,10 +259,11 @@ export function useFolderUpload() {
         cachedSize: 0,
         newSize: totalSizeCalc,
         billableSize,
+        billableFiles: billableFilesCount,
       });
       setHashingStage('complete');
     }
-  }, [getFileHashEntry, freeUploadLimitBytes]);
+  }, [getFileHashEntry, freeUploadLimitBytes, bytesRemaining]);
 
   // Reset analysis state and cancel any ongoing hashing
   const resetAnalysis = useCallback(() => {
@@ -281,7 +305,6 @@ export function useFolderUpload() {
     const dynamicTurboConfig: TurboUnauthenticatedConfiguration = {
       paymentServiceConfig: { url: config.paymentServiceUrl },
       uploadServiceConfig: { url: config.uploadServiceUrl },
-      processId: config.processId,
       ...(effectiveTokenType && config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap]
         ? { gatewayUrl: config.tokenMap[effectiveTokenType as keyof typeof config.tokenMap] }
         : {})
@@ -319,25 +342,19 @@ export function useFolderUpload() {
         return createEthereumTurboClient(tokenTypeOverride || 'ethereum');
 
       case 'solana':
-        if (walletType !== 'solana') {
-          throw new Error('Internal error: Attempting Solana operations with non-Solana wallet');
-        }
-        if (!window.solana) {
-          throw new Error('Solana wallet extension not found. Please install Phantom or Solflare');
-        }
-        if (!window.solana.isConnected || !window.solana.publicKey) {
-          throw new Error('Solana wallet not connected. Please connect your Solana wallet first.');
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         return TurboFactory.authenticated({
           token: "solana",
-          walletAdapter: window.solana,
+          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...dynamicTurboConfig,
         });
 
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [address, walletType, getCurrentConfig, validateWalletState, createEthereumTurboClient]);
+  }, [address, walletType, getCurrentConfig, validateWalletState, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
 
   // Smart content type detection based on file extensions
@@ -402,6 +419,17 @@ export function useFolderUpload() {
         throw new Error('Upload cancelled');
       }
 
+      // Per-attempt abort controller: a timeout aborts THIS attempt's in-flight
+      // upload before we retry — otherwise the abandoned upload keeps running
+      // server-side and the file can be uploaded (and charged) twice. Chained to
+      // the deployment signal so a global cancel aborts it too. Declared outside
+      // the try so the finally can clean up its timer and listener.
+      const attemptController = new AbortController();
+      const onDeployAbort = () => attemptController.abort();
+      if (signal.aborted) attemptController.abort();
+      else signal.addEventListener('abort', onDeployAbort);
+      let attemptTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
       try {
         // Build tags array
         const tags = [
@@ -428,7 +456,7 @@ export function useFolderUpload() {
         // Add timeout wrapper for upload
         const uploadPromise = turbo.uploadFile({
           file: file,
-          signal: signal, // Pass the abort signal to the SDK
+          signal: attemptController.signal, // per-attempt signal (abortable on timeout)
           fundingMode, // Pass JIT funding mode (TypeScript types don't include this yet, but runtime supports it)
           dataItemOpts: {
             tags
@@ -437,10 +465,11 @@ export function useFolderUpload() {
             // Track progress for individual files
             onProgress: ({ totalBytes, processedBytes }: { totalBytes: number; processedBytes: number }) => {
               const percentage = Math.round((processedBytes / totalBytes) * 100);
+              const finalizing = percentage >= 100;
               setFileProgress(prev => ({ ...prev, [file.name]: percentage }));
               // Update active upload progress
               setActiveUploads(prev => prev.map(u =>
-                u.name === file.name ? { ...u, progress: percentage } : u
+                u.name === file.name ? { ...u, progress: percentage, finalizing } : u
               ));
             },
             onError: (error: any) => {
@@ -448,16 +477,21 @@ export function useFolderUpload() {
             },
             onSuccess: () => {
               // Progress is already tracked by onProgress, just ensure it's at 100%
+              // and clear the finalizing flag now that the bundler has confirmed.
               setActiveUploads(prev => prev.map(u =>
-                u.name === file.name ? { ...u, progress: 100 } : u
+                u.name === file.name ? { ...u, progress: 100, finalizing: false } : u
               ));
             }
           }
         } as any); // Type assertion needed until SDK types are updated
 
-        // 5 minute timeout per file
+        // 5 minute timeout per file. On fire, abort THIS attempt so the in-flight
+        // upload actually stops before the retry starts (prevents a double-upload).
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Upload timeout after 5 minutes')), 5 * 60 * 1000);
+          attemptTimeoutId = setTimeout(() => {
+            attemptController.abort();
+            reject(new Error('Upload timeout after 5 minutes'));
+          }, 5 * 60 * 1000);
         });
 
         const result = await Promise.race([uploadPromise, timeoutPromise]);
@@ -471,6 +505,11 @@ export function useFolderUpload() {
           // Exponential backoff: 2s, 4s, 8s
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         }
+      } finally {
+        // Stop the per-file timeout and detach the deploy-abort listener so they
+        // don't leak across attempts/files.
+        if (attemptTimeoutId) clearTimeout(attemptTimeoutId);
+        signal.removeEventListener('abort', onDeployAbort);
       }
     }
 
@@ -532,11 +571,15 @@ export function useFolderUpload() {
     setRecentFiles([]);
     setUploadErrors([]);
     setFailedFiles([]);
-    setIsCancelled(false);
 
-    // Create a new AbortController for this deployment
+    // Create a new AbortController for this deployment (fresh = not aborted, so a
+    // prior cancel can't leak into this run).
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    // Only the deploy that currently owns the shared controller may clear it or
+    // reset the deploying/activeUploads UI. A cancelled deploy can still be
+    // unwinding after a newer deploy has started, and must not clobber it.
+    const isActiveDeploy = () => abortControllerRef.current === controller;
 
     // Calculate total size (only for files being uploaded)
     const totalSizeBytes = filesToUpload.reduce((sum, file) => sum + file.size, 0);
@@ -630,7 +673,9 @@ export function useFolderUpload() {
         receipt: any;
       }> = [];
       const totalFiles = filesToUpload.length;
-      const BATCH_SIZE = 5; // Upload 5 files concurrently
+      // Solana wallets require a signMessage popup per file — concurrent uploads
+      // cause all but one to be cancelled. Upload sequentially for Solana.
+      const BATCH_SIZE = walletType === 'solana' ? 1 : 5;
       let completedFiles = 0;
       const failedUploads: { file: File; error: Error }[] = [];
 
@@ -643,10 +688,12 @@ export function useFolderUpload() {
       } else {
         // Process files in batches (only filesToUpload - Smart Deploy)
       for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
-        // Check if cancelled
-        if (isCancelled) {
-          setDeploying(false);
-          setActiveUploads([]);
+        // Check if cancelled (synchronously — this deploy's own controller)
+        if (controller.signal.aborted) {
+          if (isActiveDeploy()) {
+            setDeploying(false);
+            setActiveUploads([]);
+          }
           return { results: fileUploadResults, failedFileNames: [] };
         }
 
@@ -698,7 +745,7 @@ export function useFolderUpload() {
 
             // Mark file as complete in active uploads (keep at 100%)
             setActiveUploads(prev => prev.map(u =>
-              u.name === file.name ? { ...u, progress: 100 } : u
+              u.name === file.name ? { ...u, progress: 100, finalizing: false } : u
             ));
 
             // Don't remove completed files - they'll be cleared when next batch starts
@@ -741,7 +788,7 @@ export function useFolderUpload() {
 
             // Mark as failed in active uploads (set to -1 to indicate error)
             setActiveUploads(prev => prev.map(u =>
-              u.name === file.name ? { ...u, progress: -1 } : u
+              u.name === file.name ? { ...u, progress: -1, finalizing: false } : u
             ));
 
             // Don't remove failed files - they'll be cleared when next batch starts
@@ -784,10 +831,12 @@ export function useFolderUpload() {
         await Promise.allSettled(batchPromises);
 
         // Check again if cancelled after batch completes
-        if (isCancelled || controller.signal.aborted) {
-          setDeploying(false);
-          setActiveUploads([]);
-          abortControllerRef.current = null;
+        if (controller.signal.aborted) {
+          if (isActiveDeploy()) {
+            setDeploying(false);
+            setActiveUploads([]);
+            abortControllerRef.current = null;
+          }
           return { results: fileUploadResults, failedFileNames: [] };
         }
 
@@ -810,10 +859,12 @@ export function useFolderUpload() {
       } // End of else block for non-cached files
 
       // Check if cancelled before manifest creation
-      if (isCancelled || controller.signal.aborted) {
-        setDeploying(false);
-        setActiveUploads([]);
-        abortControllerRef.current = null;
+      if (controller.signal.aborted) {
+        if (isActiveDeploy()) {
+          setDeploying(false);
+          setActiveUploads([]);
+          abortControllerRef.current = null;
+        }
         return { results: fileUploadResults, failedFileNames: [] };
       }
 
@@ -963,6 +1014,11 @@ export function useFolderUpload() {
       // Create results structure
       const results: DeployResult[] = [];
 
+      // Files that failed to upload while the deploy still proceeded (under the
+      // 10% threshold). Surfaced so the UI can't report a clean success for a site
+      // that is actually missing assets.
+      const failedFilePaths = failedUploads.map(f => f.file.webkitRelativePath || f.file.name);
+
       // Add manifest result
       results.push({
         type: 'manifest',
@@ -972,6 +1028,7 @@ export function useFolderUpload() {
         receipt: manifestResult, // Store manifest upload result
         appName: manifestOptions?.appName,
         appVersion: manifestOptions?.appVersion,
+        failedFiles: failedFilePaths.length > 0 ? failedFilePaths : undefined,
       });
 
       // Add individual files
@@ -989,23 +1046,31 @@ export function useFolderUpload() {
       setDeployProgress(100);
       setDeployStage('complete');
       setCurrentFile('');
-      abortControllerRef.current = null; // Clear the controller when done
+      if (isActiveDeploy()) abortControllerRef.current = null; // Clear the controller when done
+
+      // Refresh balance + free-tier allowance after a completed deploy (free or
+      // paid) so subsequent pricing reflects the consumed allowance/credits.
+      window.dispatchEvent(new CustomEvent('refresh-balance'));
 
       return {
         manifestId: uploadResult.manifestId,
         files: uploadResult.files,
-        results
+        results,
+        failedFiles: failedFilePaths,
       };
     } catch (error) {
       // Deployment failed
       const errorMessage = error instanceof Error ? error.message : 'Deployment failed';
       setErrors({ deployment: errorMessage });
-      abortControllerRef.current = null; // Clear the controller on error
+      if (isActiveDeploy()) abortControllerRef.current = null; // Clear the controller on error
       throw error;
     } finally {
-      setDeploying(false);
+      // Runs on every exit (incl. the cancelled-deploy early returns). Only turn
+      // off the deploying UI if we're still the active deploy — otherwise a
+      // cancelled deploy unwinding after a newer one started would blank its UI.
+      if (isActiveDeploy()) setDeploying(false);
     }
-  }, [createTurboClient, validateWalletState, isCancelled, uploadFileWithRetry, walletType, freeUploadLimitBytes, getContentType, fileHashes, getFileHashEntry, updateFileHashCache]);
+  }, [createTurboClient, validateWalletState, uploadFileWithRetry, walletType, getContentType, fileHashes, getFileHashEntry, updateFileHashCache, getCurrentConfig]);
 
   const reset = useCallback(() => {
     setDeployProgress(0);
@@ -1023,7 +1088,6 @@ export function useFolderUpload() {
     setTotalSize(0);
     setUploadedSize(0);
     setFailedFiles([]);
-    setIsCancelled(false);
     abortControllerRef.current = null;
     // Don't clear results in reset - that's now separate
   }, []);
@@ -1058,8 +1122,8 @@ export function useFolderUpload() {
 
   // Cancel ongoing uploads
   const cancelUploads = useCallback(() => {
-    setIsCancelled(true);
-    // Abort all in-flight requests
+    // Abort the active deploy's controller — the loop sees signal.aborted
+    // synchronously and stops (and stops charging).
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;

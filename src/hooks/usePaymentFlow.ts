@@ -67,11 +67,9 @@ export function usePaymentFlow({
   // Selected JIT token - will be set when user opens "Pay with Crypto"
   // NOT set by default to avoid triggering x402 pricing before user interaction
   const [selectedJitToken, setSelectedJitToken] = useState<SupportedTokenType>(() => {
-    if (walletType === 'arweave') return 'ario';
     if (walletType === 'solana') return 'solana';
-    // In x402-only mode, only base-usdc is available
     if (x402OnlyMode) return 'base-usdc';
-    return 'base-ario'; // Default for Ethereum - fast L2 ARIO payments
+    return 'base-usdc'; // Default for Ethereum
   });
 
   // Track if user has sufficient crypto balance for JIT payment
@@ -95,16 +93,10 @@ export function usePaymentFlow({
     }
   }, [showConfirmModal, x402OnlyMode]);
 
-  // Auto-select base-ario ONLY when user explicitly opens "Pay with Crypto" section
-  // Reset to base-ario when they close it (unless x402-only mode is active)
+  // Reset to default when user collapses the crypto section
   useEffect(() => {
-    if (walletType === 'ethereum') {
-      if (jitSectionExpanded) {
-        // Keep current selection when section expands - user can choose via JitTokenSelector
-        // Don't auto-switch to base-usdc anymore since base-ario is now the default
-      } else if (!x402OnlyMode) {
-        setSelectedJitToken('base-ario'); // Reset to base-ario when section collapses (unless x402-only)
-      }
+    if (walletType === 'ethereum' && !jitSectionExpanded && !x402OnlyMode) {
+      setSelectedJitToken('base-usdc');
     }
   }, [walletType, jitSectionExpanded, x402OnlyMode]);
 

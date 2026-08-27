@@ -9,6 +9,7 @@ import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { usePrimaryArNSName } from '../../hooks/usePrimaryArNSName';
 import CopyButton from '../CopyButton';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface BalanceResult {
   address: string;
@@ -43,7 +44,8 @@ interface BalanceResult {
 export default function BalanceCheckerPanel() {
   const { address: connectedAddress, walletType } = useStore();
   const turboConfig = useTurboConfig();
-  const { createEthereumTurboClient } = useEthereumTurboClient(); // Shared Ethereum client with custom connect message
+  const { createEthereumTurboClient } = useEthereumTurboClient();
+  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -79,20 +81,20 @@ export default function BalanceCheckerPanel() {
         return createEthereumTurboClient('ethereum');
 
       case 'solana':
-        if (!window.solana) {
-          throw new Error('Solana wallet extension not found. Please install Phantom or Solflare');
+        if (!solanaPublicKey || !solanaSignMessage) {
+          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
 
         return TurboFactory.authenticated({
           token: "solana",
-          walletAdapter: window.solana,
+          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...turboConfig,
         });
 
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-  }, [connectedAddress, walletType, turboConfig, createEthereumTurboClient]);
+  }, [connectedAddress, walletType, turboConfig, createEthereumTurboClient, solanaPublicKey, solanaSignMessage, solanaSignTransaction]);
 
   // Load recent searches from localStorage and check for pre-filled address
   useEffect(() => {
@@ -315,7 +317,7 @@ export default function BalanceCheckerPanel() {
           <Search className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Check Balance</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Check Balance</h3>
           <p className="text-sm text-foreground/80">
             Check credit balance of any wallet address (Arweave, Ethereum, or Solana)
           </p>
@@ -337,7 +339,7 @@ export default function BalanceCheckerPanel() {
                 onChange={(e) => setWalletAddress(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Paste wallet address here..."
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-primary focus:outline-none transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border/20 bg-card text-foreground font-mono text-sm focus:border-primary transition-colors"
                 disabled={loading}
               />
             </div>
@@ -374,7 +376,20 @@ export default function BalanceCheckerPanel() {
         {/* Recent Searches */}
         {recentSearches.length > 0 && (
           <div>
-            <p className="text-xs text-foreground/80 mb-2 uppercase tracking-wider">Recent Searches</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-foreground/80 uppercase tracking-wider">Recent Searches</p>
+              <button
+                onClick={() => {
+                  setRecentSearches([]);
+                  localStorage.removeItem('recentBalanceSearches');
+                }}
+                className="text-xs text-foreground/50 hover:text-foreground/80 transition-colors flex items-center gap-1"
+                title="Clear search history"
+              >
+                <X className="w-3 h-3" />
+                Clear
+              </button>
+            </div>
             <div className="space-y-2">
               {recentSearches.map((address) => (
                 <button
@@ -410,7 +425,7 @@ export default function BalanceCheckerPanel() {
           {/* Address Info */}
           <div className="p-4 rounded-2xl bg-card border border-border/20">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-bold font-heading text-foreground flex items-center gap-2">
+              <h4 className="font-extrabold font-heading text-foreground flex items-center gap-2">
                 <Wallet className="w-5 h-5" />
                 Wallet Details
               </h4>
@@ -426,7 +441,7 @@ export default function BalanceCheckerPanel() {
                     if (isEthereum) {
                       explorerUrl = `https://etherscan.io/address/${balanceResult.address}`;
                     } else if (isSolana) {
-                      explorerUrl = `https://explorer.solana.com/address/${balanceResult.address}`;
+                      explorerUrl = `https://solscan.io/account/${balanceResult.address}`;
                     } else {
                       explorerUrl = `https://viewblock.io/arweave/address/${balanceResult.address}`;
                     }
@@ -565,7 +580,7 @@ export default function BalanceCheckerPanel() {
               >
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-foreground/80" />
-                  <h4 className="font-bold font-heading text-foreground">Credit Sharing Details</h4>
+                  <h4 className="font-extrabold font-heading text-foreground">Credit Sharing Details</h4>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-foreground/80 transition-transform ${showSharingDetails ? 'rotate-180' : ''}`} />
               </button>

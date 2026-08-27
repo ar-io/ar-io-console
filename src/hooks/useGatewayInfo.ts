@@ -1,8 +1,84 @@
 import { useState, useEffect } from 'react';
-import { type AoGateway } from '@ar.io/sdk';
-import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
+import { type Gateway } from '@ar.io/sdk';
+import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
+
+/**
+ * Fetch with retry and exponential backoff for rate-limited APIs.
+ * Retries on 429 (rate limit) and 5xx errors.
+ */
+async function fetchWithRetry(
+  url: string,
+  options: { maxRetries?: number; initialDelayMs?: number; timeoutMs?: number } = {}
+): Promise<Response> {
+  const { maxRetries = 3, initialDelayMs = 1000, timeoutMs = 10000 } = options;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      // Retry on rate limit or server errors
+      if (response.status === 429 || response.status >= 500) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delayMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : initialDelayMs * Math.pow(2, attempt);
+
+        if (attempt < maxRetries - 1) {
+          console.warn(
+            `[GatewayInfo] ${url} returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < maxRetries - 1) {
+        const delayMs = initialDelayMs * Math.pow(2, attempt);
+        console.warn(
+          `[GatewayInfo] ${url} failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries}):`,
+          error
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to fetch ${url} after ${maxRetries} attempts`);
+}
+
+/**
+ * Fetch Arweave L1 price via turbo-gateway.com.
+ */
+async function fetchArweavePriceWithFallback(bytes: number): Promise<number> {
+  const endpoints = ['https://turbo-gateway.com'];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetchWithRetry(`${endpoint}/price/${bytes}`, {
+        maxRetries: 2,
+        initialDelayMs: 500,
+      });
+      if (response.ok) {
+        const price = Number(await response.text());
+        if (!isNaN(price) && price > 0) {
+          return price;
+        }
+      }
+    } catch (err) {
+      console.warn(`[GatewayInfo] Failed to fetch price from ${endpoint}:`, err);
+    }
+  }
+
+  throw new Error('Failed to fetch Arweave price from all endpoints');
+}
 
 interface UploadServiceInfo {
   version: string;
@@ -15,6 +91,11 @@ interface UploadServiceInfo {
   };
   gateway: string;
   freeUploadLimitBytes: number;
+  freeTier?: {
+    maxItemBytes: number;
+    lifetimeBytes: number;
+    ipBytes: number;
+  };
 }
 
 interface X402Pricing {
@@ -47,7 +128,7 @@ interface GatewayInfo {
 }
 
 // Use the actual AR.IO SDK type
-type ArIOGatewayInfo = AoGateway;
+type ArIOGatewayInfo = Gateway;
 
 interface PricingInfo {
   wincPerGiB: string;
@@ -117,7 +198,7 @@ export function useGatewayInfo() {
           try {
             const parsedCache: CachedGatewayInfo = JSON.parse(cached);
             const isExpired = Date.now() - parsedCache.timestamp > CACHE_DURATION;
-            
+
             if (!isExpired) {
               // Using cached gateway info
               setUploadServiceInfo(parsedCache.data.uploadServiceInfo);
@@ -181,10 +262,12 @@ export function useGatewayInfo() {
           try {
             const { getARIO } = await import('../utils');
             const io = getARIO();
-            arIOData = await io.getGateway({ address: gatewayData.wallet });
+            arIOData = await io.getGateway({
+              address: gatewayData.wallet,
+            });
             setArIOGatewayInfo(arIOData);
           } catch (err) {
-            console.warn('Gateway not found in AR.IO network or lookup failed:', err);
+            console.warn('Gateway not found in ar.io network or lookup failed:', err);
             // This is expected for some gateways - they might not be registered in AR.IO
           }
         }
@@ -201,89 +284,59 @@ export function useGatewayInfo() {
           }
         }
 
-        // Compare fiat payment processing: Turbo's rate vs direct conversion
+        // Compare Turbo's rate vs raw Arweave network cost
         try {
-          console.log('🔍 Comparing Turbo payment processing vs direct rates...');
           const turbo = TurboFactory.unauthenticated(turboConfig);
           const gigabyteInBytes = 1073741824; // 1 GiB in bytes
-          
-          // Step 1: Get how much winc you get when you PAY Turbo $10 USD (includes their 23% fee)
-          console.log('💳 Getting Turbo payment rate (includes processing fees)...');
-          const turboPaymentRate = await turbo.getWincForFiat({
-            amount: USD(10),
-            promoCodes: []
-          });
-          const turboWincPer10USD = Number(turboPaymentRate.winc);
-          const turboWincPer1USD = turboWincPer10USD / 10;
-          
-          console.log('💰 Turbo payment processing:', {
-            '$10 gets': turboWincPer10USD,
-            'Per $1': turboWincPer1USD,
-            'Includes fees': turboPaymentRate.fees
-          });
-          
-          // Step 2: Get gateway winc cost for 1 GiB (direct gateway call)
-          let gatewayWincFor1GiB = undefined;
-          if (uploadData?.gateway) {
-            try {
-              const gatewayHost = uploadData.gateway.replace('https://', '');
-              const gatewayUrl = `https://${gatewayHost}/price/${gigabyteInBytes}`;
-              console.log('📡 Fetching direct from gateway:', gatewayUrl);
-              const response = await fetch(gatewayUrl);
-              gatewayWincFor1GiB = await response.json();
-              console.log('🌐 Direct gateway winc for 1 GiB:', gatewayWincFor1GiB);
-              
-              // Let's also check what gateway we're actually hitting
-              console.log('🏗️ Gateway we are comparing against:', gatewayHost);
-              
-            } catch (err) {
-              console.warn('❌ Gateway pricing fetch failed:', err);
+
+          // Get Turbo's USD rate for 1 GiB
+          const fiatRates = await turbo.getFiatRates();
+          const turboUSDPerGiB = fiatRates.fiat?.usd || 0;
+
+          // Get raw Arweave network cost (winston) and AR/USD price
+          let arweaveUSDPerGiB = undefined;
+          let arweaveWinstonPerGiB = undefined;
+
+          try {
+            // Fetch raw Arweave L1 network price (returns winston - 1 AR = 10^12 winston).
+            // Fetches from turbo-gateway.com
+            arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
+
+            // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
+            // Uses retry with backoff to handle 429 responses.
+            const cgResponse = await fetchWithRetry(
+              'https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd',
+              { maxRetries: 3, initialDelayMs: 1000 }
+            );
+            const cgData = await cgResponse.json();
+            const arUSDPrice = cgData.arweave?.usd;
+
+            if (arweaveWinstonPerGiB && arUSDPrice) {
+              // Convert winston to AR, then to USD
+              const arPerGiB = arweaveWinstonPerGiB / 1e12;
+              arweaveUSDPerGiB = arPerGiB * arUSDPrice;
             }
-          } else {
-            console.warn('❌ No gateway URL available from upload service');
+          } catch (err) {
+            console.warn('[GatewayInfo] Arweave network pricing fetch failed:', err);
           }
-          
-          // Step 3: Compare payment processing efficiency 
+
+          // Calculate the premium (Turbo vs raw Arweave)
           let turboFeePercentage = undefined;
-          let gatewayUSDPer1GiB = undefined;
-          let turboUSDPer1GiB = undefined;
-          
-          if (gatewayWincFor1GiB && gatewayWincFor1GiB > 0 && turboWincPer1USD) {
-            
-            // Calculate how much USD you'd need to buy 1 GiB worth of winc
-            // Through Turbo (with 23% payment processing fee)
-            const usdNeededForGatewayWinc_ViaTurbo = gatewayWincFor1GiB / turboWincPer1USD;
-            
-            // Calculate what the rate WOULD BE without Turbo's 23% processing fee
-            const turboWithoutFees = turboWincPer1USD * 1.23; // Add back the ~23% that Turbo removes
-            const theoreticalDirectUSD = gatewayWincFor1GiB / turboWithoutFees;
-            
-            // Show the difference (should be ~23% markup)
-            turboFeePercentage = ((usdNeededForGatewayWinc_ViaTurbo - theoreticalDirectUSD) / theoreticalDirectUSD) * 100;
-            
-            turboUSDPer1GiB = usdNeededForGatewayWinc_ViaTurbo;
-            gatewayUSDPer1GiB = theoreticalDirectUSD;
-            
-            console.log('🧮 Payment processing comparison:', { 
-              gatewayWincFor1GiB,
-              turboWincPer1USD,
-              turboPaymentProcessingUSD: usdNeededForGatewayWinc_ViaTurbo,
-              theoreticalDirectUSD: theoreticalDirectUSD,
-              turboPaymentProcessingFee: turboFeePercentage
-            });
+
+          if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
+            turboFeePercentage = (1 - arweaveUSDPerGiB / turboUSDPerGiB) * 100;
           }
-          
+
           pricingData = {
-            wincPerGiB: gatewayWincFor1GiB?.toString() || '0',
-            usdPerGiB: turboUSDPer1GiB || 0,
-            baseGatewayPrice: gatewayUSDPer1GiB,
+            wincPerGiB: arweaveWinstonPerGiB?.toString() || '0',
+            usdPerGiB: turboUSDPerGiB || 0,
+            baseGatewayPrice: arweaveUSDPerGiB,
             turboFeePercentage: turboFeePercentage,
           };
-          
-          console.log('💾 Final pricing comparison:', pricingData);
+
           setPricingInfo(pricingData);
         } catch (err) {
-          console.warn('❌ Pricing calculation failed:', err);
+          console.warn('Pricing calculation failed:', err);
         }
 
         // Cache the results
@@ -299,8 +352,6 @@ export function useGatewayInfo() {
           timestamp: Date.now(),
         };
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-        console.log('Gateway info cached for 10 minutes');
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch gateway information');
       } finally {
@@ -314,10 +365,10 @@ export function useGatewayInfo() {
   const refresh = async () => {
     setRefreshing(true);
     setError(null);
-    
+
     // Clear cache and refetch
     localStorage.removeItem(cacheKey);
-    
+
     try {
       // Fetch all data fresh
       let uploadData = null;
@@ -366,10 +417,12 @@ export function useGatewayInfo() {
         try {
           const { getARIO } = await import('../utils');
           const io = getARIO();
-          arIOData = await io.getGateway({ address: gatewayData.wallet });
+          arIOData = await io.getGateway({
+            address: gatewayData.wallet,
+          });
           setArIOGatewayInfo(arIOData);
         } catch (err) {
-          console.warn('Gateway not found in AR.IO network or lookup failed:', err);
+          console.warn('Gateway not found in ar.io network or lookup failed:', err);
           // This is expected for some gateways - they might not be registered in AR.IO
         }
       }
@@ -386,53 +439,52 @@ export function useGatewayInfo() {
         }
       }
 
-      // Fetch pricing information (same logic as initial fetch)
+      // Fetch pricing information - compare Turbo vs raw Arweave network cost
       try {
         const turbo = TurboFactory.unauthenticated(turboConfig);
         const gigabyteInBytes = 1073741824; // 1 GiB in bytes
 
-        // Get how much winc you get when you PAY Turbo $10 USD (includes their 23% fee)
-        const turboPaymentRate = await turbo.getWincForFiat({
-          amount: USD(10),
-          promoCodes: []
-        });
-        const turboWincPer10USD = Number(turboPaymentRate.winc);
-        const turboWincPer1USD = turboWincPer10USD / 10;
+        // Step 1: Get Turbo's USD rate for 1 GiB
+        const fiatRates = await turbo.getFiatRates();
+        const turboUSDPerGiB = fiatRates.fiat?.usd || 0;
 
-        // Get gateway winc cost for 1 GiB (direct gateway call)
-        let gatewayWincFor1GiB = undefined;
-        if (uploadData?.gateway) {
-          try {
-            const gatewayHost = uploadData.gateway.replace('https://', '');
-            const response = await fetch(`https://${gatewayHost}/price/${gigabyteInBytes}`);
-            gatewayWincFor1GiB = await response.json();
-          } catch (err) {
-            console.warn('Gateway pricing fetch failed:', err);
+        // Step 2: Get raw Arweave network cost (winston) and AR/USD price
+        let arweaveUSDPerGiB = undefined;
+        let arweaveWinstonPerGiB = undefined;
+
+        try {
+          // Fetch raw Arweave L1 network price (returns winston).
+          // Fetches from turbo-gateway.com
+          arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
+
+          // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
+          // Uses retry with backoff to handle 429 responses.
+          const cgResponse = await fetchWithRetry(
+            'https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd',
+            { maxRetries: 3, initialDelayMs: 1000 }
+          );
+          const cgData = await cgResponse.json();
+          const arUSDPrice = cgData.arweave?.usd;
+
+          if (arweaveWinstonPerGiB && arUSDPrice) {
+            const arPerGiB = arweaveWinstonPerGiB / 1e12;
+            arweaveUSDPerGiB = arPerGiB * arUSDPrice;
           }
+        } catch (err) {
+          console.warn('[GatewayInfo] Arweave network pricing fetch failed:', err);
         }
 
-        // Calculate pricing
+        // Step 3: Calculate the premium
         let turboFeePercentage = undefined;
-        let gatewayUSDPer1GiB = undefined;
-        let turboUSDPer1GiB = undefined;
 
-        if (gatewayWincFor1GiB && gatewayWincFor1GiB > 0 && turboWincPer1USD) {
-          // Calculate how much USD you'd need to buy 1 GiB worth of winc through Turbo
-          const usdNeededForGatewayWinc_ViaTurbo = gatewayWincFor1GiB / turboWincPer1USD;
-
-          // Calculate what the rate WOULD BE without Turbo's ~23% processing fee
-          const turboWithoutFees = turboWincPer1USD * 1.23;
-          const theoreticalDirectUSD = gatewayWincFor1GiB / turboWithoutFees;
-
-          turboFeePercentage = ((usdNeededForGatewayWinc_ViaTurbo - theoreticalDirectUSD) / theoreticalDirectUSD) * 100;
-          turboUSDPer1GiB = usdNeededForGatewayWinc_ViaTurbo;
-          gatewayUSDPer1GiB = theoreticalDirectUSD;
+        if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
+          turboFeePercentage = (1 - arweaveUSDPerGiB / turboUSDPerGiB) * 100;
         }
 
         pricingDataRefresh = {
-          wincPerGiB: gatewayWincFor1GiB?.toString() || '0',
-          usdPerGiB: turboUSDPer1GiB || 0,
-          baseGatewayPrice: gatewayUSDPer1GiB,
+          wincPerGiB: arweaveWinstonPerGiB?.toString() || '0',
+          usdPerGiB: turboUSDPerGiB || 0,
+          baseGatewayPrice: arweaveUSDPerGiB,
           turboFeePercentage: turboFeePercentage,
         };
         setPricingInfo(pricingDataRefresh);
@@ -453,7 +505,6 @@ export function useGatewayInfo() {
         timestamp: Date.now(),
       };
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh gateway information');
     } finally {

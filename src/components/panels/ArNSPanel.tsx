@@ -1,35 +1,48 @@
 import { useState } from 'react';
-import useDebounce from '../../hooks/useDebounce';
-import { Globe, Search, CheckCircle, XCircle, Shield, Zap, ExternalLink, AlertCircle } from 'lucide-react';
-import { useStore } from '../../store/useStore';
+import { Globe, Search, CheckCircle, XCircle, Shield, Zap, ExternalLink } from 'lucide-react';
 import { getARIO } from '../../utils';
 
 export default function ArNSPanel() {
-  const { walletType } = useStore();
   const [nameSearch, setNameSearch] = useState('');
   const [checking, setChecking] = useState(false);
   const [availability, setAvailability] = useState<boolean | null>(null);
+  // The name `availability` actually describes — captured at check time so the
+  // result banner can never be mislabeled by later keystrokes.
+  const [checkedName, setCheckedName] = useState('');
+  const [checkError, setCheckError] = useState<string | null>(null);
 
-  const debouncedSearch = useDebounce(nameSearch);
+  const hasInvalidHyphens = /^-|-$/.test(nameSearch);
 
   const checkAvailability = async () => {
-    if (!debouncedSearch) return;
+    // Read the current input directly (no debounce): the check is button-
+    // triggered, so a debounced value would just let a stale/empty name be
+    // checked and then mislabeled with the current text.
+    const name = nameSearch;
+    if (!name || hasInvalidHyphens) return;
 
     setChecking(true);
+    setAvailability(null);
+    setCheckError(null);
     try {
       const ario = getARIO();
 
-      // Try to resolve the name - if it exists, it's taken
-      const record = await ario.resolveArNSName({ name: debouncedSearch });
-
-      // If we get a record back, the domain is taken
-      if (record) {
-        setAvailability(false);
-      }
+      // A returned record means the name is registered → taken.
+      // getArNSRecord THROWS "ArNS record not found: <name>" when no record
+      // exists (i.e. available). Any *other* thrown error is a gateway/transport
+      // failure — we must not report that as "available" (the old behavior),
+      // which could send a user to register a name that's actually taken.
+      await ario.getArNSRecord({ name });
+      setCheckedName(name);
+      setAvailability(false);
     } catch (error) {
-      // If resolveArNSName throws an error, the domain is likely available
-      console.log('Domain appears to be available:', error);
-      setAvailability(true);
+      const message = error instanceof Error ? error.message : String(error);
+      if (/record not found/i.test(message)) {
+        setCheckedName(name);
+        setAvailability(true);
+      } else {
+        console.error('ArNS availability check failed:', error);
+        setCheckError('Could not check availability right now. Please try again.');
+      }
     } finally {
       setChecking(false);
     }
@@ -43,7 +56,7 @@ export default function ArNSPanel() {
           <Globe className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Search Domains</h3>
+          <h3 className="text-2xl font-extrabold font-heading text-foreground mb-1">Search Domains</h3>
           <p className="text-sm text-foreground/80">
             Search available ArNS names and check registration costs
           </p>
@@ -61,7 +74,7 @@ export default function ArNSPanel() {
             href="https://arns.ar.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-warning hover:opacity-80 transition-colors font-medium"
+            className="flex items-center gap-1 text-xs text-primary hover:opacity-80 transition-colors font-medium"
           >
             <ExternalLink className="w-3 h-3" />
             arns.ar.io
@@ -70,18 +83,17 @@ export default function ArNSPanel() {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <div className="flex items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors">
+            <div className="field flex items-center border border-border/20 rounded-2xl bg-card focus-within:border-primary transition-colors">
               <input
                 type="text"
                 value={nameSearch}
                 onChange={(e) => {
-                  let cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                  // Remove leading and trailing dashes
-                  cleaned = cleaned.replace(/^-+|-+$/g, '');
+                  const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
                   setNameSearch(cleaned);
                   setAvailability(null);
+                  setCheckError(null);
                 }}
-                className="flex-1 p-3 bg-transparent text-foreground font-mono focus:outline-none min-w-0"
+                className="flex-1 p-3 bg-transparent text-foreground font-mono min-w-0"
                 placeholder="my-awesome-app"
               />
               <div className="px-3 text-sm text-foreground/80 font-mono border-l border-border/20 flex-shrink-0">
@@ -91,7 +103,7 @@ export default function ArNSPanel() {
           </div>
           <button
             onClick={checkAvailability}
-            disabled={!nameSearch || checking}
+            disabled={!nameSearch || checking || hasInvalidHyphens}
             className="w-full sm:w-auto px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Search className="w-4 h-4" />
@@ -99,8 +111,24 @@ export default function ArNSPanel() {
           </button>
         </div>
 
+        {hasInvalidHyphens && (
+          <p className="mt-2 text-xs text-warning">
+            ArNS names cannot start or end with a hyphen.
+          </p>
+        )}
+
+        {/* Transport/gateway error — distinct from a definitive availability result */}
+        {checkError && (
+          <div className="mt-4 p-4 rounded-2xl border border-error/20 bg-error/10 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <XCircle className="w-5 h-5 text-error" />
+              <span className="font-semibold text-error">{checkError}</span>
+            </div>
+          </div>
+        )}
+
         {/* Single consolidated availability display */}
-        {availability !== null && nameSearch && (
+        {availability !== null && checkedName && (
           <div className={`mt-4 p-4 rounded-2xl border text-center ${
             availability
               ? 'bg-card border-primary/30'
@@ -110,13 +138,13 @@ export default function ArNSPanel() {
               <>
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <CheckCircle className="w-5 h-5 text-primary" />
-                  <span className="font-semibold text-foreground">"{nameSearch}.ar.io" is available!</span>
+                  <span className="font-semibold text-foreground">"{checkedName}.ar.io" is available!</span>
                 </div>
                 <p className="text-sm text-foreground/80 mb-4">
                   Complete your registration on the official ArNS app
                 </p>
                 <a
-                  href={`https://arns.ar.io/#/register/${nameSearch}`}
+                  href={`https://arns.ar.io/#/register/${checkedName}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-full hover:bg-primary/90 transition-colors"
@@ -129,7 +157,7 @@ export default function ArNSPanel() {
               <>
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <XCircle className="w-5 h-5 text-error" />
-                  <span className="font-semibold text-error">"{nameSearch}.ar.io" is already taken</span>
+                  <span className="font-semibold text-error">"{checkedName}.ar.io" is already taken</span>
                 </div>
                 <p className="text-sm text-foreground/80">Try a different name</p>
               </>
@@ -138,17 +166,6 @@ export default function ArNSPanel() {
         )}
       </div>
 
-      {/* Solana Wallet Warning */}
-      {walletType === 'solana' && availability === true && (
-        <div className="mb-4 p-3 rounded-2xl bg-error/5 border border-error/10">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-error flex-shrink-0" />
-            <p className="text-xs text-error">
-              ArNS domains require an Arweave or Ethereum wallet. You can search names but need to switch wallets to register.
-            </p>
-          </div>
-        </div>
-      )}
       </div>
 
       {/* ArNS Features */}
@@ -159,7 +176,7 @@ export default function ArNSPanel() {
               <Globe className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Human-Readable Names</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Human-Readable Names</h4>
               <p className="text-xs text-foreground/80">
                 Replace complex transaction IDs with memorable domain names for your apps.
               </p>
@@ -173,7 +190,7 @@ export default function ArNSPanel() {
               <Shield className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Permanent Ownership</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Permanent Ownership</h4>
               <p className="text-xs text-foreground/80">
                 Domain ownership is permanently recorded on the Arweave blockchain.
               </p>
@@ -187,9 +204,9 @@ export default function ArNSPanel() {
               <Zap className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Global Propagation</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Global Propagation</h4>
               <p className="text-xs text-foreground/80">
-                Instant propagation across the entire AR.IO Network worldwide.
+                Instant propagation across the entire ar.io network worldwide.
               </p>
             </div>
           </div>
@@ -201,7 +218,7 @@ export default function ArNSPanel() {
               <ExternalLink className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h4 className="font-bold font-heading text-foreground mb-1 text-sm">Update Anytime</h4>
+              <h4 className="font-extrabold font-heading text-foreground mb-1 text-sm">Update Anytime</h4>
               <p className="text-xs text-foreground/80">
                 Change where your domain points without losing ownership.
               </p>
@@ -214,7 +231,7 @@ export default function ArNSPanel() {
       <div className="bg-card rounded-2xl p-6 border border-border/20">
         <div className="flex items-start gap-4">
           <div className="flex-1">
-            <h4 className="text-lg font-bold font-heading text-foreground mb-2">Ready to Register?</h4>
+            <h4 className="text-lg font-extrabold font-heading text-foreground mb-2">Ready to Register?</h4>
             <p className="text-sm text-foreground/80 mb-4">
               For the complete ArNS experience including domain registration, management, and advanced features,
               visit the full ArNS application.

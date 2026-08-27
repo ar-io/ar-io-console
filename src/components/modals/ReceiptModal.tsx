@@ -3,6 +3,7 @@ import { X, ExternalLink, Receipt, FileText, Clock, RefreshCw, CheckCircle, Arch
 import BaseModal from './BaseModal';
 import CopyButton from '../CopyButton';
 import { useUploadStatus, UploadStatus } from '../../hooks/useUploadStatus';
+import { getArweaveUrl } from '../../utils';
 
 interface ReceiptModalProps {
   onClose: () => void;
@@ -83,16 +84,18 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border/20">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            {/* Same scale as ModalHeader; the sheet layout stays. */}
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
               <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-lg sm:text-xl font-bold">Upload Receipt</h3>
-              <p className="text-xs sm:text-sm text-foreground/80">Transaction status and details</p>
+              <h3 className="text-lg font-extrabold">Upload Receipt</h3>
+              <p className="text-xs text-foreground/80">Transaction status and details</p>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 hover:bg-card rounded transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5" />
@@ -162,10 +165,10 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
 
               {/* File Information */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <div className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <FileText className="w-4 h-4 text-primary" />
                   File Information
-                </h4>
+                </div>
 
                 <div className="bg-card rounded-2xl p-4 space-y-3">
                   {/* File Size & Type */}
@@ -213,10 +216,10 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
 
               {/* Transaction IDs - Collapsible for cleaner look */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <div className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Archive className="w-4 h-4 text-primary" />
                   Transaction Details
-                </h4>
+                </div>
 
                 <div className="space-y-3">
                   {/* Data Item ID */}
@@ -257,7 +260,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                   Download Receipt
                 </button>
                 <a
-                  href={`https://arweave.net/${uploadId}`}
+                  href={getArweaveUrl(uploadId)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm hover:bg-primary/90 transition-colors"
@@ -273,7 +276,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
               {/* Receipt JSON */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-foreground">Upload Receipt</h4>
+                  <div className="text-sm font-semibold text-foreground">Upload Receipt</div>
                   <CopyButton textToCopy={JSON.stringify(receipt, null, 2)} />
                 </div>
                 <div className="bg-card rounded-2xl p-3 border border-border/20">
@@ -287,7 +290,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
               {currentStatus && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-foreground">Status Response</h4>
+                    <div className="text-sm font-semibold text-foreground">Status Response</div>
                     <CopyButton textToCopy={JSON.stringify(currentStatus, null, 2)} />
                   </div>
                   <div className="bg-card rounded-2xl p-3 border border-border/20">

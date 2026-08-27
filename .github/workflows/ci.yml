@@ -1,0 +1,55 @@
+name: CI
+
+# Automated checks on every PR and on pushes to the main branches. The repo
+# previously had no PR CI (only the manual deploy workflow), so nothing gated
+# type errors, lint, tests, or a broken build. This runs the same checks the
+# project exposes via npm scripts.
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+# Cancel superseded runs for the same ref (e.g. rapid pushes to a PR branch).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The job only reads the repo — grant the workflow token read-only scope so a
+# compromised step can't push, open PRs, etc.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: type-check · lint · test · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Don't leave the GitHub token in .git/config — nothing here pushes.
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # legacy-peer-deps: @ar.io/sdk is pinned to a prerelease (4.1.0-alpha.6)
+      # required by the ArNS Solana features, but @ar.io/wayfinder-core's
+      # peerOptional @ar.io/sdk ">=4.0.0" won't accept a prerelease under npm's
+      # strict resolver. Also set in .npmrc, so the flag here is belt-and-braces.
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Type-check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

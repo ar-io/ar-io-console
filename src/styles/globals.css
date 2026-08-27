@@ -1,4 +1,4 @@
-/* ar.io App - Global Styles */
+/* ar.io Console - Global Styles */
 
 /* Font imports - Variable fonts for optimal flexibility */
 @import '@fontsource-variable/besley';
@@ -18,9 +18,21 @@
     --color-lavender: 223 214 247;     /* #DFD6F7 - Secondary/decorative */
     --color-foreground: 35 35 45;      /* #23232D - Primary text, dark elements */
     --color-background: 255 255 255;   /* #FFFFFF - Page background */
-    --color-card: 240 240 240;         /* #F0F0F0 - Card surfaces */
+    --color-card: 240 240 240;         /* #F0F0F0 - Card surfaces (never a full-page background) */
     --color-border: 35 35 45;          /* #23232D at 12% opacity for borders */
     --color-code-surface: 35 35 45;    /* #23232D - Code block backgrounds */
+
+    /*
+     * Extended brand palette (ar.io brand kit 2026-08-07).
+     * These are the surface/accent colors the kit added on top of the core five.
+     * Deep Dark + Accent Lavender are a PAIR: accent-lavender is the only accent
+     * with enough contrast on deep-dark (primary reaches only ~1.9:1 there).
+     */
+    --color-deep-dark: 14 10 28;         /* #0e0a1c - Heroes, final CTAs, dark radial sections */
+    --color-accent-lavender: 212 198 255;/* #D4C6FF - Labels/icons/emphasis ON dark surfaces */
+    --color-lavender-wash: 241 236 255;  /* #f1ecff - Product / how-it-works sections */
+    --color-warm-neutral: 246 244 239;   /* #F6F4EF - Softer explanatory + transitional sections */
+    --color-subtle-border: 230 228 239;  /* #E6E4EF - Dividers, list rows, quiet card borders */
 
     /* Semantic status colors */
     --color-success: 22 163 74;        /* #16a34a - Success/positive states */
@@ -30,20 +42,77 @@
   }
 
   body {
-    @apply text-foreground antialiased;
+    @apply bg-background text-foreground antialiased;
     font-family: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', sans-serif;
-    /* Gradient background is applied in Layout.tsx to match ar.io public site pattern */
+    /* White page ground. Colour comes from full-bleed section bands (see the
+       brand kit's section_backgrounds / section_rhythm), never a page-wide
+       tint — Layout.tsx carries the reasoning. */
     min-height: 100vh;
   }
 
-  /* Headings use Besley */
+  /*
+   * Headings use Besley Extra Bold (800).
+   * Brand kit: "h1 through h6 receive Besley 800 from a global rule. They need
+   * no font class." So DON'T add `font-heading font-bold` to a real heading tag
+   * — it silently downgrades the weight to 700. Use `font-heading` only on
+   * non-heading elements that need the display face.
+   */
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Besley Variable', 'Besley', serif;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    text-wrap: balance;
   }
 
-  /* Smooth transitions for interactive elements */
+  /* Smooth transitions for interactive elements (brand duration scale: 150ms
+     colour/opacity, 200ms transform/shadow, 300ms panels/modals). */
   button, a, input, select, textarea {
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+
+  /*
+   * Keyboard focus. Brand kit mandates :focus-visible with an OUTLINE (not a
+   * box-shadow) so the ring follows border-radius, and forbids
+   * `focus:outline-none` without a replacement indicator. This global rule is
+   * the replacement — it means a stray `focus:outline-none` in a component
+   * degrades to "no visible ring" only if it also beats this selector, which
+   * bare utilities do not.
+   */
+  :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+
+  /*
+   * An input wrapped in a bordered "field" container (search pills, the ArNS
+   * name box) must NOT draw its own ring. The input is a bare rectangle inside
+   * a rounded pill, so the outline lands on the inner edge and reads as a stray
+   * highlight around the text rather than around the control.
+   *
+   * The CONTAINER owns the indicator instead, so it follows the pill's radius.
+   * This is the sanctioned way to suppress an input outline: the replacement is
+   * real, visible, and brand-shaped, per the kit's focus rule.
+   *
+   * The :has() is scoped to form CONTROLS deliberately. Most of these wrappers
+   * also hold a button (a clear "x", a submit, a unit toggle), and a bare
+   * :has(:focus-visible) would light the whole container when that button was
+   * focused — a ring around the wrong element, drawn on top of the button's own
+   * ring. Only the field's control should claim the field's outline.
+   */
+  :where(.field):has(:is(input, select, textarea):focus-visible) {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+  .field :where(input, select, textarea):focus-visible {
+    outline: none;
+  }
+
+  /* On deep-dark surfaces primary only reaches ~1.9:1 — use accent lavender. */
+  .on-dark :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])):focus-visible,
+  :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])).on-dark:focus-visible {
+    outline-color: rgb(var(--color-accent-lavender));
   }
 }
 
@@ -61,6 +130,27 @@
   /* Pause animation on hover */
   .carousel-wrapper:hover .carousel-container {
     animation-play-state: paused;
+  }
+
+  /*
+   * Full-bleed section band.
+   *
+   * Page content renders inside Layout's `max-w-site` rail, but the brand kit's
+   * section patterns (lavender wash, warm neutral, dark radial) are SECTION
+   * BACKGROUNDS — they run edge to edge, unlike the framed hero, which is
+   * deliberately inset with a 2.5rem radius. This breaks a child back out to
+   * the full viewport width; put a `max-w-site mx-auto` wrapper inside to bring
+   * the content back onto the rail.
+   *
+   * `100vw` includes the vertical scrollbar, so this overhangs by the scrollbar
+   * width. That is absorbed by `overflow-x: clip` on Layout's root — `clip`
+   * rather than `hidden` specifically because `hidden` would make the root a
+   * scroll container and break the sticky header.
+   */
+  .full-bleed {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
   }
 
   /* Hide scrollbar but keep scrolling functionality */
@@ -87,13 +177,42 @@
    *   - Headings: Besley (font-heading)
    *   - Body: Plus Jakarta Sans (font-body / font-sans)
    *
-   * Sizes & Weights:
-   *   - Hero/Page titles: text-4xl/5xl font-heading font-bold
-   *   - Section headings: text-3xl font-heading font-bold
-   *   - Panel titles: text-2xl font-heading font-bold
-   *   - Card titles: text-xl font-heading font-bold (or text-lg font-bold)
-   *   - Body text: text-base (16px)
-   *   - Secondary/muted text: text-sm text-foreground/80
-   *   - Labels/small: text-xs, often uppercase tracking-wide
+   * Type scale (brand kit `type_scale` — use the standard Tailwind scale, avoid
+   * arbitrary pixel sizes; sub-12px monospace micro-labels are the exception):
+   *   - Hero h1:        text-4xl sm:text-5xl
+   *   - Section h2:     text-3xl sm:text-4xl lg:text-5xl
+   *   - Subsection h3:  text-xl sm:text-2xl
+   *   - Body:           text-base or text-lg, relaxed leading
+   *   - Eyebrow:        text-xs font-semibold uppercase tracking-widest
+   *
+   * Weights: real heading tags (h1-h6) already get Besley 800 from the base
+   * layer — do NOT add `font-bold`, it downgrades them to 700. Use
+   * `font-heading font-extrabold` only on non-heading elements.
+   *
+   * Text hierarchy — mute with OPACITY, never with another gray
+   * (#4A4A58 "Body Gray" is retired):
+   *   - Primary:   text-foreground
+   *   - Secondary: text-foreground/80
+   *   - Body:      text-foreground/70
+   *   - Captions:  text-foreground/60
+   *   - On dark:   text-white/80 body, text-white/70 secondary,
+   *                text-accent-lavender for labels and accents
    */
+}
+
+/*
+ * Brand kit accessibility rule: "Every animated class must be disabled under
+ * prefers-reduced-motion." Global kill switch — covers the carousel, the blink
+ * keyframes, and every Tailwind transition/animate utility in the app, so new
+ * components can't regress this.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

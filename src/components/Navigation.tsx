@@ -2,18 +2,17 @@ import { NavLink } from 'react-router-dom';
 import {
   Home,
   CreditCard,
-  Gift,
   Upload,
   Globe,
-  Share2,
-  Ticket
+  Share2
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
   { path: '/top-up', label: 'Top Up', icon: CreditCard },
-  { path: '/gift', label: 'Gift', icon: Gift },
-  { path: '/redeem', label: 'Redeem', icon: Ticket },
+  // DEPRECATED: Gifting feature disabled
+  // { path: '/gift', label: 'Gift', icon: Gift },
+  // { path: '/redeem', label: 'Redeem', icon: Ticket },
   { path: '/share', label: 'Share', icon: Share2 },
   { path: '/upload', label: 'Upload', icon: Upload },
   { path: '/arns', label: 'ArNS', icon: Globe },

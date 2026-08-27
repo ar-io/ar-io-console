@@ -4,21 +4,28 @@
 
 export interface BannerConfig {
   enabled: boolean;
-  id: string;  // Unique identifier for localStorage tracking
+  id: string; // Unique identifier for localStorage tracking
   message: string;
   link?: {
     text: string;
     href: string;
     external?: boolean;
+    /** React Router navigation state for internal links (external links ignore it). */
+    state?: Record<string, unknown>;
   };
-  variant: 'subtle' | 'prominent';  // subtle = lavender, prominent = purple
+  variant: 'subtle' | 'prominent'; // subtle = lavender, prominent = purple
 }
 
 export const BANNER_CONFIG: BannerConfig = {
   enabled: true,
-  id: 'console-rebrand-feb-2025',
-  message: 'The Turbo app is now the ar.io Console — same tools, new home.',
-  link: undefined,
+  id: 'pages-launch-2026',
+  message: 'New feature! Build a permanent link-in-bio page, live in seconds.',
+  link: {
+    text: 'Try Pages',
+    href: '/pages',
+    state: { create: true },
+    external: false,
+  },
   variant: 'subtle',
 };
 

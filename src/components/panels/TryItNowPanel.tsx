@@ -26,7 +26,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { usePrivy, useLogin, useWallets, useCreateWallet } from '@privy-io/react-auth';
 import { useStore } from '../../store/useStore';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { useFreeUploadLimit, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, isFileFree, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { getArweaveUrl, resolveEthereumAddress, getTurboBalance } from '../../utils';
 import CopyButton from '../CopyButton';
@@ -78,7 +78,8 @@ const getFileIcon = (contentType?: string, fileName?: string) => {
 
 export default function TryItNowPanel() {
   const { address, uploadHistory, addUploadResults, setAddress } = useStore();
-  const freeLimit = useFreeUploadLimit();
+  const { freeUploadLimitBytes: freeLimit, freeTier } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
   const { uploadFile } = useFileUpload();
   const { uploadStatuses, getStatusIcon, checkUploadStatus, statusChecking, formatFileSize } = useUploadStatus();
 
@@ -174,6 +175,7 @@ export default function TryItNowPanel() {
         });
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privyWallets, waitingForWallet]);
 
   // Check if file is previewable (image)
@@ -192,10 +194,18 @@ export default function TryItNowPanel() {
         setPreviewUrl(null);
       }
 
-      // Validate file size against free limit
-      if (!isFileFree(file.size, freeLimit)) {
+      // Validate the file size against the per-item free limit first…
+      if (!(file.size < freeLimit && freeLimit > 0)) {
         setError(
           `File too large. Free uploads are limited to ${formatFreeLimit(freeLimit)}. Try a smaller file.`
+        );
+        return;
+      }
+      // …then the wallet's remaining free allowance (a no-op for an anonymous
+      // visitor, whose IP-tier balance isn't queryable by address).
+      if (!isFileFree(file.size, freeLimit, bytesRemaining)) {
+        setError(
+          `You've used up your free uploads for now. Head to the Upload page to continue.`
         );
         return;
       }
@@ -207,7 +217,7 @@ export default function TryItNowPanel() {
         setPreviewUrl(URL.createObjectURL(file));
       }
     },
-    [freeLimit, previewUrl]
+    [freeLimit, previewUrl, bytesRemaining]
   );
 
   const handleDrop = useCallback(
@@ -328,7 +338,7 @@ export default function TryItNowPanel() {
           <Upload className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Try It Out</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Try It Out</h3>
           <p className="text-sm text-foreground/80">
             Upload a file for free. It will be stored permanently and accessible to anyone with the link.
           </p>
@@ -384,6 +394,9 @@ export default function TryItNowPanel() {
                 </p>
                 <p className="text-sm text-foreground/80">
                   Max file size: <span className="text-foreground font-medium">{formatFreeLimit(freeLimit)}</span>
+                  {freeTier.lifetimeBytes > 0 && (
+                    <span className="block mt-1 text-xs text-foreground/60">{formatFreeLimit(freeTier.lifetimeBytes)} lifetime free limit</span>
+                  )}
                 </p>
               </div>
               <input
@@ -522,9 +535,9 @@ export default function TryItNowPanel() {
           <div className="w-12 h-12 bg-foreground/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Upload className="w-6 h-6 text-foreground/80" />
           </div>
-          <h4 className="text-lg font-semibold font-heading text-foreground mb-2">Free Uploads Not Available</h4>
+          <h4 className="text-lg text-foreground mb-2">Free Uploads Not Available</h4>
           <p className="text-sm text-foreground/80 max-w-md mx-auto">
-            The current bundler doesn't support free uploads. Connect a wallet to purchase credits,
+            The current bundler doesn't support free uploads. Sign in to purchase credits,
             or try a different gateway that offers free uploads.
           </p>
         </div>
@@ -535,7 +548,7 @@ export default function TryItNowPanel() {
         <div className="bg-card rounded-2xl border border-border/20">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border/20">
-            <h3 className="font-bold font-heading text-foreground flex items-center gap-2">
+            <h3 className="font-extrabold font-heading text-foreground flex items-center gap-2">
               <Upload className="w-5 h-5 text-foreground" />
               Your Uploads ({userUploads.length})
             </h3>
@@ -727,7 +740,7 @@ export default function TryItNowPanel() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-foreground group-hover:text-foreground">
-              What is the AR.IO Network?
+              What is the ar.io Network?
             </p>
             <p className="text-xs text-foreground/80">Learn about the permanent cloud - decentralized storage and hosting that lasts forever</p>
           </div>

@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { getTurboBalance, wincToCredits } from '../../utils';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
-import { useFreeUploadLimit, formatFreeLimit } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import Faq from '../Faq';
 
 export default function InfoPanel() {
-  const { address, walletType } = useStore();
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { address, walletType, x402OnlyMode } = useStore();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — don't advertise one.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const freeSummary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const wincForOneGiB = useWincForOneGiB();
@@ -31,7 +35,7 @@ export default function InfoPanel() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-2">Your Account</h2>
+        <h2 className="text-2xl font-extrabold mb-2">Your Account</h2>
         <p className="text-foreground/80">Manage credits, upload files, and more</p>
       </div>
 
@@ -68,17 +72,19 @@ export default function InfoPanel() {
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl p-4">
-          <div className="text-sm text-foreground/80 mb-1">Free Tier</div>
-          <div className="font-semibold">
-            {freeUploadLimitBytes > 0 ? `Files under ${formatFreeLimit(freeUploadLimitBytes)}` : 'No free tier'}
+        {freeSummary && (
+          <div className="bg-card rounded-2xl p-4">
+            <div className="text-sm text-foreground/80 mb-1">Free Tier</div>
+            <div className={`font-semibold ${bytesRemaining === 0 ? 'text-foreground/60' : ''}`}>
+              {freeSummary}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Resources */}
       <div className="mt-8 pt-8 border-t border-border/20">
-        <h3 className="font-semibold mb-4">Resources</h3>
+        <h3 className="mb-4">Resources</h3>
         <div className="space-y-2">
           <a
             href="https://docs.ardrive.io/docs/turbo/turbo-sdk/"

@@ -1,21 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
+import { useState, useMemo, useEffect } from 'react';
+import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useTurboCapture } from '../../hooks/useTurboCapture';
-import { useFreeUploadLimit, isFileFree } from '../../hooks/useFreeUploadLimit';
+import { useFreeUploadLimit, isFileFree, useFreeStatus } from '../../hooks/useFreeUploadLimit';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { wincPerCredit, APP_NAME, APP_VERSION } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Camera, CheckCircle, XCircle, Shield, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, Link, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, ExternalLink, RefreshCw, Receipt, ChevronDown, ChevronUp, Archive, Clock, HelpCircle, MoreVertical, ArrowRight, Copy, Globe, AlertTriangle, Link, CreditCard, Wallet, FileText, Image, Film, Music, FileCode, File } from 'lucide-react';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import ReceiptModal from '../modals/ReceiptModal';
 import AssignDomainModal from '../modals/AssignDomainModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
 import BaseModal from '../modals/BaseModal';
-import { getArweaveUrl } from '../../utils';
+import { getArweaveUrl, promptSignIn } from '../../utils';
 import UploadProgressSummary from '../UploadProgressSummary';
 import { CryptoPaymentDetails } from '../CryptoPaymentDetails';
 import { JitTokenSelector } from '../JitTokenSelector';
@@ -73,10 +74,26 @@ export default function CapturePanel() {
   } = useStore();
 
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
 
   // Capture state
   const [urlInput, setUrlInput] = useState('');
+
+  // Suggestion for the "get a name" link: the hostname of the page being
+  // captured, minus www/TLD — capturing example.com/blog suggests "example".
+  // Derived, never auto-selected; the user still chooses.
+  const suggestedArnsName = useMemo(() => {
+    const raw = urlInput.trim();
+    if (!raw) return undefined;
+    try {
+      const host = new URL(raw.startsWith('http') ? raw : `https://${raw}`).hostname;
+      return host.replace(/^www\./, '').split('.')[0] || undefined;
+    } catch {
+      return undefined;
+    }
+  }, [urlInput]);
   const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const { capture, isCapturing, error: captureError, result: captureResult, captureFile } = useTurboCapture();
 
@@ -87,6 +104,7 @@ export default function CapturePanel() {
   const [showUndername, setShowUndername] = useState(false);
   const [customTTL, setCustomTTL] = useState<number | undefined>(undefined);
   const { updateArNSRecord } = useOwnedArNSNames();
+  const { hasArNSAccess } = useLinkedSolanaWallet();
 
   // Upload state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -120,6 +138,7 @@ export default function CapturePanel() {
   });
 
   const wincForOneGiB = useWincForOneGiB();
+  const perDataItemFeeWinc = usePerDataItemFee();
   const {
     uploadMultipleFiles,
     uploading,
@@ -147,7 +166,7 @@ export default function CapturePanel() {
   } = useUploadStatus();
 
   // Calculate billable file size for x402 pricing (exclude free files)
-  const billableFileSize = captureFile && !isFileFree(captureFile.size, freeUploadLimitBytes)
+  const billableFileSize = captureFile && !isFileFree(captureFile.size, effectiveFreeLimit, bytesRemaining)
     ? captureFile.size
     : 0;
 
@@ -248,18 +267,21 @@ export default function CapturePanel() {
   };
 
   const calculateUploadCost = (bytes: number) => {
-    if (isFileFree(bytes, freeUploadLimitBytes)) return 0; // Free tier
+    if (isFileFree(bytes, effectiveFreeLimit, bytesRemaining)) return 0; // Free tier
     if (!wincForOneGiB) return null;
 
     const gibSize = bytes / (1024 * 1024 * 1024);
-    const wincCost = gibSize * Number(wincForOneGiB);
+    let wincCost = gibSize * Number(wincForOneGiB);
+    if (perDataItemFeeWinc) {
+      wincCost += Number(perDataItemFeeWinc);
+    }
     const creditCost = wincCost / wincPerCredit;
     return creditCost;
   };
 
   const handleCapture = async () => {
     if (!address) {
-      setCaptureMessage({ type: 'error', text: 'Please connect your wallet to capture screenshots' });
+      setCaptureMessage({ type: 'error', text: 'Please sign in to capture screenshots' });
       return;
     }
 
@@ -434,20 +456,10 @@ export default function CapturePanel() {
           <Camera className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-2xl font-heading font-bold text-foreground mb-1">Capture Page</h3>
+          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Capture Page</h3>
           <p className="text-sm text-foreground/80">Capture and permanently archive any webpage to Arweave</p>
         </div>
       </div>
-
-      {/* Connection Warning */}
-      {!address && (
-        <div className="mb-4 sm:mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-warning" />
-            <span className="text-sm text-warning">Connect your wallet to capture pages</span>
-          </div>
-        </div>
-      )}
 
       {/* Capture Message */}
       {captureMessage && (
@@ -488,7 +500,7 @@ export default function CapturePanel() {
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="https://example.com"
-              className="w-full px-4 py-3 bg-card border border-border/20 rounded-2xl text-foreground placeholder-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
+              className="w-full px-4 py-3 bg-card border border-border/20 rounded-2xl text-foreground placeholder-foreground/50 focus:border-primary/50 transition-colors"
               disabled={isCapturing}
             />
             <p className="mt-2 text-xs text-foreground/80">
@@ -498,9 +510,10 @@ export default function CapturePanel() {
         </div>
       )}
 
-      {/* ArNS Association Panel - Show for Arweave/Ethereum wallets when not uploading and URL is valid */}
-      {!uploading && hasValidUrl && (walletType === 'arweave' || walletType === 'ethereum') && (
+      {/* ArNS Association Panel - Show for Solana wallets when not uploading and URL is valid */}
+      {!uploading && hasValidUrl && hasArNSAccess && (
         <ArNSAssociationPanel
+          suggestedName={suggestedArnsName}
           enabled={arnsEnabled}
           onEnabledChange={setArnsEnabled}
           selectedName={selectedArnsName}
@@ -517,12 +530,21 @@ export default function CapturePanel() {
       {/* Capture Button - After ArNS config, only show when URL is valid */}
       {!uploading && hasValidUrl && (
         <button
-          onClick={handleCapture}
-          disabled={isCapturing || !address || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername)}
+          onClick={address ? handleCapture : promptSignIn}
+          disabled={!!address && (isCapturing || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
           className="w-full py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          <Camera className="w-5 h-5" />
-          {isCapturing ? 'Capturing...' : 'Capture & Upload'}
+          {address ? (
+            <>
+              <Camera className="w-5 h-5" />
+              {isCapturing ? 'Capturing...' : 'Capture & Upload'}
+            </>
+          ) : (
+            <>
+              <Wallet className="w-5 h-5" />
+              Sign in to capture pages
+            </>
+          )}
         </button>
       )}
 
@@ -694,15 +716,14 @@ export default function CapturePanel() {
                             >
                               <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                             </button>
-                            {(walletType === 'arweave' || walletType === 'ethereum') && (
-                              <button
-                                onClick={() => setShowAssignDomainModal(result.id)}
-                                className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
-                                title="Assign Domain"
-                              >
-                                <Globe className="w-4 h-4" />
-                              </button>
-                            )}
+                            {/* Assign Domain — modal handles wallet linking/reconnect */}
+                            <button
+                              onClick={() => setShowAssignDomainModal(result.id)}
+                              className="p-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                              title="Assign ArNS Domain"
+                            >
+                              <Globe className="w-4 h-4" />
+                            </button>
                             <a
                               href={getArweaveUrl(result.id, result.dataCaches)}
                               target="_blank"
@@ -784,18 +805,17 @@ export default function CapturePanel() {
                                       <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
                                       Check Status
                                     </button>
-                                    {(walletType === 'arweave' || walletType === 'ethereum') && (
-                                      <button
-                                        onClick={() => {
-                                          setShowAssignDomainModal(result.id);
-                                          close();
-                                        }}
-                                        className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
-                                      >
-                                        <Globe className="w-4 h-4" />
-                                        Assign Domain
-                                      </button>
-                                    )}
+                                    {/* Assign Domain — modal handles wallet linking/reconnect */}
+                                    <button
+                                      onClick={() => {
+                                        setShowAssignDomainModal(result.id);
+                                        close();
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-foreground/80 hover:bg-card transition-colors flex items-center gap-2"
+                                    >
+                                      <Globe className="w-4 h-4" />
+                                      Assign Domain
+                                    </button>
                                     <a
                                       href={getArweaveUrl(result.id, result.dataCaches)}
                                       target="_blank"
@@ -849,14 +869,21 @@ export default function CapturePanel() {
                         <div className="flex items-center gap-2 text-sm text-foreground/80">
                           <span>
                             {(() => {
-                              if (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes)) {
-                                return <span className="text-success">FREE</span>;
-                              } else if (wincForOneGiB && result.winc) {
-                                const credits = Number(result.winc) / wincPerCredit;
-                                return `${credits.toFixed(6)} Credits`;
-                              } else {
-                                return 'Unknown Cost';
+                              // The receipt's winc is the immutable ground truth for a
+                              // completed capture: a small file that used up the free
+                              // allowance was billed (winc > 0) and must not read FREE.
+                              // Fall back to the fixed size cap only for legacy records
+                              // that predate winc capture (never the mutable allowance).
+                              const winc = result.winc ? Number(result.winc) : NaN;
+                              if (Number.isFinite(winc) && winc > 0) {
+                                // Converting a recorded winc to credits needs only the
+                                // wincPerCredit constant — not the live storage rate.
+                                return `${(winc / wincPerCredit).toFixed(6)} Credits`;
                               }
+                              if ((Number.isFinite(winc) && winc === 0) || (result.fileSize && isFileFree(result.fileSize, freeUploadLimitBytes))) {
+                                return <span className="text-success">FREE</span>;
+                              }
+                              return 'Unknown Cost';
                             })()}
                           </span>
                           <span>•</span>
@@ -904,6 +931,7 @@ export default function CapturePanel() {
       {/* Assign Domain Modal */}
       {showAssignDomainModal && (
         <AssignDomainModal
+          suggestedName={suggestedArnsName}
           onClose={() => setShowAssignDomainModal(null)}
           manifestId={showAssignDomainModal}
           onSuccess={(arnsName: string, undername?: string, transactionId?: string) => {
@@ -929,7 +957,7 @@ export default function CapturePanel() {
                 <Camera className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
-                <h3 className="text-lg font-heading font-bold text-foreground">Ready to Upload</h3>
+                <h3 className="text-lg font-heading font-extrabold text-foreground">Ready to Upload</h3>
                 <p className="text-xs text-foreground/80">Confirm screenshot upload details</p>
               </div>
             </div>
@@ -974,7 +1002,9 @@ export default function CapturePanel() {
             {(() => {
               const creditsNeeded = typeof totalCost === 'number' ? Math.max(0, totalCost - creditBalance) : 0;
               const hasSufficientCredits = creditsNeeded === 0;
-              const canUseJit = selectedJitToken && supportsJitPayment(selectedJitToken);
+              // Arweave wallets can't pay JIT/crypto (no supported token), so never
+              // offer the crypto tab for them — it would only fail at signing.
+              const canUseJit = walletType !== 'arweave' && selectedJitToken && supportsJitPayment(selectedJitToken);
 
               // Check if capture is completely free
               const isFreeCapture = typeof totalCost === 'number' && totalCost === 0;

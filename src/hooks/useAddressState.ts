@@ -99,7 +99,7 @@ const useAddressState = (): AddressState | undefined => {
           address,
           token: 'solana',
           disconnect: clearAddress, // Use store's clearAddress
-          explorerUrl: `https://solscan.io/address/${address}`,
+          explorerUrl: `https://solscan.io/account/${address}`,
           submitNativeTransaction: async (amount: number, toAddress: string) => {
             try {
               const publicKey = new PublicKey(address);
@@ -109,7 +109,7 @@ const useAddressState = (): AddressState | undefined => {
               const sendSolInstruction = SystemProgram.transfer({
                 fromPubkey: publicKey,
                 toPubkey: recipientPubKey,
-                lamports: amount * LAMPORTS_PER_SOL,
+                lamports: Math.round(amount * LAMPORTS_PER_SOL),
               });
 
               transaction.add(sendSolInstruction);

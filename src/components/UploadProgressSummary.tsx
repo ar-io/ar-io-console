@@ -17,6 +17,8 @@ export interface ActiveUpload {
   name: string;
   progress: number;
   size: number;
+  /** True once bytes are fully sent and the bundler is finalizing the upload. */
+  finalizing?: boolean;
 }
 
 export interface RecentFile {
@@ -117,7 +119,7 @@ export default function UploadProgressSummary({
             <FileText className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h4 className="text-lg font-bold text-foreground mb-1">Upload Progress</h4>
+            <h4 className="text-lg font-extrabold text-foreground mb-1">Upload Progress</h4>
             <p className="text-sm text-foreground/80">
               {uploadedCount} of {totalCount} files ({progressPercentage}%)
             </p>
@@ -179,7 +181,7 @@ export default function UploadProgressSummary({
       {activeUploads.length > 0 && (
         <div className="bg-card rounded-2xl border border-border/20 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <h4 className="text-sm font-extrabold text-foreground flex items-center gap-2">
               <Loader2 className="w-4 h-4 text-primary animate-spin" />
               Uploading Files
             </h4>
@@ -235,9 +237,11 @@ export default function UploadProgressSummary({
                     </div>
                     <div className="flex justify-between text-xs text-foreground/80">
                       <span>
-                        {activeUploads.length > 1
-                          ? `Processing batch (${activeUploads.length} concurrent)`
-                          : `${displayFile.progress || 0}% complete`
+                        {displayFile.finalizing
+                          ? 'Finalizing…'
+                          : activeUploads.length > 1
+                            ? `Processing batch (${activeUploads.length} concurrent)`
+                            : `${displayFile.progress || 0}% complete`
                         }
                       </span>
                       <span>{uploadedCount} of {totalCount} complete</span>
@@ -257,7 +261,7 @@ export default function UploadProgressSummary({
             onClick={() => setShowErrors(!showErrors)}
             className="w-full flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
           >
-            <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <h4 className="text-sm font-extrabold text-foreground flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-error" />
               Upload Errors ({errors.length})
             </h4>

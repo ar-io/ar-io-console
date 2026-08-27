@@ -3,6 +3,8 @@ import { useStore } from '../store/useStore';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { clearEthereumTurboClientCache } from './useEthereumTurboClient';
+import { clearX402SignerCache } from './useX402Upload';
+import { canRestoreSolanaSession } from '../utils/solanaSessionRestore';
 
 /**
  * Hook that listens for wallet account changes across all supported wallet types
@@ -19,7 +21,7 @@ import { clearEthereumTurboClientCache } from './useEthereumTurboClient';
  * 3. Header component automatically refetches the balance due to address change
  */
 export function useWalletAccountListener() {
-  const { address, walletType, setAddress, clearAddress, clearAllPaymentState } = useStore();
+  const { address, walletType, solanaWalletName, setAddress, clearAddress, clearAllPaymentState } = useStore();
 
   // Listen for Ethereum account changes (RainbowKit, MetaMask, Privy embedded wallet)
   const { address: ethAddress, isConnected: ethIsConnected, connector } = useAccount();
@@ -29,21 +31,20 @@ export function useWalletAccountListener() {
 
   // Handle RainbowKit/Wagmi session restoration on page load
   // When user refreshes, wagmi auto-reconnects and we need to update our store
-  // Only restore if store is empty OR already on Ethereum - don't overwrite Solana/Arweave
+  // Only restore if store already has walletType === 'ethereum' — don't auto-connect
+  // on fresh loads or after clearing a stale Solana session
   useEffect(() => {
     if (
       ethIsConnected &&
       ethAddress &&
-      (!address || walletType === 'ethereum') &&
+      walletType === 'ethereum' &&
       ethAddress !== address
     ) {
-      // Session restored from RainbowKit/Wagmi - update our store
-      // Only when: store is empty, or already on Ethereum with different address
-      console.log('[Wallet Listener] Session restored/updated from RainbowKit:', { from: address, to: ethAddress });
+      console.log('[Wallet Listener] Ethereum session restored/updated:', { from: address, to: ethAddress });
 
-      // Only clear cache if there was a previous address (actual switch, not initial load)
       if (address) {
         clearEthereumTurboClientCache();
+        clearX402SignerCache();
       }
 
       setAddress(ethAddress, 'ethereum');
@@ -58,6 +59,7 @@ export function useWalletAccountListener() {
 
       // Clear cached Turbo clients since we have a new wallet
       clearEthereumTurboClientCache();
+      clearX402SignerCache();
 
       // Update to new address
       setAddress(ethAddress, 'ethereum');
@@ -77,31 +79,97 @@ export function useWalletAccountListener() {
       console.log('[Wallet Listener] Ethereum connector changed:', { from: prevConnectorRef.current, to: currentConnectorId });
       // Clear cached Turbo clients when switching wallet apps
       clearEthereumTurboClientCache();
+      clearX402SignerCache();
     }
 
     prevConnectorRef.current = currentConnectorId;
   }, [connector?.uid, walletType]);
 
   // Listen for Solana wallet changes
-  const { publicKey: solanaPublicKey } = useWallet();
+  // Use publicKey as source of truth — solanaConnected can be stale when
+  // Standard Wallet adapters auto-approve (connect() returns early without
+  // emitting 'connect' event, so WalletProviderBase never calls setConnected(true)).
+  const { publicKey: solanaPublicKey, wallets: solanaWallets } = useWallet();
 
+  // Track whether a Solana wallet has been active in this session.
+  const solanaEverConnectedRef = useRef(false);
+  if (solanaPublicKey) {
+    solanaEverConnectedRef.current = true;
+  }
+
+  // Handle Solana connection: update store when publicKey appears.
+  // Only update the primary session for Solana-primary users.
+  // For linked wallets (Arweave/Ethereum primary), useLinkedSolanaWallet manages its own state.
   useEffect(() => {
-    if (walletType === 'solana' && solanaPublicKey) {
+    if (solanaPublicKey && walletType === 'solana') {
       const newAddress = solanaPublicKey.toString();
       if (newAddress !== address) {
-        console.log('[Wallet Listener] Solana address changed:', { from: address, to: newAddress });
-        console.warn('[Wallet Listener] IMPORTANT: Wallet account has switched. Clearing payment state to prevent wrong account usage.');
-
-        // Update to new address
+        console.log('[Wallet Listener] Solana wallet connected (primary):', { from: address, to: newAddress });
+        if (address) {
+          clearAllPaymentState();
+        }
         setAddress(newAddress, 'solana');
-
-        // Clear all payment state to prevent using wrong account's payment flows
-        clearAllPaymentState();
-
-        // Note: Balance will be automatically refetched by Header component's useEffect
       }
     }
   }, [solanaPublicKey, address, walletType, setAddress, clearAllPaymentState]);
+
+  // Handle Solana disconnection: clear store when publicKey disappears.
+  // Only runs after a wallet has been active at least once in this session,
+  // so it won't fire on page load when the store has a stale Solana session.
+  // Skipped during wallet switching (select() disconnects old wallet before connecting new one).
+  useEffect(() => {
+    if (
+      !solanaPublicKey &&
+      walletType === 'solana' &&
+      address &&
+      solanaEverConnectedRef.current &&
+      !(window as any).__SOLANA_SWITCHING__
+    ) {
+      console.log('[Wallet Listener] Solana wallet disconnected, clearing session');
+      clearAllPaymentState();
+      clearAddress();
+    }
+  }, [solanaPublicKey, walletType, address, clearAllPaymentState, clearAddress]);
+
+  // Clear a stale Solana session on page load — but only one that cannot be
+  // restored.
+  //
+  // With autoConnect=false the adapter never reconnects by itself, so a
+  // persisted primary Solana session starts with no publicKey. This used to
+  // sign the user out unconditionally, on every single reload. It now defers to
+  // useLinkedSolanaWallet's auto-reconnect whenever that has something to work
+  // with: a remembered adapter name that is actually installed.
+  //
+  // Sessions saved before `solanaWalletName` existed have no name to reconnect
+  // with and are still cleared — one final sign-out, then it stops.
+  //
+  // If the reconnect is attempted and fails, the disconnect effect above owns
+  // the cleanup (it is latched on solanaEverConnectedRef, so it only fires once
+  // a wallet has genuinely been live).
+  useEffect(() => {
+    const { action } = canRestoreSolanaSession({
+      walletType,
+      address,
+      solanaPublicKey: solanaPublicKey ? solanaPublicKey.toString() : null,
+      solanaWalletName,
+      // Exclude only definitively-absent adapters. Filtering to 'Installed'
+      // alone would sign out users whose wallet is merely 'Loadable' — which
+      // is the very bug this change fixes — while accepting every configured
+      // wallet would defer forever for someone who uninstalled theirs.
+      installedWalletNames: solanaWallets
+        .filter((w) => w.readyState !== 'NotDetected')
+        .map((w) => w.adapter.name),
+    });
+    if (action === 'none') return;
+    if (action === 'defer-to-reconnect') {
+      console.log('[Wallet Listener] Deferring to auto-reconnect for', solanaWalletName);
+      return;
+    }
+    console.log('[Wallet Listener] Clearing unrestorable Solana session from previous page load');
+    clearAddress();
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Listen for ArConnect (Wander/ArConnect) wallet switches
   useEffect(() => {
@@ -163,6 +231,7 @@ export function useWalletAccountListener() {
 
         // Clear cached Turbo clients since we have a new wallet
         clearEthereumTurboClientCache();
+        clearX402SignerCache();
 
         // Update to new address
         setAddress(accounts[0], 'ethereum');

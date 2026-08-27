@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { X, ExternalLink } from 'lucide-react';
 import { BANNER_CONFIG, DISMISSED_BANNERS_KEY } from '../config/banner';
 
@@ -43,25 +44,35 @@ export default function Banner() {
           : 'bg-primary text-white'
       }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 relative">
-        <p className="text-sm font-medium text-center pr-8">
+      <div className="max-w-site mx-auto flex items-center justify-center gap-3 relative">
+        <p className={`text-sm text-center pr-8 ${isSubtle ? 'font-medium' : 'font-semibold'}`}>
           {BANNER_CONFIG.message}
           {BANNER_CONFIG.link && (
             <>
               {' '}
-              <a
-                href={BANNER_CONFIG.link.href}
-                target={BANNER_CONFIG.link.external ? '_blank' : undefined}
-                rel={BANNER_CONFIG.link.external ? 'noopener noreferrer' : undefined}
-                className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 transition-opacity ${
-                  isSubtle ? 'text-primary' : 'text-white'
-                }`}
-              >
-                {BANNER_CONFIG.link.text}
-                {BANNER_CONFIG.link.external && (
+              {BANNER_CONFIG.link.external ? (
+                <a
+                  href={BANNER_CONFIG.link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 transition-opacity ${
+                    isSubtle ? 'text-primary' : 'text-white'
+                  }`}
+                >
+                  {BANNER_CONFIG.link.text}
                   <ExternalLink className="w-3 h-3" />
-                )}
-              </a>
+                </a>
+              ) : (
+                <Link
+                  to={BANNER_CONFIG.link.href}
+                  state={BANNER_CONFIG.link.state}
+                  className={`inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-80 transition-opacity ${
+                    isSubtle ? 'text-primary' : 'text-white'
+                  }`}
+                >
+                  {BANNER_CONFIG.link.text}
+                </Link>
+              )}
             </>
           )}
         </p>

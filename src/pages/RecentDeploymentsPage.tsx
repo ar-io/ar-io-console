@@ -27,7 +27,7 @@ export default function RecentDeploymentsPage() {
   const wincForOneGiB = useWincForOneGiB();
 
   // Fetch and track the bundler's free upload limit
-  const freeUploadLimitBytes = useFreeUploadLimit();
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
 
   // Memoize deployment grouping to prevent lag - exact same as DeploySitePanel
   const deploymentGroups = useMemo(() => {
@@ -254,7 +254,7 @@ export default function RecentDeploymentsPage() {
                 <Zap className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-heading font-bold text-2xl text-foreground mb-1">Recent Deployments</h3>
+                <h3 className="font-heading font-extrabold text-2xl text-foreground mb-1">Recent Deployments</h3>
                 <p className="text-sm text-foreground/80">View and manage all your site deployments</p>
               </div>
             </div>
@@ -263,7 +263,7 @@ export default function RecentDeploymentsPage() {
             <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/20 p-6 mb-6">
               <div className="bg-card/50 rounded-2xl p-6 text-center border border-border/20">
                 <Globe className="w-12 h-12 text-foreground/80 mx-auto mb-4" />
-                <h3 className="font-heading font-bold text-foreground mb-2">No Deployments Yet</h3>
+                <h3 className="font-heading font-extrabold text-foreground mb-2">No Deployments Yet</h3>
                 <p className="text-sm text-foreground/80 mb-4">Deploy your first site to get started</p>
                 <button
                   onClick={() => navigate('/deploy')}
@@ -285,7 +285,7 @@ export default function RecentDeploymentsPage() {
               <Zap className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-heading font-bold text-2xl text-foreground mb-1">Recent Deployments</h3>
+              <h3 className="font-heading font-extrabold text-2xl text-foreground mb-1">Recent Deployments</h3>
               <p className="text-sm text-foreground/80">View and manage all your site deployments</p>
             </div>
           </div>
@@ -295,7 +295,7 @@ export default function RecentDeploymentsPage() {
             {/* Header with better description */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="font-heading font-bold text-lg text-foreground">Your Site Deployments</h3>
+                <h3 className="font-heading font-extrabold text-lg text-foreground">Your Site Deployments</h3>
                 <p className="text-sm text-foreground/80">
                   {Object.keys(deploymentGroups).length} site{Object.keys(deploymentGroups).length !== 1 ? 's' : ''} deployed
                 </p>

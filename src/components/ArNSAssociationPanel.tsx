@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Globe, ExternalLink, AlertCircle, Loader2, RefreshCw, ChevronDown, Check, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Globe, ExternalLink, Loader2, RefreshCw, ChevronDown, Check, ChevronRight, Link as LinkIcon, Wallet } from 'lucide-react';
 import { Combobox } from '@headlessui/react';
 import { useOwnedArNSNames } from '../hooks/useOwnedArNSNames';
+import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
+import LinkSolanaWalletModal from './modals/LinkSolanaWalletModal';
 import { sanitizeUndername, hasInvalidCharacters } from '../utils/undernames';
+import ArNSGetNameLinks from './ArNSGetNameLinks';
+import { useStore } from '../store/useStore';
+import { promptSignIn } from '../utils';
 
 interface ArNSAssociationPanelProps {
   enabled: boolean;
@@ -15,6 +20,13 @@ interface ArNSAssociationPanelProps {
   onShowUndernameChange?: (show: boolean) => void;
   customTTL?: number;
   onCustomTTLChange?: (ttl: number | undefined) => void;
+  /** Render without the gradient card wrapper + icon/subtitle — for hosts (e.g.
+   *  the Pages editor) that already provide a section card + heading. */
+  bare?: boolean;
+  /** What the user is already naming (site name, page title). Prefills the
+   *  register search via ?q= so "get a name" lands on a live availability check
+   *  rather than an empty box. */
+  suggestedName?: string;
 }
 
 export default function ArNSAssociationPanel({
@@ -27,9 +39,13 @@ export default function ArNSAssociationPanel({
   showUndername: externalShowUndername,
   onShowUndernameChange,
   customTTL: _customTTL, // eslint-disable-line @typescript-eslint/no-unused-vars
-  onCustomTTLChange
+  onCustomTTLChange,
+  bare = false,
+  suggestedName,
 }: ArNSAssociationPanelProps) {
-  const { names, loading, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
+  const { names, loading, fetchError, loadingDetails, fetchOwnedNames, fetchNameDetails } = useOwnedArNSNames();
+  const { isSolanaConnected, needsLinking, promptReconnect, showLinkModal, setShowLinkModal } = useLinkedSolanaWallet();
+  const address = useStore((s) => s.address);
   const [internalShowUndername, setInternalShowUndername] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [ttlMode, setTTLMode] = useState<'existing' | 'custom'>('existing');
@@ -79,10 +95,10 @@ export default function ArNSAssociationPanel({
   };
 
   useEffect(() => {
-    if (enabled && names.length === 0 && !loading) {
+    if (enabled && names.length === 0 && !loading && !fetchError) {
       fetchOwnedNames();
     }
-  }, [enabled, names.length, loading, fetchOwnedNames]);
+  }, [enabled, names.length, loading, fetchError, fetchOwnedNames]);
 
   // Auto-enable undername if selectedUndername exists
   useEffect(() => {
@@ -92,13 +108,17 @@ export default function ArNSAssociationPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUndername]);
 
-  // Clear undername when ArNS name changes
+  // Clear the undername only when the user actually SWITCHES to a different name —
+  // never on mount. The Domain section mounts lazily (on expand), so clearing on
+  // mount would wipe a hydrated undername when editing an existing `blog_myname`
+  // page, silently republishing it to the bare `myname`.
+  const prevSelectedNameRef = useRef(selectedName);
   useEffect(() => {
-    if (selectedName) {
-      // Reset undername selection when switching names
+    if (prevSelectedNameRef.current !== selectedName) {
       onUndernameChange('');
       setShowUndername(false);
     }
+    prevSelectedNameRef.current = selectedName;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedName, onUndernameChange]);
 
@@ -122,32 +142,114 @@ export default function ArNSAssociationPanel({
       setCustomTTLInput(currentTTL.toString());
     }
   }, [currentTTL]);
-  return (
-    <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-6 mb-6">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-          <Globe className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <input
-              type="checkbox"
-              id="arns-enabled"
-              checked={enabled}
-              onChange={(e) => onEnabledChange(e.target.checked)}
-              className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white transition-colors"
-            />
-            <label htmlFor="arns-enabled" className="font-medium text-foreground cursor-pointer">
-              Add domain name
-            </label>
-          </div>
-          <p className="text-sm text-foreground/80">
-            Give your site a friendly, smart domain name
-          </p>
-        </div>
-      </div>
+  const canUseArNS = isSolanaConnected && !needsLinking;
 
-      {enabled && (
+  // While the "no names yet" nudge is showing, refetch when the user returns to the
+  // tab — a name they just registered on arns.ar.io then shows up without them
+  // having to find the manual refresh.
+  useEffect(() => {
+    if (!(enabled && canUseArNS && names.length === 0)) return;
+    const onFocus = () => fetchOwnedNames(true);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [enabled, canUseArNS, names.length, fetchOwnedNames]);
+
+  return (
+    <div className={bare ? '' : 'bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-6 mb-6'}>
+      {bare ? (
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            type="checkbox"
+            id="arns-enabled"
+            checked={enabled}
+            onChange={(e) => onEnabledChange(e.target.checked)}
+            disabled={!canUseArNS}
+            className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+          />
+          <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
+            Add a domain
+          </label>
+        </div>
+      ) : (
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <input
+                type="checkbox"
+                id="arns-enabled"
+                checked={enabled}
+                onChange={(e) => onEnabledChange(e.target.checked)}
+                disabled={!canUseArNS}
+                className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white transition-colors disabled:opacity-50"
+              />
+              <label htmlFor="arns-enabled" className={`font-medium cursor-pointer ${canUseArNS ? 'text-foreground' : 'text-foreground/50'}`}>
+                Add a domain
+              </label>
+            </div>
+            <p className="text-sm text-foreground/80">
+              Give it a name people remember
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet status, shown while the domain checkbox is disabled: sign in first,
+          then link / reconnect a Solana wallet (ArNS updates are Solana-signed).
+          A fully logged-out user must NOT be told to link a *secondary* wallet — it
+          contradicts the "Sign in" gate — so that case wins. */}
+      {!address ? (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-foreground/80">
+              <Wallet className="w-4 h-4 text-primary" />
+              Sign in to add a domain
+            </div>
+            <button
+              onClick={promptSignIn}
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
+      ) : needsLinking ? (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2 text-sm text-foreground/80">
+              <LinkIcon className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <span>ArNS domains are secured on Solana, so pointing one at your work takes a quick Solana signature — link a wallet once.</span>
+            </div>
+            <button
+              onClick={() => setShowLinkModal(true)}
+              className="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Link wallet
+            </button>
+          </div>
+        </div>
+      ) : !isSolanaConnected ? (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-foreground/80">
+              Solana wallet session expired. Reconnect to assign a domain.
+            </div>
+            <button
+              onClick={promptReconnect}
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap ml-3"
+            >
+              Reconnect
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {showLinkModal && (
+        <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} isReconnect={!needsLinking} />
+      )}
+
+      {enabled && canUseArNS && (
         <div className="space-y-4">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-foreground/80">
@@ -155,23 +257,45 @@ export default function ArNSAssociationPanel({
               Loading your ArNS names...
             </div>
           ) : names.length === 0 ? (
-            <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-sm font-medium text-foreground mb-1">
-                    No ArNS names found
-                  </div>
-                  <div className="text-sm text-foreground/80 mb-3">
-                    You need to own an ArNS name first. You can purchase names from the AR.IO Network.
-                  </div>
-                  <button
-                    onClick={() => window.open('https://ar.io/arns', '_blank')}
-                    className="px-3 py-1.5 bg-primary text-white rounded-full text-xs hover:bg-primary/90 transition-colors"
-                  >
-                    Learn More About ArNS
-                  </button>
-                </div>
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="mb-1 text-sm font-medium text-foreground">You don’t own a name yet</div>
+              <p className="mb-3 text-sm text-foreground/80">
+                Register an ArNS <span className="font-medium text-primary">smart domain</span> — a name
+                you own on-chain, backed by a smart contract — then come back and assign it here.
+              </p>
+              <ul className="mb-4 space-y-2">
+                <li className="flex items-start gap-2 text-xs text-foreground/80">
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">You own it.</span> No registrar, no
+                    yearly renewal to a company.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2 text-xs text-foreground/80">
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">Update forever.</span> Point it at new
+                    versions anytime; the link never changes.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2 text-xs text-foreground/80">
+                  <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">Yours everywhere.</span> Resolves
+                    through any ar.io gateway, permanently.
+                  </span>
+                </li>
+              </ul>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <ArNSGetNameLinks suggestedName={suggestedName} variant="empty" />
+                {/* Registered elsewhere and came back? Pull the fresh list. */}
+                <button
+                  onClick={() => fetchOwnedNames(true)}
+                  disabled={loading}
+                  className="text-xs font-medium text-primary transition-colors hover:underline disabled:opacity-50"
+                >
+                  Just registered? Refresh
+                </button>
               </div>
             </div>
           ) : (
@@ -194,20 +318,19 @@ export default function ArNSAssociationPanel({
                 </div>
                 <Combobox
                   value={selectedName}
-                  onChange={async (name: string) => {
+                  onChange={async (name: string | null) => {
+                    if (!name) return;
                     onNameChange(name);
                     setNameQuery('');
                     // Fetch ANT details on-demand when name is selected
-                    if (name) {
-                      await fetchNameDetails(name);
-                    }
+                    await fetchNameDetails(name);
                   }}
                   disabled={loading}
                 >
                   <div className="relative">
                     <div className="relative w-full">
                       <Combobox.Input
-                        className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 pr-10"
+                        className="w-full px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground focus:border-primary disabled:opacity-50 pr-10"
                         displayValue={(name: string) => {
                           if (!name) return '';
                           const found = names.find(n => n.name === name);
@@ -226,7 +349,7 @@ export default function ArNSAssociationPanel({
                         )}
                       </Combobox.Button>
                     </div>
-                    <Combobox.Options className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-2xl bg-card border border-border/20 shadow-lg focus:outline-none">
+                    <Combobox.Options anchor="bottom" className="z-50 max-h-60 w-[var(--input-width)] overflow-auto rounded-2xl bg-card border border-border/20 shadow-lg focus:outline-none [--anchor-gap:4px]">
                       {filteredNames.length === 0 && nameQuery !== '' ? (
                         <div className="relative cursor-default select-none py-3 px-4 text-foreground/80">
                           No names found matching "{nameQuery}"
@@ -276,6 +399,11 @@ export default function ArNSAssociationPanel({
                     </Combobox.Options>
                   </div>
                 </Combobox>
+
+                {/* The case the empty state never covers: you already own names,
+                    but want a NEW one for this particular deploy/page. Quiet by
+                    design — it must not compete with the picker above. */}
+                <ArNSGetNameLinks suggestedName={suggestedName} variant="inline" />
               </div>
 
               {/* Undername Option */}
@@ -293,7 +421,7 @@ export default function ArNSAssociationPanel({
                         onUndernameChange('');
                       }
                     }}
-                    className="w-4 h-4 bg-card border-2 border-border/20 rounded focus:ring-0 checked:bg-card checked:border-border/20 accent-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-4 h-4 bg-card border-2 border-border/20 rounded checked:bg-card checked:border-border/20 accent-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   />
                   <span className="text-sm text-foreground">Use undername (subdomain)</span>
                 </label>
@@ -356,10 +484,10 @@ export default function ArNSAssociationPanel({
                           }
                         }}
                         placeholder="my_blog, docs, app..."
-                        className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground focus:ring-2 text-sm transition-colors ${
+                        className={`w-full px-3 py-2 bg-card border rounded-2xl text-foreground text-sm transition-colors ${
                           selectedUndername && hasInvalidCharacters(selectedUndername)
-                            ? 'border-warning focus:ring-warning'
-                            : 'border-border/20 focus:ring-primary'
+                            ? 'border-warning'
+                            : 'border-border/20'
                         }`}
                       />
                       <p className="text-xs mt-1">
@@ -482,7 +610,7 @@ export default function ArNSAssociationPanel({
                                       max="86400"
                                       value={customTTLInput}
                                       onChange={(e) => setCustomTTLInput(e.target.value)}
-                                      className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                      className="flex-1 px-3 py-2 bg-card border border-border/20 rounded-2xl text-foreground text-sm focus:border-primary"
                                       placeholder="600"
                                     />
                                     <span className="px-3 py-2 bg-card/50 border border-border/20 rounded-2xl text-foreground/80 text-sm flex items-center">
@@ -530,7 +658,7 @@ export default function ArNSAssociationPanel({
                         {/* Help Text */}
                         <div className="mt-3 text-xs text-foreground/80 bg-primary/10 rounded p-3 border border-primary/30">
                           <div className="font-medium text-foreground mb-1">What is TTL?</div>
-                          TTL controls how long AR.IO gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
+                          TTL controls how long ar.io gateways cache your content before checking for updates. Lower values (5-10 min) are better for frequently updated content, while higher values (1 hour+) work well for static sites and reduce network requests.
                         </div>
                       </div>
                     </div>

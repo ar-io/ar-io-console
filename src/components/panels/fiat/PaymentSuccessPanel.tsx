@@ -1,4 +1,5 @@
-import { CheckCircle, ExternalLink, Upload, Zap, Globe, Share2, Mail, Users } from 'lucide-react';
+import { CheckCircle, ExternalLink, Upload, Zap, Globe, Share2, Mail, Users, Loader2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useStore } from '../../../store/useStore';
 import { tokenLabels, SupportedTokenType } from '../../../constants';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +17,15 @@ interface PaymentSuccessPanelProps {
   // Cross-wallet top-up fields (from SDK v1.34.0+)
   owner?: string; // Who paid
   recipient?: string; // Who received credits
+  /**
+   * What this payment bought, when it isn't a general top-up.
+   *
+   * Matters most here: for a name purchase the credits have landed but the NAME
+   * is not registered yet, so "your credits are now available" reads as done
+   * when there is still a step to take — and "Upload a file / Deploy a site"
+   * points away from the thing they were in the middle of buying.
+   */
+  purpose?: { kind: 'arns-name'; name: string };
 }
 
 const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
@@ -24,6 +34,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
   tokenType,
   transactionId,
   creditsReceived,
+  purpose,
   targetAddress,
   owner,
   recipient
@@ -43,7 +54,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
       case 'arweave':
         return `https://viewblock.io/arweave/tx/${txId}`;
       case 'ario':
-        return `https://scan.ar.io/#/message/${txId}`;
+        return `https://solscan.io/tx/${txId}`;
       case 'solana':
         return `https://solscan.io/tx/${txId}`;
       default:
@@ -71,6 +82,46 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
     ? transactionId || ''
     : paymentIntentResult?.paymentIntent?.id || '';
 
+  /*
+    A name purchase continues on its own.
+
+    "Continue to registration" gated a step that needed no decision:
+    finishCardPurchase closes this modal, polls until the credits land, and
+    then registers. All of that already handles the asynchronous settlement
+    that makes the balance read 0 for a few seconds, so the button was asking
+    the user to press Go on a machine that was going to run anyway.
+
+    The beat before it fires is deliberate — long enough to read "Payment
+    received", short enough not to feel like a wait. Ref-guarded because
+    StrictMode double-invokes effects in dev, and firing this twice would run
+    a second registration.
+  */
+  const continuedRef = useRef(false);
+  useEffect(() => {
+    if (!purpose) return;
+    const t = setTimeout(() => {
+      if (continuedRef.current) return;
+      continuedRef.current = true;
+      onComplete();
+    }, 1500);
+    return () => {
+      clearTimeout(t);
+      /*
+        Continue even if this unmounts first.
+
+        The screen is dismissible — busy deliberately excludes success — so a
+        user can close it inside the beat, and the card has already been
+        charged by then. Letting the timer die with the component would leave
+        them paid up with no name and nothing running to finish the job. The
+        ref keeps this to exactly one call whichever path gets there first.
+      */
+      if (!continuedRef.current) {
+        continuedRef.current = true;
+        onComplete();
+      }
+    };
+  }, [purpose, onComplete]);
+
   return (
     <div>
       {/* Main Content Container with Gradient */}
@@ -81,12 +132,17 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-success" />
           </div>
-          <h4 className="text-2xl font-heading font-bold text-success mb-2">Payment Complete!</h4>
+          <h4 className="text-2xl font-heading font-extrabold text-success mb-2">
+            {/* "Complete!" overclaims mid-purchase — the payment completed, the
+                registration has not, and the user still has a step to take. */}
+            {purpose ? 'Payment received' : 'Payment Complete!'}
+          </h4>
           <p className="text-foreground/80">
-            {isCryptoPayment && tokenType === 'arweave'
-              ? 'Your account will be credited in 15-30 minutes.'
-              : 'Your credits are now available.'
-            }
+            {purpose
+              ? `$${paymentAmount.toFixed(2)} charged. One step left — confirm the registration to claim ${purpose.name}.ar.io.`
+              : isCryptoPayment && tokenType === 'arweave'
+                ? 'Your account will be credited in 15-30 minutes.'
+                : 'Your credits are now available.'}
           </p>
         </div>
 
@@ -120,7 +176,17 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
           </div>
         )}
 
-        {/* Payment Summary */}
+        {/*
+          Suppressed mid-purchase.
+
+          "Current Balance" is the problem: card credits settle asynchronously,
+          so at this instant the store usually still reads 0 — and it was
+          rendered bold, large, in success green, one line under "your credits
+          are ready". A buyer who has just been charged $5 reads that as the
+          money having vanished. The amount now lives in the sentence above,
+          and the payment id below, so nothing here is lost.
+        */}
+        {!purpose && (
         <div className="bg-card rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -177,10 +243,41 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             )}
           </div>
         </div>
+        )}
 
-        {/* Next Steps - Call to Actions */}
+        {/*
+          A purchase in flight gets one action, not a menu.
+
+          Upload/Deploy point away from what the user came for — but suppressing
+          them alone stranded the flow, because EVERY one of those buttons was
+          also the only caller of `onComplete`, which is what continues to
+          registration. Hiding them removed the exit as well as the detours.
+        */}
+        {purpose && (
+          <div className="mb-6">
+            <div className="flex items-center justify-center gap-2 text-sm text-foreground/80">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Continuing to registration…
+            </div>
+            {/*
+              The line that used to sit here repeated the sentence under the
+              heading almost word for word, with the receipt sandwiched between
+              them. One statement of what happens next is enough; what belongs
+              this low is the reference number you would quote to support.
+            */}
+            {paymentId && (
+              <div className="mt-3 flex items-center justify-center gap-2 text-xs text-foreground/60">
+                <span>Payment ID</span>
+                <span className="font-mono">{formatTxId(paymentId, true)}</span>
+                <CopyButton textToCopy={paymentId} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {!purpose && (
         <div className="bg-card rounded-2xl p-4 mb-6">
-          <h5 className="font-heading font-medium text-foreground mb-4">What's Next?</h5>
+          <h5 className="text-foreground mb-4">What's Next?</h5>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => {
@@ -217,7 +314,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             <button
               onClick={() => {
                 onComplete();
-                navigate('/domains');
+                navigate('/arns');
               }}
               className="flex items-center gap-3 p-3 bg-card hover:bg-card/80 transition-colors rounded-2xl border border-border/20 hover:border-primary/30 text-left"
             >
@@ -247,8 +344,15 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             </button>
           </div>
         </div>
+        )}
 
-        {/* Support Link */}
+        {/*
+          Not during a name purchase: the screen is mid-flow and auto-advancing
+          to registration, so an escape hatch to email is the wrong last thing
+          on it — and an ardrive.io address is the wrong support route for a
+          .ar.io name bought on console.ar.io.
+        */}
+        {!purpose && (
         <div className="text-center mt-4 sm:mt-6">
           <p className="text-xs text-foreground/80 mb-2">
             Need help? Contact our support team
@@ -263,6 +367,7 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
             <Mail className="w-3 h-3" />
           </a>
         </div>
+        )}
       </div>
     </div>
   );

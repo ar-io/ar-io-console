@@ -1,0 +1,136 @@
+name: Deploy to Arweave (console.ar.io)
+
+# Manual-only permaweb deploy via ar.io. Builds the production bundle and publishes it to
+# Arweave through Turbo, then repoints the `console` ArNS name's ANT record at the new manifest.
+#
+# Wallet model (single Solana wallet, both roles — see .github/workflows/README or the repo docs):
+#   secrets.DEPLOY_KEY  base58 Solana secret key — pays for the Turbo upload (sig-type: solana)
+#   secrets.ARNS_KEY    same base58 Solana secret key — controller of `console`, signs the record update
+#   vars.ARNS_NAME      the ArNS name to update ("console")
+#
+# The `undername` input defaults to `staging` so an accidental run publishes to
+# staging_console.ar.io — never the live base record. Choose `@` to publish live console.ar.io.
+
+on:
+  # Merging to main publishes the live console. Manual dispatch stays for
+  # re-deploys, for shipping a specific ref, and for staging undernames.
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      undername:
+        description: 'Publish target. "@" = live console.ar.io; "staging" (or any label) = <label>_console.ar.io.'
+        required: true
+        default: 'staging'
+        type: string
+      ref:
+        description: 'Git ref (branch / tag / SHA) to build & deploy.'
+        required: false
+        default: 'main'
+        type: string
+
+# Serialize deploys per target so two runs can't race on the same ArNS record.
+# A push to main IS the live deploy, so its target is '@' and its ref is the
+# pushed commit. Manual runs keep their inputs, which default to staging.
+env:
+  TARGET_UNDERNAME: ${{ inputs.undername || '@' }}
+  TARGET_REF: ${{ inputs.ref || github.sha }}
+
+concurrency:
+  group: deploy-arweave-${{ inputs.undername || '@' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Optional manual-approval gate + scoped secrets. Remove this line if you don't create the
+    # `production` GitHub environment (repo-level secrets/vars work either way).
+    environment: production
+    steps:
+      # Whitelist the manual undername input before it reaches the deploy action
+      # (which interpolates it into a shell step). Fail fast on anything unexpected.
+      - name: Validate inputs
+        env:
+          UNDERNAME: ${{ env.TARGET_UNDERNAME }}
+          # Presence check only — the value is never echoed.
+          SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
+        run: |
+          if [[ "$UNDERNAME" != "@" && ! "$UNDERNAME" =~ ^[a-z0-9][a-z0-9_-]{0,59}$ ]]; then
+            echo "::error::Invalid undername '$UNDERNAME' — use '@' or a label of [a-z0-9_-], max 60 chars."
+            exit 1
+          fi
+
+          # VITE_SOLANA_RPC falls back to public api.mainnet-beta.solana.com when
+          # unset. That fallback is rate-limited and will fail under real traffic,
+          # but it fails *silently* at build time — so a missing secret ships a
+          # broken live console that looks fine in CI. Refuse rather than publish it.
+          if [[ "$UNDERNAME" == "@" && -z "$SOLANA_RPC" ]]; then
+            echo "::error::secrets.VITE_SOLANA_RPC is empty — a live deploy would fall back to public mainnet-beta RPC. Set the secret before publishing to '@'."
+            exit 1
+          fi
+          if [[ -z "$SOLANA_RPC" ]]; then
+            echo "::warning::secrets.VITE_SOLANA_RPC is empty — this build falls back to public mainnet-beta RPC and will be heavily rate-limited."
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_REF }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build:prod
+        env:
+          VITE_NODE_ENV: production
+          # Optional overrides — each falls back to an in-source default if unset.
+          VITE_PRIVY_APP_ID: ${{ secrets.VITE_PRIVY_APP_ID }}
+          VITE_WALLETCONNECT_PROJECT_ID: ${{ secrets.VITE_WALLETCONNECT_PROJECT_ID }}
+          # NOT optional for a live deploy — see the guard above. Carries an auth
+          # token, so it lives in secrets (masked in logs), not vars.
+          VITE_SOLANA_RPC: ${{ secrets.VITE_SOLANA_RPC }}
+          # EVM endpoints — optional. Each falls back to the public RPC it
+          # replaced, so an unset secret changes nothing. Set them to move off
+          # the free public endpoints (mainnet.base.org et al), which are the
+          # most likely source of 429s.
+          VITE_ETHEREUM_RPC: ${{ secrets.VITE_ETHEREUM_RPC }}
+          VITE_BASE_RPC: ${{ secrets.VITE_BASE_RPC }}
+          VITE_POLYGON_RPC: ${{ secrets.VITE_POLYGON_RPC }}
+
+      - name: Deploy to Arweave + update ArNS
+        id: deploy
+        uses: ar-io/ar-io-deploy@v1
+        with:
+          deploy-key: ${{ secrets.DEPLOY_KEY }}
+          arns-key: ${{ secrets.ARNS_KEY }}
+          arns-name: ${{ vars.ARNS_NAME }}
+          undername: ${{ env.TARGET_UNDERNAME }}
+          sig-type: solana
+          deploy-folder: ./dist
+          ttl-seconds: '300'
+
+      - name: Summary
+        if: always() && steps.deploy.outputs.tx-id != ''
+        # Pass every value through env + constant printf formats so nothing is expanded
+        # by the shell (avoids GitHub Actions script injection via workflow inputs/outputs).
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+          TX_ID: ${{ steps.deploy.outputs.tx-id }}
+          UNDERNAME_USED: ${{ steps.deploy.outputs.undername-used }}
+          DEPLOY_REF: ${{ env.TARGET_REF }}
+        run: |
+          {
+            printf '%s\n' '### Deployed 🎉' ''
+            printf '%s\n' '| | |' '|---|---|'
+            printf '| URL | %s |\n' "$DEPLOYMENT_URL"
+            printf '| Tx | `%s` |\n' "$TX_ID"
+            printf '| Undername | `%s` |\n' "$UNDERNAME_USED"
+            printf '| Ref | `%s` |\n' "$DEPLOY_REF"
+          } >> "$GITHUB_STEP_SUMMARY"

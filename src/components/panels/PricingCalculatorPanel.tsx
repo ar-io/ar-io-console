@@ -1,18 +1,23 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
-import { Calculator, HardDrive, DollarSign, ArrowRight, Zap, Upload, Globe, CreditCard, ChevronDown, Check } from 'lucide-react';
+import { HardDrive, DollarSign, Upload, Globe, CreditCard, ChevronDown, Check, Wallet } from 'lucide-react';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import { useCryptoPriceForWinc, useWincForCrypto } from '../../hooks/useCryptoPrice';
 import { useX402Pricing } from '../../hooks/useX402Pricing';
+import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import { useStore } from '../../store/useStore';
 import { SupportedTokenType, tokenLabels } from '../../constants';
-import WalletSelectionModal from '../modals/WalletSelectionModal';
+import { promptSignIn } from '../../utils';
 
 export default function PricingCalculatorPanel() {
   const { address, creditBalance, x402OnlyMode } = useStore();
-  const [showWalletModal, setShowWalletModal] = useState(false);
+  const { freeUploadLimitBytes } = useFreeUploadLimit();
+  const { bytesRemaining } = useFreeStatus();
+  // x402-only bundlers have no free tier — don't advertise one.
+  const effectiveFreeLimit = x402OnlyMode ? 0 : freeUploadLimitBytes;
+  const freeSummary = freeTierSummary(effectiveFreeLimit, bytesRemaining);
   const [inputType, setInputType] = useState<'storage' | 'dollars'>('storage');
   const [storageAmount, setStorageAmount] = useState(1);
   const [storageAmountInput, setStorageAmountInput] = useState('1'); // String for display
@@ -30,7 +35,6 @@ export default function PricingCalculatorPanel() {
     { value: 'usd', label: 'USD', symbol: '$' },
     { value: 'arweave', label: tokenLabels.arweave, symbol: 'AR' },
     { value: 'ario', label: tokenLabels.ario, symbol: 'ARIO' },
-    { value: 'base-ario', label: tokenLabels['base-ario'], symbol: 'ARIO' },
     { value: 'ethereum', label: tokenLabels.ethereum, symbol: 'ETH' },
     { value: 'base-eth', label: tokenLabels['base-eth'], symbol: 'ETH' },
     { value: 'solana', label: tokenLabels.solana, symbol: 'SOL' },
@@ -244,29 +248,10 @@ export default function PricingCalculatorPanel() {
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <Calculator className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h3 className="text-2xl font-bold font-heading text-foreground mb-1">Storage Pricing Calculator</h3>
-          <p className="text-sm text-foreground/80">
-            Calculate exactly how much permanent storage you get for your budget
-          </p>
-        </div>
-      </div>
+      {/* Header is provided by the unified PricingPage (the only consumer). */}
 
       {/* Main Content Container with Gradient */}
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
-
-        {/* Free Tier Notice */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
-            <Zap className="w-4 h-4" />
-            Files under 100 KiB are FREE!
-          </div>
-        </div>
 
         {/* Calculator Mode Toggle */}
         <div className="flex justify-center mb-6">
@@ -308,7 +293,7 @@ export default function PricingCalculatorPanel() {
             <div>
               {inputType === 'storage' ? (
                 <div className="flex flex-col h-full">
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Storage Amount</h4>
+                  <h4 className="text-lg font-extrabold font-heading text-foreground mb-4">Enter Storage Amount</h4>
                   <div className="bg-card rounded-2xl p-6 flex-1 flex flex-col">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much data do you need to store?
@@ -344,7 +329,7 @@ export default function PricingCalculatorPanel() {
                             setStorageAmount(numValue);
                           }
                         }}
-                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none"
+                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary"
                         placeholder="Enter amount"
                       />
                       <Listbox
@@ -352,7 +337,7 @@ export default function PricingCalculatorPanel() {
                         onChange={(unit) => setStorageUnit(unit.value)}
                       >
                         <div className="relative w-full sm:w-auto">
-                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full sm:w-auto rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary cursor-pointer text-left">
                             <span className="block truncate">{storageUnits.find(unit => unit.value === storageUnit)?.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
@@ -425,7 +410,7 @@ export default function PricingCalculatorPanel() {
                 </div>
               ) : (
                 <div className="flex flex-col h-full">
-                  <h4 className="text-lg font-bold font-heading text-foreground mb-4">Enter Your Budget</h4>
+                  <h4 className="text-lg font-extrabold font-heading text-foreground mb-4">Enter Your Budget</h4>
                   <div className="bg-card rounded-2xl p-6 flex-1 flex flex-col">
                     <label className="block text-sm font-medium text-foreground/80 mb-3">
                       How much do you want to spend?
@@ -463,7 +448,7 @@ export default function PricingCalculatorPanel() {
                             setDollarAmount(numValue);
                           }
                         }}
-                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none"
+                        className="w-full sm:flex-1 rounded-2xl border border-border/20 bg-card px-4 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary"
                         placeholder="Enter amount"
                       />
                       <Listbox
@@ -471,7 +456,7 @@ export default function PricingCalculatorPanel() {
                         onChange={(currency) => setSelectedCurrency(currency.value)}
                       >
                         <div className="relative w-full sm:w-48">
-                          <Listbox.Button className="relative w-full rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative w-full rounded-2xl border border-border/20 bg-card pl-4 pr-12 py-3 sm:py-4 text-lg font-medium text-foreground focus:border-primary cursor-pointer text-left">
                             <span className="block truncate">{selectedCurrencyInfo.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                               <ChevronDown className="h-5 w-5 text-foreground/80" aria-hidden="true" />
@@ -580,7 +565,7 @@ export default function PricingCalculatorPanel() {
 
             {/* Results Side */}
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-bold font-heading text-foreground mb-4">
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-4">
                 {inputType === 'storage' ? 'Cost Breakdown' : 'Storage Breakdown'}
               </h4>
 
@@ -595,7 +580,7 @@ export default function PricingCalculatorPanel() {
                         onChange={(currency) => setSelectedCurrency(currency.value)}
                       >
                         <div className="relative">
-                          <Listbox.Button className="relative rounded-2xl border border-border/20 bg-card pl-3 pr-10 py-1 text-sm font-medium text-foreground hover:bg-card focus:border-primary focus:outline-none cursor-pointer text-left">
+                          <Listbox.Button className="relative rounded-2xl border border-border/20 bg-card pl-3 pr-10 py-1 text-sm font-medium text-foreground hover:bg-card focus:border-primary cursor-pointer text-left">
                             <span className="block truncate">{selectedCurrencyInfo.label}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
                               <ChevronDown className="h-4 w-4 text-foreground/80" aria-hidden="true" />
@@ -725,19 +710,19 @@ export default function PricingCalculatorPanel() {
           {!address ? (
             // Not logged in - show connect wallet CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">Ready to store your data permanently?</h4>
-              <p className="text-foreground/80 mb-4">Connect your wallet to top up credits and start uploading.</p>
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-3">Ready to store your data permanently?</h4>
+              <p className="text-foreground/80 mb-4">Sign in to top up credits and start uploading.</p>
               <button
-                onClick={() => setShowWalletModal(true)}
+                onClick={promptSignIn}
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
               >
-                Connect Wallet <ArrowRight className="w-4 h-4" />
+                <Wallet className="w-4 h-4" /> Sign in
               </button>
             </>
           ) : creditBalance > 0 ? (
             // Logged in with credits - show upload/ArNS CTAs
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You have {creditBalance.toFixed(2)} credits ready to use!</h4>
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-3">You have {creditBalance.toFixed(2)} credits ready to use!</h4>
               <p className="text-foreground/80 mb-4">Start uploading files or register an ArNS domain name to use your credits.</p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
@@ -748,7 +733,7 @@ export default function PricingCalculatorPanel() {
                   Upload Files
                 </Link>
                 <Link
-                  to="/domains"
+                  to="/arns"
                   className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
                 >
                   <Globe className="w-4 h-4" />
@@ -759,7 +744,7 @@ export default function PricingCalculatorPanel() {
           ) : (
             // Logged in but no credits - show top up CTA
             <>
-              <h4 className="text-lg font-bold font-heading text-foreground mb-3">You need credits to store data permanently</h4>
+              <h4 className="text-lg font-extrabold font-heading text-foreground mb-3">You need credits to store data permanently</h4>
               <p className="text-foreground/80 mb-4">Top up your account with credits to start uploading files or registering ArNS names.</p>
               <Link
                 to="/topup"
@@ -771,13 +756,19 @@ export default function PricingCalculatorPanel() {
             </>
           )}
         </div>
+
+        {/* Free-tier note — kept below the CTA so it doesn't eat vertical space
+            at the top of the calculator. */}
+        {freeSummary && (
+          <div className="mt-4 text-center">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${bytesRemaining === 0 ? 'bg-card text-foreground/60' : 'bg-primary/10 text-primary'}`}>
+              <DollarSign className="w-4 h-4" />
+              {freeSummary}
+            </div>
+          </div>
+        )}
       </div>
 
-      {showWalletModal && (
-        <WalletSelectionModal
-          onClose={() => setShowWalletModal(false)}
-        />
-      )}
     </div>
   );
 }
