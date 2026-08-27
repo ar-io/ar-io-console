@@ -548,17 +548,31 @@ export const useStore = create<StoreState>()(
       jitBufferMultiplier: 1.1, // Default 10% buffer
       // Actions
       setAddress: (address, type, solanaWalletName) =>
-        set({
+        set((state) => ({
           address,
           walletType: type,
-          creditBalance: 0,
+          /*
+            Only a DIFFERENT wallet invalidates the balance.
+
+            This is re-called for the SAME session — adapter reconnects, the
+            linked-wallet restore, a wallet modal re-confirming — and zeroing
+            unconditionally wiped a balance the query had already resolved.
+            Nothing restored it: useCreditBalance syncs the store from an effect
+            keyed on the QUERY value, and that value hadn't changed, so the
+            effect never re-ran. The header kept rendering the query's number
+            while every store reader saw 0 — which is how a funded wallet lost
+            its "Balance" payment option mid-checkout while the header still
+            showed the credits.
+          */
+          creditBalance:
+            state.address === address ? state.creditBalance : 0,
           // Keep the existing name when re-setting the same Solana session
           // (the listener calls this without a name on reconnect).
           solanaWalletName:
             type === 'solana'
               ? (solanaWalletName ?? get().solanaWalletName)
               : null,
-        }),
+        })),
       clearAddress: () =>
         set({
           address: null,
