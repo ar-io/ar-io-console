@@ -6,6 +6,7 @@ import {
   TurboWincForFiatResponse,
   TwoDecimalCurrency,
 } from '@ardrive/turbo-sdk/web';
+import { hostServesArweave } from './gatewayHost';
 
 /**
  * Get current payment service URL from developer configuration
@@ -141,8 +142,13 @@ export const getGatewayBaseUrl = (): string => {
   // Get configured AR.IO gateway from store
   const configuredGateway = getArioGatewayUrl();
 
-  // Local development - use configured AR.IO gateway
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  /*
+    Anywhere that can't resolve a transaction id — local dev, and any static
+    host like GitHub Pages — falls back to the configured AR.IO gateway. The
+    old check named localhost only, treating every other hostname as proof of
+    a gateway behind it; see `hostServesArweave`.
+  */
+  if (!hostServesArweave(hostname)) {
     return configuredGateway;
   }
 

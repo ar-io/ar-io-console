@@ -259,7 +259,7 @@ const LandingPage = () => {
 
         {/* Subheadline */}
         <p className="relative z-10 mt-5 text-base sm:text-lg text-center max-w-3xl text-white/75 leading-relaxed">
-          Enterprise-grade storage, deployments, and domains for devs and teams.
+          Storage, hosting, and domains for devs and teams.
         </p>
 
         {/* CTA Section */}
