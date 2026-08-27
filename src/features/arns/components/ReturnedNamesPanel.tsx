@@ -28,7 +28,6 @@ import {
   useArnsSettingsPda,
 } from '../hooks/useArnsSettingsPda';
 import PriceAmount from './PriceAmount';
-import PriceDisplayToggle from './PriceDisplayToggle';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
 import { toUnicodeName } from '@/utils/punycode';
 
@@ -178,7 +177,6 @@ export default function ReturnedNamesPanel() {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <PriceDisplayToggle />
           <button
             onClick={refresh}
             disabled={loading}
@@ -319,7 +317,6 @@ export default function ReturnedNamesPanel() {
                   <PriceAmount
                     ario={priceOf(r)}
                     compact
-                    unit={false}
                     primaryClassName="text-sm text-foreground/80 tabular-nums"
                   />
                 </div>

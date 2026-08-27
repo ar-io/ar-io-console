@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { useArNSPricing } from '@/hooks/useArNSPricing';
-import { useStore } from '@/store/useStore';
 import { isValidArNSName, lowerCaseDomain } from '../utils';
 import {
   arnsUndernameFees,
@@ -9,7 +8,6 @@ import {
   formatTierCharacterLabel,
 } from '../arnsPriceTable';
 import PriceAmount from './PriceAmount';
-import PriceDisplayToggle from './PriceDisplayToggle';
 
 /**
  * ArNS fee-schedule table: registration price by name character length.
@@ -27,7 +25,6 @@ import PriceDisplayToggle from './PriceDisplayToggle';
  */
 export default function ArNSPriceTable() {
   const { pricingTiers, loading, error, demandFactor } = useArNSPricing();
-  const currency = useStore((s) => s.priceDisplayCurrency);
   const [nameQuery, setNameQuery] = useState('');
 
   const trimmed = lowerCaseDomain(nameQuery);
@@ -81,7 +78,6 @@ export default function ArNSPriceTable() {
               })}
             </span>
           )}
-          <PriceDisplayToggle />
         </div>
       </div>
 
@@ -102,7 +98,7 @@ export default function ArNSPriceTable() {
         ) : (
           <div className="overflow-x-auto">
             <p className="mb-2 px-3 text-right text-xs text-foreground/50">
-              Amounts in {currency === 'usd' ? 'USD' : 'ARIO'}
+              Amounts in USD, with the ARIO price beneath
             </p>
             <table className="w-full text-sm">
               <thead>
@@ -147,7 +143,6 @@ export default function ArNSPriceTable() {
                         <PriceAmount
                           ario={tier.pricesInARIO.year1}
                           compact
-                          unit={false}
                           primaryClassName="text-sm font-semibold text-foreground tabular-nums"
                         />
                       </div>
@@ -161,7 +156,6 @@ export default function ArNSPriceTable() {
                             tier.pricesInARIO.year2 - tier.pricesInARIO.year1,
                           )}
                           compact
-                          unit={false}
                           primaryClassName="text-sm font-medium text-foreground/80 tabular-nums"
                         />
                       </div>
@@ -171,7 +165,6 @@ export default function ArNSPriceTable() {
                         <PriceAmount
                           ario={tier.pricesInARIO.permabuy}
                           compact
-                          unit={false}
                           primaryClassName="text-sm font-semibold text-foreground tabular-nums"
                         />
                       </div>
@@ -181,7 +174,6 @@ export default function ArNSPriceTable() {
                         <PriceAmount
                           ario={arnsUndernameFees(tier.pricesInARIO.year1).lease}
                           compact
-                          unit={false}
                           primaryClassName="text-sm font-medium text-foreground/80 tabular-nums"
                         />
                       </div>
@@ -193,7 +185,6 @@ export default function ArNSPriceTable() {
                             arnsUndernameFees(tier.pricesInARIO.year1).permabuy
                           }
                           compact
-                          unit={false}
                           primaryClassName="text-sm font-medium text-foreground/80 tabular-nums"
                         />
                       </div>
