@@ -38,11 +38,22 @@ export function useCreditBalance() {
     },
   });
 
-  // Sync to Zustand so store-based consumers stay current.
+  /*
+    Sync to Zustand so store-based consumers stay current.
+
+    Keyed on the STORE value as well as the query's, so the two cannot drift
+    apart and stay apart. Keyed on the query alone, anything that wrote
+    `creditBalance` directly — `setAddress` did, on every reconnect — left the
+    store at 0 with no way back: the query value hadn't changed, so this effect
+    never re-ran. The header reads this hook's return and looked right, while
+    every store reader saw 0, and the ArNS checkout quietly dropped its
+    "Balance" option for a funded wallet.
+  */
   const credits = paymentAvailable ? (data ?? 0) : 0;
+  const storeCredits = useStore((s) => s.creditBalance);
   useEffect(() => {
-    setCreditBalance(credits);
-  }, [credits, setCreditBalance]);
+    if (storeCredits !== credits) setCreditBalance(credits);
+  }, [credits, storeCredits, setCreditBalance]);
 
   // Invalidate on `refresh-balance` (debounced 150ms — C5).
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
