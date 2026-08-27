@@ -234,7 +234,8 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
   };
 
   return (
-    <div className="px-4 sm:px-6">
+    <div className={purpose ? '' : 'px-4 sm:px-6'}>
+      {/* The host modal already pads; doubling it inset the form by ~44px. */}
       {/*
         Inline header — dropped entirely when a host has already framed the
         purchase. The ArNS modal names the domain and the terms, so this
@@ -258,11 +259,19 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         </div>
       )}
 
-      {/* Main Content Container with Gradient */}
+      {/*
+        No inner card inside a modal. BaseModal is already
+        `bg-card border border-border/20 rounded-2xl`, so this wrapper repeated
+        the same surface, border and radius one level in — a frame around a
+        frame, which Deploy Site's modal doesn't do. Standing alone on /topup
+        it IS the card that lifts the form off the page, so it stays there.
+      */}
       <div
-        className={`bg-card rounded-2xl border border-border/20 mb-4 sm:mb-6 ${
-          purpose ? 'p-4 sm:p-5' : 'p-4 sm:p-6'
-        }`}
+        className={
+          purpose
+            ? 'mb-4 sm:mb-6'
+            : 'bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6'
+        }
       >
 
         {/* Show recipient info if funding another wallet */}
