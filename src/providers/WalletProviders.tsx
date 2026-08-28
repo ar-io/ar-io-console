@@ -55,6 +55,8 @@ const queryClient = new QueryClient({
   },
 });
 
+import { PrivySolanaBridge } from './PrivySolanaBridge';
+
 interface WalletProvidersProps {
   children: ReactNode;
 }
@@ -75,6 +77,30 @@ export function WalletProviders({ children }: WalletProvidersProps) {
             // balance.
             createOnLogin: 'users-without-wallets',
           },
+          /*
+            ADDED alongside Ethereum, never replacing it. Turbo credits belong
+            to an address, so switching an existing email user's identity to a
+            fresh Solana wallet would strand the balance they already hold.
+            They keep the Ethereum session; the Solana wallet is what signs
+            ArNS writes, via PrivySolanaBridge.
+          */
+          solana: {
+            /*
+              'all-users', unlike Ethereum above.
+
+              'users-without-wallets' means "no wallet of ANY kind", so every
+              existing email user — who already holds an embedded Ethereum
+              wallet — would be skipped and never get a Solana key. That is the
+              entire population this is for.
+
+              The reason Ethereum avoids 'all-users' does not apply here: there
+              it minted a second, empty ETH address that competed with the one
+              the user had connected. Privy is email-only in this app
+              (`loginMethods: ['email']`), so nobody arrives with a Solana
+              wallet through it, and there is nothing for this to shadow.
+            */
+            createOnLogin: 'all-users',
+          },
           // Disable wallet UIs to prevent signature prompts during file uploads
           showWalletUIs: false,
         },
@@ -86,6 +112,9 @@ export function WalletProviders({ children }: WalletProvidersProps) {
         },
       }}
     >
+      {/* Announces Privy's embedded Solana wallet to the Wallet Standard
+          registry, so the adapter below discovers it like any extension. */}
+      <PrivySolanaBridge />
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider theme={arioRainbowTheme}>

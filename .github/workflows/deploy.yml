@@ -104,6 +104,14 @@ jobs:
           VITE_BASE_RPC: ${{ secrets.VITE_BASE_RPC }}
           VITE_POLYGON_RPC: ${{ secrets.VITE_POLYGON_RPC }}
 
+      # ario-deploy sets the manifest's `fallback` from a 404.html in the deploy
+      # folder, and an arweave/paths manifest 404s any path it does not list —
+      # so without this every deep link (/try, /upload, /arns) fails while the
+      # root loads fine. Serving index.html there hands the URL to the router.
+      # Staging needs the identical file for the same reason on GitHub Pages.
+      - name: SPA fallback for deep links
+        run: cp dist/index.html dist/404.html
+
       - name: Deploy to Arweave + update ArNS
         id: deploy
         uses: ar-io/ar-io-deploy@v1

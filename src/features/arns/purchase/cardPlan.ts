@@ -70,6 +70,19 @@ export function planCardPurchase({
 
   // A wallet exists; it just isn't awake. This is the case that was silently
   // costing users their ANT and an extra ~$2.06.
+  /*
+    A known-empty wallet outranks a cold one.
+
+    Reconnecting cannot conjure rent, so telling someone with 0 SOL to
+    "reconnect your Solana wallet to buy this name" promises something we can
+    already see is false — and they hit the real wall one click later. Only
+    when the shortfall is KNOWN: an undefined balance still means the signer is
+    the thing to fix.
+  */
+  if (solCoversGas === false && !custodialEnabled) {
+    return { kind: 'self-custody' };
+  }
+
   if (!signerLive) return { kind: 'reconnect' };
 
   // Known to be short on rent: they cannot complete a self-custody buy, so

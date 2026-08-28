@@ -168,12 +168,26 @@ The largest feature in the repo (~75 files) and the least guessable — read thi
 
 **Custody models** (`services/custodyStrategy.ts`):
 - **Model B (user-owned)** — the *client* spawns the ANT with a Solana signer (`services/antSpawn.ts`), so the user self-owns it from the first block; the bundler only settles (debits credits, writes the record). **Preferred — the ladder below tries hard to reach it.**
-- **Model A (custodial)** — the bundler spawns and custodies the ANT, and performs the three operations it exposes on the user's behalf (`/v1/arns/transfer/:antId`, `/v1/arns/manage/:antId/set-record`, `.../remove-record`). Now wired, as a genuine last resort.
+- **Model A (custodial)** — the bundler spawns and custodies the ANT, and performs the three operations it exposes on the user's behalf (`/v1/arns/transfer/:antId`, `/v1/arns/manage/:antId/set-record`, `.../remove-record`). **Built, then retired before launch — see the switch below.** The code stays reachable; nothing sells it.
 
-`purchase/cardPlan.ts` picks between them: `self-custody → reconnect → link → custodial`. Custodial is reached only when the user has no Solana signer *and* no SOL for the spawn — otherwise an ANT the user cannot sign for is a worse outcome than asking them to connect a wallet.
+`purchase/cardPlan.ts` picks between them, and `custodialPurchaseEnabled()` in
+that file is the single switch. **It returns `false` everywhere — not an
+environment gate.** Custody removed the need to hold SOL but never the need for
+a wallet to sign with (`needsLinking` always meant "no *Solana* wallet"; a
+session identity is required to reach checkout at all), and every sub-flow was
+broken as written. With it off the ladder is `self-custody → reconnect → link`;
+a buyer short on SOL falls through to self-custody so the existing balance
+gating stops them and names the shortfall.
+
+The intended replacement is **fee sponsorship**, and the SDK already supports
+it: `buildCreateAntInstruction` takes `authority` and `payer` as separate
+addresses, and `buildSpawnAntInstructions` returns the ordered instructions
+without sending. So Turbo can pay rent on an ANT the user owns from the first
+block. That needs a bundler endpoint (Turbo's keypair signs as fee payer) and
+the `ario_ant::initialize` instruction, which is not exported in the SDK types.
 
 `custody/nameCustody.ts` is the authority on what a custodial name can do. Registry operations (extend, upgrade, add undernames) are payments and work regardless of who holds the ANT; ANT operations (records, controllers, transfer, release) need the owner's signature, so under custody all but set-record/remove-record/transfer are **genuinely impossible**, not merely unimplemented — which is why they render as disabled controls with a reason rather than buttons that fail. `GET /v1/arns/my-names/:address` returns a per-name `custodial` flag; `custody/mergeCustodialNames.ts` folds it into "your names".
-- There is no hybrid: a transfer wipes controllers and a spawn can't seed owner+controllers together, so a name is either fully user-owned or fully custodial.
+- There is no hybrid *via the high-level API*: a transfer wipes controllers, and `ANT.spawn` takes one signer documented as "pays rent + receives the NFT". The low-level builders do separate the two roles — see the sponsorship note above before assuming this is a protocol limit.
 
 **Linked Solana wallet** (`hooks/useLinkedSolanaWallet.ts`): Arweave/Ethereum users link a **secondary** Solana wallet for ArNS without changing their primary session identity. `linkedSolanaAddress` + `linkedSolanaWalletName` persist in the store, and `getArNSAddress()` returns the primary address for Solana sessions or the linked address otherwise. Read-only lookups work from the persisted address alone; **writes need a live signer**, so the hook auto-reconnects the named adapter on page load (the Solana `WalletProvider` runs `autoConnect=false`). `hooks/useArNSTurboSigner.ts` turns that into the two things writes need: a `walletAdapter` for `TurboFactory.authenticated` and a `@solana/kit` `SolanaSigner` for `ANT.spawn`.
 
@@ -387,7 +401,11 @@ Service URLs managed by store's configuration system, overridable via Developer 
 
 **`.github/workflows/ci.yml`** — runs on every PR and on pushes to `main`/`develop`: `npm ci --legacy-peer-deps` → `type-check` → `lint` → `test` → `build`. All four must pass, so run them locally before pushing.
 
-**`.github/workflows/deploy.yml`** — manual-only (`workflow_dispatch`) permaweb deploy: builds the production bundle, publishes it to Arweave via Turbo, then repoints the `console` ArNS name's ANT record at the new manifest. The `undername` input **defaults to `staging`** (→ `staging_console.ar.io`); `@` publishes live `console.ar.io`. A live `@` deploy hard-fails if `secrets.VITE_SOLANA_RPC` is empty, because the public mainnet-beta fallback fails *silently* at build time and would ship a broken console that looks fine in CI. One Solana wallet fills both roles (`DEPLOY_KEY` pays the upload, `ARNS_KEY` controls the name).
+**`.github/workflows/staging.yml`** — every push to `develop` publishes to GitHub Pages (`ar-io.github.io/ar-io-console`), running the full CI gate first. A Pages *project* site is served from `/<repo>/`, not a domain root, so the build sets `VITE_BASE_PATH` and the router reads the same value via `import.meta.env.BASE_URL` — the two cannot drift. `index.html` is copied to `404.html` so deep links reach the router instead of 404ing. The `github-pages` environment must list `develop` as an allowed deployment branch; it ships allowing `main` only.
+
+**The flow is `feature → develop → main`.** `main` is protected: PR required, CI must pass, 0 approvals (a solo maintainer cannot approve their own PR), admin bypass on.
+
+**`.github/workflows/deploy.yml`** — permaweb deploy, on **push to `main`** and via `workflow_dispatch`: builds the production bundle, publishes it to Arweave via Turbo, then repoints the `console` ArNS name's ANT record at the new manifest. A push carries no inputs, so `TARGET_UNDERNAME`/`TARGET_REF` resolve to `@` and the pushed SHA — merging to `main` publishes live `console.ar.io` with no approval step. Manual runs keep their own defaults (`staging` → `staging_console.ar.io`). TTL is 300s. **`.github/workflows/deploy-wallet-address.yml`** prints the deploy wallet's public address, since the secrets are write-only once set. A live `@` deploy hard-fails if `secrets.VITE_SOLANA_RPC` is empty, because the public mainnet-beta fallback fails *silently* at build time and would ship a broken console that looks fine in CI. One Solana wallet fills both roles (`DEPLOY_KEY` pays the upload, `ARNS_KEY` controls the name).
 
 **`.npmrc` sets `legacy-peer-deps=true`.** Its comment says it exists because `@ar.io/sdk` was pinned to a prerelease that `@ar.io/wayfinder-core`'s `peerOptional ">=4.0.0"` rejected. That is now **stale** — the repo is on `@ar.io/sdk` 4.1.1 stable, which satisfies the peer range, so the flag (and the matching CI comment) can likely be dropped. Verify with a clean `npm ci` before removing.
 
@@ -426,7 +444,34 @@ Tracks the ar.io brand kit (`https://ar.io/brand-kit/agents.json`, version 2026-
 - **Body text**: Plus Jakarta Sans (font-body)
 - Both fonts loaded via `@fontsource-variable`
 
+### Copy
+
+**Don't be grandiose.** Say what changed and what it costs. No "never been
+easier", no "revolutionary", no claim about how the user will feel. The
+specific fact is always stronger: *"ARIO pays the registry directly and skips
+the infrastructure fee"* beats *"the best way to buy a name"*.
+
+**Never claim away a real requirement.** Buying a name needs a Solana wallet
+holding ~0.0156 SOL on every route, so "no crypto needed" and "just a credit
+card" are false — and they are exactly the lines a user quotes back the moment
+a wallet prompt appears. State the constraint plainly and explain what it buys.
+
+**One statement per screen.** If a host modal already names the purchase, the
+panel inside it doesn't repeat the title, the terms, or the amount. Duplicated
+copy reads as a bug, and it usually is one — see the modal contract below.
+
 ### Modals
+
+**Headers come from `components/modals/ModalHeader.tsx`** — 40px `rounded-xl
+bg-primary/20` tile, `text-lg font-extrabold` title, `text-xs` description,
+top-aligned (`items-start`, so a wrapping title doesn't leave the icon floating
+mid-block). All twelve modals use it; don't hand-roll another.
+
+**A modal is already a card.** `BaseModal` is `bg-card border border-border/20
+rounded-2xl` and pads its own content, so a panel embedded in one must not add
+its own surface or horizontal padding — that's a frame inside a frame and
+double inset. Panels written for a standalone page (the `/topup` fiat and
+crypto steps) carry both and gate them on being embedded.
 
 All modal chrome lives in `components/modals/BaseModal.tsx` (~20 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
 
