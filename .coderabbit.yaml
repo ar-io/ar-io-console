@@ -1,0 +1,13 @@
+# CodeRabbit review configuration.
+#
+# By default CodeRabbit only auto-reviews pull requests targeting the DEFAULT
+# branch — here that is `main`. Under the feature -> develop -> main flow, PRs
+# land on `develop` first and `main` only ever receives an already-merged
+# release, so nothing was being reviewed at the point where review is useful.
+#
+# Listing `develop` restores that: every PR gets reviewed on the way in, and
+# the release PR to `main` still gets one on the way out.
+reviews:
+  auto_review:
+    base_branches:
+      - "develop"
