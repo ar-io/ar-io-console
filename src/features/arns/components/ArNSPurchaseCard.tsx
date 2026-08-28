@@ -640,12 +640,24 @@ export function ArNSPurchaseCard({
     if (!priceReady) return null;
     if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
     /*
-      Deliberately silent: the cost breakdown directly above already says what
-      you hold and how much more you need, with a link to get it. Repeating it
-      here put the same sentence on screen twice with the useful number split
-      between them.
+      Paired with the card button's `balances.sol === undefined` gate. Without
+      a matching reason that gate is a dead button with no explanation — the
+      failure this whole memo exists to prevent.
     */
-    if (insufficientSol) return null;
+    if (balances.sol === undefined && !balances.loading) {
+      return { text: "Couldn't read your Solana balance — reload and try again." };
+    }
+    /*
+      Silent only where the cost breakdown already says it. That panel shows
+      the SOL rows — and the shortfall beneath them — for the routes that spend
+      SOL directly. A card buyer sees a dollar total, so nothing else on the
+      screen explains why the button is dead.
+    */
+    if (insufficientSol) {
+      return route.kind === 'card'
+        ? { text: 'Not enough SOL in your wallet for the network deposit.' }
+        : null;
+    }
     /*
       The token route disables on its own conditions, so it needs its own
       reason — otherwise it greys out silently, which is what a zero shortfall
@@ -663,6 +675,7 @@ export function ArNSPurchaseCard({
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
     insufficientFunds, route, custodialCard,
+    balances.sol, balances.loading,
     tokenSmallestUnitForName,
   ]);
 
@@ -920,7 +933,18 @@ export function ArNSPurchaseCard({
               money taken, no name. Every other route already gated on it.
             */
             (!custodialCard &&
-              (!priceReady || gasUnavailable || insufficientSol))
+              (!priceReady ||
+                gasUnavailable ||
+                insufficientSol ||
+                /*
+                  An UNKNOWN balance must not read as a sufficient one here.
+                  Elsewhere unknown deliberately does not block — it once told
+                  funded users to buy SOL. But this button takes payment before
+                  the spawn, and the costs are asymmetric: blocking a funded
+                  user costs them a message, while letting an unfunded one
+                  through costs them a charge for a name they cannot receive.
+                */
+                balances.sol === undefined))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
@@ -1011,8 +1035,10 @@ export function ArNSPurchaseCard({
         </p>
       )}
 
-      {/* Say why the button is dead, next to the button. See `blockedReason`. */}
-      {!needsPaymentStep && blockedReason && (
+      {/* Say why the button is dead, next to the button. See `blockedReason`.
+          Rendered on the payment step too: the card route IS that step, so
+          gating it here without this greyed the button with no explanation. */}
+      {blockedReason && (
         <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-xs text-foreground/70">
           <AlertTriangle className="h-3 w-3 flex-shrink-0 text-error" />
           <span>{blockedReason.text}</span>
