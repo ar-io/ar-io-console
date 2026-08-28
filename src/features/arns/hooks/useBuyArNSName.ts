@@ -11,8 +11,19 @@ import {
   submittingMessage,
   toSettlement,
 } from '../purchase/buyDecisions';
+import type { SettlementMechanism } from '../purchase/settlementMechanism';
+import { DEFAULT_ARNS_TARGET_TX } from '../purchase/buyDecisions';
+import { spawnArNSAnt } from '../services/antSpawn';
+import {
+  clearPendingArNSPurchase,
+  getPendingArNSPurchase,
+  savePendingArNSPurchase,
+} from '../services/arnsPurchaseResume';
+import { useTurboArNSClient } from './useTurboArNSClient';
+import { useStore } from '../../../store/useStore';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
+import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import type { ArNSRegistrationType } from './useArNSPrice';
 
 export type BuyPhase = 'idle' | 'submitting' | 'success' | 'error';
@@ -25,8 +36,13 @@ export interface BuyArNSNameInput {
   type: ArNSRegistrationType;
   /** Lease term in years (ignored for permabuy). */
   years?: number;
-  /** Funding source for the ARIO price. Defaults to Turbo Credits. */
-  fundFrom?: ArNSBuyFundFrom;
+  /**
+   * How this purchase settles. Replaces the old `fundFrom`, which offered a
+   * `'turbo'` value that `@ar.io/sdk` accepts and ignores — every Solana write
+   * treats it as `'balance'` and debits the wallet's ARIO, so "pay with
+   * credits" silently charged the wrong asset.
+   */
+  mechanism: SettlementMechanism;
 }
 
 export interface UseBuyArNSNameResult {
@@ -72,6 +88,9 @@ function isInsufficientCredits(err: unknown): boolean {
  */
 export function useBuyArNSName(): UseBuyArNSNameResult {
   const signer = useArNSTurboSigner();
+  const { getClient: getOwnerClient } = useCustodyOwnerClient();
+  const client = useTurboArNSClient();
+  const config = useStore((st) => st.getCurrentConfig());
 
   const [phase, setPhase] = useState<BuyPhase>('idle');
   const [statusMessage, setStatusMessage] = useState('');
@@ -111,7 +130,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       name,
       type,
       years,
-      fundFrom = 'turbo',
+      mechanism,
     }: BuyArNSNameInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
@@ -132,23 +151,92 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         setPhase('submitting');
         setStatusMessage(submittingMessage(lowered, type));
 
-        const ario = getWritableARIO(signer.getSolanaSigner());
+        let settlement: ArNSSettlementResult;
 
-        // Atomic: omit processId → buyRecord mints a fresh user-owned ANT and
-        // assigns the name in ONE tx. No pre-spawn ⇒ no orphaned-ANT window.
-        // `fundFrom` selects where the ARIO price is drawn from (credits vs the
-        // wallet's ARIO balance/stakes); SOL rent is always paid by the signer.
-        const res = await ario.buyRecord(
-          buildBuyRecordArgs({
+        if (mechanism.kind === 'ario-direct') {
+          // Atomic: omit processId → buyRecord mints a fresh user-owned ANT and
+          // assigns the name in ONE tx. No pre-spawn ⇒ no orphaned-ANT window.
+          // SOL rent is always paid by the signer.
+          const ario = getWritableARIO(signer.getSolanaSigner());
+          const res = await ario.buyRecord(
+            buildBuyRecordArgs({
+              name: lowered,
+              type,
+              years,
+              fundFrom: mechanism.fundFrom,
+              referrer: APP_NAME,
+            }),
+          );
+          settlement = toSettlement(res);
+        } else {
+          /*
+            Credits are debited ONLY by turbo-sdk. Two steps, because turbo's
+            buy provisions a Turbo-OWNED ANT when given no `processId` — right
+            for a custodial card, wrong here, where the buyer owns the name.
+
+            The spawned ANT is persisted the instant it exists: it costs real
+            SOL, so a retry must reuse it rather than orphan one per attempt.
+          */
+          if (!client) throw new Error('Payment service is unavailable.');
+
+          /*
+            Reuse a previously-spawned ANT. A spawn costs real SOL, so a retry
+            that spawns again bleeds funds and orphans the first one.
+          */
+          const pending = getPendingArNSPurchase();
+          const reusable =
+            pending?.name === lowered &&
+            pending.owner === owner &&
+            pending.processId
+              ? pending.processId
+              : undefined;
+
+          let processId = reusable;
+          if (!processId) {
+            setStatusMessage(`Creating the ANT for ${lowered}…`);
+            const spawned = await spawnArNSAnt({
+              signer: signer.getSolanaSigner(),
+              name: lowered,
+              rpcUrl: config.tokenMap.solana,
+              antProgramId: config.antProgramId,
+              targetId: DEFAULT_ARNS_TARGET_TX,
+            });
+            processId = spawned.processId;
+            // Persist the instant it exists, before anything else can fail.
+            savePendingArNSPurchase({
+              intent: 'Buy-Name',
+              name: lowered,
+              owner,
+              processId,
+              savedAt: Date.now(),
+            });
+          }
+
+          setStatusMessage(submittingMessage(lowered, type));
+          const res = await client.purchaseWithCredits({
+            /*
+              Signed by the SESSION identity, whose credits these are.
+
+              Authenticating with the linked Solana adapter debited that
+              address instead — so an Arweave or Ethereum user saw their own
+              balance on the checkout, chose Balance, and the purchase spent an
+              address holding nothing. The balance shown and the balance spent
+              have to be the same one. Same fix as the renewal path.
+            */
+            client: await getOwnerClient(),
             name: lowered,
+            intent: 'Buy-Name',
             type,
             years,
-            fundFrom,
-            referrer: APP_NAME,
-          }),
-        );
-
-        const settlement: ArNSSettlementResult = toSettlement(res);
+            processId,
+          });
+          settlement = {
+            nonce: res.nonce ?? '',
+            messageId: res.arioWriteResult?.id ?? '',
+            receipt: { processId },
+          };
+          clearPendingArNSPurchase();
+        }
         setResult(settlement);
         setPhase('success');
         // The name price was debited (credits or ARIO) — refresh the balance.
@@ -161,7 +249,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         // a normal error instead.
         if (
           routeBuyError({
-            fundFrom,
+            mechanism: mechanism.kind,
             isInsufficientCredits: isInsufficientCredits(err),
           }).kind === 'insufficient-credits'
         ) {
@@ -176,7 +264,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         throw normalized;
       }
     },
-    [signer],
+    [signer, client, getOwnerClient, config.antProgramId, config.tokenMap.solana],
   );
 
   return {

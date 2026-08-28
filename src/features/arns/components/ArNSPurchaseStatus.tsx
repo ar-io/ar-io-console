@@ -1,28 +1,28 @@
-import { useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
   CreditCard,
   ExternalLink,
-  Loader2,
-  Pencil,
   Rocket,
   Settings2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import type { ArNSName } from '@/types';
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
 import { toUnicodeName } from '@/utils/punycode';
 import type { BuyPhase } from '../hooks/useBuyArNSName';
-import EditDetailsModal from './EditDetailsModal';
 
 interface ArNSPurchaseStatusProps {
   phase: BuyPhase;
-  statusMessage: string;
   result: ArNSSettlementResult | undefined;
   error: Error | undefined;
   insufficientCredits: boolean;
+  /**
+   * The user already paid — a token top-up landed and only the registration
+   * failed. Changes the whole message: they hold spendable credits and need no
+   * second payment, where a bare failure implies a refund that isn't coming.
+   */
+  alreadyFunded?: boolean;
   name: string;
   /** Reset the whole flow (clears the selected name). Used by "Register another". */
   onDone: () => void;
@@ -37,47 +37,27 @@ interface ArNSPurchaseStatusProps {
  */
 export function ArNSPurchaseStatus({
   phase,
-  statusMessage,
   result,
   error,
   insufficientCredits,
+  alreadyFunded = false,
   name,
   onDone,
   onRetry,
 }: ArNSPurchaseStatusProps) {
   const navigate = useNavigate();
-  const [editing, setEditing] = useState(false);
 
   if (phase === 'idle') return null;
 
-  const busy = phase === 'submitting';
+  /*
+    Progress is reported inline on the purchase card now, so this surface is
+    only for terminal states. Rendering both produced two progress indicators
+    for one action.
+  */
+  if (phase === 'submitting') return null;
 
-  if (busy) {
-    return (
-      <div className="mt-4 bg-card rounded-2xl border border-primary/30 p-5">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-5 h-5 text-primary animate-spin flex-shrink-0" />
-          <div>
-            <p className="font-medium text-foreground">{statusMessage}</p>
-            <p className="text-xs text-foreground/60 mt-0.5">
-              Keep this tab open. Your credits are only charged once the purchase
-              is confirmed.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (phase === 'success' && result) {
-    // buyRecord returns the freshly minted ANT id — lets the user set where the
-    // name points (its base @ target) right away instead of the default logo.
-    const newProcessId = (
-      result.receipt as { processId?: string | null } | undefined
-    )?.processId;
-    const newDomain: ArNSName | undefined = newProcessId
-      ? { name, displayName: toUnicodeName(name), processId: newProcessId }
-      : undefined;
 
     return (
       <div className="mt-4 bg-card rounded-2xl border border-primary/30 p-5">
@@ -104,19 +84,11 @@ export function ArNSPurchaseStatus({
               >
                 <Rocket className="h-4 w-4" /> Deploy a site
               </button>
-              {newDomain && (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
-                >
-                  <Pencil className="h-4 w-4" /> Edit details
-                </button>
-              )}
               {/*
-                Always present, unlike "Edit details" above, which needs an ANT
-                id the fiat path never returns. This lands on the name's own
-                page, which works for a Turbo-held name too — otherwise a card
-                buyer's only follow-up is a bare tx hash.
+                One destination, not two. This and "Edit details" did the same
+                job — but the modal needs an ANT id the fiat path never returns,
+                and the name's own page does everything the modal did plus
+                records and controllers. It also works for a Turbo-held name.
               */}
               <button
                 onClick={() => navigate(`/domains/${name}`)}
@@ -147,17 +119,40 @@ export function ArNSPurchaseStatus({
             </button>
           </div>
         </div>
-        {editing && newDomain && (
-          <EditDetailsModal
-            domain={newDomain}
-            onClose={() => setEditing(false)}
-          />
-        )}
       </div>
     );
   }
 
   // phase === 'error'
+  if (alreadyFunded) {
+    return (
+      <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">
+        <div className="flex items-start gap-3">
+          <CreditCard className="w-6 h-6 text-warning flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-foreground">
+              Paid — but &quot;{name}&quot; isn&apos;t registered yet
+            </p>
+            <p className="text-sm text-foreground/70 mt-1">
+              Your payment went through and the credits are on your balance.
+              Nothing was lost and you don&apos;t need to pay again — try
+              registering once more to finish.
+            </p>
+            {error && (
+              <p className="mt-2 text-xs text-foreground/60">{error.message}</p>
+            )}
+            <button
+              onClick={onRetry}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Finish registering
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (insufficientCredits) {
     return (
       <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">

@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
-import { TurboFactory } from '@ardrive/turbo-sdk/web';
 
 import { useArNSTurboSigner } from './useArNSTurboSigner';
+import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import { useTurboNameCustody } from './useNameCustody';
-import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import { getWritableANT } from '../../../utils';
 import {
   writerKindForWrite,
@@ -26,7 +25,7 @@ import {
  */
 export function useRecordWriter(name: string | undefined, processId: string | undefined) {
   const signer = useArNSTurboSigner();
-  const turboConfig = useTurboConfig('solana');
+  const { getClient } = useCustodyOwnerClient();
   const { custodyOf, isLoading } = useTurboNameCustody();
 
   const custody = custodyOf(name ?? '');
@@ -34,7 +33,13 @@ export function useRecordWriter(name: string | undefined, processId: string | un
 
   const getWriter = useCallback(
     async (antId?: string): Promise<RecordWriter> => {
-      if (!signer.isReady || !signer.walletAdapter) {
+      /*
+        A Turbo-held name is signed by its OWNER, who may hold no Solana wallet
+        at all; a user-owned name needs the Solana signer that owns the ANT. The
+        precondition differs by writer, so it is checked per branch below rather
+        than demanding a Solana adapter from everyone up front.
+      */
+      if (kind !== 'turbo' && (!signer.isReady || !signer.walletAdapter)) {
         throw new Error('Connect a Solana wallet with a live signer to edit records.');
       }
       // `blocked` means custody hasn't resolved yet. Picking a writer here
@@ -45,11 +50,7 @@ export function useRecordWriter(name: string | undefined, processId: string | un
       }
 
       if (kind === 'turbo') {
-        const turbo = TurboFactory.authenticated({
-          token: 'solana',
-          walletAdapter: signer.walletAdapter,
-          ...turboConfig,
-        }) as unknown as TurboRecordClient;
+        const turbo = (await getClient()) as unknown as TurboRecordClient;
         return turboRecordWriter(antId ?? processId ?? '', turbo);
       }
 
@@ -59,7 +60,7 @@ export function useRecordWriter(name: string | undefined, processId: string | un
       )) as unknown as ANTRecordWriteable;
       return antRecordWriter(ant);
     },
-    [signer, turboConfig, kind, processId],
+    [getClient, signer, kind, processId],
   );
 
   return {

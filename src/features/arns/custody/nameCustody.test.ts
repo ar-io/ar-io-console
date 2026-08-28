@@ -70,3 +70,18 @@ describe('custodyFromTurboName', () => {
     expect(custodyFromTurboName({})).toBe('user-owned');
   });
 });
+
+describe('reassign is owner-only, like the other ANT mutations', () => {
+  it('is blocked while Turbo holds the ANT', () => {
+    // Repointing the name rewrites the ANT's own record, so the asset's owner
+    // has to sign it — Turbo exposes no route for this on the user's behalf.
+    expect(actionAvailability('reassign', 'turbo-custodial')).toEqual({
+      kind: 'unavailable',
+      reason: 'Transfer this name to your wallet to change this.',
+    });
+  });
+
+  it('is available once the name is user-owned', () => {
+    expect(actionAvailability('reassign', 'user-owned').kind).toBe('signer');
+  });
+});

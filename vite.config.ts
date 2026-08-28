@@ -11,7 +11,17 @@ const packageJson = JSON.parse(
 );
 
 export default defineConfig({
-  base: '/', // Absolute paths — required so nested routes (/domains/:name) resolve assets correctly on direct navigation
+  /*
+    Absolute paths — required so nested routes (/domains/:name) resolve assets
+    correctly on direct navigation.
+
+    Overridable for one case only: GitHub Pages serves a project site from
+    /<repo>/, not a domain root, so the staging build sets VITE_BASE_PATH to
+    that prefix. Everything else — production, dev, an ArNS name root — stays
+    at '/'. The router reads the same value via import.meta.env.BASE_URL, so
+    the two cannot disagree.
+  */
+  base: process.env.VITE_BASE_PATH || '/',
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version),
     // Use date only (not full timestamp) to avoid cache-busting on every build

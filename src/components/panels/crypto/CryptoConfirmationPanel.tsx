@@ -31,6 +31,8 @@ interface CryptoConfirmationPanelProps {
   cryptoAmount: number;
   tokenType: SupportedTokenType;
   onBack: () => void;
+  /** Set when a host modal owns the title; suppresses this panel's header. */
+  purpose?: { kind: 'arns-name'; name: string };
   onPaymentComplete: (result: any) => void;
 }
 
@@ -38,6 +40,7 @@ export default function CryptoConfirmationPanel({
   cryptoAmount,
   tokenType,
   onBack,
+  purpose,
   onPaymentComplete,
 }: CryptoConfirmationPanelProps) {
   const { address, walletType, paymentTargetAddress, paymentTargetType } = useStore();
@@ -619,19 +622,33 @@ export default function CryptoConfirmationPanel({
 
   return (
     <div className="px-4 sm:px-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <Wallet className="w-5 h-5 text-primary" />
+      {/* Suppressed when a host modal already carries the title. */}
+      {!purpose && (
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+            <Wallet className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Review Payment</h3>
+            <p className="text-sm text-foreground/80">Confirm your crypto payment details</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Review Payment</h3>
-          <p className="text-sm text-foreground/80">Confirm your crypto payment details</p>
-        </div>
-      </div>
+      )}
 
-      {/* Single Main Container - All elements inside like Stripe */}
-      <div className="bg-card rounded-2xl border border-border/20 p-6">
+      {/*
+        No inner card inside a modal. BaseModal is already
+        `bg-card border border-border/20 rounded-2xl`, so this wrapper repeated
+        the same surface, border and radius one level in — a frame around a
+        frame, which Deploy Site's modal doesn't do. Standing alone on /topup
+        it IS the card that lifts the form off the page, so it stays there.
+      */}
+      <div
+        className={
+          purpose
+            ? ''
+            : 'bg-card rounded-2xl border border-border/20 p-6'
+        }
+      >
         {pricingLoading ? (
           <div className="text-center py-8">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -821,7 +838,9 @@ export default function CryptoConfirmationPanel({
               </div>
             </div>
 
-            {/* Terms */}
+            {/* Host-owned when embedded — see PaymentConfirmationPanel. Its
+                "By uploading" wording is also wrong for a name purchase. */}
+            {!purpose && (
             <div className="text-center bg-card/30 rounded-2xl p-4 mb-6">
               <p className="text-xs text-foreground/80">
                 By uploading, you agree to our{' '}
@@ -835,6 +854,7 @@ export default function CryptoConfirmationPanel({
                 </a>
               </p>
             </div>
+            )}
 
             {/* Error Message */}
             {paymentError && (

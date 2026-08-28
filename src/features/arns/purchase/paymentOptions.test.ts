@@ -18,11 +18,22 @@ describe('buildPaymentOptions', () => {
       .toEqual(['card', 'token:base-usdc', 'token:base-eth', 'token:usdc', 'token:pol', 'token:ethereum']);
   });
 
-  it('puts card first — the only option needing no crypto at all', () => {
+  it('puts card first when there is no balance to lead with', () => {
     const first = buildPaymentOptions({ ...base, walletType: 'solana' })[0];
     expect(first.kind).toBe('card');
     // Naming the processor is the reassurance a card row exists to give.
     expect(first.detail).toBe('with Stripe');
+  });
+
+  it('says on the Card option when Turbo will hold the name', () => {
+    // Custody changes WHAT you get, not just how you pay, so it belongs at the
+    // point of choice rather than in the breakdown underneath.
+    const normal = buildPaymentOptions({ ...base, walletType: 'solana' });
+    expect(normal.find((o) => o.kind === 'card')?.detail).toBe('with Stripe');
+    const custodial = buildPaymentOptions({
+      ...base, walletType: 'solana', cardIsCustodial: true,
+    });
+    expect(custodial.find((o) => o.kind === 'card')?.detail).toMatch(/turbo holds/i);
   });
 
   it('drops card when the payment service has fiat disabled', () => {
@@ -30,6 +41,14 @@ describe('buildPaymentOptions', () => {
     // there would be a dead end.
     const o = buildPaymentOptions({ ...base, walletType: 'solana', cardEnabled: false });
     expect(ids(o)).toEqual(['token:solana']);
+  });
+
+  it('leads with Balance when there is one — it is what gets preselected', () => {
+    // The eye should land on the already-chosen option, not hunt for it at the
+    // end of the row.
+    const o = buildPaymentOptions({ ...base, walletType: 'solana', credits: 12.4 });
+    expect(o[0].kind).toBe('balance');
+    expect(defaultPaymentOption(o)).toBe(o[0]);
   });
 
   it('offers Balance only when there are credits, and names it Balance', () => {
@@ -124,14 +143,70 @@ describe('defaultPaymentOption', () => {
   });
 
   it('falls back to the first option when nothing is sufficient', () => {
+    // Asserts the documented rule, not a position: something must stay selected
+    // so the picker never renders with nothing chosen.
     const o = buildPaymentOptions({
       ...base, walletType: 'solana', credits: 1, priceInCredits: 5,
       cardEnabled: false, tokenBalances: { solana: 0 }, tokenPrices: { solana: 2 },
     });
-    expect(defaultPaymentOption(o)?.id).toBe('token:solana');
+    expect(o.every((x) => !x.sufficient)).toBe(true);
+    expect(defaultPaymentOption(o)).toBe(o[0]);
   });
 
   it('returns undefined when there is nothing at all', () => {
     expect(defaultPaymentOption([])).toBeUndefined();
+  });
+});
+
+describe('network-cost blocking', () => {
+  const withSol = (solBalance: number | undefined) =>
+    buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 50, extraTokens: ['ario'],
+      networkSolRequired: 0.015, solBalance,
+    });
+
+  it('blocks every route that needs SOL when the wallet is short', () => {
+    // Creating a name costs account rent whoever pays for the name, so an
+    // ARIO-rich wallet with no SOL previously saw ARIO as usable and failed
+    // at signing.
+    const o = withSol(0);
+    for (const id of ['token:ario', 'token:solana', 'balance']) {
+      expect(o.find((x) => x.id === id)?.blockedReason).toMatch(/network costs/i);
+    }
+  });
+
+  it('leaves the CUSTODIAL card usable — it is the escape hatch', () => {
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 0, cardIsCustodial: true,
+      networkSolRequired: 0.015, solBalance: 0,
+    });
+    const card = o.find((x) => x.kind === 'card')!;
+    expect(card.blockedReason).toBeUndefined();
+    // Named for why it works, not for the processor.
+    expect(card.detail).toMatch(/no crypto needed/i);
+  });
+
+  it('blocks a SELF-CUSTODY card, which still needs the wallet to pay rent', () => {
+    const card = withSol(0).find((x) => x.kind === 'card')!;
+    expect(card.blockedReason).toMatch(/network costs/i);
+  });
+
+  it('blocks nothing when the SOL balance is UNKNOWN', () => {
+    // Blocking on a failed lookup would tell a funded user to buy SOL — a
+    // mistake this app has shipped once already.
+    for (const o of withSol(undefined)) expect(o.blockedReason).toBeUndefined();
+  });
+
+  it('blocks nothing when the wallet covers the rent', () => {
+    for (const o of withSol(1)) expect(o.blockedReason).toBeUndefined();
+  });
+
+  it('never preselects a blocked option', () => {
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 50, extraTokens: ['ario'],
+      cardIsCustodial: true, networkSolRequired: 0.015, solBalance: 0,
+    });
+    // Balance would normally lead; it is blocked, so the card wins.
+    expect(defaultPaymentOption(o)?.kind).toBe('card');
   });
 });

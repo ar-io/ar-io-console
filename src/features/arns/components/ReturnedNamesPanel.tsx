@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -28,7 +28,6 @@ import {
   useArnsSettingsPda,
 } from '../hooks/useArnsSettingsPda';
 import PriceAmount from './PriceAmount';
-import PriceDisplayToggle from './PriceDisplayToggle';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
 import { toUnicodeName } from '@/utils/punycode';
 
@@ -58,6 +57,34 @@ export default function ReturnedNamesPanel() {
 
   const resetPage = () => setPage(0);
 
+  const { data: priceInputs } = useReturnedNamePriceInputs();
+
+  /**
+   * A row's estimated ARIO price at its CURRENT premium — the same figure the
+   * table shows. Sorting by it is not the same as sorting by premium: premium
+   * is a pure function of elapsed time, while price multiplies it by a base fee
+   * that varies with name LENGTH, so a long name early in its auction can cost
+   * less than a short one late in its own.
+   */
+  const priceOf = useCallback(
+    (r: ReturnedNameRecord): number | undefined => {
+      if (!priceInputs) return undefined;
+      const base = baseAnnualMARIOForName(priceInputs.fees, r.name.length);
+      if (base == null) return undefined;
+      const ario = estimateReturnedNameArio(
+        base,
+        priceInputs.demandFactor,
+        auctionMultiplier({
+          startTimestamp: r.startTimestamp,
+          endTimestamp: r.endTimestamp,
+          now,
+        }),
+      );
+      return Number.isFinite(ario) ? ario : undefined;
+    },
+    [priceInputs, now],
+  );
+
   const {
     items,
     activeCount,
@@ -69,6 +96,7 @@ export default function ReturnedNamesPanel() {
     refresh,
   } = useReturnedNames({
     search,
+    priceOf,
     sortBy,
     sortOrder,
     page,
@@ -76,7 +104,6 @@ export default function ReturnedNamesPanel() {
     now,
   });
 
-  const { data: priceInputs } = useReturnedNamePriceInputs();
   const settingsPda = useArnsSettingsPda();
 
   const toggleSort = (key: ReturnedNameSortKey) => {
@@ -121,18 +148,7 @@ export default function ReturnedNamesPanel() {
     return `${start.toLocaleString()}–${end.toLocaleString()} of ${totalFiltered.toLocaleString()}`;
   }, [safePage, totalFiltered]);
 
-  // Estimated ARIO price for a row's current premium, or undefined when the fee
-  // schedule isn't loaded/usable — PriceAmount renders '—' for undefined.
-  const estPriceArio = (
-    r: ReturnedNameRecord,
-    multiplier: number,
-  ): number | undefined => {
-    if (!priceInputs) return undefined;
-    const base = baseAnnualMARIOForName(priceInputs.fees, r.name.length);
-    if (base == null) return undefined;
-    const ario = estimateReturnedNameArio(base, priceInputs.demandFactor, multiplier);
-    return Number.isFinite(ario) ? ario : undefined;
-  };
+
 
   return (
     <div className="px-4 sm:px-6">
@@ -161,7 +177,6 @@ export default function ReturnedNamesPanel() {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <PriceDisplayToggle />
           <button
             onClick={refresh}
             disabled={loading}
@@ -222,8 +237,13 @@ export default function ReturnedNamesPanel() {
           <div className="col-span-2">
             <SortHeader label="Ends in" keyName="endTimestamp" />
           </div>
-          <div className="col-span-2 font-semibold text-foreground/70">Est. price</div>
-          <div className="col-span-2 text-right font-semibold text-foreground/70">
+          <div className="col-span-2">
+            <SortHeader label="Est. price" keyName="estPrice" />
+          </div>
+          {/* pr-4 matches the Buy button's px-4 so the label sits over the
+              button's text rather than flush to the column edge, which read as
+              misaligned. */}
+          <div className="col-span-2 pr-4 text-right font-semibold text-foreground/70">
             Action
           </div>
         </div>
@@ -295,9 +315,7 @@ export default function ReturnedNamesPanel() {
                 <div className="col-span-2 flex items-center justify-between font-mono text-sm text-foreground/80 sm:col-span-2 sm:block">
                   <span className="font-sans text-xs text-foreground/50 sm:hidden">Est. price</span>
                   <PriceAmount
-                    ario={estPriceArio(r, multiplier)}
-                    compact
-                    unit={false}
+                    ario={priceOf(r)}
                     primaryClassName="text-sm text-foreground/80 tabular-nums"
                   />
                 </div>

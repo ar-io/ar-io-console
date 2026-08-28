@@ -26,7 +26,14 @@ const FormEntry: FC<FormEntryProps> = ({ name, label, children, errorText }) => 
       <label className="text-sm text-foreground/80" htmlFor={name}>
         {label}
       </label>
-      <div className="w-full rounded border border-border/20">{children}</div>
+      {/*
+        Layout only — no border, no radius. This used to paint its own
+        `rounded` (4px) border around controls that already carry `rounded-2xl`
+        (20px here) and a border of their own, so every field rendered as a
+        near-square box with a rounded box inside it. The control owns its
+        surface; this owns the label, the gap and the error.
+      */}
+      <div className="w-full">{children}</div>
       {errorText && <div className="text-xs text-error">{errorText}</div>}
     </div>
   );

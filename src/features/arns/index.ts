@@ -7,6 +7,7 @@ export { default as BrowseDomainsPanel } from './components/BrowseDomainsPanel';
 export { default as ReturnedNamesPanel } from './components/ReturnedNamesPanel';
 export { default as ReturnedNameBuyModal } from './components/ReturnedNameBuyModal';
 export { default as CustodialNamePanel } from './components/CustodialNamePanel';
+export { default as ClaimToContinueModal } from './components/ClaimToContinueModal';
 export { default as ManageDomainModal } from './components/ManageDomainModal';
 export { default as TransferDomainModal } from './components/TransferDomainModal';
 export { default as ReassignDomainModal } from './components/ReassignDomainModal';
@@ -101,9 +102,7 @@ export {
   formatUsdAmount,
   formatPriceDisplay,
 } from './priceDisplay';
-export type { PriceDisplayCurrency, PriceDisplay } from './priceDisplay';
 export { default as PriceAmount } from './components/PriceAmount';
-export { default as PriceDisplayToggle } from './components/PriceDisplayToggle';
 
 // ArNS fee-schedule table (name price by character length)
 export { default as ArNSPriceTable } from './components/ArNSPriceTable';
@@ -115,4 +114,4 @@ export {
 } from './arnsPriceTable';
 
 export { useTurboNameCustody } from './hooks/useNameCustody';
-export { actionAvailability, isActionAvailable, type NameCustody } from './custody/nameCustody';
+export { actionAvailability, isActionAvailable, type NameCustody, type ArNSAction } from './custody/nameCustody';

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Calendar,
@@ -20,27 +20,51 @@ import {
   ArNSFundingSource,
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
-import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
+import { isTokenSelectable, minUSDAmount, tokenLabels, type SupportedTokenType } from '../../../constants';
 import {
   buildPaymentOptions,
   defaultPaymentOption,
 } from '../purchase/paymentOptions';
-import { cardFlavor, resolveSettlementRoute } from '../purchase/settlementRoute';
+import { resolveSettlementRoute } from '../purchase/settlementRoute';
+import { settlementMechanismFor } from '../purchase/settlementMechanism';
+import { planCardPurchase,
+  custodialPurchaseEnabled } from '../purchase/cardPlan';
+import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
+import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
+import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
+import {
+  getTokenSmallestUnit,
+  useSmallestUnitForWinc,
+} from '../../../hooks/useCryptoPrice';
+import { getTurboBalance } from '../../../utils';
+import {
+  failureAdvice,
+  stepLabel,
+  waitingNotice,
+} from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
+import { useStore } from '@/store/useStore';
 
 interface ArNSPurchaseCardProps {
   name: string;
   isBusy: boolean;
-  onBuy: (input: BuyArNSNameInput) => void;
+  onBuy: (input: BuyArNSNameInput) => void | Promise<unknown>;
   /**
    * A card purchase settled server-side. Reported up so the host shows the same
    * receipt a credits/ARIO purchase gets, instead of silently closing.
    */
   onCardSuccess: (messageId: string) => void;
+  /**
+   * A token top-up landed — the user has paid, before registration is
+   * attempted. Reported upward because this card unmounts the moment the buy
+   * fails (the host renders it only while idle), so any "you already paid"
+   * guidance set here would never render. The host outlives it.
+   */
+  onTokenFunded: () => void;
 }
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -115,6 +139,7 @@ export function ArNSPurchaseCard({
   isBusy,
   onBuy,
   onCardSuccess,
+  onTokenFunded,
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
@@ -132,6 +157,39 @@ export function ArNSPurchaseCard({
 
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
+
+  /*
+    Who owns a custodially-bought name.
+
+    Everything else on this card is addressed by the Solana identity, because
+    every ArNS write needs a Solana signature. A custodial purchase is the one
+    route where the buyer may have no Solana identity at all — that is the
+    reason they are on it — and passing `''` made the quote fail before it was
+    sent, breaking exactly the case custody exists to serve.
+
+    Their session identity owns it — always, even when a Solana wallet is
+    linked. Owner and signer have to be the same identity or the name is
+    unreachable: the service derives the owner from the request signature, and
+    useCustodyOwnerClient signs as the SESSION wallet. Keying the purchase to a
+    linked Solana address while signing as Arweave meant an Arweave user with a
+    linked wallet but no SOL bought a name that then rejected their own claim,
+    records and renewals.
+
+    It is also the identity that actually paid: the credit balance is read for
+    the session address, not the linked one.
+
+    The linked Solana wallet is still where the name GOES — it is the transfer
+    target when they claim it — it just isn't who holds it meanwhile.
+  */
+  const sessionAddress = useStore((s) => s.address);
+  const custodialOwner = sessionAddress ?? '';
+
+  /*
+    Custody is retired pending sponsored gas — see custodialPurchaseEnabled.
+    Off, the card route asks for what self-custody needs instead: a Solana
+    wallet, and enough SOL for the rent.
+  */
+  const custodialEnabled = custodialPurchaseEnabled();
   const balances = useArNSPaymentBalances(address);
 
   /**
@@ -164,14 +222,37 @@ export function ArNSPurchaseCard({
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
     defaultPaymentOption(routingOptions);
-  const route = selectedOption
-    ? resolveSettlementRoute(selectedOption, fundingSource)
-    : ({ kind: 'credits' } as const);
+
+  /*
+    Commit the first real default, then stop.
+
+    Balances and prices arrive asynchronously, so `defaultPaymentOption`
+    re-evaluates as they land — which would let the selection move under the
+    user's cursor mid-click. Writing it once freezes it; the user can still
+    change it, and their choice is never overridden.
+  */
+  useEffect(() => {
+    if (selectedId || balances.loading || !selectedOption) return;
+    setSelectedId(selectedOption.id);
+  }, [selectedId, balances.loading, selectedOption]);
+  const route = useMemo(
+    () =>
+      selectedOption
+        ? resolveSettlementRoute(selectedOption, fundingSource)
+        : ({ kind: 'credits' } as const),
+    [selectedOption, fundingSource],
+  );
 
   // Which unit the price is quoted in. Card and token top-ups both land as
   // credits, so they price like credits — only ARIO prices in ARIO.
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
-  const fundFrom = route.kind === 'ario' ? route.fundFrom : 'turbo';
+  /**
+   * ARIO-only: the source the cost/gas estimate prices against. Anything not
+   * paying in ARIO estimates against 'balance', which is what the SDK's
+   * estimator understands.
+   */
+  const fundFrom: ArNSFundFrom =
+    route.kind === 'ario' ? route.fundFrom : 'balance';
 
   // Credits price (winc → credits) for the credits method display.
   const {
@@ -191,16 +272,41 @@ export function ArNSPurchaseCard({
     type,
     years,
     fundFrom,
+    // Credits pay the name, so the wallet's ARIO shortfall is not a blocker.
+    // Derived from the route, not the mechanism: this query runs before custody
+    // is resolved, and only ARIO-vs-not affects the estimate.
+    payWithCredits: route.kind !== 'ario',
     fromAddress: address,
   });
 
+  /** Charged amount, in the token's smallest unit — what the SDK requires. */
+  const tokenSmallestUnitForName = useSmallestUnitForWinc(
+    route.kind === 'topup' && creditsPrice?.credits
+      ? creditsPrice.credits * 1e12
+      : undefined,
+    route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
+  );
+
+  /**
+   * SOL the wallet must hold: rent and fees, PLUS the name itself when SOL is
+   * what's paying for it.
+   *
+   * Checking gas alone let a wallet through that could cover the deposit but
+   * not the purchase — it passed the gate, signed, and failed on the transfer.
+   */
+  const solNeededTotal =
+    (cost?.gasTotalSol ?? 0) +
+    (route.kind === 'topup' && tokenSmallestUnitForName
+      ? Number(tokenSmallestUnitForName) /
+        Number(getTokenSmallestUnit(route.token as SupportedTokenType))
+      : 0);
   const insufficientSol =
     // Only a KNOWN balance can block the action. `undefined` means the lookup
     // failed or never ran — blocking on that told funded users to go buy SOL.
     !!cost &&
     !balances.loading &&
     balances.sol !== undefined &&
-    balances.sol < cost.gasTotalSol;
+    balances.sol < solNeededTotal;
   /**
    * Whether the CHOSEN method is short — not whether some other one is.
    *
@@ -216,6 +322,47 @@ export function ArNSPurchaseCard({
     return false;
   }, [route.kind, creditsPrice, balances.credits, cost?.shortfallMARIO]);
 
+  const {
+    needsLinking,
+    isSolanaConnected,
+    promptReconnect,
+    showLinkModal,
+    setShowLinkModal,
+  } = useLinkedSolanaWallet();
+  /** Set only when the user is offered linking and chooses to go without. */
+
+  const cardPlan = planCardPurchase({
+    needsLinking,
+    custodialEnabled,
+    // A cold adapter is NOT a missing wallet — conflating them is what used to
+    // hand Turbo the ANT for a user who only needed to reconnect.
+    signerLive: isSolanaConnected && signer.isReady && !!signer.walletAdapter,
+    solCoversGas:
+      balances.loading || balances.sol === undefined || !cost
+        ? undefined
+        : balances.sol >= cost.gasTotalSol,
+  });
+  const custodialCard = route.kind === 'card' && cardPlan.kind === 'custodial';
+  /*
+    How this actually settles — which SDK does the write.
+
+    `fundFrom: 'turbo'` used to stand in for "pay with credits", but
+    `@ar.io/sdk` accepts that value and ignores it: every Solana branch treats
+    it as 'balance' and debits the wallet's ARIO. Credits are debited only by
+    turbo-sdk, so the mechanism, not a funding label, picks the path.
+  */
+  const mechanism = settlementMechanismFor(route, custodialCard);
+
+  /*
+    Card is chosen but a cheaper, self-owned route is one click away.
+
+    Only `reconnect` now: that user already has a Solana wallet and picked
+    self-custody, so waking it gives them what they chose. Someone with no
+    wallet at all is no longer stopped to be asked about one — see cardPlan.
+  */
+  const cardNeedsWallet =
+    route.kind === 'card' && cardPlan.kind === 'reconnect';
+
   const paymentOptions = useMemo(
     () =>
       buildPaymentOptions({
@@ -225,6 +372,11 @@ export function ArNSPurchaseCard({
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
         // next to a silent SOL row states a fact we don't have and reads as
         // "you're broke" to someone who simply hasn't connected yet.
+        cardIsCustodial: cardPlan.kind === 'custodial',
+        // Creating a name costs account rent whoever pays for the name, so it
+        // gates every route except a custodial card.
+        networkSolRequired: cost?.gasTotalSol,
+        solBalance: balances.loading ? undefined : balances.sol,
         tokenBalances: address
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
@@ -234,7 +386,8 @@ export function ArNSPurchaseCard({
       }),
     [
       address, balances.credits, balances.sol, balances.totalArio,
-      creditsPrice?.credits, cardEnabled,
+      creditsPrice?.credits, cardEnabled, cardPlan.kind,
+      cost?.gasTotalSol, balances.loading,
     ],
   );
 
@@ -253,12 +406,19 @@ export function ArNSPurchaseCard({
 
   // What a card / token payment has to cover: the whole price when there is no
   // balance to draw on, or just the gap when there is.
-  const creditShortfall = creditsPrice
-    ? Math.max(0, creditsPrice.credits - balances.credits)
-    : 0;
+  /*
+    The FULL name price, matching the token route. Balance is its own option, so
+    choosing Card means "charge my card for this name" — not "top up whatever is
+    missing", which would drain a balance the user just passed over.
+
+    It also kept the targeted UI from engaging at all: `targetedTopUp` requires
+    an amount, so a user with enough credits got `undefined` here and fell all
+    the way back to the generic storage top-up panel — presets, custom amount,
+    min/max and all.
+  */
   const topUpUsd =
-    creditShortfall > 0 && creditsForOneUSD
-      ? Math.ceil(creditShortfall / creditsForOneUSD)
+    creditsPrice && creditsForOneUSD
+      ? Math.max(minUSDAmount, Math.ceil(creditsPrice.credits / creditsForOneUSD))
       : undefined;
   // Only offer a credits top-up when SOL gas is sufficient — buying credits
   // can't make the purchase succeed if SOL for rent is also short. Gate on being
@@ -272,18 +432,11 @@ export function ArNSPurchaseCard({
    */
   /**
    * Who will own the ANT if they pay by card. Derived, never asked — see
-   * `cardFlavor`. Self-custody keeps the atomic buyRecord (user-owned, no
+   * `planCardPurchase`. Self-custody keeps the atomic buyRecord (user-owned, no
    * surcharge, but their SOL pays the rent); custodial is the one-step quote
    * that works with no crypto at all.
    */
-  const flavor = cardFlavor({
-    hasSolanaSigner: signer.isReady && !!signer.walletAdapter,
-    solCoversGas:
-      balances.loading || balances.sol === undefined || !cost
-        ? undefined
-        : balances.sol >= cost.gasTotalSol,
-  });
-  const custodialCard = route.kind === 'card' && flavor === 'custodial';
+
 
   /**
    * Card and non-ARIO tokens can't pay the contract directly, so they take a
@@ -295,9 +448,169 @@ export function ArNSPurchaseCard({
    * would break the one path that works for someone holding no crypto — which
    * is the entire reason to offer a card.
    */
-  const needsPaymentStep =
-    !!address &&
-    (custodialCard || ((route.kind === 'card' || route.kind === 'topup') && !insufficientSol));
+  /**
+   * Only the card still opens a dialog, because a card is the one method with
+   * something to type. A token top-up needs no input at all now that the amount
+   * is computed, so it runs inline on this card — same feel as paying with
+   * ARIO, which was always modal-free.
+   */
+  const needsPaymentStep = !!address && route.kind === 'card' && !cardNeedsWallet;
+
+  /**
+   * SOL (and any non-ARIO token) can't pay the registry, so it buys credits and
+   * then registers: two signatures, nothing typed in between.
+   */
+  const tokenTopUp = useArNSTokenTopUp();
+  /*
+    The FULL name price, not the shortfall.
+
+    Balance is its own option in the picker, so choosing SOL is an explicit
+    "spend SOL, not my credits" — funding only the gap would quietly drain a
+    balance the user deliberately passed over. It also fixes a dead button: a
+    user whose credits already covered the name had a shortfall of zero, so no
+    token amount was computed and "Register name" greyed out with no reason
+    given.
+  */
+
+
+  // Card buyers get one wallet prompt, not two — see FundingSource. Distinct
+  // from `fundingSource` above, which is the ARIO balance/stakes choice.
+  const promptSource = route.kind === 'card' ? 'card' : 'wallet';
+  const tokenStepLabel = stepLabel(tokenTopUp.step, promptSource);
+
+  /**
+   * Spendable credits, straight from the payment service.
+   *
+   * `effectiveBalance` includes credits shared with this wallet, which is what
+   * a purchase can actually draw on — using the owned balance alone would wait
+   * for credits that were already available.
+   */
+  const readTurboCredits = useCallback(async (): Promise<number> => {
+    if (!address) return 0;
+    const balance = await getTurboBalance(address, 'solana');
+    const winc = balance?.effectiveBalance ?? balance?.winc ?? 0;
+    return Number(winc) / 1e12;
+  }, [address]);
+
+  /**
+   * Register once the money has landed, reporting a failure as "funded, not
+   * registered" rather than a plain error — they hold spendable credits and
+   * must not be told to pay again.
+   */
+  const registerAfterFunding = useCallback(async () => {
+    onTokenFunded();
+    try {
+      const settled = await onBuy({
+        name,
+        type,
+        years: type === 'lease' ? years : undefined,
+        // The token became credits, so this settles through Turbo — NOT through
+        // the ARIO SDK, which would charge the wallet's ARIO on top.
+        mechanism: { kind: 'turbo-credits' },
+      });
+      if (settled === undefined) {
+        tokenTopUp.failAfterFunding(
+          'Your credits arrived but the name was not registered.',
+        );
+        return;
+      }
+      tokenTopUp.reset();
+    } catch (err) {
+      tokenTopUp.failAfterFunding(
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }, [onBuy, name, type, years, onTokenFunded, tokenTopUp]);
+
+  /**
+   * A card payment settled. Finish the purchase instead of just closing:
+   * leaving the user on a checkout whose button still says "Continue" invited
+   * them to open the payment modal and pay a SECOND time for a name they had
+   * already funded.
+   */
+  const finishCardPurchase = useCallback(async () => {
+    setShowPayment(false);
+    try {
+      await tokenTopUp.awaitCredits({
+        /*
+          What registering actually requires — the name's price — not
+          "starting balance + price". That sum had to be hit exactly, and its
+          two halves come from different sources (our price lookup, the payment
+          service's balance), so a rounding difference of 1e-12 left the
+          condition false for the full five minutes.
+
+          If the balance already covers the price the wait ends immediately and
+          registration proceeds; the credits just bought replenish what it
+          spends, so the user still pays in the token they chose.
+        */
+        creditsNeeded: creditsPrice?.credits ?? 0,
+        /*
+          Ask the payment service, rather than dispatching `refresh-balance` and
+          reading the store. That route is debounce -> invalidate -> refetch ->
+          effect -> store, so a synchronous read always trailed by a cycle, and
+          firing it every couple of seconds pulled every balance consumer in the
+          app along with it.
+        */
+        readCredits: readTurboCredits,
+      });
+    } catch {
+      return; // `awaitCredits` recorded that the money landed.
+    }
+    await registerAfterFunding();
+  }, [
+    tokenTopUp, creditsPrice?.credits, registerAfterFunding, readTurboCredits,
+  ]);
+
+
+  const runTokenPurchase = useCallback(async () => {
+    if (route.kind !== 'topup' || !tokenSmallestUnitForName) return;
+    try {
+      await tokenTopUp.fund({
+        token: route.token as SupportedTokenType,
+        tokenAmount: tokenSmallestUnitForName,
+        /*
+          Wait for the top-up to LAND, not merely for the balance to cover the
+          price — which it may already do. Starting balance plus the price is
+          the threshold that proves this payment arrived. Safe because the token
+          amount is rounded up, so the credits received are never less.
+        */
+        /*
+          What registering actually requires — the name's price — not
+          "starting balance + price". That sum had to be hit exactly, and its
+          two halves come from different sources (our price lookup, the payment
+          service's balance), so a rounding difference of 1e-12 left the
+          condition false for the full five minutes.
+
+          If the balance already covers the price the wait ends immediately and
+          registration proceeds; the credits just bought replenish what it
+          spends, so the user still pays in the token they chose.
+        */
+        creditsNeeded: creditsPrice?.credits ?? 0,
+        /*
+          Credits live in the store and are refreshed by the app-wide
+          `refresh-balance` event, so ask for a refresh and read what landed.
+          Polling this rather than trusting the transfer receipt is the point:
+          the credits apply server-side a moment after the transfer is accepted,
+          and registering into that gap fails for "insufficient credits" having
+          already taken the money.
+        */
+        /*
+          Ask the payment service, rather than dispatching `refresh-balance` and
+          reading the store. That route is debounce -> invalidate -> refetch ->
+          effect -> store, so a synchronous read always trailed by a cycle, and
+          firing it every couple of seconds pulled every balance consumer in the
+          app along with it.
+        */
+        readCredits: readTurboCredits,
+      });
+    } catch {
+      return; // `fund` already recorded whether any money moved.
+    }
+    await registerAfterFunding();
+  }, [
+    route, tokenSmallestUnitForName, tokenTopUp, creditsPrice?.credits,
+    registerAfterFunding, readTurboCredits,
+  ]);
 
   /**
    * Why the buy button is disabled, said next to the button itself.
@@ -326,19 +639,21 @@ export function ArNSPurchaseCard({
     if (custodialCard) return null;
     if (!priceReady) return null;
     if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
-    if (insufficientSol) {
-      const need =
-        cost && balances.sol !== undefined
-          ? Math.max(0, cost.gasTotalSol - balances.sol)
-          : 0;
-      // Format first, then decide. A shortfall under 0.00005 SOL is real but
-      // rounds to "0" at 4dp, and "you need about 0 more SOL" reads as a bug.
-      const needText = need.toLocaleString(undefined, { maximumFractionDigits: 4 });
+    /*
+      Deliberately silent: the cost breakdown directly above already says what
+      you hold and how much more you need, with a link to get it. Repeating it
+      here put the same sentence on screen twice with the useful number split
+      between them.
+    */
+    if (insufficientSol) return null;
+    /*
+      The token route disables on its own conditions, so it needs its own
+      reason — otherwise it greys out silently, which is what a zero shortfall
+      used to do. A missing quote is the only case the checks above don't cover.
+    */
+    if (route.kind === 'topup' && !tokenSmallestUnitForName) {
       return {
-        text:
-          need > 0 && Number(needText) > 0
-            ? `You need about ${needText} more SOL for the network deposit.`
-            : 'You need a little more SOL for the network deposit.',
+        text: `Still pricing this name in ${tokenLabels[route.token as SupportedTokenType]}…`,
       };
     }
     if (insufficientFunds && route.kind === 'ario') {
@@ -347,7 +662,8 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route.kind, cost, balances.sol, custodialCard,
+    insufficientFunds, route, custodialCard,
+    tokenSmallestUnitForName,
   ]);
 
   // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
@@ -426,15 +742,16 @@ export function ArNSPurchaseCard({
       {/* Lease-vs-permabuy decision aid */}
       {permabuyBreakEvenYears !== undefined && (
         <p className="-mt-2 mb-4 text-xs text-foreground/60">
+          {/*
+            Each option explains ITSELF. This line used to pitch permabuy while
+            the user was sitting on Lease — answering a question they hadn't
+            asked, and saying nothing about the choice they had made. The
+            break-even figure stays, because that is the number the decision
+            actually turns on.
+          */}
           {type === 'permabuy'
             ? `Own it forever — no renewals, ever. Roughly the cost of ${permabuyBreakEvenYears} years of leasing.`
-            : /*
-                 Was "Permabuy ≈ N years of leasing — own it forever, never
-                 renew", which reads as a DURATION and so contradicts its own
-                 second half. It's a price comparison: say "costs about as much
-                 as", and never put "≈" next to a span of years.
-              */
-              `Permabuy costs about as much as ${permabuyBreakEvenYears} years of leasing, and never needs renewing.`}
+            : `Costs less up front, and you can renew or switch to permanent later. Permabuy is about ${permabuyBreakEvenYears} years of leasing, paid once.`}
         </p>
       )}
 
@@ -480,12 +797,28 @@ export function ArNSPurchaseCard({
           creditsPrice={creditsPrice?.credits}
           // Card only: the fee-inclusive charge. Every other route settles at
           // the fee-free winc price, so passing it there would overstate.
+          isCardRoute={route.kind === 'card'}
           cardUsdPrice={
-            custodialCard
-              ? // Turbo spawns the ANT and recovers its rent — the surcharge is
-                // part of the charge, so quoting without it under-quotes by ~2x.
-                creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
-              : undefined
+            /*
+              Set for EVERY card route, not just the custodial one. A card price
+              is dollars and has no second unit, so offering "Credits / USD"
+              there is a switch with nothing to switch to — and credits are how
+              we settle it, not what the buyer hands over.
+
+              Custodial adds the ANT-spawn surcharge Turbo recovers; quoting
+              without it under-charges the display by roughly half.
+            */
+            route.kind !== 'card'
+              ? undefined
+              : custodialCard
+                ? // Server-quoted, and charged exactly as quoted.
+                  creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
+                : // What the card is ACTUALLY charged. A self-custody card runs
+                  // through the top-up flow, which floors at `minUSDAmount` and
+                  // rounds to whole dollars — so a $2.10 name showed $2.10 and
+                  // charged $5. The two card paths genuinely have different
+                  // floors: the quote route floors at Stripe's ~$0.50.
+                  topUpUsd
           }
           arioPrice={cost?.arioCost}
           priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
@@ -498,51 +831,175 @@ export function ArNSPurchaseCard({
           solBalance={balances.sol}
           insufficientFunds={insufficientFunds}
           insufficientSol={insufficientSol}
+          tokenForName={
+            route.kind === 'topup' && tokenSmallestUnitForName
+              ? {
+                  amount:
+                    Number(tokenSmallestUnitForName) /
+                    Number(getTokenSmallestUnit(route.token as SupportedTokenType)),
+                  label: tokenLabels[route.token as SupportedTokenType],
+                }
+              : undefined
+          }
           networkCostCovered={custodialCard}
           custodialAnt={custodialCard}
         />
       </div>
 
-      {needsPaymentStep ? (
+      {/*
+        What this screen offers depends on whether custody is on the menu.
+
+        With it on, connecting is the better of two options and the copy says
+        so. With it off there is no second option, so promising that "Turbo can
+        hold it for you instead" would describe a route the user cannot take —
+        and "skip the setup fee" names a fee no alternative charges.
+      */}
+      {cardNeedsWallet ? (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <p className="mb-3 text-sm text-foreground/80">
+            {cardPlan.kind === 'reconnect' ? (
+              custodialEnabled ? (
+                <>
+                  Reconnect your Solana wallet to buy this name outright — you
+                  &apos;ll own it directly and skip the setup fee.
+                </>
+              ) : (
+                <>
+                  Reconnect your Solana wallet to buy this name. It holds the
+                  name once registered, and signs the changes you make to it.
+                </>
+              )
+            ) : custodialEnabled ? (
+              <>
+                Connect a Solana wallet to own this name directly. Without one,
+                Turbo can hold it for you instead — that costs a little more and
+                limits what you can change.
+              </>
+            ) : (
+              <>
+                Connect a Solana wallet to buy this name. The name lives in your
+                wallet, and registering it costs a small amount of SOL in
+                network fees — your card only covers the name itself.
+              </>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                cardPlan.kind === 'reconnect'
+                  ? promptReconnect()
+                  : setShowLinkModal(true)
+              }
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Wallet className="h-4 w-4" />
+              {cardPlan.kind === 'reconnect'
+                ? 'Reconnect wallet'
+                : 'Connect a Solana wallet'}
+            </button>
+          </div>
+        </div>
+      ) : needsPaymentStep ? (
         <button
           onClick={() => setShowPayment(true)}
           disabled={
             isBusy ||
+            // Once a card payment has settled the purchase finishes on its own.
+            // Leaving this live would let the user reopen the payment modal and
+            // pay a SECOND time for a name they have already funded.
+            tokenStepLabel !== undefined ||
             // A custodial card buy is quoted server-side, so neither our
             // credits price nor the SOL estimate needs to have loaded.
             (!custodialCard && (!priceReady || gasUnavailable))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
-          {route.kind === 'card' ? (
-            <CreditCard className="h-4 w-4" />
+          {tokenStepLabel ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> {tokenStepLabel}
+            </>
           ) : (
-            <Wallet className="h-4 w-4" />
-          )}{' '}
-          Continue
+            <>
+              {route.kind === 'card' ? (
+                <CreditCard className="h-4 w-4" />
+              ) : (
+                <Wallet className="h-4 w-4" />
+              )}{' '}
+              Continue
+            </>
+          )}
         </button>
       ) : (
         <SolanaGateButton
           onAction={() =>
-            onBuy({
-              name,
-              type,
-              years: type === 'lease' ? years : undefined,
-              fundFrom,
-            })
+            route.kind === 'topup'
+              ? void runTokenPurchase()
+              : onBuy({
+                  name,
+                  type,
+                  years: type === 'lease' ? years : undefined,
+                  mechanism,
+                })
           }
-          disabled={!canPay}
-          busy={isBusy}
+          disabled={
+            route.kind === 'topup'
+              ? !priceReady || gasUnavailable || insufficientSol || isBusy ||
+                !tokenSmallestUnitForName || tokenStepLabel !== undefined
+              : !canPay
+          }
+          busy={isBusy || tokenStepLabel !== undefined}
           actionVerb="buy this name"
           busyLabel={
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Processing…
+              <Loader2 className="h-4 w-4 animate-spin" />{' '}
+              {/* Name the step: two wallet popups with one spinner between
+                  them is indistinguishable from a stuck app. */}
+              {tokenStepLabel ?? 'Processing…'}
             </>
           }
         >
-          <Wallet className="h-4 w-4" />{' '}
-          Register name
+          <Wallet className="h-4 w-4" /> Register name
         </SolanaGateButton>
+      )}
+
+      {/* Says what to DO while it runs; the button only says where it is. */}
+      {waitingNotice(tokenTopUp.step, promptSource) && (
+        <p className="mt-2 text-center text-xs text-foreground/70">
+          {waitingNotice(tokenTopUp.step, promptSource)}
+        </p>
+      )}
+
+      {/* Funded but not registered must never read as "payment failed". */}
+      {tokenTopUp.step.phase === 'failed' && (
+        <p className="mt-2 flex flex-wrap items-start justify-center gap-x-1.5 text-center text-xs text-error">
+          <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+          <span>
+            {tokenTopUp.step.message}{' '}
+            <span className="text-foreground/70">
+              {failureAdvice(tokenTopUp.step)}
+            </span>
+          </span>
+        </p>
+      )}
+
+      {/*
+        Terms sit under the button that accepts them. The card and token paths
+        each showed this inside their own modal; the ARIO and Balance paths
+        never showed it at all, because they never open one.
+      */}
+      {!needsPaymentStep && (
+        <p className="mt-3 text-center text-xs text-foreground/80">
+          By registering, you agree to our{' '}
+          <a
+            href="https://ardrive.io/tos-and-privacy/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline transition-colors hover:text-primary/80"
+          >
+            Terms of Service
+          </a>
+        </p>
       )}
 
       {/* Say why the button is dead, next to the button. See `blockedReason`. */}
@@ -564,12 +1021,22 @@ export function ArNSPurchaseCard({
 
       {/* Card settles server-side in one step — quote, charge, on-chain write —
           so it gets the dedicated checkout rather than the top-up shell. */}
+      {showLinkModal && (
+        <LinkSolanaWalletModal
+          onClose={() => setShowLinkModal(false)}
+          // Reconnecting an existing wallet is a different task from linking a
+          // new one — the modal changes its copy and closes itself when the
+          // known address comes back.
+          isReconnect={cardPlan.kind === 'reconnect'}
+        />
+      )}
+
       {showPayment && custodialCard && (
         <ArNSCardPaymentModal
           displayName={name}
           quoteInput={{
             name,
-            address: address ?? '',
+            address: custodialOwner,
             intent: 'Buy-Name',
             type,
             years: type === 'lease' ? years : undefined,
@@ -593,7 +1060,9 @@ export function ArNSPurchaseCard({
       {showPayment && ((route.kind === 'card' && !custodialCard) || route.kind === 'topup') && (
         <ArNSPaymentModal
           initialUsdAmount={topUpUsd}
-          shortfallCredits={creditShortfall}
+          shortfallCredits={creditsPrice?.credits}
+          arnsName={name}
+          networkSol={cost?.gasTotalSol}
           paymentMethod={route.kind === 'card' ? 'fiat' : 'crypto'}
           token={route.kind === 'topup' ? (route.token as SupportedTokenType) : undefined}
           tokenLabel={
@@ -602,7 +1071,7 @@ export function ArNSPurchaseCard({
               : undefined
           }
           onClose={() => setShowPayment(false)}
-          onComplete={() => setShowPayment(false)}
+          onComplete={() => void finishCardPurchase()}
         />
       )}
     </div>

@@ -1,9 +1,7 @@
 import { useCallback, useState } from 'react';
-import { TurboFactory } from '@ardrive/turbo-sdk/web';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { useArNSTurboSigner } from './useArNSTurboSigner';
-import { useTurboConfig } from '../../../hooks/useTurboConfig';
+import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 
 export type TransferPhase = 'idle' | 'transferring' | 'success' | 'error';
 
@@ -23,8 +21,7 @@ export type TransferPhase = 'idle' | 'transferring' | 'success' | 'error';
  * other request cannot authorize this one.
  */
 export function useTransferCustodialName() {
-  const signer = useArNSTurboSigner();
-  const turboConfig = useTurboConfig('solana');
+  const { getClient, ownerAddress } = useCustodyOwnerClient();
   const queryClient = useQueryClient();
 
   const [phase, setPhase] = useState<TransferPhase>('idle');
@@ -39,9 +36,9 @@ export function useTransferCustodialName() {
 
   const transfer = useCallback(
     async ({ antId, target }: { antId: string; target: string }) => {
-      if (!signer.isReady || !signer.walletAdapter) {
+      if (!ownerAddress) {
         const e = new Error(
-          'Connect the wallet that bought this name to transfer it.',
+          'Connect your wallet to move this name.',
         );
         setPhase('error');
         setError(e);
@@ -60,11 +57,13 @@ export function useTransferCustodialName() {
       setPhase('transferring');
       setError(undefined);
       try {
-        const turbo = TurboFactory.authenticated({
-          token: 'solana',
-          walletAdapter: signer.walletAdapter,
-          ...turboConfig,
-        });
+        /*
+          Signed by the identity that BOUGHT the name, which on this route is
+          often not a Solana wallet — the service derives the owner from the
+          signature, so signing as Solana here proved the wrong identity and
+          locked the buyer out of their own name.
+        */
+        const turbo = await getClient();
         const res = await turbo.transferArNSAnt({ antId, target });
         setMessageId(res.messageId);
         setPhase('success');
@@ -81,7 +80,7 @@ export function useTransferCustodialName() {
         throw normalized;
       }
     },
-    [signer, turboConfig, queryClient],
+    [getClient, ownerAddress, queryClient],
   );
 
   return {

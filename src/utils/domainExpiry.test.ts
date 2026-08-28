@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   daysUntil,
+  toEpochMs,
   isExpiringSoon,
   getExpiringDomains,
   expirySortKey,
@@ -18,7 +19,36 @@ const nameAt = (name: string, opts: { type?: string; days?: number } = {}) => ({
   endTimestamp: opts.days === undefined ? undefined : NOW + opts.days * DAY,
 });
 
+describe('toEpochMs', () => {
+  it('leaves millisecond values untouched', () => {
+    expect(toEpochMs(NOW)).toBe(NOW);
+  });
+
+  it('scales second values to milliseconds', () => {
+    // The actual bug: a 2027 expiry in seconds read as ms lands in 1970, so
+    // the countdown said "0 days" beside a correctly-rendered 2027 date.
+    const marchSeconds = 1_804_395_600;
+    expect(toEpochMs(marchSeconds)).toBe(marchSeconds * 1000);
+    expect(new Date(toEpochMs(marchSeconds)).getUTCFullYear()).toBe(2027);
+  });
+
+  it('passes through zero and invalid values unchanged', () => {
+    // Callers already treat these as "unknown"; inventing 1970 would be worse.
+    expect(toEpochMs(0)).toBe(0);
+    expect(toEpochMs(-1)).toBe(-1);
+    expect(Number.isNaN(toEpochMs(NaN))).toBe(true);
+  });
+});
+
 describe('daysUntil', () => {
+  it('accepts seconds as readily as milliseconds', () => {
+    // Five call sites pass this value; one disagreeing on units is how a
+    // 2027 expiry reported "in 0 days".
+    const inFiveDaysMs = NOW + 5 * DAY;
+    expect(daysUntil(Math.floor(inFiveDaysMs / 1000), NOW)).toBe(5);
+    expect(daysUntil(inFiveDaysMs, NOW)).toBe(5);
+  });
+
   it('rounds up to whole days and goes negative once past', () => {
     expect(daysUntil(NOW + 5 * DAY, NOW)).toBe(5);
     expect(daysUntil(NOW + 0.2 * DAY, NOW)).toBe(1);

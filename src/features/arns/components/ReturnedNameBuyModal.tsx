@@ -30,6 +30,7 @@ import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import EditDetailsModal from './EditDetailsModal';
 import ReturnedNamePremiumChart from './ReturnedNamePremiumChart';
 import { toUnicodeName } from '@/utils/punycode';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -154,19 +155,20 @@ export default function ReturnedNameBuyModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-md p-6">
+      <div className="w-[92vw] max-w-md p-4 sm:p-5">
         {/* Header */}
-        <div className="mb-4 flex items-start gap-3">
-          <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20">
-            <Flame className="h-5 w-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-heading text-xl font-extrabold text-foreground">
-              Buy <span className="break-all font-mono text-primary">{toUnicodeName(name)}.ar.io</span>
-            </h3>
-            <p className="text-sm text-foreground/70">from the returned-name auction</p>
-          </div>
-        </div>
+        <ModalHeader
+          icon={Flame}
+          title={
+            <>
+              Buy{' '}
+              <span className="break-all font-mono text-primary">
+                {toUnicodeName(name)}.ar.io
+              </span>
+            </>
+          }
+          description="From the returned-name auction"
+        />
 
         {/* Live premium / countdown banner */}
         {buyState.phase === 'idle' && !auctionEnded && (

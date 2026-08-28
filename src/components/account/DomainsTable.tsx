@@ -4,6 +4,12 @@ import { Globe, ExternalLink, AlertTriangle, ArrowRight } from 'lucide-react';
 import { ARIO_LOGO_TX_ID } from '@ar.io/sdk/solana';
 import { ArNSName } from '@/types';
 import { daysUntil, domainStatus, isExpiringSoon, type DomainStatus } from '@/utils/domainExpiry';
+import {
+  sortDomains,
+  type DomainSortKey,
+  type SortDirection,
+} from '@/utils/domainSort';
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
 import { deriveAntRole } from '@/features/arns/antRole';
 import { useStore } from '@/store/useStore';
@@ -97,6 +103,53 @@ function StatusPill({ status }: { status: DomainStatus }) {
  * the table itself stays slim (name, explicit expiry, quick links). Rows the
  * caller passes are expected sorted with soonest-expiring first.
  */
+/**
+ * A column header that sorts.
+ *
+ * The whole header is the button rather than an icon beside it — a 12px
+ * chevron is a poor target, and people click column headers by habit. The
+ * indicator is always rendered so the header doesn't reflow on hover, and
+ * `aria-sort` carries the same state to screen readers that the arrow carries
+ * visually.
+ */
+function SortableTh({
+  label,
+  sortKey,
+  active,
+  dir,
+  onSort,
+}: {
+  label: string;
+  sortKey: DomainSortKey;
+  active: DomainSortKey;
+  dir: SortDirection;
+  onSort: (key: DomainSortKey) => void;
+}) {
+  const isActive = active === sortKey;
+  const Icon = !isActive ? ChevronsUpDown : dir === 'asc' ? ArrowUp : ArrowDown;
+
+  return (
+    <th
+      className="px-4 py-3 font-medium"
+      aria-sort={isActive ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase tracking-wider transition-colors hover:text-foreground ${
+          isActive ? 'text-foreground' : ''
+        }`}
+      >
+        {label}
+        <Icon
+          className={`h-3 w-3 ${isActive ? 'opacity-100' : 'opacity-40'}`}
+          aria-hidden="true"
+        />
+      </button>
+    </th>
+  );
+}
+
 export default function DomainsTable({
   domains,
   walletAddress,
@@ -105,6 +158,25 @@ export default function DomainsTable({
   /** Connected/linked Solana address — used to label owner vs controller. */
   walletAddress?: string | null;
 }) {
+  /*
+    Defaults to expiry ascending, which is the order the caller already passes
+    rows in — so turning sorting on changes nothing until a header is clicked,
+    and the indicator tells the truth about the order on first paint.
+  */
+  const [sortKey, setSortKey] = useState<DomainSortKey>('expires');
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
+
+  const toggleSort = (key: DomainSortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    // A fresh column starts ascending: soonest, most urgent, A–Z. Carrying the
+    // previous column's direction over surprises people.
+    setSortDir('asc');
+  };
+
   const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
   const processIds = useMemo(
     () => domains.map((d) => d.processId).filter(Boolean),
@@ -112,19 +184,24 @@ export default function DomainsTable({
   );
   const summaries = useAntSummaries(processIds);
 
+  const rows = useMemo(
+    () => sortDomains(domains, sortKey, sortDir),
+    [domains, sortKey, sortDir],
+  );
+
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/20 bg-card">
       <table className="w-full min-w-[34rem] text-sm">
         <thead>
           <tr className="border-b border-border/20 text-left text-xs uppercase tracking-wider text-foreground/60">
-            <th className="px-4 py-3 font-medium">Domain</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Expires</th>
+            <SortableTh label="Domain" sortKey="domain" active={sortKey} dir={sortDir} onSort={toggleSort} />
+            <SortableTh label="Status" sortKey="status" active={sortKey} dir={sortDir} onSort={toggleSort} />
+            <SortableTh label="Expires" sortKey="expires" active={sortKey} dir={sortDir} onSort={toggleSort} />
             <th className="px-4 py-3 text-right font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {domains.map((domain) => {
+          {rows.map((domain) => {
             const now = Date.now();
             const expiringSoon = isExpiringSoon(domain, now);
             const status = domainStatus(domain, now);

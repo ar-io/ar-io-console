@@ -22,6 +22,7 @@ import BaseModal from '../modals/BaseModal';
 import UploadProgressSummary from '../UploadProgressSummary';
 import { JitTokenSelector } from '../JitTokenSelector';
 import X402OnlyBanner from '../X402OnlyBanner';
+import ModalHeader from '../modals/ModalHeader';
 
 // Helper function moved outside component to prevent recreation on every render
 function getFileIcon(filename: string) {
@@ -559,15 +560,11 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
   return (
     <BaseModal onClose={onClose}>
       <div className="p-4 sm:p-5 w-full max-w-2xl mx-auto min-w-[90vw] sm:min-w-[500px]">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5 text-primary" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-lg font-extrabold text-foreground">Ready to Deploy</h3>
-            <p className="text-xs text-foreground/80">Confirm your deployment details</p>
-          </div>
-        </div>
+        <ModalHeader
+          icon={Zap}
+          title="Ready to Deploy"
+          description="Confirm your deployment details"
+        />
 
         {/* X402-Only Mode Banner */}
         {x402OnlyMode && <X402OnlyBanner />}

@@ -18,12 +18,13 @@ export interface BannerConfig {
 
 export const BANNER_CONFIG: BannerConfig = {
   enabled: true,
-  id: 'pages-launch-2026',
-  message: 'New feature! Build a permanent link-in-bio page, live in seconds.',
+  // New id: dismissals are tracked per id, so reusing the Pages one would hide
+  // this from everyone who had already dismissed that.
+  id: 'arns-launch-2026',
+  message: 'Your credits buy domains now, not just storage.',
   link: {
-    text: 'Try Pages',
-    href: '/pages',
-    state: { create: true },
+    text: 'Register a name',
+    href: '/arns',
     external: false,
   },
   variant: 'subtle',

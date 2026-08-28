@@ -59,6 +59,7 @@ export function useArNSCostDetails({
   years,
   increaseQty,
   fundFrom,
+  payWithCredits = false,
   fromAddress,
   refreshTick,
   enabled = true,
@@ -69,6 +70,11 @@ export function useArNSCostDetails({
   years?: number;
   increaseQty?: number;
   fundFrom: ArNSFundFrom;
+  /**
+   * The name is paid for with Turbo credits, so the wallet's ARIO shortfall is
+   * irrelevant and the estimate should price gas only.
+   */
+  payWithCredits?: boolean;
   /** Wallet address whose ARIO balance the funding plan is checked against. */
   fromAddress?: string;
   /**
@@ -108,7 +114,12 @@ export function useArNSCostDetails({
       // funding planner only accepts balance|stakes|any, so map it to 'balance'
       // for the SOL-gas/price estimate; the wallet-ARIO shortfall it computes is
       // irrelevant on the credits path and is zeroed out below.
-      const payWithCredits = fundFrom === 'turbo';
+      /*
+        Told, not inferred. This used to read `fundFrom === 'turbo'` — the value
+        that turned out to be a lie, since @ar.io/sdk ignores it and spends
+        ARIO. With 'turbo' gone the inference silently became "never", which
+        would have shown an ARIO shortfall to someone paying with credits.
+      */
       const sdkFundFrom = payWithCredits ? 'balance' : fundFrom;
       const cd = await ario.getCostDetails({
         intent,

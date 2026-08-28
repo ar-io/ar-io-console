@@ -5,7 +5,12 @@ import { getWritableARIO } from '../../../utils';
 import { ArNSSettlementResult } from '../services/TurboArNSClient';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
-import type { ArNSBuyFundFrom } from './useBuyArNSName';
+import { useCustodyOwnerClient } from './useCustodyOwnerClient';
+import { useTurboArNSClient } from './useTurboArNSClient';
+import type {
+  ArioFundFrom,
+  SettlementMechanism,
+} from '../purchase/settlementMechanism';
 
 /** Lifecycle intents that operate on an already-owned name (no ANT spawn). */
 export type ManageIntent =
@@ -23,7 +28,7 @@ export interface ManageArNSInput {
   /** Undername slots to add — required for Increase-Undername-Limit. */
   increaseQty?: number;
   /** Funding source for the ARIO price. Defaults to Turbo Credits. */
-  fundFrom?: ArNSBuyFundFrom;
+  mechanism: SettlementMechanism;
 }
 
 export interface UseManageArNSNameResult {
@@ -43,18 +48,18 @@ type ARIOManageWriteable = {
   extendLease(p: {
     name: string;
     years: number;
-    fundFrom?: ArNSBuyFundFrom;
+    fundFrom?: ArioFundFrom;
     referrer?: string;
   }): Promise<{ id: string }>;
   upgradeRecord(p: {
     name: string;
-    fundFrom?: ArNSBuyFundFrom;
+    fundFrom?: ArioFundFrom;
     referrer?: string;
   }): Promise<{ id: string }>;
   increaseUndernameLimit(p: {
     name: string;
     increaseCount: number;
-    fundFrom?: ArNSBuyFundFrom;
+    fundFrom?: ArioFundFrom;
     referrer?: string;
   }): Promise<{ id: string }>;
 };
@@ -88,6 +93,8 @@ export function isInsufficientCredits(err: unknown): boolean {
  */
 export function useManageArNSName(): UseManageArNSNameResult {
   const signer = useArNSTurboSigner();
+  const { getClient: getOwnerClient } = useCustodyOwnerClient();
+  const client = useTurboArNSClient();
 
   const [phase, setPhase] = useState<ManagePhase>('idle');
   const [statusMessage, setStatusMessage] = useState('');
@@ -109,15 +116,28 @@ export function useManageArNSName(): UseManageArNSNameResult {
       intent,
       years,
       increaseQty,
-      fundFrom = 'turbo',
+      mechanism,
     }: ManageArNSInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
       setInsufficientCredits(false);
       setResult(undefined);
 
+      /*
+        Only the ARIO route needs a Solana signer — it moves ARIO on-chain.
+
+        Paying with credits does not: the service identifies the payer from the
+        request signature (its middleware takes Arweave, Ethereum, Solana or
+        ED25519) and debits that identity. Demanding Solana for both meant a
+        custodial buyer — who is on that route precisely because they have no
+        Solana wallet — could not renew or upgrade the name they own. On a
+        lease, that is a name they eventually lose.
+      */
       const owner = signer.address;
-      if (!signer.isReady || !owner || !signer.walletAdapter) {
+      if (
+        mechanism.kind !== 'turbo-credits' &&
+        (!signer.isReady || !owner || !signer.walletAdapter)
+      ) {
         const e = new Error(
           'Connect a Solana wallet with a live signer to pay for this change.',
         );
@@ -130,12 +150,34 @@ export function useManageArNSName(): UseManageArNSNameResult {
         setPhase('submitting');
         setStatusMessage(`${VERB[intent]} '${lowered}'…`);
 
-        const ario = getWritableARIO(
-          signer.getSolanaSigner(),
-        ) as unknown as ARIOManageWriteable;
-
         let res: { id: string };
-        switch (intent) {
+
+        if (mechanism.kind === 'turbo-credits') {
+          /*
+            Credits are debited only by turbo-sdk. These intents act on a name
+            that already exists, so unlike a Buy there is no ANT to spawn — the
+            purchase settles in one call.
+          */
+          if (!client) throw new Error('Payment service is unavailable.');
+          const purchase = await client.purchaseWithCredits({
+            // Signs as whoever is connected, so the credits debited are theirs.
+            client: await getOwnerClient(),
+            name: lowered,
+            intent,
+            years,
+            increaseQty,
+          });
+          res = { id: purchase.arioWriteResult?.id ?? '' };
+        } else {
+          const ario = getWritableARIO(
+            signer.getSolanaSigner(),
+          ) as unknown as ARIOManageWriteable;
+          // Narrowed: 'turbo-credits' returned above, and a fiat manage never
+          // reaches this hook — it settles through the quote route.
+          const fundFrom =
+            mechanism.kind === 'ario-direct' ? mechanism.fundFrom : 'balance';
+
+          switch (intent) {
           case 'Extend-Lease':
             res = await ario.extendLease({
               name: lowered,
@@ -158,7 +200,8 @@ export function useManageArNSName(): UseManageArNSNameResult {
               fundFrom,
               referrer: APP_NAME,
             });
-            break;
+              break;
+          }
         }
 
         const settlement: ArNSSettlementResult = {
@@ -184,7 +227,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
         throw normalized;
       }
     },
-    [signer],
+    [signer, client, getOwnerClient],
   );
 
   return {

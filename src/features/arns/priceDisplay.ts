@@ -1,14 +1,18 @@
 /**
- * Pure conversion + formatting for the ARIO ⇄ USD price-display toggle.
+ * Pure conversion + formatting for the ArNS priced surfaces.
  *
  * No imports, no side-effects, no `Date`/`Math.random` — every function is
  * deterministic given its arguments so the whole module is node-testable. The
  * React layer (`PriceAmount`) supplies the live `usdPerArio` rate (from
- * `useArioUsdRate`) and the current `currency` preference (from the store); all
- * the actual math lives here.
+ * `useArioUsdRate`); all the actual math lives here.
+ *
+ * Dollars lead, always. This used to swap primary and secondary based on a
+ * user toggle, but both values were rendered either way — the control only
+ * chose which one was bold, which is a thin reason to make someone operate a
+ * switch. USD is the unit everyone can price against; the token amount is what
+ * actually leaves the wallet, so it stays as the secondary line rather than
+ * being hidden behind a preference.
  */
-
-export type PriceDisplayCurrency = 'ario' | 'usd';
 
 /**
  * Convert an ARIO amount to USD given `usdPerArio` (USD per 1 ARIO). Returns
@@ -74,41 +78,21 @@ export interface PriceDisplay {
 export function formatPriceDisplay({
   ario,
   usdPerArio,
-  currency,
-  withUnit = true,
 }: {
   ario: number | undefined;
   usdPerArio: number | undefined;
-  currency: PriceDisplayCurrency;
-  /**
-   * Append the " ARIO" unit to the primary value. Set false for dense tables
-   * where the unit is shown once (via the ARIO/USD toggle) instead of on every
-   * cell — the disambiguating secondary "≈ …" line always keeps its unit.
-   * The USD primary always keeps its "$" (a compact, universal prefix).
-   */
-  withUnit?: boolean;
 }): PriceDisplay {
   if (ario == null || !Number.isFinite(ario)) {
     return { primary: '—' };
   }
 
   const usd = arioToUsd(ario, usdPerArio);
-  const arioBare = formatArioAmount(ario);
-  const arioStr = `${arioBare} ARIO`;
+  const arioStr = `${formatArioAmount(ario)} ARIO`;
 
-  if (currency === 'usd') {
-    if (usd == null) {
-      // Graceful fallback: no USD rate → show ARIO. Always keep the ARIO unit
-      // here (even when withUnit is false), otherwise a bare number would sit
-      // under a "USD" table heading and read as dollars.
-      return { primary: arioStr };
-    }
-    return { primary: formatUsdAmount(usd), secondary: `≈ ${arioStr}` };
-  }
+  // No rate → show ARIO alone rather than a broken or absent number. The unit
+  // is always kept here: a bare figure where dollars were expected reads as
+  // dollars.
+  if (usd == null) return { primary: arioStr };
 
-  // currency === 'ario'
-  return {
-    primary: withUnit ? arioStr : arioBare,
-    secondary: usd == null ? undefined : `≈ ${formatUsdAmount(usd)}`,
-  };
+  return { primary: formatUsdAmount(usd), secondary: `≈ ${arioStr}` };
 }

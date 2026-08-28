@@ -1,3 +1,4 @@
+import { resolveArNSAddress } from '../utils/arnsIdentity';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TurboCryptoFundResponse } from '@ardrive/turbo-sdk/web';
@@ -12,7 +13,6 @@ import {
 import { SupportedTokenType } from '../constants';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
-import type { PriceDisplayCurrency } from '../features/arns/priceDisplay';
 
 /**
  * Production RPC endpoints, each overridable at build time.
@@ -323,7 +323,6 @@ interface StoreState {
   smartDeployEnabled: boolean;
 
   // Price-display preference (ARIO ⇄ USD toggle on priced surfaces)
-  priceDisplayCurrency: PriceDisplayCurrency;
 
   // App Details state (deployed apps history)
   deployedApps: Record<string, DeployedAppEntry>; // Keyed by app name
@@ -457,7 +456,6 @@ interface StoreState {
   getFileHashEntry: (hash: string) => FileHashEntry | null;
   clearFileHashCache: () => void;
   setSmartDeployEnabled: (enabled: boolean) => void;
-  setPriceDisplayCurrency: (currency: PriceDisplayCurrency) => void;
 
   // App Details actions
   saveDeployedApp: (appName: string, appVersion: string) => void;
@@ -505,7 +503,6 @@ export const useStore = create<StoreState>()(
       smartDeployEnabled: true, // Default ON
 
       // Price-display preference — ARIO by default (native ArNS currency)
-      priceDisplayCurrency: 'ario',
 
       // App Details state (deployed apps history)
       deployedApps: {},
@@ -547,17 +544,31 @@ export const useStore = create<StoreState>()(
       jitBufferMultiplier: 1.1, // Default 10% buffer
       // Actions
       setAddress: (address, type, solanaWalletName) =>
-        set({
+        set((state) => ({
           address,
           walletType: type,
-          creditBalance: 0,
+          /*
+            Only a DIFFERENT wallet invalidates the balance.
+
+            This is re-called for the SAME session — adapter reconnects, the
+            linked-wallet restore, a wallet modal re-confirming — and zeroing
+            unconditionally wiped a balance the query had already resolved.
+            Nothing restored it: useCreditBalance syncs the store from an effect
+            keyed on the QUERY value, and that value hadn't changed, so the
+            effect never re-ran. The header kept rendering the query's number
+            while every store reader saw 0 — which is how a funded wallet lost
+            its "Balance" payment option mid-checkout while the header still
+            showed the credits.
+          */
+          creditBalance:
+            state.address === address ? state.creditBalance : 0,
           // Keep the existing name when re-setting the same Solana session
           // (the listener calls this without a name on reconnect).
           solanaWalletName:
             type === 'solana'
               ? (solanaWalletName ?? get().solanaWalletName)
               : null,
-        }),
+        })),
       clearAddress: () =>
         set({
           address: null,
@@ -585,8 +596,7 @@ export const useStore = create<StoreState>()(
       },
       getArNSAddress: () => {
         const { walletType, address, linkedSolanaAddress } = get();
-        if (walletType === 'solana') return address;
-        return linkedSolanaAddress;
+        return resolveArNSAddress({ walletType, address, linkedSolanaAddress });
       },
       setCreditBalance: (balance) => set({ creditBalance: balance }),
       setArNSName: (address, name, logo) => {
@@ -972,8 +982,6 @@ export const useStore = create<StoreState>()(
       },
       clearFileHashCache: () => set({ fileHashCache: {} }),
       setSmartDeployEnabled: (enabled) => set({ smartDeployEnabled: enabled }),
-      setPriceDisplayCurrency: (priceDisplayCurrency) =>
-        set({ priceDisplayCurrency }),
 
       // App Details actions
       saveDeployedApp: (appName, appVersion) => {
@@ -1054,7 +1062,6 @@ export const useStore = create<StoreState>()(
         fileHashCache: state.fileHashCache,
         smartDeployEnabled: state.smartDeployEnabled,
         // Price-display preference
-        priceDisplayCurrency: state.priceDisplayCurrency,
         // App Details state
         deployedApps: state.deployedApps,
         lastDeployedAppName: state.lastDeployedAppName,

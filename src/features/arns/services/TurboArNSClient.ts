@@ -1,10 +1,13 @@
 import {
   ArNSFiatPurchaseQuoteResponse,
+  ArNSPurchaseResponse,
   Currency,
+  SolanaWalletAdapter as TurboSolanaWalletAdapter,
   TurboArNSNamesResponse,
   TokenType,
   TurboFactory,
   TurboUnauthenticatedClient,
+  TurboAuthenticatedClient,
 } from '@ardrive/turbo-sdk/web';
 
 import { lowerCaseDomain } from '../utils';
@@ -85,11 +88,15 @@ export type ArNSSettlementResult = {
  * `{ publicKey, signMessage, signTransaction }` object console already builds
  * for uploads/shares from `useWallet()`.
  */
-export type SolanaWalletAdapter = {
-  publicKey: unknown;
-  signMessage?: (message: Uint8Array) => Promise<Uint8Array>;
-  signTransaction?: unknown;
-};
+/**
+ * Re-export of the SDK's adapter type rather than a looser local shape.
+ *
+ * The local version typed `publicKey` as `unknown`, so anything built against
+ * it needed a cast to reach `TurboFactory.authenticated` — and a cast on a
+ * money path is exactly where a wrong argument hides. Aliasing the real type
+ * makes a mismatch a build error.
+ */
+export type SolanaWalletAdapter = TurboSolanaWalletAdapter;
 
 
 
@@ -222,6 +229,99 @@ export class TurboArNSClient {
     };
     return turbo.getArNSFiatPurchaseQuote(
       params as Parameters<typeof turbo.getArNSFiatPurchaseQuote>[0],
+    );
+  }
+
+  /**
+   * Settle an ArNS intent against the signer's TURBO CREDIT balance.
+   *
+   * This is the only way to spend credits. `@ar.io/sdk`'s Solana writes accept
+   * `fundFrom: 'turbo'` and then ignore it — every branch treats it as
+   * `'balance'` and debits the wallet's ARIO — so routing a credits purchase
+   * through `buyRecord` charged the wrong asset entirely.
+   *
+   * `processId` matters for a Buy: supplied, the name is assigned to an ANT the
+   * user already owns; omitted, the bundler provisions a TURBO-OWNED one. Only
+   * the deliberately-custodial card path wants the latter.
+   */
+  public async purchaseWithCredits({
+    walletAdapter,
+    client,
+    allowServiceCustody = false,
+    name,
+    intent = 'Buy-Name',
+    type,
+    years,
+    increaseQty,
+    processId,
+    paidBy,
+  }: {
+    /**
+     * Typed against the SDK's own adapter rather than this file's looser
+     * local alias — a cast here would silence the compiler on a call that
+     * spends money.
+     */
+    walletAdapter?: TurboSolanaWalletAdapter;
+    /**
+     * A client already authenticated as the payer. Preferred.
+     *
+     * The service identifies the payer from the request SIGNATURE — its
+     * middleware accepts Arweave, Ethereum, Solana and ED25519 — and debits
+     * that identity's credits. Building a Solana client here regardless meant
+     * an Arweave or Ethereum holder could not spend their own credits on a
+     * name they own, which is every custodial buyer.
+     */
+    client?: TurboAuthenticatedClient;
+    name: string;
+    intent?: TurboArNSIntent;
+    type?: 'lease' | 'permabuy';
+    years?: number;
+    increaseQty?: number;
+    /** User-owned ANT for a Buy. Omitting it makes the SERVICE spawn one. */
+    processId?: string;
+    /**
+     * Permit a Buy with no `processId`, which hands the new ANT to Turbo.
+     *
+     * Guarded rather than implied. Omitting `processId` was the difference
+     * between a name the buyer owns and one Turbo holds, expressed as an
+     * absent field — so any upstream bug that let it fall through as undefined
+     * would have quietly sold custody, in an environment where custody is
+     * switched off and nothing downstream would notice. The custodial route
+     * does not even come through here; it quotes and settles via
+     * `getFiatQuote`. So this stays off, and a missing id is a crash rather
+     * than a silent change of ownership.
+     */
+    allowServiceCustody?: boolean;
+    paidBy?: string | string[];
+  }): Promise<ArNSPurchaseResponse> {
+    if (intent === 'Buy-Name' && !processId && !allowServiceCustody) {
+      throw new Error(
+        'Refusing to buy a name with no ANT: without a processId the service ' +
+          'spawns and keeps one. Pass the spawned ANT, or set ' +
+          'allowServiceCustody when custody is genuinely intended.',
+      );
+    }
+    if (!client && !walletAdapter) {
+      throw new Error(
+        'purchaseWithCredits needs either an authenticated client or a Solana wallet adapter.',
+      );
+    }
+    const turbo =
+      client ??
+      TurboFactory.authenticated({
+        token: 'solana',
+        walletAdapter: walletAdapter as TurboSolanaWalletAdapter,
+        paymentServiceConfig: { url: this.paymentUrl },
+        uploadServiceConfig: { url: this.uploadUrl },
+        gatewayUrl: this.gatewayUrl,
+      });
+    const params = {
+      ...intentParams({ name, intent, type, years, increaseQty }),
+      ...(processId ? { processId } : {}),
+      ...(paidBy ? { paidBy } : {}),
+    };
+    return turbo.purchaseArNSName(
+      params as Parameters<typeof turbo.purchaseArNSName>[0],
     );
   }
 

@@ -11,7 +11,7 @@
  * not a stale test.
  */
 
-import type { FundFrom } from '@ar.io/sdk/solana';
+import type { ArioFundFrom } from './settlementMechanism';
 
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
 
@@ -39,14 +39,34 @@ export interface BuyRecordArgs {
   /** Present only for a lease with a term — see the note above. */
   years?: number;
   /**
-   * Typed as the SDK's own union rather than `string`, so this object can be
-   * passed to `buyRecord` with no cast. A cast here would silence the compiler
-   * on a call that spends money — if this shape ever drifts from the SDK's,
-   * that must be a build error, not a runtime surprise.
+   * Narrowed to the sources `buyRecord` ACTS on.
+   *
+   * The SDK's own union also contains `'turbo'`, which it accepts and then
+   * ignores — every Solana branch treats it as `'balance'` and debits the
+   * wallet's ARIO. Excluding it here makes "pay with credits through the ARIO
+   * SDK" a build error rather than a silent mischarge; credits settle through
+   * turbo-sdk, which this function has nothing to do with.
    */
-  fundFrom?: FundFrom;
+  fundFrom?: ArioFundFrom;
   referrer: string;
+  /**
+   * Initial ANT metadata and `@` target, applied on the atomic buy path.
+   * Ignored when a `processId` is supplied, since that ANT already exists.
+   */
+  antState?: { transactionId?: string };
 }
+
+/**
+ * Where a freshly bought name points before its owner sets anything.
+ *
+ * Without an explicit `antState.transactionId`, the SDK falls back to
+ * `DEFAULT_ANT_TRANSACTION_ID` — which is the AR.IO **logo** image, chosen only
+ * because an empty string fails the on-chain `is_valid_arweave_id` check. It is
+ * a validation placeholder, not a destination, so a brand-new name resolved to
+ * a picture of a logo. This points it at the real landing page instead.
+ */
+export const DEFAULT_ARNS_TARGET_TX =
+  'T9_V2HfiAq5qlLzObfyayj2-cjPujxpg25TRi4OZbe4';
 
 export function buildBuyRecordArgs({
   name,
@@ -61,6 +81,9 @@ export function buildBuyRecordArgs({
     ...(type === 'lease' && years ? { years } : {}),
     fundFrom,
     referrer,
+    // Only meaningful on the atomic path (no `processId`), which is the one
+    // this app uses — a supplied ANT keeps whatever target it already has.
+    antState: { transactionId: DEFAULT_ARNS_TARGET_TX },
   };
 }
 
@@ -94,13 +117,23 @@ export type BuyErrorRoute =
  * spend money that cannot fix their problem.
  */
 export function routeBuyError({
-  fundFrom,
+  mechanism,
   isInsufficientCredits,
 }: {
-  fundFrom: FundFrom | undefined;
+  /**
+   * Keyed on the settlement MECHANISM, not on `fundFrom`.
+   *
+   * It used to test `fundFrom === 'turbo'` — a value `@ar.io/sdk` accepts and
+   * ignores, so it never described what actually happened. Only a real credits
+   * settlement can run out of credits; on the ARIO path a shortfall is an ARIO
+   * shortfall, and offering a credits top-up would not resolve it.
+   */
+  mechanism: 'ario-direct' | 'turbo-credits' | 'turbo-fiat';
   isInsufficientCredits: boolean;
 }): BuyErrorRoute {
-  if (fundFrom === 'turbo' && isInsufficientCredits) return { kind: 'insufficient-credits' };
+  if (mechanism === 'turbo-credits' && isInsufficientCredits) {
+    return { kind: 'insufficient-credits' };
+  }
   return { kind: 'error' };
 }
 

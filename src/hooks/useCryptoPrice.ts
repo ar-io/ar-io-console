@@ -8,7 +8,8 @@ import { useTurboConfig } from './useTurboConfig';
 /**
  * Get the smallest unit for a token type (e.g., 10^18 wei for ETH)
  */
-const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
+/** Smallest unit per whole token (lamports per SOL, wei per ETH, …). */
+export const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
   switch (tokenType) {
     case 'arweave':
       return BigInt(10 ** 12); // winston
@@ -43,12 +44,22 @@ const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
  */
 export function useCryptoPriceForWinc(
   wincAmount: number | undefined,
-  tokenType: SupportedTokenType
+  tokenType: SupportedTokenType,
+  /**
+   * Round the token amount UP to the next smallest unit.
+   *
+   * The conversion below is integer division, which truncates — so an exact
+   * "how much SOL buys N credits" answer lands just BELOW N. Fine for a display
+   * estimate, not fine when the number is what we actually charge: the top-up
+   * then buys slightly too few credits and the purchase it was funding fails
+   * for want of a fraction, after taking the user's money.
+   */
+  roundUp = false,
 ): number | undefined {
   const turboConfig = useTurboConfig(tokenType);
 
   const { data: tokenAmount } = useQuery({
-    queryKey: ['cryptoPriceForWinc', wincAmount, tokenType, turboConfig.paymentServiceConfig.url],
+    queryKey: ['cryptoPriceForWinc', wincAmount, tokenType, roundUp, turboConfig.paymentServiceConfig.url],
     queryFn: async () => {
       if (!wincAmount || wincAmount <= 0) return undefined;
 
@@ -68,7 +79,11 @@ export function useCryptoPriceForWinc(
 
       // Calculate token amount: (wincAmount / wincForOneToken) * oneToken
       // Then convert to display units by dividing by smallest unit
-      const tokenInSmallestUnit = (BigInt(Math.round(wincAmount)) * oneToken) / wincForOneTokenBigInt;
+      const numerator = BigInt(Math.round(wincAmount)) * oneToken;
+      let tokenInSmallestUnit = numerator / wincForOneTokenBigInt;
+      if (roundUp && numerator % wincForOneTokenBigInt !== 0n) {
+        tokenInSmallestUnit += 1n;
+      }
 
       // Convert to display units (e.g., wei to ETH)
       return Number(tokenInSmallestUnit) / Number(oneToken);
@@ -80,6 +95,60 @@ export function useCryptoPriceForWinc(
   });
 
   return tokenAmount;
+}
+
+/**
+ * Token amount for a given winc, in the token's SMALLEST unit.
+ *
+ * `useCryptoPriceForWinc` returns display units (whole SOL, whole ETH), which
+ * is right for showing a price and wrong for spending one: `topUpWithTokens`
+ * documents `tokenAmount` as "the smallest unit value" and rejects a decimal —
+ * "0.019876422 cannot be converted to a BigInt because it is not an integer".
+ *
+ * Returned as a bigint straight from the integer arithmetic rather than scaling
+ * the display figure back up, because that round-trip goes through a float:
+ * harmless at SOL's 1e9, lossy at ETH's 1e18.
+ *
+ * Rounds UP for the same reason the display quote does — a unit over is
+ * invisible, a unit short is a purchase that fails after taking the money.
+ */
+export function useSmallestUnitForWinc(
+  wincAmount: number | undefined,
+  tokenType: SupportedTokenType,
+): bigint | undefined {
+  const turboConfig = useTurboConfig(tokenType);
+
+  const { data } = useQuery({
+    queryKey: [
+      'smallestUnitForWinc',
+      wincAmount,
+      tokenType,
+      turboConfig.paymentServiceConfig.url,
+    ],
+    queryFn: async () => {
+      if (!wincAmount || wincAmount <= 0) return null;
+      const turbo = TurboFactory.unauthenticated({
+        ...turboConfig,
+        token: tokenType as any,
+      });
+      const oneToken = getTokenSmallestUnit(tokenType);
+      const { winc: wincForOneToken } = await turbo.getWincForToken({
+        tokenAmount: oneToken,
+      });
+      const wincPerToken = BigInt(wincForOneToken);
+      if (wincPerToken <= 0n) return null;
+      const numerator = BigInt(Math.round(wincAmount)) * oneToken;
+      const floor = numerator / wincPerToken;
+      return (numerator % wincPerToken === 0n ? floor : floor + 1n).toString();
+    },
+    enabled: !!wincAmount && wincAmount > 0,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+  });
+
+  // Serialized as a string through the query cache — bigint isn't JSON-safe.
+  return data == null ? undefined : BigInt(data);
 }
 
 /**

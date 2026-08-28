@@ -1,0 +1,60 @@
+name: Show deploy wallet address
+
+# Prints the PUBLIC Solana address behind secrets.DEPLOY_KEY / secrets.ARNS_KEY.
+#
+# The secrets are write-only once set, so there is otherwise no way to look up
+# which wallet the deploy pipeline actually uses — needed to fund it and to make
+# it a controller of the `console` ArNS name.
+#
+# Only the public address is derived and printed. An ed25519 secret key carries
+# its own public half in the last 32 bytes, so this reads that and encodes it;
+# the secret itself is never echoed, and GitHub masks it in logs regardless.
+
+on:
+  workflow_dispatch:
+  # workflow_dispatch only registers from the DEFAULT branch, so this would
+  # otherwise be unrunnable until it reached main — and the address is needed
+  # before main can deploy at all (the wallet has to hold SOL and control the
+  # name first). Path-filtered so it runs when this file lands and stays quiet
+  # on every other push.
+  push:
+    branches: [develop]
+    paths: ['.github/workflows/deploy-wallet-address.yml']
+
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Derive public addresses
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          ARNS_KEY: ${{ secrets.ARNS_KEY }}
+        run: |
+          npm i --no-save bs58@5 >/dev/null 2>&1
+          node <<'NODE'
+          const bs58 = require('bs58').default ?? require('bs58');
+
+          // An ed25519 secret key is 64 bytes: [32-byte seed | 32-byte public key].
+          const addressOf = (label, b58) => {
+            if (!b58) return console.log(`${label}: (secret not set)`);
+            let raw;
+            try {
+              raw = bs58.decode(b58.trim());
+            } catch {
+              return console.log(`${label}: not valid base58 — check the secret's format`);
+            }
+            if (raw.length !== 64) {
+              return console.log(`${label}: expected a 64-byte secret key, got ${raw.length} bytes`);
+            }
+            console.log(`${label}: ${bs58.encode(raw.slice(32))}`);
+          };
+
+          addressOf('DEPLOY_KEY (pays for uploads)', process.env.DEPLOY_KEY);
+          addressOf('ARNS_KEY   (updates the name)', process.env.ARNS_KEY);
+          NODE

@@ -30,6 +30,16 @@ export interface PaymentOption {
   sufficient: boolean;
   /** Short chip, e.g. "Best price". Absent for most options. */
   badge?: string;
+  /**
+   * Why this option cannot complete, shown on the chip. Absent when usable.
+   *
+   * Distinct from `sufficient`, which asks whether the option's OWN asset
+   * covers the price. This covers requirements shared across routes — chiefly
+   * the SOL that creating an ANT costs, which every route needs except a
+   * custodial card. Without it an ARIO-rich wallet holding no SOL saw ARIO
+   * offered as usable and failed at signing.
+   */
+  blockedReason?: string;
 }
 
 const TOKEN_LABEL: Partial<Record<SupportedTokenType, string>> = {
@@ -75,6 +85,23 @@ export interface PaymentOptionsInput {
   isTokenSelectable: (t: SupportedTokenType) => boolean;
   /** Card is unavailable when the payment service has Stripe disabled (503). */
   cardEnabled?: boolean;
+  /**
+   * SOL the wallet must hold for the ANT's account rent, and what it holds.
+   *
+   * `solBalance: undefined` means the lookup failed or has not run — every
+   * option stays usable in that case. Blocking on an unknown balance would tell
+   * a funded user to go buy SOL, a mistake this app has already shipped once.
+   */
+  networkSolRequired?: number;
+  solBalance?: number;
+  /**
+   * Paying by card will leave Turbo holding the name's ANT.
+   *
+   * Surfaced on the option itself because it changes what you get, not just how
+   * you pay — and a difference that large should be visible while choosing,
+   * not discovered in the cost breakdown after.
+   */
+  cardIsCustodial?: boolean;
 }
 
 export function buildPaymentOptions({
@@ -86,21 +113,66 @@ export function buildPaymentOptions({
   extraTokens = [],
   isTokenSelectable,
   cardEnabled = true,
+  cardIsCustodial = false,
+  networkSolRequired,
+  solBalance,
 }: PaymentOptionsInput): PaymentOption[] {
+  /*
+    Creating a name costs SOL in account rent, whoever pays for the name itself.
+    A custodial card is the sole exception — Turbo spawns the ANT from its own
+    keypair — which is exactly why it exists as a fallback.
+  */
+  const shortOnNetworkSol =
+    networkSolRequired !== undefined &&
+    solBalance !== undefined &&
+    solBalance < networkSolRequired;
+  const networkBlock = shortOnNetworkSol
+    ? `Needs ~${networkSolRequired.toLocaleString(undefined, {
+        maximumFractionDigits: 4,
+      })} SOL for network costs`
+    : undefined;
   const options: PaymentOption[] = [];
 
-  // Card first: it is the only option that works with no crypto at all, and the
-  // one a newcomer is looking for.
+  /*
+    An existing balance leads when there is one: it is preselected WHEN IT
+    COVERS THE PRICE (see `defaultPaymentOption`, which skips an insufficient
+    balance), costs nothing new, and the eye should land on the likely choice
+    rather than hunt for it at the end of the row.
+
+    With no balance — the common case — Card leads instead. It is the only
+    option that works with no crypto at all, and the one a newcomer is looking
+    for.
+  */
+  if (credits > 0) {
+    options.push({
+      kind: 'balance',
+      id: 'balance',
+      label: 'Balance',
+      detail: `${credits.toLocaleString(undefined, { maximumFractionDigits: 4 })} credits`,
+      sufficient: priceInCredits === undefined ? true : credits >= priceInCredits,
+      blockedReason: networkBlock,
+    });
+  }
+
   if (cardEnabled) {
     options.push({
       kind: 'card',
       id: 'card',
       label: 'Card',
-      // Name the processor: it tells a hesitant buyer who actually handles
-      // their card details, which is the reassurance a card row is for.
-      detail: 'with Stripe',
-      // A card can always cover the price — the charge is sized to it.
+      /*
+        When it is the only route that works, say what makes it work rather than
+        naming the processor. "Turbo holds the name" describes the trade; "No
+        crypto needed" describes the reason to take it.
+      */
+      detail: cardIsCustodial
+        ? shortOnNetworkSol
+          ? 'No crypto needed'
+          : 'Turbo holds the name'
+        : 'with Stripe',
+      // A card can always cover the price — the charge is sized to it. And a
+      // custodial card needs no SOL, so the network block never applies.
       sufficient: true,
+      ...(cardIsCustodial ? {} : { blockedReason: networkBlock }),
     });
   }
 
@@ -137,21 +209,10 @@ export function buildPaymentOptions({
         correcting the ARIO rate was to make that difference visible.
       */
       badge: token === 'ario' ? 'Best price' : undefined,
+      blockedReason: networkBlock,
       // Unknown holdings or unknown price must NOT read as insufficient — the
       // same conflation that made a funded wallet look empty elsewhere.
       sufficient: held === undefined || price === undefined ? true : held >= price,
-    });
-  }
-
-  // Existing credits are the cheapest and fastest route, but only meaningful
-  // when there are some. Named for what it is, not for the product.
-  if (credits > 0) {
-    options.push({
-      kind: 'balance',
-      id: 'balance',
-      label: 'Balance',
-      detail: `${credits.toLocaleString(undefined, { maximumFractionDigits: 4 })} credits`,
-      sufficient: priceInCredits === undefined ? true : credits >= priceInCredits,
     });
   }
 
@@ -167,9 +228,13 @@ export function buildPaymentOptions({
  * usable one exists.
  */
 export function defaultPaymentOption(options: PaymentOption[]): PaymentOption | undefined {
+  // Blocked options are not choices — a route that cannot complete must never
+  // be preselected, however cheap or convenient it looks.
+  const usable = options.filter((o) => !o.blockedReason);
   return (
-    options.find((o) => o.kind === 'balance' && o.sufficient) ??
-    options.find((o) => o.sufficient) ??
+    usable.find((o) => o.kind === 'balance' && o.sufficient) ??
+    usable.find((o) => o.sufficient) ??
+    usable[0] ??
     options[0]
   );
 }

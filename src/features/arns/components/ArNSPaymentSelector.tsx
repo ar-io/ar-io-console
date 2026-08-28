@@ -80,8 +80,8 @@ function OptionCard({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      disabled={disabled}
-      className={`flex items-start gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 ${
+      disabled={disabled || !!option.blockedReason}
+      className={`flex flex-1 items-start gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 sm:basis-0 ${
         active
           ? 'border-primary bg-primary/10'
           : 'border-border/20 bg-card hover:border-primary/40'
@@ -108,10 +108,19 @@ function OptionCard({
             {option.detail}
           </span>
         )}
-        {/* Say it's short here rather than only failing on submit. */}
-        {!option.sufficient && (
+        {/*
+          Say why it cannot be used, here rather than on submit. A blocked
+          reason outranks "Not enough": running out of SOL for network costs is
+          a different problem from not holding enough of this asset, and needs a
+          different remedy.
+        */}
+        {option.blockedReason ? (
+          <span className="block text-xs text-foreground/60">
+            {option.blockedReason}
+          </span>
+        ) : !option.sufficient ? (
           <span className="block text-xs text-foreground/60">Not enough</span>
-        )}
+        ) : null}
       </span>
     </button>
   );
@@ -136,19 +145,29 @@ function SourceRow({
       aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors disabled:opacity-50 ${
+      /*
+        One row on desktop, matching the payment picker directly above. Three
+        stacked full-width rows made a sub-choice look like a second decision of
+        equal weight to "how do you want to pay", when it only refines the ARIO
+        option.
+      */
+      className={`flex flex-1 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors disabled:opacity-50 sm:basis-0 sm:flex-col sm:items-start sm:gap-0.5 ${
         active
           ? 'border-primary bg-primary/10'
           : 'border-border/20 bg-card hover:border-primary/40'
       }`}
     >
-      {active ? (
-        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-primary" />
-      ) : (
-        <Circle className="h-4 w-4 flex-shrink-0 text-foreground/40" />
-      )}
-      <span className="font-medium text-foreground">{label}</span>
-      <span className="ml-auto font-mono text-xs text-foreground/60">
+      <span className="flex items-center gap-2">
+        {active ? (
+          <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-primary" />
+        ) : (
+          <Circle className="h-4 w-4 flex-shrink-0 text-foreground/40" />
+        )}
+        <span className="font-medium text-foreground">{label}</span>
+      </span>
+      {/* Stacked under the label on desktop so a long balance can't squeeze
+          the label in a third-width column. */}
+      <span className="ml-auto font-mono text-xs text-foreground/60 sm:ml-6">
         {fmt(amount)} ARIO
       </span>
     </button>
@@ -182,7 +201,13 @@ export function ArNSPaymentSelector({
       {!arioOnly && (
         <>
           <label className="mb-2 block text-sm font-medium">Pay with</label>
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {/*
+            One row on desktop whatever the count. A fixed 3-column grid wrapped
+            to two rows the moment a Balance option appeared, which made the set
+            read as two groups rather than one row of equals — the whole point
+            of flattening it.
+          */}
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row">
             {options.map((option) => (
               <OptionCard
                 key={option.id}
@@ -197,8 +222,11 @@ export function ArNSPaymentSelector({
       )}
 
       {showSources && (
-        <div className="mb-3 space-y-2">
-          <p className="text-xs font-medium text-foreground/70">Funding source</p>
+        <div className="mb-3">
+          <p className="mb-2 text-xs font-medium text-foreground/70">
+            Funding source
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
           <SourceRow
             active={fundingSource === 'balance'}
             disabled={disabled}
@@ -220,6 +248,7 @@ export function ArNSPaymentSelector({
             label="Staked"
             amount={balances.stakedArio}
           />
+          </div>
         </div>
       )}
     </div>

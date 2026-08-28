@@ -23,6 +23,7 @@ import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { tokenLabels } from '../../constants';
 import { Loader2 } from 'lucide-react';
 import X402OnlyBanner from '../X402OnlyBanner';
+import ModalHeader from '../modals/ModalHeader';
 
 // Helper function to get contextual file icon based on content type or file name
 // size: 'sm' (16px) for inline use, 'lg' (24px) for file list thumbnails
@@ -1355,15 +1356,11 @@ export default function UploadPanel() {
           setJitSectionExpanded(false); // Reset JIT section when modal closes
         }}>
           <div className="p-4 sm:p-5 w-full max-w-2xl mx-auto min-w-[90vw] sm:min-w-[500px]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Upload className="w-5 h-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <h3 className="text-lg font-extrabold text-foreground">Ready to Upload</h3>
-                <p className="text-xs text-foreground/80">Confirm your upload details</p>
-              </div>
-            </div>
+            <ModalHeader
+              icon={Upload}
+              title="Ready to Upload"
+              description="Confirm your upload details"
+            />
 
             {/* X402-Only Mode Banner */}
             {x402OnlyMode && <X402OnlyBanner />}

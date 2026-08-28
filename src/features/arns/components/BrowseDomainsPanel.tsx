@@ -235,14 +235,24 @@ export default function BrowseDomainsPanel() {
                 className="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3 px-4 py-3 border-b border-border/10 last:border-0 items-center hover:bg-primary/5 transition-colors"
               >
                 {/* Name — click to open details */}
-                <div className="col-span-2 sm:col-span-4 min-w-0">
+                {/*
+                  A long name has to yield, not push. `truncate` alone was not
+                  enough: the button sized to its content, so the name kept its
+                  full width and ran under the Type column instead of
+                  ellipsing. `w-full` pins the button to its grid cell and
+                  `min-w-0` lets the name shrink inside it — a flex item will
+                  not go below its content width without one.
+
+                  The title carries the full name, since truncating hides it.
+                */}
+                <div className="col-span-2 sm:col-span-4 min-w-0 overflow-hidden">
                   <button
                     onClick={() => navigate(`/domains/${r.name}`, { state: { from: '/domains' } })}
-                    title="View details"
-                    className="group flex items-center gap-2 min-w-0 text-left"
+                    title={`${toUnicodeName(r.name)}.ar.io — view details`}
+                    className="group flex w-full items-center gap-2 min-w-0 text-left"
                   >
                     <Globe className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="font-heading font-extrabold text-foreground truncate group-hover:text-primary group-hover:underline transition-colors">
+                    <span className="min-w-0 truncate font-heading font-extrabold text-foreground group-hover:text-primary group-hover:underline transition-colors">
                       {toUnicodeName(r.name)}
                     </span>
                     <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>

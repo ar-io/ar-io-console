@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Globe, RefreshCw, AlertTriangle, Download, Search, X } from 'lucide-react';
 import { getExpiringDomains, expiryLabel } from '@/utils/domainExpiry';
 import { downloadDomainsCsv } from '@/utils/domainCsv';
 import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
-import { useTurboNameCustody } from '@/features/arns';
-import { mergeCustodialNames } from '@/features/arns/custody/mergeCustodialNames';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import DomainsTable from '@/components/account/DomainsTable';
 import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
@@ -26,23 +24,16 @@ export default function MyDomainsPage() {
   const { address } = useStore();
   const navigate = useNavigate();
   const { hasArNSAccess, arnsAddress } = useLinkedSolanaWallet();
+  /*
+    Custodial names are merged inside useOwnedArNSNames now, so every consumer
+    gets them. This page used to do it here — the merge is idempotent, so the
+    duplicate was harmless, but two copies of the same rule is how they drift.
+  */
   const {
-    names: aclNames,
+    names: ownedNames,
     loading: loadingDomains,
     fetchOwnedNames,
   } = useOwnedArNSNames();
-
-  /**
-   * Names Turbo holds are invisible to the ACL — it records the ANT's owner,
-   * and for a custodial name that is Turbo, not the buyer. Without this merge a
-   * card-bought name appears nowhere on the page that exists to list your
-   * names.
-   */
-  const { rows: turboRows } = useTurboNameCustody();
-  const ownedNames = useMemo(
-    () => mergeCustodialNames(aclNames, turboRows),
-    [aclNames, turboRows],
-  );
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showAllDomains, setShowAllDomains] = useState(false);
 

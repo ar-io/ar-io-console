@@ -10,6 +10,7 @@ import StripeElementsProvider from '../../../components/StripeElementsProvider';
 import { useArNSFiatPurchase, type FiatQuoteInput } from '../hooks/useArNSFiatPurchase';
 import { formatFiatAmount, hasMinimumChargeExcess } from '../purchase/fiatQuote';
 import { isMoneyAtRisk } from '../purchase/purchaseMachine';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 /** Matches the app's other card input; Stripe's iframe can't read our CSS vars. */
 const cardElementOptions: StripeCardElementOptions = {
@@ -77,13 +78,8 @@ function CardCheckout({
     : undefined;
 
   return (
-    <div className="w-[92vw] max-w-md p-6">
-      <div className="mb-5 flex items-center gap-2">
-        <CreditCard className="h-5 w-5 text-primary" />
-        <h3 className="font-heading text-xl font-extrabold text-foreground">
-          Pay with card
-        </h3>
-      </div>
+    <div className="w-[92vw] max-w-md p-4 sm:p-5">
+      <ModalHeader icon={CreditCard} title="Pay with card" />
 
       {state.status === 'quoting' && (
         <p className="flex items-center gap-2 text-sm text-foreground/70">
@@ -102,9 +98,18 @@ function CardCheckout({
           <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
           <span>
             <span className="font-medium text-foreground">
-              {displayName} is yours.
+              {displayName} is registered.
             </span>{' '}
-            Your card was charged and the name is registered.
+            {/*
+              "is yours" alone set up a surprise. Turbo holds the ANT on this
+              route — the cost panel says so before the charge, but this is the
+              screen people actually read, and it dropped the caveat. Naming it
+              here, with the way out, beats discovering it later as a greyed
+              control.
+            */}
+            Turbo holds its ANT for now — that&apos;s why you didn&apos;t need
+            SOL. Transfer it to your own wallet any time from the name&apos;s
+            page; that doesn&apos;t need SOL either.
           </span>
         </div>
       )}

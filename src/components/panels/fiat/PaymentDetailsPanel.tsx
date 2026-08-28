@@ -19,7 +19,41 @@ interface PaymentDetailsPanelProps {
   onNext: () => void;
   targetAddress: string; // NEW - address receiving credits
   targetWalletType: 'arweave' | 'ethereum' | 'solana'; // NEW - type of target wallet
+  /**
+   * What this payment buys, when it isn't a general top-up — e.g. an ArNS name.
+   *
+   * These panels were written for one job: buying storage credits. Reused for a
+   * name purchase they still talked about storage power, which is both wrong
+   * and confusing at the moment someone is entering card details for a domain.
+   * Absent means the original generic top-up, unchanged.
+   */
+  purpose?: { kind: 'arns-name'; name: string };
+  /**
+   * Why the charge is larger than the thing being bought — e.g. Stripe's floor
+   * rounding a $2 name up to $5. It used to sit on the amount step, which a
+   * targeted card purchase now skips; an unexplained overcharge on the card
+   * form is exactly what generates chargebacks, so it follows the amount here.
+   */
+  minimumNote?: string;
 }
+
+/*
+  One geometry for every control on this form.
+
+  The native inputs and Stripe's iframe do not measure the same: a 16px input
+  line-box is 24px, Stripe's card iframe is ~20px, so identical padding left the
+  card field visibly shorter than the fields above and below it. The card
+  wrapper carries 2px more padding on each side to land both on 46px.
+
+  16px text is a floor, not a preference — iOS Safari zooms the page when a
+  focused input is under 16px, so shrink these with padding, never font-size.
+*/
+const FIELD_BASE =
+  'w-full bg-card border border-border/20 rounded-2xl px-4 text-foreground';
+const FIELD_CLASS = `${FIELD_BASE} py-2.5`;
+// min-h pins the match rather than trusting Stripe's iframe to measure exactly
+// 20px — a floor cannot make the field short, which is the failure we had.
+const CARD_FIELD_CLASS = `${FIELD_BASE} py-3 min-h-[46px]`;
 
 const isValidPromoCode = async (
   paymentAmount: number,
@@ -38,7 +72,7 @@ const isValidPromoCode = async (
   }
 };
 
-const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, onNext, targetAddress, targetWalletType }) => {
+const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, onNext, targetAddress, targetWalletType, purpose, minimumNote }) => {
   const countries = useCountries();
   const wincForOneGiB = useWincForOneGiB();
   const { address } = useStore();
@@ -200,20 +234,45 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
   };
 
   return (
-    <div className="px-4 sm:px-6">
-      {/* Inline Header with Description */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-          <CreditCard className="w-5 h-5 text-primary" />
+    <div className={purpose ? '' : 'px-4 sm:px-6'}>
+      {/* The host modal already pads; doubling it inset the form by ~44px. */}
+      {/*
+        Inline header — dropped entirely when a host has already framed the
+        purchase. The ArNS modal names the domain and the terms, so this
+        repeated them; gating only the TEXT left an empty flex row still
+        spending its 24px margin, which is padding you can see and not read.
+      */}
+      {!purpose && (
+        <div className="flex items-start gap-3 mb-6">
+          <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
+            <CreditCard className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">
+              Payment Details
+            </h3>
+            <p className="text-sm text-foreground/80">
+              We do not save credit card information. See our T&amp;C for more
+              info.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Payment Details</h3>
-          <p className="text-sm text-foreground/80">We do not save credit card information. See our T&C for more info.</p>
-        </div>
-      </div>
+      )}
 
-      {/* Main Content Container with Gradient */}
-      <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
+      {/*
+        No inner card inside a modal. BaseModal is already
+        `bg-card border border-border/20 rounded-2xl`, so this wrapper repeated
+        the same surface, border and radius one level in — a frame around a
+        frame, which Deploy Site's modal doesn't do. Standing alone on /topup
+        it IS the card that lifts the form off the page, so it stays there.
+      */}
+      <div
+        className={
+          purpose
+            ? 'mb-4 sm:mb-6'
+            : 'bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6'
+        }
+      >
 
         {/* Show recipient info if funding another wallet */}
         {targetAddress && targetAddress !== address && (
@@ -235,19 +294,35 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         )}
 
         {/* Credits Summary */}
-        <div className="grid grid-cols-2 mb-8">
+        <div className={`grid grid-cols-2 ${purpose ? 'mb-5' : 'mb-8'}`}>
           {estimatedCredits ? (
             <div className="flex flex-col">
+              {/*
+                The dollar figure leads. Credits were the headline and the
+                charge the small print — but the card is charged dollars, and
+                credits are the unit we settle in. Reversed for a purchase; the
+                generic top-up still leads with what it is buying.
+              */}
               <div className="text-2xl font-bold text-foreground">
-                {((Number(estimatedCredits?.winc ?? 0)) / wincPerCredit).toFixed(4)} Credits
+                {purpose
+                  ? `$${actualPaymentAmount}`
+                  : `${(Number(estimatedCredits?.winc ?? 0) / wincPerCredit).toFixed(4)} Credits`}
               </div>
               <div className="text-sm text-foreground/80">
-                ${actualPaymentAmount}{' '}
+                {purpose
+                  ? `${(Number(estimatedCredits?.winc ?? 0) / wincPerCredit).toFixed(4)} credits`
+                  : `$${actualPaymentAmount}`}{' '}
                 {discountAmount && (
                   <span className="text-foreground/80">{discountAmount}</span>
                 )}
               </div>
-              {storageAmount > 0 && (
+              {minimumNote && (
+                <div className="text-xs text-foreground/70 mt-1">
+                  {minimumNote}
+                </div>
+              )}
+              {/* Storage equivalence means nothing when the credits buy a name. */}
+              {!purpose && storageAmount > 0 && (
                 <div className="text-xs text-foreground/80 mt-1">
                   ≈ {formatStorage(storageAmount)} storage power
                 </div>
@@ -278,10 +353,10 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
         </div>
 
         {/* Payment Form */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <FormEntry name="name" label="Name on Card *" errorText={nameError}>
             <input
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={FIELD_CLASS}
               type="text"
               id="name"
               name="name"
@@ -300,7 +375,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="card" label="Credit Card *" errorText={cardError}>
             <CardElement
               options={cardElementOptions}
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={CARD_FIELD_CLASS}
               onChange={(e) => {
                 setCardError(e.error?.message || '');
               }}
@@ -310,7 +385,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="country" label="Country *" errorText={countryError}>
             <select
               id="country"
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={FIELD_CLASS}
               value={country}
               onChange={(e) => {
                 setCountry(e.target.value);
@@ -371,7 +446,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
             <FormEntry name="promoCode" label="Promo Code" errorText={promoCodeError}>
               <div className="relative">
                 <input
-                  className="peer w-full bg-card border border-border/20 px-4 py-3 pr-16 text-foreground rounded-2xl"
+                  className={`${FIELD_CLASS} peer pr-16`}
                   type="text"
                   id="promoCode"
                   name="promoCode"
@@ -421,7 +496,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           <FormEntry name="email" label="Email (optional - for receipt)" errorText={emailError}>
             <input
               type="email"
-              className="w-full bg-card border border-border/20 px-4 py-3 text-foreground rounded-2xl"
+              className={FIELD_CLASS}
               id="email"
               name="email"
               value={email}

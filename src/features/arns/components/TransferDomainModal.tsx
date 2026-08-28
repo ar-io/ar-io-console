@@ -12,6 +12,7 @@ import BaseModal from '../../../components/modals/BaseModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useTransferArNSName } from '../hooks/useTransferArNSName';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 interface TransferDomainModalProps {
   domain: ArNSName;
@@ -51,15 +52,19 @@ export default function TransferDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-md p-6">
-        <div className="mb-5">
-          <h3 className="font-heading text-xl font-extrabold text-foreground">
-            Transfer{' '}
-            <span className="break-all font-mono text-primary">
-              {domain.displayName}.ar.io
-            </span>
-          </h3>
-        </div>
+      <div className="w-[92vw] max-w-md p-4 sm:p-5">
+        <ModalHeader
+          icon={Send}
+          title={
+            <>
+              Transfer{' '}
+              <span className="break-all font-mono text-primary">
+                {domain.displayName}.ar.io
+              </span>
+            </>
+          }
+          description="Send ownership to another wallet"
+        />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">

@@ -3,8 +3,11 @@ import { CreditCard, Wallet } from 'lucide-react';
 
 import BaseModal from '../../../components/modals/BaseModal';
 import StripeElementsProvider from '../../../components/StripeElementsProvider';
-import TopUpPanel from '../../../components/panels/TopUpPanel';
+import TopUpPanel, {
+  type TopUpHostStep,
+} from '../../../components/panels/TopUpPanel';
 import type { SupportedTokenType } from '../../../constants';
+import ModalHeader from '../../../components/modals/ModalHeader';
 
 interface ArNSPaymentModalProps {
   /** USD to pre-seed the amount (rounded up to cover the name's price). */
@@ -17,6 +20,16 @@ interface ArNSPaymentModalProps {
   token?: SupportedTokenType;
   /** Ticker for the header, e.g. "SOL". */
   tokenLabel?: string;
+  /** The name being bought — makes the fiat panels speak about it, not storage. */
+  arnsName?: string;
+  /**
+   * SOL the wallet still pays for network costs, on top of this payment.
+   *
+   * This route funds the NAME only; the ANT's account rent is paid by the
+   * user's own Solana wallet at registration. "This covers your name" is true
+   * and easy to read as "this covers everything", which it does not.
+   */
+  networkSol?: number;
   onClose: () => void;
   /** Fired when payment completes (credits landed). */
   onComplete: () => void;
@@ -43,10 +56,13 @@ export default function ArNSPaymentModal({
   paymentMethod,
   token,
   tokenLabel,
+  arnsName,
+  networkSol,
   onClose,
   onComplete,
 }: ArNSPaymentModalProps) {
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<TopUpHostStep>('details');
   const payingByCard = paymentMethod === 'fiat';
 
   return (
@@ -61,32 +77,63 @@ export default function ArNSPaymentModal({
       an accident, not to remove the exit.
     */
     <BaseModal onClose={onClose} showCloseButton dismissible={!busy}>
-      <div className="w-[92vw] max-w-xl p-6">
-        <div className="mb-5">
-          <div className="flex items-center gap-2">
-            {payingByCard ? (
-              <CreditCard className="h-5 w-5 text-primary" />
-            ) : (
-              <Wallet className="h-5 w-5 text-primary" />
-            )}
-            <h3 className="font-heading text-xl font-extrabold text-foreground">
-              {payingByCard ? 'Pay with card' : `Pay with ${tokenLabel ?? 'crypto'}`}
-            </h3>
-          </div>
-          {shortfallCredits != null && shortfallCredits > 0 && (
-            <p className="mt-1 text-sm text-foreground/70">
-              This covers your name. You&apos;ll confirm the registration right
-              after.
-            </p>
-          )}
-        </div>
+      <div className="w-[92vw] max-w-xl p-4 sm:p-5">
+        {/*
+          Gone once the payment lands. "Pay for name.ar.io — you'll confirm
+          registration next" is a promise about a step the user has just
+          finished paying for, and reads as stale instructions on the screen
+          that reports success. That screen brings its own heading (a green
+          check and "Payment Complete!"), so the modal steps out of its way
+          rather than competing with a second title.
+        */}
+        {step !== 'success' && (
+        <ModalHeader
+          icon={payingByCard ? CreditCard : Wallet}
+          title={
+            arnsName
+              ? `Pay for ${arnsName}.ar.io`
+              : payingByCard
+                ? 'Pay with card'
+                : `Pay with ${tokenLabel ?? 'crypto'}`
+          }
+          description={
+            shortfallCredits != null && shortfallCredits > 0 ? (
+              <>
+                {/* Trimmed: this was the tallest thing in the modal, and at
+                    ~110 characters it wrapped to three lines and pushed the
+                    terms link below the fold. */}
+                Covers the name only
+                {networkSol != null && networkSol > 0 ? (
+                  <>
+                    {' '}
+                    — your wallet pays ~
+                    {networkSol.toLocaleString(undefined, {
+                      maximumFractionDigits: 4,
+                    })}{' '}
+                    SOL in network costs next
+                  </>
+                ) : null}
+                .
+              </>
+            ) : undefined
+          }
+        />
+        )}
 
         <StripeElementsProvider>
           <TopUpPanel
             embedded
             initialUsdAmount={initialUsdAmount}
+            // Sizes the CRYPTO side. Without it a token top-up here falls back
+            // to the panel's 0.01 default instead of the name's price.
+            initialCreditAmount={shortfallCredits}
             initialPaymentMethod={paymentMethod}
+            purpose={arnsName ? { kind: 'arns-name', name: arnsName } : undefined}
             initialToken={token}
+            // The card flow opens on the card form; its Back has nothing behind
+            // it inside the panel, so it closes the modal instead.
+            onCancel={onClose}
+            onStepChange={setStep}
             onComplete={onComplete}
             onBusyChange={setBusy}
           />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useStore } from '@/store/useStore';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Globe, ExternalLink, Flame } from 'lucide-react';
+import { ArrowLeft, Globe, ExternalLink, Flame, Tag, Settings2 } from 'lucide-react';
 
 import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
@@ -16,17 +17,31 @@ import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
  * and non-credit payment methods are deferred.
  */
 export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {}) {
+  const address = useStore((s) => s.address);
   const [search, setSearch] = useState(initialSearch ?? '');
   const [selectedName, setSelectedName] = useState<string | undefined>();
 
   const buyState = useBuyArNSName();
+  /**
+   * The user paid for credits but the registration hasn't settled. Lives here,
+   * not on the purchase card: that card is unmounted the instant `phase` leaves
+   * 'idle', which is exactly when this matters.
+   */
+  const [tokenFunded, setTokenFunded] = useState(false);
 
   const handleBuy = (input: BuyArNSNameInput) => {
-    // Swallow the throw — terminal state is surfaced via buyState (status card).
-    void buyState.buy(input).catch(() => undefined);
+    /*
+      Returns the promise rather than swallowing it. The status card still owns
+      the terminal UI, but the token path ALSO needs to know: it has already
+      taken the user's money for credits, so a registration failure there is
+      "funded, not registered" — a different message with a different remedy.
+      Rejections stay handled at the call site.
+    */
+    return buyState.buy(input).catch(() => undefined);
   };
 
   const handleDone = () => {
+    setTokenFunded(false);
     buyState.reset();
     setSelectedName(undefined);
     setSearch('');
@@ -35,6 +50,13 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   // Retry the same name: clear the terminal buy state but keep the selection,
   // so the purchase card re-appears for another attempt.
   const handleRetry = () => {
+    /*
+      Deliberately does NOT clear `tokenFunded`. Retrying re-runs only the
+      registration — the credits are already bought and still theirs, so if it
+      fails again they should see the same "you already paid" guidance rather
+      than a bare error. It clears when the flow actually ends (`handleDone`) or
+      the user picks a different name.
+    */
     buyState.reset();
   };
 
@@ -109,12 +131,34 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
             >
               <Flame className="h-4 w-4" /> Returned-name auctions
             </Link>
+            {/*
+              The two questions this page raises but doesn't answer: what a
+              name costs before you search for one, and where the names you
+              already own live. Both were a nav hunt from here.
+            */}
+            <Link
+              to="/pricing?type=domains"
+              className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+            >
+              <Tag className="h-4 w-4" /> See name prices
+            </Link>
+            {/* Signed out, /my-domains redirects to the homepage — so the
+                link would silently throw away whatever you were doing here. */}
+            {address && (
+              <Link
+                to="/my-domains"
+                className="inline-flex items-center gap-1.5 font-medium text-foreground/70 transition-colors hover:text-foreground"
+              >
+                <Settings2 className="h-4 w-4" /> Manage my domains
+              </Link>
+            )}
           </div>
         </>
       ) : (
         <button
           onClick={() => {
             setSelectedName(undefined);
+            setTokenFunded(false);
             buyState.reset();
           }}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
@@ -127,11 +171,19 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
       {/* Configure + buy. The buy button itself gates on a Solana signer (via
           SolanaGateButton), so the user configures freely and meets the wallet
           step only at the moment of purchase — no upfront wall. */}
-      {selectedName && buyState.phase === 'idle' && (
+      {/*
+        Stays mounted while the purchase is in flight. Swapping the whole
+        checkout for a status screen mid-write was jarring — and inconsistent
+        with the token path, which reports progress on the button the user just
+        pressed. Terminal states still get their own surface, because a receipt
+        really is a different screen.
+      */}
+      {selectedName && (buyState.phase === 'idle' || buyState.phase === 'submitting') && (
         <ArNSPurchaseCard
           name={selectedName}
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
+          onTokenFunded={() => setTokenFunded(true)}
           onCardSuccess={(messageId) =>
             buyState.markExternalSuccess({
               nonce: '',
@@ -146,10 +198,10 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
       {selectedName && (
         <ArNSPurchaseStatus
           phase={buyState.phase}
-          statusMessage={buyState.statusMessage}
           result={buyState.result}
           error={buyState.error}
           insufficientCredits={buyState.insufficientCredits}
+          alreadyFunded={tokenFunded}
           name={selectedName}
           onDone={handleDone}
           onRetry={handleRetry}
