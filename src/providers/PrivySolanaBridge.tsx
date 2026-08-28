@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { getWallets } from '@wallet-standard/app';
+import { usePrivy } from '@privy-io/react-auth';
 import { useStandardWallets } from '@privy-io/react-auth/solana';
 
 /**
@@ -22,11 +23,18 @@ import { useStandardWallets } from '@privy-io/react-auth/solana';
  * adapter's list, so each is tracked and released on unmount.
  */
 export function PrivySolanaBridge() {
+  /*
+    Only for signed-in Privy users. Registering unconditionally would put a
+    Privy wallet in the picker for everyone — including people who signed in
+    with Wander or Phantom and have no Privy account — offering an option that
+    cannot connect.
+  */
+  const { authenticated } = usePrivy();
   const { ready, wallets } = useStandardWallets();
   const registered = useRef(new Map<unknown, () => void>());
 
   useEffect(() => {
-    if (!ready) return;
+    if (!authenticated || !ready) return;
     const api = getWallets();
     const seen = registered.current;
 
@@ -42,7 +50,22 @@ export function PrivySolanaBridge() {
         */
       }
     }
-  }, [ready, wallets]);
+  }, [authenticated, ready, wallets]);
+
+  useEffect(() => {
+    if (authenticated) return;
+    // Signed out: withdraw the wallet rather than leave a dead entry in the
+    // picker that belongs to an account no longer present.
+    const seen = registered.current;
+    for (const unregister of seen.values()) {
+      try {
+        unregister();
+      } catch {
+        /* already gone */
+      }
+    }
+    seen.clear();
+  }, [authenticated]);
 
   useEffect(() => {
     const seen = registered.current;
