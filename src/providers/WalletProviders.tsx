@@ -85,7 +85,21 @@ export function WalletProviders({ children }: WalletProvidersProps) {
             ArNS writes, via PrivySolanaBridge.
           */
           solana: {
-            createOnLogin: 'users-without-wallets',
+            /*
+              'all-users', unlike Ethereum above.
+
+              'users-without-wallets' means "no wallet of ANY kind", so every
+              existing email user — who already holds an embedded Ethereum
+              wallet — would be skipped and never get a Solana key. That is the
+              entire population this is for.
+
+              The reason Ethereum avoids 'all-users' does not apply here: there
+              it minted a second, empty ETH address that competed with the one
+              the user had connected. Privy is email-only in this app
+              (`loginMethods: ['email']`), so nobody arrives with a Solana
+              wallet through it, and there is nothing for this to shadow.
+            */
+            createOnLogin: 'all-users',
           },
           // Disable wallet UIs to prevent signature prompts during file uploads
           showWalletUIs: false,

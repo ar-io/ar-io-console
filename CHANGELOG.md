@@ -2,6 +2,35 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.6.0] - 2026-08-28
+
+### Fixed
+- **Deep links returned 404 on console.ar.io.** `/try`, `/upload`, `/arns` and
+  `/settings` failed while the root loaded fine. An `arweave/paths` manifest
+  serves only the paths it lists, so a single-page app needs a `fallback`
+  entry; the 4.5.0 manifest had none. `ario-deploy` derives that fallback from
+  a `404.html` in the deploy folder, which the build never produced — the same
+  step had been added to the GitHub Pages workflow and not carried across to
+  the Arweave one. Only direct arrivals were affected; in-app navigation was
+  always fine.
+
+### Added
+- **Email sign-in now creates an embedded Solana wallet** alongside the
+  Ethereum one, so someone who has never installed a wallet can still sign ArNS
+  writes. Added rather than swapped: Turbo credits belong to an address, so
+  changing an existing email user's identity would strand the balance they
+  hold. Privy builds a Wallet Standard wallet but never registers it, and the
+  Solana adapter discovers wallets only through that registry — so it existed,
+  could sign, and was invisible. `PrivySolanaBridge` registers it, which means
+  Phantom, Solflare and Privy all arrive through the same hook and no ArNS code
+  needs a Privy-specific branch.
+
+### Changed
+- **CodeRabbit reviews pull requests into `develop`.** It only auto-reviews the
+  default branch by default, and under `feature → develop → main` that is the
+  one branch PRs never target first — so reviews were happening after the
+  decision instead of before it.
+
 ## [4.5.0] - 2026-08-27
 
 ### Added
