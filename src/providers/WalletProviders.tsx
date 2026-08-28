@@ -55,6 +55,8 @@ const queryClient = new QueryClient({
   },
 });
 
+import { PrivySolanaBridge } from './PrivySolanaBridge';
+
 interface WalletProvidersProps {
   children: ReactNode;
 }
@@ -75,6 +77,16 @@ export function WalletProviders({ children }: WalletProvidersProps) {
             // balance.
             createOnLogin: 'users-without-wallets',
           },
+          /*
+            ADDED alongside Ethereum, never replacing it. Turbo credits belong
+            to an address, so switching an existing email user's identity to a
+            fresh Solana wallet would strand the balance they already hold.
+            They keep the Ethereum session; the Solana wallet is what signs
+            ArNS writes, via PrivySolanaBridge.
+          */
+          solana: {
+            createOnLogin: 'users-without-wallets',
+          },
           // Disable wallet UIs to prevent signature prompts during file uploads
           showWalletUIs: false,
         },
@@ -86,6 +98,9 @@ export function WalletProviders({ children }: WalletProvidersProps) {
         },
       }}
     >
+      {/* Announces Privy's embedded Solana wallet to the Wallet Standard
+          registry, so the adapter below discovers it like any extension. */}
+      <PrivySolanaBridge />
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider theme={arioRainbowTheme}>
