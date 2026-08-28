@@ -909,9 +909,18 @@ export function ArNSPurchaseCard({
             // Leaving this live would let the user reopen the payment modal and
             // pay a SECOND time for a name they have already funded.
             tokenStepLabel !== undefined ||
-            // A custodial card buy is quoted server-side, so neither our
-            // credits price nor the SOL estimate needs to have loaded.
-            (!custodialCard && (!priceReady || gasUnavailable))
+            /*
+              A custodial card buy is quoted server-side, so neither our
+              credits price nor the SOL estimate needs to have loaded.
+
+              `insufficientSol` belongs here and was missing. Paying by card
+              buys credits; the ANT spawn that follows is still paid in SOL
+              from the user's own wallet. Without this the card was charged,
+              the credits landed, and the registration then failed for rent —
+              money taken, no name. Every other route already gated on it.
+            */
+            (!custodialCard &&
+              (!priceReady || gasUnavailable || insufficientSol))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
