@@ -115,3 +115,40 @@ describe('custodialPurchaseEnabled', () => {
     }
   });
 });
+
+describe('a known SOL shortfall outranks a cold signer', () => {
+  it('does not offer reconnect when reconnecting cannot fund the purchase', () => {
+    // Reconnecting is real advice, but not when the wallet is empty — the user
+    // would follow it and hit the shortfall one click later.
+    expect(
+      planCardPurchase({
+        needsLinking: false,
+        signerLive: false,
+        solCoversGas: false,
+        custodialEnabled: false,
+      }),
+    ).toEqual({ kind: 'self-custody' });
+  });
+
+  it('still asks a cold wallet to reconnect when the balance is unknown', () => {
+    expect(
+      planCardPurchase({
+        needsLinking: false,
+        signerLive: false,
+        solCoversGas: undefined,
+        custodialEnabled: false,
+      }),
+    ).toEqual({ kind: 'reconnect' });
+  });
+
+  it('still asks a funded cold wallet to reconnect', () => {
+    expect(
+      planCardPurchase({
+        needsLinking: false,
+        signerLive: false,
+        solCoversGas: true,
+        custodialEnabled: false,
+      }),
+    ).toEqual({ kind: 'reconnect' });
+  });
+});
