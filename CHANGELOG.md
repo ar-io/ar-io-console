@@ -2,6 +2,69 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.5.0] - 2026-08-27
+
+### Added
+- **Buy an ArNS name without leaving the console.** Search, price and purchase
+  in one place, replacing the deep-link out to `arns.ar.io`. Payment is a flat
+  row of equals — Card, ARIO, SOL, or an existing Turbo Credits balance — rather
+  than a credits-versus-tokens fork, because "how do I pay" is one question.
+  ARIO carries a "Best price" badge: it pays the registry directly and never
+  touches the Turbo infrastructure fee, so it is cheaper *by construction*
+  rather than by a market rate that could invert.
+- **Card purchases settle in one step.** The bundler's fiat quote route prices
+  the name, charges the card and registers it, instead of routing through a
+  generic credit top-up.
+- **Sortable Domain, Status and Expires columns** on My Domains. Status sorts by
+  urgency rather than alphabetically — A–Z buries the row you need to act on
+  between two you don't — and a name that never expires sorts last rather than
+  first.
+- **A staging environment.** `develop` publishes to GitHub Pages, `main`
+  publishes the live console via ar.io. The flow is feature → develop → main.
+
+### Changed
+- **Turbo-custodied purchases are retired.** They removed the need to hold SOL
+  but never the need for a wallet to sign with, and every sub-flow was broken as
+  written. Sponsored gas removes the SOL requirement without handing Turbo the
+  asset, a surcharge, a reduced action set and a claim flow, so custody waits for
+  that rather than being repaired. Card buyers now need a Solana wallet holding
+  the network deposit.
+- **Dollars lead on every priced surface.** The ARIO/USD toggle is gone: it only
+  chose which of two values was bold — both were always rendered — and it
+  governed the name price while the *total* stayed in credits or SOL, which is
+  the number the toggle existed to convert.
+- **Network costs are quoted as an upper bound** ("up to ~0.0152 SOL"). The
+  SDK's estimate is deliberately conservative, so a wallet quoting less is
+  expected rather than a discrepancy.
+- **One title per modal.** Every step panel shipped its own page-level header
+  because they were written as sections of `/topup`; embedded, each restated the
+  modal's title. All twelve modals now share one `ModalHeader`.
+
+### Fixed
+- **Buying with credits debited the wrong address.** The checkout read the
+  balance for the session address while the purchase authenticated with the
+  linked Solana wallet, so an Arweave or Ethereum holder was shown their own
+  balance and charged an address holding nothing. Renewals and upgrades had the
+  same split.
+- **A wallet reconnect wiped the credit balance every store reader saw.**
+  `setAddress` zeroed it and is re-called for the same session; nothing restored
+  it, because the sync effect watched the query value, which had not changed.
+  The header stayed correct while the checkout silently dropped its Balance
+  option.
+- **The Pay button did nothing on the card path.** Skipping the amount step also
+  skipped the only place the Stripe PaymentIntent was created, and the guard that
+  caught it returned without a word.
+- **Transaction ids resolved against the wrong host.** Any non-localhost host was
+  assumed to be an ar.io gateway, so ArNS profile logos 404'd anywhere the app
+  was served statically.
+- **Domain expiry read "in 0 days"** for leases years away — seconds compared
+  against milliseconds.
+- **Long names ran under the Type column** on the browse table.
+
+### Removed
+- The ARIO/USD price toggle and its persisted preference.
+- Custodial ArNS purchases (see above).
+
 ## [4.4.2] - 2026-08-23
 
 ### Changed
