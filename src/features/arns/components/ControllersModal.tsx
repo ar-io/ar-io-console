@@ -97,19 +97,25 @@ export default function ControllersModal({
         />
 
         {/*
+          "Controller" is the protocol's own word — it appears in the SDK, in
+          explorers, and in every other ArNS tool. Renaming it here to
+          something friendlier (this said "helpers" briefly) buys a little
+          reassurance and costs the user the ability to recognise the same
+          concept anywhere else. The scary reading is better answered by
+          stating the limit outright, which the first sentence does.
+
           Turbo appears in this list on every name bought here, because buying
-          adds it in the same approval that mints the name. That is worth
-          explaining once, plainly, next to the button that removes it:
-          revocability is the whole reason the arrangement is safe to accept,
-          so burying it or dressing Remove up as destructive would undercut the
-          claim that the name is genuinely the owner's.
+          adds it in the same approval that mints the name. Worth explaining
+          plainly next to the button that removes it: being able to remove it
+          is the whole reason the arrangement is safe to accept.
         */}
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-          Helpers can edit this name&apos;s records but can never transfer or
-          sell it. Turbo was added when you bought the name so record changes
-          stay quick — removing it is free and doesn&apos;t lock you out.
-          Adding or removing one is a single wallet approval, and needs no SOL.
+          Controllers can edit this name&apos;s records but can never transfer
+          or sell it. Turbo was added when you bought the name so record
+          changes stay quick — removing it is free and doesn&apos;t lock you
+          out. Adding or removing one is a single wallet approval, and needs
+          no SOL.
         </div>
 
         {/* Existing controllers */}
@@ -124,7 +130,7 @@ export default function ControllersModal({
           </div>
         ) : controllers.length === 0 ? (
           <p className="py-4 text-sm text-foreground/60">
-            No helpers yet. You can always manage this name yourself.
+            No controllers yet. You can always manage this name yourself.
           </p>
         ) : (
           <ul className="mb-2 space-y-2">

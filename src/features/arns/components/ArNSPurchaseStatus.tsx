@@ -9,6 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
+import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
 import { toUnicodeName } from '@/utils/punycode';
 import type { BuyPhase } from '../hooks/useBuyArNSName';
 
@@ -58,6 +59,8 @@ export function ArNSPurchaseStatus({
 
 
   if (phase === 'success' && result) {
+    // ArNS writes settle on Solana, whatever the buyer paid with.
+    const explorerUrl = getExplorerTxUrl(result.messageId ?? '', 'solana');
 
     return (
       <div className="mt-4 bg-card rounded-2xl border border-primary/30 p-5">
@@ -70,9 +73,28 @@ export function ArNSPurchaseStatus({
             <p className="text-sm text-foreground/70 mt-1">
               The name is now yours and resolves across the ar.io network.
             </p>
-            <div className="mt-2 text-xs font-mono text-foreground/50 break-all">
-              tx: {result.messageId}
-            </div>
+            {/*
+              A bare transaction id is unactionable — it sits there looking
+              technical and there is nothing a user can do with it. Linked, it
+              becomes the receipt it was always meant to be. Falls back to plain
+              text on a network we have no explorer for, rather than vanishing.
+            */}
+            {result.messageId && (
+              <div className="mt-2 break-all font-mono text-xs text-foreground/50">
+                {explorerUrl ? (
+                  <a
+                    href={explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary hover:underline"
+                  >
+                    View transaction
+                  </a>
+                ) : (
+                  <>tx: {result.messageId}</>
+                )}
+              </div>
+            )}
 
             <p className="mt-4 text-sm font-medium text-foreground">
               What&apos;s next?

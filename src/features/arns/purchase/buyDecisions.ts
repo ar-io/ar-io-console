@@ -139,7 +139,12 @@ export function routeBuyError({
 
 /** Status copy while the purchase is in flight. */
 export function submittingMessage(name: string, type: BuyRegistrationType): string {
+  /*
+    "creating its ANT" was both jargon and, now, wrong: Turbo mints the name,
+    the buyer does not. What they are waiting on is the registration, so say
+    that and nothing else.
+  */
   return type === 'permabuy'
-    ? `Registering '${name}' permanently and creating its ANT…`
-    : `Registering '${name}' and creating its ANT…`;
+    ? `Registering ${name} permanently…`
+    : `Registering ${name}…`;
 }

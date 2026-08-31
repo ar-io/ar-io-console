@@ -110,6 +110,12 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
  * browse-side DomainDetailsModal and is the canonical home the manage table and
  * browse table link into.
  */
+/** "A, B and C" — an Oxford-comma-free list, matching the app's copy voice. */
+function formatList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 export default function NameDetailPage() {
   const { name: rawName } = useParams<{ name: string }>();
   const location = useLocation();
@@ -482,17 +488,25 @@ export default function NameDetailPage() {
               {/*
                 Named before the click, not after it fails.
 
-                Records, renewals, helpers and transfer are all covered by
-                Turbo. These four are not, and one of them — setting a primary
-                name — is common enough that a blanket "you never need SOL"
-                would be caught almost immediately. Listing them once here
-                keeps the promise scoped without hanging a caveat off every
-                button.
+                Records, renewals, controllers and transfer are all covered by
+                Turbo. These are not, and one of them — setting a primary name
+                — is common enough that a blanket "you never need SOL" would be
+                caught almost immediately. Listed once here rather than hung
+                off every button.
+
+                Built from the buttons actually rendered: Reassign and Release
+                are owner-only and Release is permabuy-only, so a fixed list
+                told a controller that two controls they cannot see need SOL.
               */}
               <p className="mb-3 text-xs text-foreground/60">
-                Set as primary, Edit details, Reassign and Release need a small
-                amount of SOL in your wallet — Turbo doesn&apos;t cover those
-                yet. Everything else here is covered.
+                {formatList([
+                  'Set as primary',
+                  'Edit details',
+                  ...(ownerOnly ? ['Reassign'] : []),
+                  ...(ownerOnly && record.type === 'permabuy' ? ['Release'] : []),
+                ])}{' '}
+                need a small amount of SOL in your wallet — Turbo doesn&apos;t
+                cover those yet. Everything else here is covered.
               </p>
               <div className="flex flex-wrap gap-2">
                 {/* Renewing and upgrading are registry payments Turbo settles

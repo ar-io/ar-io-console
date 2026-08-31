@@ -162,7 +162,20 @@ export default function ManageDomainModal({
     enabled: active,
   });
 
+  /*
+    Renewing, upgrading and adding undername slots are registry payments Turbo
+    settles from credits — it pays the Solana fee, so the user's SOL balance is
+    irrelevant to them.
+
+    Only the ARIO route spends the user's own SOL, because that one is not a
+    Turbo action at all. Gating every route on SOL meant a wallet holding
+    plenty of credits and no SOL could not renew a name it owned — and a lease
+    that cannot be renewed is a name eventually lost, which is the worst
+    outcome this modal has.
+  */
+  const sponsored = priceUnit === 'credits';
   const insufficientSol =
+    !sponsored &&
     // Only a KNOWN balance can block the action. `undefined` means the lookup
     // failed or never ran — blocking on that told funded users to go buy SOL.
     !!cost &&
@@ -203,7 +216,10 @@ export default function ManageDomainModal({
   // payment method. If that query errored (or resolved with no data), we have
   // no estimate — don't render a misleading "~0 SOL" and don't let the user
   // confirm against an absent estimate.
-  const gasUnavailable = !!costError || (!cost && !costLoading);
+  // A missing SOL estimate cannot block a sponsored action either — there is
+  // no Solana cost for the user to be short of.
+  const gasUnavailable =
+    !sponsored && (!!costError || (!cost && !costLoading));
   const canConfirm =
     !isBusy &&
     priceReady &&
@@ -220,13 +236,11 @@ export default function ManageDomainModal({
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
-  // Only offer a credits top-up when SOL gas is sufficient — otherwise topping
-  // up credits still can't make the transaction succeed.
-  // Card ignores the SOL gate — the service does the on-chain write and pays
-  // the rent itself, so a buyer with no SOL can still renew or upgrade.
+  // Turbo pays the Solana cost on every credits-settled route, so topping up
+  // credits is always enough to make the change succeed.
   const needsPaymentStep =
     !!address &&
-    (route.kind === 'card' || (route.kind === 'topup' && !insufficientSol)) &&
+    (route.kind === 'card' || route.kind === 'topup') &&
     !isBusy;
 
   const expiryLabel =
@@ -400,7 +414,7 @@ export default function ManageDomainModal({
                 /* Renew, upgrade and undername slots are registry payments
                    Turbo settles from credits — no Solana cost to the user, and
                    nothing minted, so no setup charge either. */
-                sponsored={priceUnit === 'credits'}
+                sponsored={sponsored}
                 cardUsdPrice={
                   route.kind === 'card' ? creditsPrice?.usd : undefined
                 }

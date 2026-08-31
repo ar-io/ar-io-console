@@ -152,7 +152,7 @@ export default function EditDetailsModal({
               </span>
             </>
           }
-          description="Name metadata stored on the ANT"
+          description="Details shown wherever this name appears"
         />
 
         {phase === 'success' ? (
@@ -297,7 +297,7 @@ export default function EditDetailsModal({
                   holds all its records.
                 </p>
                 <div className="flex items-center justify-between gap-2 pt-1">
-                  <span className="text-foreground/50">Name token (ANT)</span>
+                  <span className="text-foreground/50">Name token</span>
                   <a
                     href={explorerAddressUrl(domain.processId, configMode)}
                     target="_blank"

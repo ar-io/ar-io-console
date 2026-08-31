@@ -62,7 +62,7 @@ export default function ReassignDomainModal({
               </span>
             </>
           }
-          description="Point this name at a different ANT"
+          description="Point this name at a different name token"
         />
 
         {phase === 'success' ? (
@@ -111,7 +111,7 @@ export default function ReassignDomainModal({
               type="text"
               value={targetAnt}
               onChange={(e) => setTargetAnt(e.target.value)}
-              placeholder="Address of an ANT you own"
+              placeholder="Address of a name token you own"
               spellCheck={false}
               disabled={isBusy}
               className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary disabled:opacity-50"
