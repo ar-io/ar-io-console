@@ -1,0 +1,69 @@
+import type { ArNSOwnerSigner } from '@ardrive/turbo-sdk/web';
+
+import type { RecordWriter } from './recordWriter';
+
+/**
+ * The single record writer: Turbo performs the write, the owner approves it.
+ *
+ * Free to the user and needing no SOL — Turbo is fee payer — but never
+ * promptless. The owner's approval is required on every record write, whether
+ * or not Turbo is still a helper on the name, so UI copy says "approve a
+ * message" and never "one click".
+ *
+ * Whether that approval is a message or a full transaction depends on live
+ * state and is decided per request by the service; the SDK handles both and
+ * this file never branches on it.
+ */
+
+/** The two SDK methods this adapter needs. Structural, so tests need no SDK. */
+export interface SponsoredRecordClient {
+  setArNSRecord(p: {
+    antId: string;
+    owner: ArNSOwnerSigner;
+    transactionId: string;
+    undername?: string;
+    ttlSeconds?: number;
+  }): Promise<{ messageId: string }>;
+  removeArNSRecord(p: {
+    antId: string;
+    owner: ArNSOwnerSigner;
+    undername: string;
+  }): Promise<{ messageId: string }>;
+}
+
+/** The apex record — the name itself resolving. Turbo takes it as `'@'`. */
+export const APEX = '@';
+
+export function sponsoredRecordWriter(
+  antId: string,
+  turbo: SponsoredRecordClient,
+  owner: ArNSOwnerSigner,
+): RecordWriter {
+  return {
+    async setRecord({ undername, transactionId, ttlSeconds }) {
+      const res = await turbo.setArNSRecord({
+        antId,
+        owner,
+        transactionId,
+        undername,
+        ttlSeconds,
+      });
+      return { id: res.messageId };
+    },
+
+    async removeRecord({ undername }) {
+      /*
+        The apex record is the name itself resolving. Removing it would leave
+        the name pointing at nothing, and the service rejects it with a 400 that
+        does not explain why. Refuse here, where we can say what to do instead.
+      */
+      if (undername === APEX) {
+        throw new Error(
+          'The main record cannot be removed — point it somewhere else instead.',
+        );
+      }
+      const res = await turbo.removeArNSRecord({ antId, owner, undername });
+      return { id: res.messageId };
+    },
+  };
+}

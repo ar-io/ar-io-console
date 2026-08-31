@@ -96,10 +96,20 @@ export default function ControllersModal({
           description="Who can edit this name's records"
         />
 
+        {/*
+          Turbo appears in this list on every name bought here, because buying
+          adds it in the same approval that mints the name. That is worth
+          explaining once, plainly, next to the button that removes it:
+          revocability is the whole reason the arrangement is safe to accept,
+          so burying it or dressing Remove up as destructive would undercut the
+          claim that the name is genuinely the owner's.
+        */}
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-          Controllers can manage this name&apos;s records and metadata but cannot
-          transfer or sell it. Each change is a separate wallet approval.
+          Helpers can edit this name&apos;s records but can never transfer or
+          sell it. Turbo was added when you bought the name so record changes
+          stay quick — removing it is free and doesn&apos;t lock you out.
+          Adding or removing one is a single wallet approval, and needs no SOL.
         </div>
 
         {/* Existing controllers */}
@@ -114,7 +124,7 @@ export default function ControllersModal({
           </div>
         ) : controllers.length === 0 ? (
           <p className="py-4 text-sm text-foreground/60">
-            No controllers yet. The owner can always manage this name.
+            No helpers yet. You can always manage this name yourself.
           </p>
         ) : (
           <ul className="mb-2 space-y-2">

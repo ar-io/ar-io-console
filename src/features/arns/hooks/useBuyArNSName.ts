@@ -12,15 +12,12 @@ import {
   toSettlement,
 } from '../purchase/buyDecisions';
 import type { SettlementMechanism } from '../purchase/settlementMechanism';
-import { DEFAULT_ARNS_TARGET_TX } from '../purchase/buyDecisions';
-import { spawnArNSAnt } from '../services/antSpawn';
 import {
   clearPendingArNSPurchase,
-  getPendingArNSPurchase,
   savePendingArNSPurchase,
 } from '../services/arnsPurchaseResume';
+import { browserArNSOwnerSigner } from '../actions/browserOwnerSigner';
 import { useTurboArNSClient } from './useTurboArNSClient';
-import { useStore } from '../../../store/useStore';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import { useCustodyOwnerClient } from './useCustodyOwnerClient';
@@ -90,7 +87,6 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
   const signer = useArNSTurboSigner();
   const { getClient: getOwnerClient } = useCustodyOwnerClient();
   const client = useTurboArNSClient();
-  const config = useStore((st) => st.getCurrentConfig());
 
   const [phase, setPhase] = useState<BuyPhase>('idle');
   const [statusMessage, setStatusMessage] = useState('');
@@ -170,50 +166,24 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
           settlement = toSettlement(res);
         } else {
           /*
-            Credits are debited ONLY by turbo-sdk. Two steps, because turbo's
-            buy provisions a Turbo-OWNED ANT when given no `processId` — right
-            for a custodial card, wrong here, where the buyer owns the name.
+            Credits are debited only by turbo-sdk, and the purchase is
+            gas-sponsored: Turbo pays the Solana rent and fees, so the buyer
+            needs no SOL at all. The name is minted straight to their wallet —
+            Turbo never holds it, so there is nothing to claim afterwards.
 
-            The spawned ANT is persisted the instant it exists: it costs real
-            SOL, so a retry must reuse it rather than orphan one per attempt.
+            The client-side ANT spawn this branch used to do is gone with it.
+            It cost the buyer ~0.02 SOL, had to be persisted and reused so a
+            retry did not orphan one, and existed only because turbo's old buy
+            would otherwise have kept the ANT itself.
           */
           if (!client) throw new Error('Payment service is unavailable.');
-
-          /*
-            Reuse a previously-spawned ANT. A spawn costs real SOL, so a retry
-            that spawns again bleeds funds and orphans the first one.
-          */
-          const pending = getPendingArNSPurchase();
-          const reusable =
-            pending?.name === lowered &&
-            pending.owner === owner &&
-            pending.processId
-              ? pending.processId
-              : undefined;
-
-          let processId = reusable;
-          if (!processId) {
-            setStatusMessage(`Creating the ANT for ${lowered}…`);
-            const spawned = await spawnArNSAnt({
-              signer: signer.getSolanaSigner(),
-              name: lowered,
-              rpcUrl: config.tokenMap.solana,
-              antProgramId: config.antProgramId,
-              targetId: DEFAULT_ARNS_TARGET_TX,
-            });
-            processId = spawned.processId;
-            // Persist the instant it exists, before anything else can fail.
-            savePendingArNSPurchase({
-              intent: 'Buy-Name',
-              name: lowered,
-              owner,
-              processId,
-              savedAt: Date.now(),
-            });
+          if (!signer.walletAdapter || !owner) {
+            throw new Error(
+              'Connect the Solana wallet that will own this name.',
+            );
           }
 
-          setStatusMessage(submittingMessage(lowered, type));
-          const res = await client.purchaseWithCredits({
+          settlement = await client.purchaseWithCredits({
             /*
               Signed by the SESSION identity, whose credits these are.
 
@@ -221,20 +191,38 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               address instead — so an Arweave or Ethereum user saw their own
               balance on the checkout, chose Balance, and the purchase spent an
               address holding nothing. The balance shown and the balance spent
-              have to be the same one. Same fix as the renewal path.
+              have to be the same one.
             */
             client: await getOwnerClient(),
             name: lowered,
             intent: 'Buy-Name',
             type,
             years,
-            processId,
+            /*
+              The wallet that RECEIVES the name, which is routinely not the
+              payer. An Arweave or email session paying for a name owned by
+              their linked or embedded Solana wallet is the intended shape.
+            */
+            owner: browserArNSOwnerSigner({
+              address: owner,
+              signTransaction: signer.walletAdapter.signTransaction,
+              signMessage: signer.walletAdapter.signMessage,
+            }),
+            /*
+              Persist before the wallet opens. Credits are reserved when the
+              action is created, so an abandoned approval has already been
+              charged; the nonce is the only way back to it. Turbo refunds an
+              unsigned action on expiry, but polling beats waiting.
+            */
+            onNonce: (nonce) =>
+              savePendingArNSPurchase({
+                intent: 'Buy-Name',
+                name: lowered,
+                owner,
+                nonce,
+                savedAt: Date.now(),
+              }),
           });
-          settlement = {
-            nonce: res.nonce ?? '',
-            messageId: res.arioWriteResult?.id ?? '',
-            receipt: { processId },
-          };
           clearPendingArNSPurchase();
         }
         setResult(settlement);
@@ -264,7 +252,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         throw normalized;
       }
     },
-    [signer, client, getOwnerClient, config.antProgramId, config.tokenMap.solana],
+    [signer, client, getOwnerClient],
   );
 
   return {

@@ -27,13 +27,11 @@ import {
 } from '../purchase/paymentOptions';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
-import { planCardPurchase,
-  custodialPurchaseEnabled } from '../purchase/cardPlan';
+import { planNamePurchase } from '../purchase/cardPlan';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
 import ArNSPaymentModal from './ArNSPaymentModal';
-import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
 import {
   getTokenSmallestUnit,
@@ -47,7 +45,6 @@ import {
 } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
-import { useStore } from '@/store/useStore';
 
 interface ArNSPurchaseCardProps {
   name: string;
@@ -57,7 +54,6 @@ interface ArNSPurchaseCardProps {
    * A card purchase settled server-side. Reported up so the host shows the same
    * receipt a credits/ARIO purchase gets, instead of silently closing.
    */
-  onCardSuccess: (messageId: string) => void;
   /**
    * A token top-up landed — the user has paid, before registration is
    * attempted. Reported upward because this card unmounts the moment the buy
@@ -138,7 +134,6 @@ export function ArNSPurchaseCard({
   name,
   isBusy,
   onBuy,
-  onCardSuccess,
   onTokenFunded,
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
@@ -152,44 +147,15 @@ export function ArNSPurchaseCard({
    * answers 503 when fiat is disabled (the testnet default), so we learn it by
    * asking — and then stop offering an option that cannot work.
    */
-  const [cardEnabled, setCardEnabled] = useState(true);
+  // Flipped off when the service reports fiat disabled — a normal sandbox
+  // state, not a fault. Read-only now that no flow can turn it back on.
+  const [cardEnabled] = useState(true);
   const [creditsForOneUSD] = useCreditsForFiat(1, () => {});
 
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
 
-  /*
-    Who owns a custodially-bought name.
 
-    Everything else on this card is addressed by the Solana identity, because
-    every ArNS write needs a Solana signature. A custodial purchase is the one
-    route where the buyer may have no Solana identity at all — that is the
-    reason they are on it — and passing `''` made the quote fail before it was
-    sent, breaking exactly the case custody exists to serve.
-
-    Their session identity owns it — always, even when a Solana wallet is
-    linked. Owner and signer have to be the same identity or the name is
-    unreachable: the service derives the owner from the request signature, and
-    useCustodyOwnerClient signs as the SESSION wallet. Keying the purchase to a
-    linked Solana address while signing as Arweave meant an Arweave user with a
-    linked wallet but no SOL bought a name that then rejected their own claim,
-    records and renewals.
-
-    It is also the identity that actually paid: the credit balance is read for
-    the session address, not the linked one.
-
-    The linked Solana wallet is still where the name GOES — it is the transfer
-    target when they claim it — it just isn't who holds it meanwhile.
-  */
-  const sessionAddress = useStore((s) => s.address);
-  const custodialOwner = sessionAddress ?? '';
-
-  /*
-    Custody is retired pending sponsored gas — see custodialPurchaseEnabled.
-    Off, the card route asks for what self-custody needs instead: a Solana
-    wallet, and enough SOL for the rent.
-  */
-  const custodialEnabled = custodialPurchaseEnabled();
   const balances = useArNSPaymentBalances(address);
 
   /**
@@ -246,6 +212,18 @@ export function ArNSPurchaseCard({
   // Which unit the price is quoted in. Card and token top-ups both land as
   // credits, so they price like credits — only ARIO prices in ARIO.
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
+
+  /*
+    Whether Turbo pays the Solana costs for this purchase.
+
+    True for every route that settles in credits — card and token top-ups both
+    become credits first. False for ARIO, which is not a Turbo action at all:
+    it is the buyer's own `buyRecord` transaction, so their wallet pays the
+    account rent and needs real SOL. That makes ARIO the cheapest way to buy a
+    name AND the only one with a SOL requirement, which the payment picker has
+    to say out loud rather than leave to be discovered at the wallet prompt.
+  */
+  const sponsored = priceUnit === 'credits';
   /**
    * ARIO-only: the source the cost/gas estimate prices against. Anything not
    * paying in ARIO estimates against 'balance', which is what the SDK's
@@ -281,8 +259,8 @@ export function ArNSPurchaseCard({
 
   /** Charged amount, in the token's smallest unit — what the SDK requires. */
   const tokenSmallestUnitForName = useSmallestUnitForWinc(
-    route.kind === 'topup' && creditsPrice?.credits
-      ? creditsPrice.credits * 1e12
+    route.kind === 'topup' && creditsPrice?.sponsoredCredits
+      ? creditsPrice.sponsoredCredits * 1e12
       : undefined,
     route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
   );
@@ -301,6 +279,10 @@ export function ArNSPurchaseCard({
         Number(getTokenSmallestUnit(route.token as SupportedTokenType))
       : 0);
   const insufficientSol =
+    // Only the ARIO route spends the buyer's own SOL. Every credits-settled
+    // route is paid by Turbo, so applying this gate there would block exactly
+    // the buyers this whole change exists to serve: the ones with none.
+    !sponsored &&
     // Only a KNOWN balance can block the action. `undefined` means the lookup
     // failed or never ran — blocking on that told funded users to go buy SOL.
     !!cost &&
@@ -316,7 +298,7 @@ export function ArNSPurchaseCard({
    */
   const insufficientFunds = useMemo(() => {
     if (route.kind === 'credits') {
-      return creditsPrice ? balances.credits < creditsPrice.credits : false;
+      return creditsPrice ? balances.credits < creditsPrice.sponsoredCredits : false;
     }
     if (route.kind === 'ario') return (cost?.shortfallMARIO ?? 0) > 0;
     return false;
@@ -331,18 +313,13 @@ export function ArNSPurchaseCard({
   } = useLinkedSolanaWallet();
   /** Set only when the user is offered linking and chooses to go without. */
 
-  const cardPlan = planCardPurchase({
+  const cardPlan = planNamePurchase({
     needsLinking,
-    custodialEnabled,
-    // A cold adapter is NOT a missing wallet — conflating them is what used to
-    // hand Turbo the ANT for a user who only needed to reconnect.
+    // A cold adapter is NOT a missing wallet — conflating them sends a user who
+    // needs one reconnect prompt down a much longer path.
     signerLive: isSolanaConnected && signer.isReady && !!signer.walletAdapter,
-    solCoversGas:
-      balances.loading || balances.sol === undefined || !cost
-        ? undefined
-        : balances.sol >= cost.gasTotalSol,
   });
-  const custodialCard = route.kind === 'card' && cardPlan.kind === 'custodial';
+
   /*
     How this actually settles — which SDK does the write.
 
@@ -351,7 +328,7 @@ export function ArNSPurchaseCard({
     it as 'balance' and debits the wallet's ARIO. Credits are debited only by
     turbo-sdk, so the mechanism, not a funding label, picks the path.
   */
-  const mechanism = settlementMechanismFor(route, custodialCard);
+  const mechanism = settlementMechanismFor(route);
 
   /*
     Card is chosen but a cheaper, self-owned route is one click away.
@@ -368,13 +345,15 @@ export function ArNSPurchaseCard({
       buildPaymentOptions({
         walletType: 'solana',
         credits: balances.credits,
-        priceInCredits: creditsPrice?.credits,
+        priceInCredits: creditsPrice?.sponsoredCredits,
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
         // next to a silent SOL row states a fact we don't have and reads as
         // "you're broke" to someone who simply hasn't connected yet.
-        cardIsCustodial: cardPlan.kind === 'custodial',
-        // Creating a name costs account rent whoever pays for the name, so it
-        // gates every route except a custodial card.
+        // Only the ARIO route spends the buyer's own SOL; every credits-settled
+        // route is covered by Turbo, so gating them on a SOL balance would block
+        // buyers who genuinely need none.
+        // Passed always; paymentOptions applies it to ARIO alone, so the
+        // picker can warn about ARIO's SOL requirement BEFORE it is chosen.
         networkSolRequired: cost?.gasTotalSol,
         solBalance: balances.loading ? undefined : balances.sol,
         tokenBalances: address
@@ -386,7 +365,7 @@ export function ArNSPurchaseCard({
       }),
     [
       address, balances.credits, balances.sol, balances.totalArio,
-      creditsPrice?.credits, cardEnabled, cardPlan.kind,
+      creditsPrice?.sponsoredCredits, cardEnabled,
       cost?.gasTotalSol, balances.loading,
     ],
   );
@@ -418,7 +397,7 @@ export function ArNSPurchaseCard({
   */
   const topUpUsd =
     creditsPrice && creditsForOneUSD
-      ? Math.max(minUSDAmount, Math.ceil(creditsPrice.credits / creditsForOneUSD))
+      ? Math.max(minUSDAmount, Math.ceil(creditsPrice.sponsoredCredits / creditsForOneUSD))
       : undefined;
   // Only offer a credits top-up when SOL gas is sufficient — buying credits
   // can't make the purchase succeed if SOL for rent is also short. Gate on being
@@ -543,7 +522,7 @@ export function ArNSPurchaseCard({
           registration proceeds; the credits just bought replenish what it
           spends, so the user still pays in the token they chose.
         */
-        creditsNeeded: creditsPrice?.credits ?? 0,
+        creditsNeeded: creditsPrice?.sponsoredCredits ?? 0,
         /*
           Ask the payment service, rather than dispatching `refresh-balance` and
           reading the store. That route is debounce -> invalidate -> refetch ->
@@ -558,7 +537,7 @@ export function ArNSPurchaseCard({
     }
     await registerAfterFunding();
   }, [
-    tokenTopUp, creditsPrice?.credits, registerAfterFunding, readTurboCredits,
+    tokenTopUp, creditsPrice?.sponsoredCredits, registerAfterFunding, readTurboCredits,
   ]);
 
 
@@ -585,7 +564,7 @@ export function ArNSPurchaseCard({
           registration proceeds; the credits just bought replenish what it
           spends, so the user still pays in the token they chose.
         */
-        creditsNeeded: creditsPrice?.credits ?? 0,
+        creditsNeeded: creditsPrice?.sponsoredCredits ?? 0,
         /*
           Credits live in the store and are refreshed by the app-wide
           `refresh-balance` event, so ask for a refresh and read what landed.
@@ -608,7 +587,7 @@ export function ArNSPurchaseCard({
     }
     await registerAfterFunding();
   }, [
-    route, tokenSmallestUnitForName, tokenTopUp, creditsPrice?.credits,
+    route, tokenSmallestUnitForName, tokenTopUp, creditsPrice?.sponsoredCredits,
     registerAfterFunding, readTurboCredits,
   ]);
 
@@ -633,19 +612,21 @@ export function ArNSPurchaseCard({
    */
   const blockedReason = useMemo((): { text: string; canSwitchToCredits?: boolean } | null => {
     if (!address || isBusy) return null;
-    // Only the CUSTODIAL card is settled and funded server-side. A self-custody
-    // card buy still needs the user's SOL for rent, so it keeps every blocker
-    // below.
-    if (custodialCard) return null;
     if (!priceReady) return null;
-    if (gasUnavailable) return { text: 'Network cost is unavailable right now.' };
     /*
-      Paired with the card button's `balances.sol === undefined` gate. Without
-      a matching reason that gate is a dead button with no explanation — the
-      failure this whole memo exists to prevent.
+      Turbo pays the Solana costs on every credits-settled route, so neither a
+      missing gas estimate nor an unreadable SOL balance can block one. Both
+      gates stay for ARIO, which is the buyer's own transaction.
     */
-    if (balances.sol === undefined && !balances.loading) {
-      return { text: "Couldn't read your Solana balance — reload and try again." };
+    if (!sponsored) {
+      if (gasUnavailable) {
+        return { text: 'Network cost is unavailable right now.' };
+      }
+      if (balances.sol === undefined && !balances.loading) {
+        return {
+          text: "Couldn't read your Solana balance — reload and try again.",
+        };
+      }
     }
     /*
       Silent only where the cost breakdown already says it. That panel shows
@@ -653,11 +634,9 @@ export function ArNSPurchaseCard({
       SOL directly. A card buyer sees a dollar total, so nothing else on the
       screen explains why the button is dead.
     */
-    if (insufficientSol) {
-      return route.kind === 'card'
-        ? { text: 'Not enough SOL in your wallet for the network deposit.' }
-        : null;
-    }
+    // ARIO only, now: the breakdown shows the SOL rows and the shortfall there,
+    // so a second copy would be the same sentence twice.
+    if (insufficientSol) return null;
     /*
       The token route disables on its own conditions, so it needs its own
       reason — otherwise it greys out silently, which is what a zero shortfall
@@ -674,7 +653,7 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route, custodialCard,
+    insufficientFunds, route, sponsored,
     balances.sol, balances.loading,
     tokenSmallestUnitForName,
   ]);
@@ -807,31 +786,24 @@ export function ArNSPurchaseCard({
       <div className="mb-4">
         <ArNSCostBreakdown
           priceUnit={priceUnit}
-          creditsPrice={creditsPrice?.credits}
+          creditsPrice={creditsPrice?.sponsoredCredits}
+          /* Turbo mints the name and pays the Solana rent, recovering it as the
+             setup line. The buyer's wallet signs once and needs no SOL. */
+          sponsored={priceUnit === 'credits'}
+          setupCredits={creditsPrice?.surchargeCredits}
           // Card only: the fee-inclusive charge. Every other route settles at
           // the fee-free winc price, so passing it there would overstate.
           isCardRoute={route.kind === 'card'}
           cardUsdPrice={
             /*
-              Set for EVERY card route, not just the custodial one. A card price
-              is dollars and has no second unit, so offering "Credits / USD"
-              there is a switch with nothing to switch to — and credits are how
-              we settle it, not what the buyer hands over.
+              A card price is dollars and has no second unit, so offering
+              "Credits / USD" here is a switch with nothing to switch to.
 
-              Custodial adds the ANT-spawn surcharge Turbo recovers; quoting
-              without it under-charges the display by roughly half.
+              What the card is ACTUALLY charged: a card buy runs through the
+              top-up flow, which floors at `minUSDAmount` and rounds to whole
+              dollars — so a $2.10 name showed $2.10 and charged $5.
             */
-            route.kind !== 'card'
-              ? undefined
-              : custodialCard
-                ? // Server-quoted, and charged exactly as quoted.
-                  creditsPrice?.usdWithAntSpawn ?? creditsPrice?.usd
-                : // What the card is ACTUALLY charged. A self-custody card runs
-                  // through the top-up flow, which floors at `minUSDAmount` and
-                  // rounds to whole dollars — so a $2.10 name showed $2.10 and
-                  // charged $5. The two card paths genuinely have different
-                  // floors: the quote route floors at Stripe's ~$0.50.
-                  topUpUsd
+            route.kind === 'card' ? topUpUsd : undefined
           }
           arioPrice={cost?.arioCost}
           priceLoading={priceUnit === 'credits' ? creditsLoading : costLoading}
@@ -854,45 +826,31 @@ export function ArNSPurchaseCard({
                 }
               : undefined
           }
-          networkCostCovered={custodialCard}
-          custodialAnt={custodialCard}
         />
       </div>
 
       {/*
-        What this screen offers depends on whether custody is on the menu.
+        A wallet is needed to HOLD the name, not to fund it.
 
-        With it on, connecting is the better of two options and the copy says
-        so. With it off there is no second option, so promising that "Turbo can
-        hold it for you instead" would describe a route the user cannot take —
-        and "skip the setup fee" names a fee no alternative charges.
+        That distinction is the whole product change, so the copy leads with it:
+        the old line ended on "costs a small amount of SOL in network fees",
+        which is now false on this route and was the sentence users quoted back
+        the moment a wallet prompt appeared.
       */}
       {cardNeedsWallet ? (
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
           <p className="mb-3 text-sm text-foreground/80">
             {cardPlan.kind === 'reconnect' ? (
-              custodialEnabled ? (
-                <>
-                  Reconnect your Solana wallet to buy this name outright — you
-                  &apos;ll own it directly and skip the setup fee.
-                </>
-              ) : (
-                <>
-                  Reconnect your Solana wallet to buy this name. It holds the
-                  name once registered, and signs the changes you make to it.
-                </>
-              )
-            ) : custodialEnabled ? (
               <>
-                Connect a Solana wallet to own this name directly. Without one,
-                Turbo can hold it for you instead — that costs a little more and
-                limits what you can change.
+                Reconnect your Solana wallet to buy this name. It holds the name
+                once registered and approves the changes you make to it — you
+                won&apos;t need any SOL.
               </>
             ) : (
               <>
-                Connect a Solana wallet to buy this name. The name lives in your
-                wallet, and registering it costs a small amount of SOL in
-                network fees — your card only covers the name itself.
+                You&apos;ll need a wallet to hold the name. Sign in with email
+                and we&apos;ll make one for you, or connect Phantom or Solflare.
+                Turbo pays the Solana fees, so it never needs a balance.
               </>
             )}
           </p>
@@ -922,29 +880,17 @@ export function ArNSPurchaseCard({
             // Leaving this live would let the user reopen the payment modal and
             // pay a SECOND time for a name they have already funded.
             tokenStepLabel !== undefined ||
+            !priceReady ||
             /*
-              A custodial card buy is quoted server-side, so neither our
-              credits price nor the SOL estimate needs to have loaded.
+              SOL gates apply only where the buyer's own wallet pays.
 
-              `insufficientSol` belongs here and was missing. Paying by card
-              buys credits; the ANT spawn that follows is still paid in SOL
-              from the user's own wallet. Without this the card was charged,
-              the credits landed, and the registration then failed for rent —
-              money taken, no name. Every other route already gated on it.
+              They mattered because a card bought credits and the ANT spawn
+              that followed was still paid in SOL — so an unfunded wallet could
+              be charged for a name it could never receive. Turbo mints the
+              name now, so there is no spawn to fund and no such failure; the
+              gates would only block buyers who correctly hold nothing.
             */
-            (!custodialCard &&
-              (!priceReady ||
-                gasUnavailable ||
-                insufficientSol ||
-                /*
-                  An UNKNOWN balance must not read as a sufficient one here.
-                  Elsewhere unknown deliberately does not block — it once told
-                  funded users to buy SOL. But this button takes payment before
-                  the spawn, and the costs are asymmetric: blocking a funded
-                  user costs them a message, while letting an unfunded one
-                  through costs them a charge for a name they cannot receive.
-                */
-                balances.sol === undefined))
+            (!sponsored && (gasUnavailable || insufficientSol || balances.sol === undefined))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         >
@@ -1066,38 +1012,14 @@ export function ArNSPurchaseCard({
         />
       )}
 
-      {showPayment && custodialCard && (
-        <ArNSCardPaymentModal
-          displayName={name}
-          quoteInput={{
-            name,
-            address: custodialOwner,
-            intent: 'Buy-Name',
-            type,
-            years: type === 'lease' ? years : undefined,
-          }}
-          onClose={() => setShowPayment(false)}
-          onSuccess={(messageId) => {
-            setShowPayment(false);
-            onCardSuccess(messageId);
-          }}
-          onFiatDisabled={() => {
-            setCardEnabled(false);
-            setShowPayment(false);
-            setSelectedId(undefined);
-          }}
-        />
-      )}
 
-      {/* Self-custody card: buy credits, then the user's own signer registers
-          the name atomically. Two steps, but they own the ANT and skip the
-          surcharge. */}
-      {showPayment && ((route.kind === 'card' && !custodialCard) || route.kind === 'topup') && (
+      {/* Card or token: buy credits, then the sponsored purchase mints the
+          name straight to the buyer's wallet. */}
+      {showPayment && (route.kind === 'card' || route.kind === 'topup') && (
         <ArNSPaymentModal
           initialUsdAmount={topUpUsd}
-          shortfallCredits={creditsPrice?.credits}
+          shortfallCredits={creditsPrice?.sponsoredCredits}
           arnsName={name}
-          networkSol={cost?.gasTotalSol}
           paymentMethod={route.kind === 'card' ? 'fiat' : 'crypto'}
           token={route.kind === 'topup' ? (route.token as SupportedTokenType) : undefined}
           tokenLabel={

@@ -21,12 +21,13 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. 37 suites in three clusters: `src/utils/` (7 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry), `src/features/pages/` (19 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/features/arns/` (11 — ANT roles, price tables, record fields, returned-name pricing, image compression, plus hook-level logic tests). Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~58 suites, the bulk in three clusters: `src/features/arns/` (26 — ANT roles, custody, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (13 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore). One stray outside them: `src/components/modals/bodyScrollLock.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: '/'` — absolute asset paths, required so nested routes (`/domains/:name`) resolve assets on direct navigation. This trades away Arweave *subpath* compatibility (the old `'./'` value): the build assumes it is served from a domain root (`console.ar.io`, or an ArNS name root), not from `gateway/<txid>/`. Don't flip it back without re-checking nested-route deep links.
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
 - Route pages are lazy-loaded (`React.lazy`); Layout wraps `<Outlet>` in `<Suspense>` so the header/nav stay mounted while page chunks load. **Exception:** `LandingPage` is eagerly imported — it's the primary entry point, so lazy-loading it just produces a spinner flash on every first visit
-- `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
+- `vite-plugin-fix-modules.ts` (repo root) is a local Vite plugin that aliases `pino` → `pino/browser.js` and `@walletconnect/environment` to its ESM build. Wallet-SDK transitive deps that ship Node-only entry points go here, not in the polyfill list
+- `scripts/arns-buy-smoke.mjs` is a **devnet-only** smoke script (not shipped, not in CI) that drives the same turbo-sdk calls `TurboArNSClient` makes against a local bundler: `PAYMENT_URL`/`UPLOAD_URL` env vars, `node scripts/arns-buy-smoke.mjs`
 - `vite-plugin-pwa` (`VitePWA` in `vite.config.ts`) is configured in `injectManifest` mode purely to compile the Browse service worker (`src/features/browse/service-worker/service-worker.ts`) — `manifest: false`, no offline app caching. It is the build mechanism for the Browse verification SW, not a general PWA setup.
 
 ## Critical Gotchas
@@ -87,6 +88,9 @@ src/
 ├── providers/            # WalletProviders.tsx (Wagmi, Solana, Privy, Stripe, React Query)
 ├── utils/                # Helpers (addressValidation, token utilities, jitPayment)
 ├── lib/                  # API clients (turboCaptureClient.ts)
+├── workers/              # hashWorker.ts — Smart Deploy content hashing (via utils/fileHash.ts)
+├── config/               # banner.ts — site-wide announcement banner
+├── types/                # global.d.ts (window.arweaveWallet etc.) + shared types
 └── constants.ts          # App config, token definitions, X402_CONFIG
 ```
 
@@ -121,9 +125,11 @@ what it did. Don't reintroduce a second verification entry point.
 |--------|--------|-------|
 | Arweave (Wander) | `ArconnectSigner` via `window.arweaveWallet` | Uploads and payments only |
 | Ethereum (all) | `InjectedEthereumSigner` from `@ar.io/sdk/web` | Supports MetaMask, RainbowKit, WalletConnect, Coinbase |
-| Solana (Phantom/Solflare) | Wallet adapter via `useWallet()` | Required for ArNS updates; auto-detected via Standard Wallet API |
+| Solana (Phantom/Solflare/Privy) | Wallet adapter via `useWallet()` | Required for ArNS updates; auto-detected via Standard Wallet API |
 
-**Email Auth (Privy):** Creates embedded Ethereum wallet via `@privy-io/react-auth`
+**`WalletProvider` is passed `wallets={[]}` on purpose** (`solanaWallets: never[]` in `WalletProviders.tsx`). Every Solana wallet arrives through the Wallet Standard registry, never through a hardcoded adapter list — so adding a wallet means it registering itself, not editing that array.
+
+**Email Auth (Privy):** Creates an embedded **Ethereum *and* Solana** wallet via `@privy-io/react-auth`. Privy builds a real Wallet Standard Solana wallet but never calls `registerWallet`, so the adapter cannot see it; `providers/PrivySolanaBridge.tsx` registers it (idempotently, unregistering on unmount) **only while `authenticated`** — registering unconditionally would offer a Privy wallet to Wander/Phantom users who cannot connect it. Net effect: Phantom, Solflare and Privy all come through one `useWallet()`, so `useArNSTurboSigner` and the linked-wallet flow need no Privy branch, and an email user can sign ArNS writes without installing anything. The Solana wallet was **added, not swapped** — Turbo credits belong to an address, so changing an existing email user's identity would strand their balance.
 
 **Ethereum Signer Caching:** The `useEthereumTurboClient` hook caches signers globally so users only sign once per session. Call `clearEthereumTurboClientCache()` when switching wallets.
 
@@ -362,6 +368,8 @@ Network-specific settings in `constants.ts`:
 | JIT Payments | ❌ | ✅ Base-ETH, Base-USDC | ✅ SOL |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
+The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet — in both cases the primary identity is unchanged.
+
 ## Environment Variables
 
 ```bash
@@ -406,6 +414,10 @@ Service URLs managed by store's configuration system, overridable via Developer 
 **The flow is `feature → develop → main`.** `main` is protected: PR required, CI must pass, 0 approvals (a solo maintainer cannot approve their own PR), admin bypass on.
 
 **`.github/workflows/deploy.yml`** — permaweb deploy, on **push to `main`** and via `workflow_dispatch`: builds the production bundle, publishes it to Arweave via Turbo, then repoints the `console` ArNS name's ANT record at the new manifest. A push carries no inputs, so `TARGET_UNDERNAME`/`TARGET_REF` resolve to `@` and the pushed SHA — merging to `main` publishes live `console.ar.io` with no approval step. Manual runs keep their own defaults (`staging` → `staging_console.ar.io`). TTL is 300s. **`.github/workflows/deploy-wallet-address.yml`** prints the deploy wallet's public address, since the secrets are write-only once set. A live `@` deploy hard-fails if `secrets.VITE_SOLANA_RPC` is empty, because the public mainnet-beta fallback fails *silently* at build time and would ship a broken console that looks fine in CI. One Solana wallet fills both roles (`DEPLOY_KEY` pays the upload, `ARNS_KEY` controls the name).
+
+**Both deploy paths need `404.html`, for the same reason.** An `arweave/paths` manifest serves only the paths it lists, and `ario-deploy` derives the manifest's `fallback` from a `404.html` in the deploy folder — so `deploy.yml` runs `cp dist/index.html dist/404.html` before publishing. Without it every deep link (`/try`, `/upload`, `/arns`) 404s on direct arrival while the root loads fine and in-app navigation works — the 4.6.0 bug. The GitHub Pages workflow copies the same file for the same reason; if you add a third publish target, carry the step across.
+
+**`.coderabbit.yaml`** makes CodeRabbit auto-review PRs targeting **`develop`**. It reviews only the default branch (`main`) out of the box, which under `feature → develop → main` is the one branch PRs never target first.
 
 **`.npmrc` sets `legacy-peer-deps=true`.** Its comment says it exists because `@ar.io/sdk` was pinned to a prerelease that `@ar.io/wayfinder-core`'s `peerOptional ">=4.0.0"` rejected. That is now **stale** — the repo is on `@ar.io/sdk` 4.1.1 stable, which satisfies the peer range, so the flag (and the matching CI comment) can likely be dropped. Verify with a clean `npm ci` before removing.
 
@@ -538,10 +550,12 @@ if (privyWallet) {
 
 - `@ardrive/turbo-sdk`: Turbo services, multi-chain signing, USDC support
 - `@ar.io/sdk`: ArNS resolution, InjectedEthereumSigner
+- `@ar.io/solana-contracts` + `@solana/kit`: ANT spawn/instruction builders for the Solana ArNS paths
 - `@ar.io/wayfinder-core` + `@ar.io/wayfinder-react`: Browse content verification
 - `@privy-io/react-auth`: Email auth with embedded wallets
 - `wagmi` + `ethers`: Ethereum wallets
 - `@solana/wallet-adapter-*`: Solana wallets
+- `@wallet-standard/app`: `getWallets().register()` — how `PrivySolanaBridge` makes the embedded wallet visible
 - `arbundles`: Data item creation for X402
 - `x402-fetch`: X402 payment protocol
 - `zustand`: State management

@@ -2,72 +2,58 @@ import { useCallback } from 'react';
 
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import { useCustodyOwnerClient } from './useCustodyOwnerClient';
-import { useTurboNameCustody } from './useNameCustody';
-import { getWritableANT } from '../../../utils';
+import { browserArNSOwnerSigner } from '../actions/browserOwnerSigner';
+import type { RecordWriter } from '../records/recordWriter';
 import {
-  writerKindForWrite,
-  type RecordWriter,
-} from '../custody/recordWriter';
-import {
-  antRecordWriter,
-  turboRecordWriter,
-  type ANTRecordWriteable,
-  type TurboRecordClient,
-} from '../custody/writers';
+  sponsoredRecordWriter,
+  type SponsoredRecordClient,
+} from '../records/sponsoredWriter';
 
 /**
- * Resolve the right record writer for a name, by who holds its ANT.
+ * The writer for a name's records.
  *
- * Both writers need a live wallet — the difference is what it signs. A
- * user-owned name signs the ANT transaction itself; a Turbo-held one signs a
- * short action-bound message authorising Turbo to do it. So "connect a wallet"
- * is a shared precondition and only the failure past that point differs.
+ * One implementation now. This hook used to pick between the owner's own ANT
+ * signer and Turbo's custodial route, and had to WAIT for custody to resolve
+ * before dispatching — guessing wrong asked a wallet to sign for an asset it
+ * did not own. Custody is gone, every name is the user's, and Turbo writes
+ * every record, so there is nothing left to resolve and nothing to block on.
+ *
+ * Two identities are still involved and they are frequently different wallets:
+ * the PAYER (the session identity, whose Turbo client is used) and the OWNER
+ * (the Solana wallet that holds the name and approves the write). A record
+ * write costs no credits, so the payer here is only proving who is asking.
  */
-export function useRecordWriter(name: string | undefined, processId: string | undefined) {
+export function useRecordWriter(processId: string | undefined) {
   const signer = useArNSTurboSigner();
   const { getClient } = useCustodyOwnerClient();
-  const { custodyOf, isLoading } = useTurboNameCustody();
-
-  const custody = custodyOf(name ?? '');
-  const kind = writerKindForWrite(custody);
 
   const getWriter = useCallback(
     async (antId?: string): Promise<RecordWriter> => {
-      /*
-        A Turbo-held name is signed by its OWNER, who may hold no Solana wallet
-        at all; a user-owned name needs the Solana signer that owns the ANT. The
-        precondition differs by writer, so it is checked per branch below rather
-        than demanding a Solana adapter from everyone up front.
-      */
-      if (kind !== 'turbo' && (!signer.isReady || !signer.walletAdapter)) {
-        throw new Error('Connect a Solana wallet with a live signer to edit records.');
+      const id = antId ?? processId;
+      if (!id) {
+        throw new Error('This name has no record to edit yet.');
       }
-      // `blocked` means custody hasn't resolved yet. Picking a writer here
-      // would be a coin flip, and guessing wrong asks the wallet to sign for an
-      // asset it doesn't own — a failure the user cannot interpret.
-      if (kind === 'blocked') {
-        throw new Error('Still checking who holds this name. Try again in a moment.');
+      if (!signer.isReady || !signer.walletAdapter || !signer.address) {
+        throw new Error(
+          'Connect the Solana wallet that owns this name to edit its records.',
+        );
       }
 
-      if (kind === 'turbo') {
-        const turbo = (await getClient()) as unknown as TurboRecordClient;
-        return turboRecordWriter(antId ?? processId ?? '', turbo);
-      }
+      const turbo = (await getClient()) as unknown as SponsoredRecordClient;
+      const owner = browserArNSOwnerSigner({
+        address: signer.address,
+        signTransaction: signer.walletAdapter.signTransaction,
+        signMessage: signer.walletAdapter.signMessage,
+      });
 
-      const ant = (await getWritableANT(
-        processId as string,
-        signer.getSolanaSigner(),
-      )) as unknown as ANTRecordWriteable;
-      return antRecordWriter(ant);
+      return sponsoredRecordWriter(id, turbo, owner);
     },
-    [getClient, signer, kind, processId],
+    [getClient, signer, processId],
   );
 
   return {
     getWriter,
-    custody,
-    /** True while custody is still unknown — writes must wait, not guess. */
-    isResolving: isLoading || kind === 'blocked',
-    isCustodial: kind === 'turbo',
+    /** True when a wallet is present and able to approve a write. */
+    canWrite: signer.isReady,
   };
 }

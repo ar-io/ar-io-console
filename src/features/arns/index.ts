@@ -6,8 +6,6 @@ export { ArNSBuyPanel, default as ArNSBuyPanelDefault } from './ArNSBuyPanel';
 export { default as BrowseDomainsPanel } from './components/BrowseDomainsPanel';
 export { default as ReturnedNamesPanel } from './components/ReturnedNamesPanel';
 export { default as ReturnedNameBuyModal } from './components/ReturnedNameBuyModal';
-export { default as CustodialNamePanel } from './components/CustodialNamePanel';
-export { default as ClaimToContinueModal } from './components/ClaimToContinueModal';
 export { default as ManageDomainModal } from './components/ManageDomainModal';
 export { default as TransferDomainModal } from './components/TransferDomainModal';
 export { default as ReassignDomainModal } from './components/ReassignDomainModal';
@@ -29,8 +27,6 @@ export type {
   TurboArNSClientConfig,
   ArNSSettlementResult,
 } from './services/TurboArNSClient';
-export { resolveCustodyStrategy } from './services/custodyStrategy';
-export type { CustodyModel, CustodyStrategy } from './services/custodyStrategy';
 export { spawnArNSAnt } from './services/antSpawn';
 
 // Hooks
@@ -113,5 +109,33 @@ export {
   formatTierCharacterLabel,
 } from './arnsPriceTable';
 
-export { useTurboNameCustody } from './hooks/useNameCustody';
-export { actionAvailability, isActionAvailable, type NameCustody, type ArNSAction } from './custody/nameCustody';
+
+// Gas-sponsored ArNS actions. turbo-sdk owns the protocol — the two response
+// shapes, the nonce discipline and the owner proof — via `buyArNSName`,
+// `setArNSRecord` and friends. What lives here is the half the SDK cannot own:
+// the browser wallet that signs, and honest copy about what is sponsored.
+export {
+  assertOwnerSlotOnly,
+  browserArNSOwnerSigner,
+} from './actions/browserOwnerSigner';
+export type { BrowserOwnerSignerAdapter } from './actions/browserOwnerSigner';
+export {
+  SPONSORED_ACTIONS,
+  SPONSORED_ACTION_FACTS,
+  UNSPONSORED_OPERATIONS,
+  actionCostsCredits,
+  isSponsoredAction,
+} from './actions/sponsorship';
+export type {
+  SponsoredActionFacts,
+  UnsponsoredOperation,
+} from './actions/sponsorship';
+
+// Sponsored vs self-spawn pricing. `wincTotal` is the figure to charge; the
+// base and the surcharge are still needed separately — see `priceTotals.ts`.
+export {
+  fiatCentsForPurchase,
+  readWincTotals,
+  wincForPurchase,
+} from './purchase/priceTotals';
+export type { ArNSPriceFields, ArNSWincTotals } from './purchase/priceTotals';

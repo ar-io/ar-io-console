@@ -75,11 +75,14 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
               Register an ArNS Name
             </h3>
             <p className="text-sm text-foreground/80">
-              {/* Named the two crypto routes and omitted the one that needs no
-                  crypto at all — which is the option a newcomer is looking for.
-                  Lead with the card. */}
-              Search, price, and buy a name with a card, ARIO, or SOL — no
-              leaving the console.
+              {/* Leads on the thing that changed. The old line named payment
+                  methods, which nobody is worried about; what stops people is
+                  not knowing whether they need crypto. Say that first, and say
+                  the wallet approval too — it is the one prompt they will see,
+                  and hiding it is what makes it feel like a bait and switch. */}
+              Search for a name and buy it with credits or a card. Turbo pays
+              the Solana fees, so you never need SOL — you&apos;ll approve the
+              purchase once in your wallet, and the name is yours.
             </p>
             <a
               href="https://docs.ar.io/learn/arns"
@@ -184,13 +187,6 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
           onTokenFunded={() => setTokenFunded(true)}
-          onCardSuccess={(messageId) =>
-            buyState.markExternalSuccess({
-              nonce: '',
-              messageId,
-              receipt: {},
-            })
-          }
         />
       )}
 

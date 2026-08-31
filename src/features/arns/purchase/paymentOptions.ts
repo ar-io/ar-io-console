@@ -94,14 +94,6 @@ export interface PaymentOptionsInput {
    */
   networkSolRequired?: number;
   solBalance?: number;
-  /**
-   * Paying by card will leave Turbo holding the name's ANT.
-   *
-   * Surfaced on the option itself because it changes what you get, not just how
-   * you pay — and a difference that large should be visible while choosing,
-   * not discovered in the cost breakdown after.
-   */
-  cardIsCustodial?: boolean;
 }
 
 export function buildPaymentOptions({
@@ -113,14 +105,21 @@ export function buildPaymentOptions({
   extraTokens = [],
   isTokenSelectable,
   cardEnabled = true,
-  cardIsCustodial = false,
   networkSolRequired,
   solBalance,
 }: PaymentOptionsInput): PaymentOption[] {
   /*
-    Creating a name costs SOL in account rent, whoever pays for the name itself.
-    A custodial card is the sole exception — Turbo spawns the ANT from its own
-    keypair — which is exactly why it exists as a fallback.
+    Only ARIO spends the buyer's own SOL.
+
+    Paying in ARIO is not a Turbo action — it is the buyer's own `buyRecord`
+    transaction, so their wallet covers the Solana account rent. Every other
+    route settles in credits and Turbo pays that rent, so the block below is
+    applied to the ARIO option alone. Applying it broadly is what would block
+    the buyers this change exists to serve: the ones holding no SOL at all.
+
+    It is stated on the option rather than at submit, because ARIO also carries
+    the "Best price" badge — the cheapest route being the only one with a SOL
+    requirement is exactly the trade someone should see before choosing.
   */
   const shortOnNetworkSol =
     networkSolRequired !== undefined &&
@@ -150,7 +149,6 @@ export function buildPaymentOptions({
       label: 'Balance',
       detail: `${credits.toLocaleString(undefined, { maximumFractionDigits: 4 })} credits`,
       sufficient: priceInCredits === undefined ? true : credits >= priceInCredits,
-      blockedReason: networkBlock,
     });
   }
 
@@ -164,15 +162,10 @@ export function buildPaymentOptions({
         naming the processor. "Turbo holds the name" describes the trade; "No
         crypto needed" describes the reason to take it.
       */
-      detail: cardIsCustodial
-        ? shortOnNetworkSol
-          ? 'No crypto needed'
-          : 'Turbo holds the name'
-        : 'with Stripe',
-      // A card can always cover the price — the charge is sized to it. And a
-      // custodial card needs no SOL, so the network block never applies.
+      detail: 'with Stripe',
+      // A card can always cover the price — the charge is sized to it — and
+      // Turbo pays the Solana costs, so no SOL block applies.
       sufficient: true,
-      ...(cardIsCustodial ? {} : { blockedReason: networkBlock }),
     });
   }
 
@@ -209,7 +202,8 @@ export function buildPaymentOptions({
         correcting the ARIO rate was to make that difference visible.
       */
       badge: token === 'ario' ? 'Best price' : undefined,
-      blockedReason: networkBlock,
+      // ARIO alone; see the note on `shortOnNetworkSol`.
+      blockedReason: token === 'ario' ? networkBlock : undefined,
       // Unknown holdings or unknown price must NOT read as insufficient — the
       // same conflation that made a funded wallet look empty elsewhere.
       sufficient: held === undefined || price === undefined ? true : held >= price,

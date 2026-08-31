@@ -104,14 +104,22 @@ interface Props {
    */
   networkCostCovered?: boolean;
   /**
-   * Turbo will hold this name's ANT (a custodial card purchase).
+   * Turbo pays the Solana fees and rent for this purchase.
    *
-   * Stated, never asked. The console picks the best custody the wallet can
-   * support, but "who owns this" must not be something the buyer discovers
-   * later — so the one case where they don't own it says so, next to the price
-   * that includes spawning it.
+   * True for registration, renewal, upgrade and undername actions, where the
+   * buyer's wallet needs no SOL at all. False for a returned-name auction,
+   * which still runs through the buyer's own wallet — the one purchase in the
+   * app that costs real SOL, so it keeps the deposit and fee rows below.
    */
-  custodialAnt?: boolean;
+  sponsored?: boolean;
+  /**
+   * The one-time setup charge, in credits, shown as its own line.
+   *
+   * Worth a line rather than folding into the name price: it is operator-
+   * configured, varies by environment, and is currently larger than the name
+   * itself on testnet. A total that jumps with no explanation reads as a bug.
+   */
+  setupCredits?: number;
   /**
    * Token spent on the NAME itself, when paying with a token that must become
    * credits first.
@@ -200,7 +208,8 @@ export function ArNSCostBreakdown({
   insufficientFunds,
   insufficientSol,
   networkCostCovered = false,
-  custodialAnt = false,
+  sponsored = false,
+  setupCredits,
   tokenForName,
 }: Props) {
   // Credits per $1, inverted. Shown with "~" because this is an indicative
@@ -375,8 +384,42 @@ export function ArNSCostBreakdown({
 
         <div className="my-2 border-t border-border/10" />
 
-        {/* Solana network cost — always required */}
-        {gasLoading ? (
+        {/*
+          Turbo pays the Solana costs, so there is no deposit to hold and no
+          balance to be short of. What remains is the one-time setup charge —
+          the rent Turbo fronts to register the name — and the total.
+        */}
+        {sponsored ? (
+          <>
+            {setupCredits != null && setupCredits > 0 && (
+              <Row
+                label={
+                  <span className="inline-flex items-center gap-1.5">
+                    One-time setup
+                    <InfoTip text="Registers your name on Solana. Turbo pays the network deposit and this covers it. Charged once, only when you buy." />
+                  </span>
+                }
+              >
+                <span className="text-sm text-foreground/80">
+                  {fmtNum(setupCredits)} credits
+                </span>
+              </Row>
+            )}
+            <div className="my-2 border-t border-border/10" />
+            <Row label="Total" strong>
+              <span className="flex flex-col items-end">
+                <span
+                  className={`text-lg font-bold ${insufficientFunds ? 'text-error' : 'text-foreground'}`}
+                >
+                  {priceNode}
+                </span>
+                <span className="text-[11px] font-normal text-foreground/60">
+                  Turbo pays the Solana fees — you don&apos;t need SOL
+                </span>
+              </span>
+            </Row>
+          </>
+        ) : gasLoading ? (
           <div className="flex items-center gap-2 py-1 text-sm text-foreground/70">
             <Loader2 className="h-4 w-4 animate-spin" /> Estimating network
             cost…
@@ -407,12 +450,6 @@ export function ArNSCostBreakdown({
                   </span>
                 </Row>
               </>
-            )}
-            {custodialAnt && (
-              <p className="pt-1 text-[11px] leading-snug text-foreground/60">
-                Turbo holds this name&apos;s ANT so you don&apos;t need SOL. You
-                can transfer it to your own wallet any time.
-              </p>
             )}
           </>
         ) : gasError ? (

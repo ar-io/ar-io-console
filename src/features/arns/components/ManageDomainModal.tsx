@@ -172,7 +172,7 @@ export default function ManageDomainModal({
   // Only the CHOSEN method can be short; a card is sized to the price.
   const insufficientFunds = useMemo(() => {
     if (route.kind === 'credits') {
-      return creditsPrice ? balances.credits < creditsPrice.credits : false;
+      return creditsPrice ? balances.credits < creditsPrice.sponsoredCredits : false;
     }
     if (route.kind !== 'ario') return false;
     return (cost?.shortfallMARIO ?? 0) > 0;
@@ -183,7 +183,7 @@ export default function ManageDomainModal({
       buildPaymentOptions({
         walletType: 'solana',
         credits: balances.credits,
-        priceInCredits: creditsPrice?.credits,
+        priceInCredits: creditsPrice?.sponsoredCredits,
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
         // next to a silent SOL row states a fact we don't have and reads as
         // "you're broke" to someone who simply hasn't connected yet.
@@ -194,7 +194,7 @@ export default function ManageDomainModal({
         isTokenSelectable,
         cardEnabled,
       }),
-    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.credits],
+    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits],
   );
 
   const priceReady =
@@ -214,7 +214,7 @@ export default function ManageDomainModal({
   // Credit shortfall → on-demand top-up (credits method only).
   const creditShortfall =
     creditsPrice
-      ? Math.max(0, creditsPrice.credits - balances.credits)
+      ? Math.max(0, creditsPrice.sponsoredCredits - balances.credits)
       : 0;
   const topUpUsd =
     creditShortfall > 0 && creditsForOneUSD
@@ -386,9 +386,21 @@ export default function ManageDomainModal({
 
             {/* Cost breakdown */}
             <div className="mb-4">
+              {/* Registry payments settle from credits with no wallet prompt
+                  at all — worth saying, because the hesitation before clicking
+                  is usually "what is this going to ask me for". */}
+              {priceUnit === 'credits' && (
+                <p className="mb-2 text-xs text-foreground/60">
+                  Paid from your credits. No wallet approval, and no SOL.
+                </p>
+              )}
               <ArNSCostBreakdown
                 priceUnit={priceUnit}
-                creditsPrice={creditsPrice?.credits}
+                creditsPrice={creditsPrice?.sponsoredCredits}
+                /* Renew, upgrade and undername slots are registry payments
+                   Turbo settles from credits — no Solana cost to the user, and
+                   nothing minted, so no setup charge either. */
+                sponsored={priceUnit === 'credits'}
                 cardUsdPrice={
                   route.kind === 'card' ? creditsPrice?.usd : undefined
                 }

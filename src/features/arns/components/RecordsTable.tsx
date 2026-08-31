@@ -8,6 +8,7 @@ import {
   blankRecordFields,
   RecordFieldsState,
   toRecordChange,
+  withoutClears,
   validateRecordFields,
 } from '../recordFields';
 import { DEFAULT_TTL, isValidUndername } from '../utils';
@@ -90,6 +91,15 @@ export default function RecordsTable({
   /** Row key currently expanded for editing, or '__new__' for the add form. */
   const [editKey, setEditKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<RecordFieldsState>(() => blankRecordFields(DEFAULT_TTL));
+  /*
+    The record as loaded, kept alongside the draft.
+
+    Metadata fields are tri-state on the wire — omitted means "leave alone",
+    null means "clear" — and only a diff against this can tell those apart. A
+    blank box with no original is a field the user never filled in; a blank box
+    that HAD a value is a deliberate clear.
+  */
+  const [original, setOriginal] = useState<RecordFieldsState | undefined>();
   const [newName, setNewName] = useState('');
   const [rowError, setRowError] = useState<string | null>(null);
 
@@ -156,13 +166,18 @@ export default function RecordsTable({
 
   const openEdit = (r: Row) => {
     setRowError(null);
-    setDraft(r.seed());
+    const seeded = r.seed();
+    setDraft(seeded);
+    setOriginal(seeded);
     setEditKey(r.key);
   };
   const openAdd = () => {
     setRowError(null);
     setNewName('');
     setDraft(blankRecordFields(DEFAULT_TTL));
+    // A new record has nothing on chain, so every blank field is simply absent
+    // rather than cleared.
+    setOriginal(undefined);
     setEditKey('__new__');
   };
   const close = () => {
@@ -175,10 +190,18 @@ export default function RecordsTable({
     try {
       if (r?.kind === 'apex') {
         // One bundled setBaseNameRecord write.
-        await metadata.apply(processId, { baseRecord: toRecordChange(draft) });
+        // `withoutClears` until the sponsored record actions land — the ANT
+        // write has no way to clear a field, only to overwrite one.
+        await metadata.apply(processId, {
+          baseRecord: withoutClears(toRecordChange(draft, original)),
+        });
       } else {
         const key = r ? r.key : newName;
-        await undernameWrites.saveUndername(processId, key, toRecordChange(draft));
+        await undernameWrites.saveUndername(
+          processId,
+          key,
+          withoutClears(toRecordChange(draft, original)),
+        );
       }
       close();
       onSuccess();
@@ -263,6 +286,19 @@ export default function RecordsTable({
 
   return (
     <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
+      {/*
+        Said once, above the table.
+
+        The approval happens on every save, so "one click" would be false — and
+        it is a MESSAGE signature, which is visibly not a payment. Naming that
+        is what makes the wallet opening feel routine instead of alarming.
+      */}
+      {canManage && (
+        <p className="mb-3 text-xs text-foreground/60">
+          Saving a record is free. Your wallet will ask you to approve a
+          message — it costs nothing and needs no SOL.
+        </p>
+      )}
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-primary" />

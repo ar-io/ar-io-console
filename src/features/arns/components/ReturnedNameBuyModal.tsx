@@ -170,6 +170,23 @@ export default function ReturnedNameBuyModal({
           description="From the returned-name auction"
         />
 
+        {/*
+          The sharpest edge in the release, said before the button rather than
+          discovered at the wallet.
+
+          An auction sits one click from a registration that needs no SOL at
+          all — but it is not a Turbo action: the buyer pays in ARIO, signs
+          twice, and their own wallet covers the Solana rent. Twenty times the
+          SOL of anything else in the app, and the only flow with two
+          approvals. Reading as a bug is the default outcome unless all three
+          facts are stated up front.
+        */}
+        <div className="mb-4 rounded-2xl border border-warning/30 bg-warning/10 p-3 text-xs text-foreground/80">
+          Auction names work differently from registering a new one. You pay in
+          ARIO, approve twice, and your wallet needs a small amount of SOL for
+          the network fee — Turbo doesn&apos;t cover auctions yet.
+        </div>
+
         {/* Live premium / countdown banner */}
         {buyState.phase === 'idle' && !auctionEnded && (
           <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3">
@@ -443,8 +460,8 @@ export default function ReturnedNameBuyModal({
                   </p>
                   <p className="mt-1 text-sm text-foreground/70">
                     Add ARIO to the funding source you selected, then try the
-                    purchase again. If your ANT was already created it will be
-                    reused — no extra SOL.
+                    purchase again. If the first step already completed it will
+                    be reused, so you won&apos;t pay that SOL twice.
                   </p>
                   <button
                     onClick={() => buyState.reset()}
