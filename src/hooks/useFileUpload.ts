@@ -68,6 +68,13 @@ const mergeTags = (
   return [...customTags, ...nonOverriddenDefaults];
 };
 
+/**
+ * How long to wait for a crypto top-up to become spendable. Measured at ~67s on
+ * devnet for base-usdc, so the window is generous — the alternative is failing
+ * an upload the user has already paid for.
+ */
+const TOPUP_SETTLE_TIMEOUT_MS = 5 * 60 * 1000;
+
 export function useFileUpload() {
   const { address, walletType } = useStore();
   const { wallets } = useWallets(); // Get Privy wallets
@@ -556,6 +563,27 @@ export function useFileUpload() {
     // settles has to say the credits are sitting in their balance.
     let toppedUp = false;
     const selectedToken = options?.selectedToken || options?.selectedJitToken;
+
+    /** Credit balance by address, or undefined if it cannot be read. */
+    const readCreditBalance = async (): Promise<number | undefined> => {
+      if (!address) return undefined;
+      try {
+        const cfg = getCurrentConfig();
+        const unauth = TurboFactory.unauthenticated({
+          paymentServiceConfig: { url: cfg.paymentServiceUrl },
+          uploadServiceConfig: { url: cfg.uploadServiceUrl },
+          ...(selectedToken ? { token: selectedToken as any } : {}),
+        });
+        const bal = await unauth.getBalance(address);
+        return Number(bal?.effectiveBalance ?? 0);
+      } catch (e) {
+        console.warn('[useFileUpload] could not read credit balance:', e);
+        return undefined;
+      }
+    };
+    const creditedBefore = (options?.cryptoPayment && selectedToken && options?.tokenAmount)
+      ? await readCreditBalance()
+      : undefined;
     if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
       try {
         const turbo = await createTurboClient(selectedToken);
@@ -564,19 +592,46 @@ export function useFileUpload() {
           tokenAmount: BigInt(options.tokenAmount),
         });
         console.log('[DEBUG] topUpWithTokens result:', JSON.stringify(topUpResult, (_, v) => typeof v === 'bigint' ? v.toString() : v));
-        // Money has left the wallet either way, so the user must be told that
-        // much. But only 'confirmed' means the credits are actually spendable —
-        // uploading on a 'pending' one walks into the insufficient-balance
-        // failure this whole change exists to prevent.
         toppedUp = true;
         window.dispatchEvent(new CustomEvent('refresh-balance'));
-        if (topUpResult?.status !== 'confirmed') {
-          releaseUi();
-          throw new Error(
-            'Your payment was sent but is still confirming, so the credits are not ' +
-            'spendable yet. Nothing was uploaded and you will not be charged again — ' +
-            'wait a moment and upload again.'
-          );
+
+        /*
+          Settling is NOT instant, and 'confirmed' is not the common case.
+
+          Measured against the devnet bundler on Base Sepolia: a base-usdc
+          top-up returns status 'pending' and the balance does not reflect it
+          for ~67 seconds. Uploading the moment topUpWithTokens resolves —
+          which is what this code used to do — walks into an
+          insufficient-balance rejection with the payment already settled. That
+          is the same "paid, got nothing" outcome a correctly-sized payment was
+          supposed to eliminate.
+
+          So wait for the credits to actually appear rather than trusting the
+          status. Balance is read by address through an unauthenticated client
+          because getBalance() on the walletAdapter-backed payment client
+          derives its address from a public key the adapter need not carry.
+        */
+        if (creditedBefore !== undefined) {
+          const settleDeadline = Date.now() + TOPUP_SETTLE_TIMEOUT_MS;
+          let settled = false;
+          while (Date.now() < settleDeadline) {
+            if (controller.signal.aborted) break;
+            await new Promise((r) => setTimeout(r, 3000));
+            const current = await readCreditBalance();
+            if (current !== undefined && current > creditedBefore) {
+              settled = true;
+              window.dispatchEvent(new CustomEvent('refresh-balance'));
+              break;
+            }
+          }
+          if (!settled && !controller.signal.aborted) {
+            releaseUi();
+            throw new Error(
+              'Your payment went through but the credits have not landed yet. Nothing ' +
+              'was uploaded and you will not be charged again — the credits will appear ' +
+              'in your balance shortly, and uploading again will spend them.'
+            );
+          }
         }
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
@@ -725,7 +780,7 @@ export function useFileUpload() {
 
     releaseUi();
     return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
-  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig]);
+  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig, address]);
 
   const reset = useCallback(() => {
     setUploadProgress({});
