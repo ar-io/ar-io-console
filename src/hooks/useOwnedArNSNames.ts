@@ -231,19 +231,25 @@ export function useOwnedArNSNames() {
           antSummaries.get(nameRecord.processId),
           solanaPublicKey.toBase58(),
         );
+        /*
+          An unresolved role falls back to signing rather than blocking.
+
+          The records editor blocks instead, and should: a person is watching,
+          the summary resolves in a moment, and a wrong guess there costs a
+          wallet prompt. This path is different — it runs mid-deploy, mid-
+          capture, mid-publish, with nobody able to "try again in a moment".
+          Blocking here would fail a deploy that used to work, which is a worse
+          outcome than an owner occasionally paying a fee they could have
+          avoided. It is also exactly what this path did before sponsorship.
+
+          ACL drift makes this more than theoretical: "your names" is an
+          eventually-consistent index, so a name can legitimately be in the
+          list while the summary has not caught up.
+        */
         const kind = writerForRole(role);
-        if (kind === 'blocked') {
-          return {
-            success: false,
-            error:
-              role === 'unknown'
-                ? 'Still checking what this wallet can do with this name. Try again in a moment.'
-                : 'This wallet cannot edit this name’s records.',
-          };
-        }
 
         let writer;
-        if (kind === 'self-signed') {
+        if (kind !== 'sponsored') {
           const signer = createWalletAdapterTransactionSendingSigner(
             solanaPublicKey.toBase58(),
             solanaConnection,
