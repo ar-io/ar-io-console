@@ -541,7 +541,11 @@ export function useFileUpload() {
     const results: UploadResult[] = [];
     const failedFileNames: string[] = [];
 
-    // Handle crypto payment: top up once for all files before uploading
+    // Handle crypto payment: top up once for all files before uploading.
+    // `paidWithoutUpload` is what the caller needs to tell the user their money
+    // is not lost: the top-up is on-chain and irreversible, so any exit after it
+    // settles has to say the credits are sitting in their balance.
+    let toppedUp = false;
     const selectedToken = options?.selectedToken || options?.selectedJitToken;
     if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
       try {
@@ -551,6 +555,7 @@ export function useFileUpload() {
           tokenAmount: BigInt(options.tokenAmount),
         });
         console.log('[DEBUG] topUpWithTokens result:', JSON.stringify(topUpResult, (_, v) => typeof v === 'bigint' ? v.toString() : v));
+        toppedUp = true;
         window.dispatchEvent(new CustomEvent('refresh-balance'));
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
@@ -585,6 +590,7 @@ export function useFileUpload() {
             console.log('Retry submitFundTransaction succeeded:', retryResult);
 
             if (retryResult.status !== 'failed') {
+              toppedUp = true;
               window.dispatchEvent(new CustomEvent('refresh-balance'));
               // Success - continue with uploads
             } else {
@@ -603,11 +609,12 @@ export function useFileUpload() {
     }
 
     // A cancel during the (non-abortable) crypto pre-top-up can't undo the
-    // on-chain payment, but it must stop us from uploading afterwards.
+    // on-chain payment, but it must stop us from uploading afterwards. It must
+    // also not exit silently: the user paid, so say where the money went.
     if (controller.signal.aborted) {
       setUploading(false);
       setActiveUploads([]);
-      return { results, failedFiles: failedFileNames };
+      return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp };
     }
 
     for (const file of files) {
@@ -615,7 +622,7 @@ export function useFileUpload() {
       if (controller.signal.aborted) {
         setUploading(false);
         setActiveUploads([]);
-        return { results, failedFiles: failedFileNames };
+        return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
       }
 
       try {
@@ -698,7 +705,7 @@ export function useFileUpload() {
     }
 
     setUploading(false);
-    return { results, failedFiles: failedFileNames };
+    return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
   }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig]);
 
   const reset = useCallback(() => {

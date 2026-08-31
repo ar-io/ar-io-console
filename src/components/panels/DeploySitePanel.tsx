@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFolderUpload } from '../../hooks/useFolderUpload';
 import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags } from '../../hooks/useFreeUploadLimit';
-import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { wincPerCredit, SupportedTokenType, tokenLabels } from '../../constants';
 import { useStore } from '../../store/useStore';
 import { Globe, XCircle, Loader2, RefreshCw, Info, Receipt, ChevronDown, ChevronUp, CheckCircle, Folder, File, FileText, Image, Code, ExternalLink, Home, AlertTriangle, Archive, Clock, HelpCircle, MoreVertical, Zap, ArrowRight, Copy, X, Wallet, CreditCard, Sparkles, Package } from 'lucide-react';
@@ -186,12 +185,6 @@ interface CryptoPaymentDetailsProps {
   onShortageUpdate: (shortage: { amount: number; tokenType: SupportedTokenType } | null) => void;
   localJitMax: number;
   onMaxTokenAmountChange: (amount: number) => void;
-  x402Pricing?: {
-    usdcAmount: number;
-    usdcAmountSmallestUnit: string;
-    loading: boolean;
-    error: string | null;
-  };
 }
 
 const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
@@ -204,7 +197,6 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
   onShortageUpdate,
   localJitMax: _localJitMax, // eslint-disable-line @typescript-eslint/no-unused-vars
   onMaxTokenAmountChange,
-  x402Pricing,
 }: CryptoPaymentDetailsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<{
@@ -228,27 +220,22 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
   useEffect(() => {
     const calculate = async () => {
       try {
-        // For base-usdc, use x402 pricing directly
-        if (tokenType === 'base-usdc' && x402Pricing) {
-          // Don't set cost while loading to avoid showing "FREE" flash
-          if (x402Pricing.loading) {
-            setEstimatedCost(null); // Show "Calculating..."
-            return;
-          }
+        /*
+          base-usdc is NOT special-cased any more.
 
-          if (!x402Pricing.error) {
-            setEstimatedCost({
-              tokenAmountReadable: x402Pricing.usdcAmount, // Can be 0 for free deployments
-              estimatedUSD: x402Pricing.usdcAmount, // USDC is 1:1 with USD
-            });
+          It used to be quoted straight off `x402Pricing` — a raw price for the
+          file's bytes, carrying neither the per-data-item fee nor a safety
+          buffer, while the upload is billed `totalCost` (bytes + that fee, per
+          file). The payment was therefore always short: as little as 54% of a
+          1 KB file's cost, ~99.9% of a large one. Either way the top-up settled
+          and the upload it had just paid for was rejected for insufficient
+          balance.
 
-            // For Crypto tab, max is just the buffered cost
-            onMaxTokenAmountChange(x402Pricing.usdcAmount);
-          }
-          return;
-        }
+          Falling through to the shared credits->token conversion below fixes it:
+          `totalCost` already carries the per-item fee, and BUFFER_MULTIPLIER
+          absorbs price drift between quote and settlement.
+        */
 
-        // For other tokens, calculate using regular pricing
         // Always use totalCost for Crypto tab - user is choosing to pay full amount with crypto
         const cost = await calculateRequiredTokenAmount({
           creditsNeeded: totalCost,
@@ -277,8 +264,9 @@ const CryptoPaymentDetails = React.memo(function CryptoPaymentDetails({
       setEstimatedCost({ tokenAmountReadable: 0, estimatedUSD: 0 });
       onMaxTokenAmountChange(0);
     }
+    // x402Pricing is intentionally absent: the cost no longer derives from it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditsNeeded, totalCost, tokenType, bufferPercentage, x402Pricing?.usdcAmount, x402Pricing?.loading, x402Pricing?.error]);
+  }, [creditsNeeded, totalCost, tokenType, bufferPercentage]);
 
   // Validate balance and update shortage info
   useEffect(() => {
@@ -532,16 +520,13 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
 
   // Check if deployment is completely free (all files under free limit)
   const isFreeDeployment = totalCost === 0;
-  // Calculate billable file size for x402 (total size for deployments)
-  const billableFileSize = totalSize;
 
-  // x402 pricing - only when user is on Crypto tab with BASE-USDC selected
-  // In x402-only mode, always use x402 pricing since there's no credits option
-  const shouldUseX402 =
-    walletType === 'ethereum' &&
-    selectedJitToken === 'base-usdc' &&
-    (paymentTab === 'crypto' || x402OnlyMode);
-  const x402Pricing = useX402Pricing(shouldUseX402 ? billableFileSize : 0);
+  /*
+    The x402 byte-price quote is deliberately not fetched any more. Crypto
+    payments — base-usdc included — are sized from the CREDITS the upload needs
+    (`totalCost`, which carries the per-data-item fee) via
+    `calculateRequiredTokenAmount`. See the note in CryptoPaymentDetails.
+  */
 
   // Tab click handlers
   const handleCreditsTabClick = () => {
@@ -801,7 +786,6 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
                       onShortageUpdate={onCryptoShortageUpdate}
                       localJitMax={localJitMax}
                       onMaxTokenAmountChange={onMaxTokenAmountChange}
-                      x402Pricing={x402Pricing}
                     />
                   )}
                 </>

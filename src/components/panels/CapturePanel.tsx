@@ -22,7 +22,6 @@ import { CryptoPaymentDetails } from '../CryptoPaymentDetails';
 import { JitTokenSelector } from '../JitTokenSelector';
 import { supportsJitPayment, getTokenConverter, formatTokenAmount } from '../../utils/jitPayment';
 import { tokenLabels } from '../../constants';
-import { useX402Pricing } from '../../hooks/useX402Pricing';
 import X402OnlyBanner from '../X402OnlyBanner';
 
 // Helper function to get contextual file icon based on content type or file name
@@ -125,7 +124,6 @@ export default function CapturePanel() {
     setLocalJitMax,
     localJitEnabled,
     setLocalJitEnabled,
-    jitSectionExpanded,
     setJitSectionExpanded,
     selectedJitToken,
     setSelectedJitToken,
@@ -165,19 +163,12 @@ export default function CapturePanel() {
     initializeFromCache
   } = useUploadStatus();
 
-  // Calculate billable file size for x402 pricing (exclude free files)
-  const billableFileSize = captureFile && !isFileFree(captureFile.size, effectiveFreeLimit, bytesRemaining)
-    ? captureFile.size
-    : 0;
-
-  // Determine if we should use x402 for pricing
-  // In x402-only mode, always use x402 pricing since there's no credits option
-  const shouldUseX402 =
-    walletType === 'ethereum' &&
-    selectedJitToken === 'base-usdc' &&
-    showConfirmModal &&  // Modal must be open
-    (jitSectionExpanded || x402OnlyMode);  // "Pay with Crypto" section expanded OR x402-only mode
-  const x402Pricing = useX402Pricing(shouldUseX402 ? billableFileSize : 0);
+  /*
+    The x402 byte-price quote is deliberately not fetched any more. Crypto
+    payments — base-usdc included — are sized from the CREDITS the capture needs
+    (`totalCost`, which carries the per-data-item fee) via
+    `calculateRequiredTokenAmount`. See the note in CryptoPaymentDetails.
+  */
 
   // Initialize status from cache when page loads
   useEffect(() => {
@@ -1166,7 +1157,6 @@ export default function CapturePanel() {
                           onShortageUpdate={setCryptoShortage}
                           localJitMax={localJitMax}
                           onMaxTokenAmountChange={setLocalJitMax}
-                          x402Pricing={x402Pricing}
                         />
                       )}
                     </>
@@ -1280,9 +1270,7 @@ export default function CapturePanel() {
                         (creditsNeeded > 0 && !localJitEnabled) ||
                         (localJitEnabled && creditsNeeded > 0 && !jitBalanceSufficient) ||
                         // Disable if in x402-only mode with non-Ethereum wallet for billable captures
-                        (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') ||
-                        // Disable while x402 pricing is loading (for crypto payments)
-                        (localJitEnabled && creditsNeeded > 0 && selectedJitToken === 'base-usdc' && x402Pricing?.loading)
+                        (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum')
                       }
                       className="flex-1 py-3 px-4 rounded-2xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
                     >
