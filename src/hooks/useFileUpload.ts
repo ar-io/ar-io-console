@@ -532,6 +532,15 @@ export function useFileUpload() {
     // abortControllerRef can't affect this one.
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    // Only the batch that currently owns the ref may reset shared UI state. A
+    // cancelled batch can still be unwinding (a crypto top-up is not abortable)
+    // after a newer batch has started, and must not clear its progress.
+    const isActiveBatch = () => abortControllerRef.current === controller;
+    const releaseUi = () => {
+      if (!isActiveBatch()) return;
+      setUploading(false);
+      setActiveUploads([]);
+    };
 
     // Calculate total size
     const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -555,8 +564,20 @@ export function useFileUpload() {
           tokenAmount: BigInt(options.tokenAmount),
         });
         console.log('[DEBUG] topUpWithTokens result:', JSON.stringify(topUpResult, (_, v) => typeof v === 'bigint' ? v.toString() : v));
+        // Money has left the wallet either way, so the user must be told that
+        // much. But only 'confirmed' means the credits are actually spendable —
+        // uploading on a 'pending' one walks into the insufficient-balance
+        // failure this whole change exists to prevent.
         toppedUp = true;
         window.dispatchEvent(new CustomEvent('refresh-balance'));
+        if (topUpResult?.status !== 'confirmed') {
+          releaseUi();
+          throw new Error(
+            'Your payment was sent but is still confirming, so the credits are not ' +
+            'spendable yet. Nothing was uploaded and you will not be charged again — ' +
+            'wait a moment and upload again.'
+          );
+        }
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
 
@@ -589,7 +610,7 @@ export function useFileUpload() {
             const retryResult = await unauthenticatedTurbo.submitFundTransaction({ txId });
             console.log('Retry submitFundTransaction succeeded:', retryResult);
 
-            if (retryResult.status !== 'failed') {
+            if (retryResult.status === 'confirmed') {
               toppedUp = true;
               window.dispatchEvent(new CustomEvent('refresh-balance'));
               // Success - continue with uploads
@@ -597,12 +618,12 @@ export function useFileUpload() {
               throw new Error('Transaction confirmation failed after retry');
             }
           } catch (retryError) {
-            setUploading(false);
+            releaseUi();
             const retryMsg = retryError instanceof Error ? retryError.message : 'Unknown error';
             throw new Error(`Crypto payment polling timed out. Your transaction (${txId}) may have succeeded - check your balance or try "Buy Credits" to resubmit. Error: ${retryMsg}`);
           }
         } else {
-          setUploading(false);
+          releaseUi();
           throw new Error(`Crypto payment failed: ${errorMessage}`);
         }
       }
@@ -612,16 +633,14 @@ export function useFileUpload() {
     // on-chain payment, but it must stop us from uploading afterwards. It must
     // also not exit silently: the user paid, so say where the money went.
     if (controller.signal.aborted) {
-      setUploading(false);
-      setActiveUploads([]);
+      releaseUi();
       return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp };
     }
 
     for (const file of files) {
       // Check if cancelled (synchronously — this batch's controller).
       if (controller.signal.aborted) {
-        setUploading(false);
-        setActiveUploads([]);
+        releaseUi();
         return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
       }
 
@@ -704,7 +723,7 @@ export function useFileUpload() {
       window.dispatchEvent(new CustomEvent('refresh-balance'));
     }
 
-    setUploading(false);
+    releaseUi();
     return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
   }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig]);
 

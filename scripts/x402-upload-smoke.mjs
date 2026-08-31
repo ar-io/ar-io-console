@@ -31,6 +31,21 @@ import Arweave from 'arweave';
 const UPLOAD_URL = process.env.UPLOAD_URL ?? 'https://upload.services.ar-io.dev/v1';
 const SIGNED = `${UPLOAD_URL}/x402/upload/signed`;
 const MAX_ITEM_BYTES = 10 * 1024 * 1024; // the ceiling the service enforces
+const TIMEOUT_MS = Number(process.env.TIMEOUT_MS ?? 60_000);
+
+/** fetch with a deadline, so a stalled bundler fails the check instead of hanging it. */
+async function fetchWithDeadline(url, init) {
+  const signal = AbortSignal.timeout(TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { ...init, signal });
+    return { res, text: await res.text() };
+  } catch (e) {
+    if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
+      throw new Error(`no response within ${TIMEOUT_MS}ms`);
+    }
+    throw e;
+  }
+}
 
 let failures = 0;
 const ok = (m) => console.log(`  ✓ ${m}`);
@@ -50,12 +65,11 @@ async function post(payloadBytes) {
   await item.sign(signer);
   const raw = new Uint8Array(item.getRaw());
   const started = Date.now();
-  const res = await fetch(SIGNED, {
+  const { res, text } = await fetchWithDeadline(SIGNED, {
     method: 'POST',
     headers: { 'content-type': 'application/octet-stream' },
     body: new Blob([raw]),
   });
-  const text = await res.text();
   let body;
   try {
     body = JSON.parse(text);
@@ -68,7 +82,7 @@ async function post(payloadBytes) {
 console.log(`\n[smoke] x402 upload surface @ ${SIGNED}\n`);
 
 console.log('1. an item under the ceiling is quoted for payment');
-{
+try {
   const r = await post(MAX_ITEM_BYTES - 64 * 1024);
   if (r.status === 402) {
     ok(`${r.itemBytes}B item -> 402 challenge in ${r.ms}ms`);
@@ -86,10 +100,10 @@ console.log('1. an item under the ceiling is quoted for payment');
   } else {
     bad(`expected 402, got ${r.status}: ${JSON.stringify(r.body).slice(0, 160)}`);
   }
-}
+} catch (e) { bad(`under-ceiling probe failed: ${e.message}`); }
 
 console.log('\n2. an item over the ceiling is refused, and refused for FREE');
-{
+try {
   const r = await post(MAX_ITEM_BYTES + 64 * 1024);
   if (r.status === 402) {
     bad(`${r.itemBytes}B item was QUOTED FOR PAYMENT (402) despite exceeding ` +
@@ -100,10 +114,10 @@ console.log('\n2. an item over the ceiling is refused, and refused for FREE');
   } else {
     bad(`expected a free 400 'too large', got ${r.status}: ${JSON.stringify(r.body).slice(0, 160)}`);
   }
-}
+} catch (e) { bad(`over-ceiling probe failed: ${e.message}`); }
 
 console.log('\n3. the incident shape: oversized AND streamed, so no Content-Length');
-{
+try {
   // The production failure arrived without a Content-Length (chunked transfer
   // encoding), so the service could not size it up front. That is the path where
   // the 402 was issued first and the buyer paid for an upload that could not be
@@ -115,7 +129,7 @@ console.log('\n3. the incident shape: oversized AND streamed, so no Content-Leng
   await item.sign(signer);
   const raw = new Uint8Array(item.getRaw());
   const started = Date.now();
-  const res = await fetch(SIGNED, {
+  const { res, text } = await fetchWithDeadline(SIGNED, {
     method: 'POST',
     headers: { 'content-type': 'application/octet-stream' },
     duplex: 'half',
@@ -132,7 +146,6 @@ console.log('\n3. the incident shape: oversized AND streamed, so no Content-Leng
       },
     }),
   });
-  const text = await res.text();
   const ms = Date.now() - started;
   if (res.status === 402) {
     bad(`${raw.length}B streamed item was QUOTED FOR PAYMENT (402) — the exact ` +
@@ -142,7 +155,7 @@ console.log('\n3. the incident shape: oversized AND streamed, so no Content-Leng
   } else {
     bad(`expected a free 400 'too large', got ${res.status}: ${text.slice(0, 160)}`);
   }
-}
+} catch (e) { bad(`streamed probe failed: ${e.message}`); }
 
 console.log(
   failures === 0

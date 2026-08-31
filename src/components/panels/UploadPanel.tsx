@@ -1669,7 +1669,12 @@ export default function UploadPanel() {
                           // User opted into crypto but balance validation failed
                           (shouldEnableJit && creditsNeeded > 0 && !jitBalanceSufficient) ||
                           // Disable if in x402-only mode with non-Ethereum wallet for billable uploads
-                          (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum')
+                          (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') ||
+                          // Crypto pricing has not resolved yet: localJitMax is still 0,
+                          // which handleConfirmUpload would send as a falsy tokenAmount —
+                          // silently skipping the top-up and uploading against a balance
+                          // that cannot cover it.
+                          (shouldEnableJit && creditsNeeded > 0 && !(localJitMax > 0))
                         );
                       })()}
                       className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"

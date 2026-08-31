@@ -97,8 +97,21 @@ interface PriceCache {
   timestamp: number;
 }
 
-const priceCache = new Map<SupportedTokenType, PriceCache>();
+/*
+  Keyed by token AND the endpoints the quote came from. Switching config mode
+  (production <-> testnet <-> custom) repoints the payment service and the token
+  gateway, and a token-only key would serve the previous environment's price for
+  up to five minutes — quoting a mainnet payment at testnet rates, or the
+  reverse.
+*/
+const priceCache = new Map<string, PriceCache>();
 const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const priceCacheKey = (
+  tokenType: SupportedTokenType,
+  paymentServiceUrl: string,
+  gatewayUrl: string | undefined,
+) => `${tokenType}|${paymentServiceUrl}|${gatewayUrl ?? ''}`;
 
 /** 1 trillion winc = 1 credit. */
 export const WINC_PER_CREDIT = 1_000_000_000_000;
@@ -141,7 +154,16 @@ export async function calculateRequiredTokenAmount({
   estimatedUSD: number | null;
 }> {
   const now = Date.now();
-  const cached = priceCache.get(tokenType);
+  // Resolve config first: the cache key depends on which endpoints a quote came
+  // from, so it has to be known before the lookup, not just before the fetch.
+  const { useStore } = await import('../store/useStore');
+  const turboConfig = useStore.getState().getCurrentConfig();
+  const cacheKey = priceCacheKey(
+    tokenType,
+    turboConfig.paymentServiceUrl,
+    turboConfig.tokenMap[tokenType as keyof typeof turboConfig.tokenMap],
+  );
+  const cached = priceCache.get(cacheKey);
 
   // Use cached price if available and fresh
   if (cached && (now - cached.timestamp) < PRICE_CACHE_DURATION) {
@@ -159,10 +181,6 @@ export async function calculateRequiredTokenAmount({
 
   // Fetch fresh pricing
   try {
-    // Get current dev mode configuration from store
-    const { useStore } = await import('../store/useStore');
-    const turboConfig = useStore.getState().getCurrentConfig();
-
     const wincPerCredit = WINC_PER_CREDIT;
     const oneGiBBytes = 1024 * 1024 * 1024;
 
@@ -234,7 +252,7 @@ export async function calculateRequiredTokenAmount({
     console.log(`[JIT ${tokenType}] Token price per credit:`, tokenPrice);
 
     // Cache the result
-    priceCache.set(tokenType, {
+    priceCache.set(cacheKey, {
       tokenPricePerCredit: tokenPrice,
       usdPerToken,
       timestamp: now,
