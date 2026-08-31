@@ -1,13 +1,25 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { getARIO, getANT } from '../utils';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import {
+  getARIO,
+  getANT,
+  getWritableANT,
+  createWalletAdapterTransactionSendingSigner,
+} from '../utils';
 import { ArNSName } from '@/types';
 // Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
 // URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
 import { toUnicodeName as decodePunycode } from '../utils/punycode';
 import { useCustodyOwnerClient } from '../features/arns/hooks/useCustodyOwnerClient';
 import { browserArNSOwnerSigner } from '../features/arns/actions/browserOwnerSigner';
+import { useAntSummaries } from '../features/arns/hooks/useAntLogos';
+import { deriveAntRoleStrict } from '../features/arns/antRole';
+import {
+  antRecordWriter,
+  type ANTRecordWriteable,
+} from '../features/arns/records/antWriter';
+import { writerForRole } from '../features/arns/records/writerChoice';
 import {
   sponsoredRecordWriter,
   type SponsoredRecordClient,
@@ -33,6 +45,18 @@ export function useOwnedArNSNames() {
   const fetchSeqRef = useRef(0);
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const { getClient: getOwnerClient } = useCustodyOwnerClient();
+  const { connection: solanaConnection } = useConnection();
+  /*
+    Roles for every name in the list, in one bulk read.
+
+    "Your names" is Owned UNION Controlled, and the two write differently:
+    Turbo sponsors the owner's record changes and rejects a controller's, since
+    it verifies the owner proof against the current on-chain owner. Deploy Site,
+    Capture, Assign Domain and Pages all publish through this hook, so getting
+    this wrong breaks "deploy to a name I control" — an ordinary collaboration
+    setup that worked before sponsorship.
+  */
+  const antSummaries = useAntSummaries(names.map((n) => n.processId));
   const {
     publicKey: solanaPublicKey,
     signTransaction: solanaSignTransaction,
@@ -196,16 +220,54 @@ export function useOwnedArNSNames() {
             : nameRecord.ttl) ??
           600;
 
-        const turbo = (await getOwnerClient()) as unknown as SponsoredRecordClient;
-        const writer = sponsoredRecordWriter(
-          nameRecord.processId,
-          turbo,
-          browserArNSOwnerSigner({
-            address: solanaPublicKey.toBase58(),
-            signTransaction: solanaSignTransaction,
-            signMessage: solanaSignMessage,
-          }),
+        /*
+          Owner → Turbo pays the Solana fee. Controller → they sign and pay for
+          themselves, which is what they were doing before sponsorship existed.
+          An unresolved role waits rather than guessing: the wrong guess either
+          burns a wallet prompt on a request that 401s, or charges an owner a
+          fee they do not owe.
+        */
+        const role = deriveAntRoleStrict(
+          antSummaries.get(nameRecord.processId),
+          solanaPublicKey.toBase58(),
         );
+        const kind = writerForRole(role);
+        if (kind === 'blocked') {
+          return {
+            success: false,
+            error:
+              role === 'unknown'
+                ? 'Still checking what this wallet can do with this name. Try again in a moment.'
+                : 'This wallet cannot edit this name’s records.',
+          };
+        }
+
+        let writer;
+        if (kind === 'self-signed') {
+          const signer = createWalletAdapterTransactionSendingSigner(
+            solanaPublicKey.toBase58(),
+            solanaConnection,
+            undefined,
+            solanaSignTransaction,
+          );
+          writer = antRecordWriter(
+            (await getWritableANT(
+              nameRecord.processId,
+              signer,
+            )) as unknown as ANTRecordWriteable,
+          );
+        } else {
+          const turbo = (await getOwnerClient()) as unknown as SponsoredRecordClient;
+          writer = sponsoredRecordWriter(
+            nameRecord.processId,
+            turbo,
+            browserArNSOwnerSigner({
+              address: solanaPublicKey.toBase58(),
+              signTransaction: solanaSignTransaction,
+              signMessage: solanaSignMessage,
+            }),
+          );
+        }
 
         const result = await writer.setRecord({
           // The base name is '@' on the wire; callers pass '' for it.
@@ -298,6 +360,8 @@ export function useOwnedArNSNames() {
       solanaPublicKey,
       solanaSignTransaction,
       solanaSignMessage,
+      solanaConnection,
+      antSummaries,
     ]
   );
 

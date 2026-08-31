@@ -2,6 +2,41 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Buying and running an ArNS name no longer needs SOL.** Turbo pays the
+  Solana fees and rent; you pay in Turbo Credits and the name is minted
+  straight to your wallet. Turbo holds nothing, so there is no claim step and
+  nothing to transfer out later. Signing in with an email address already
+  creates a Solana wallet, so someone who has never held cryptocurrency can buy
+  a name and keep it.
+- **Prices now show the total.** A registration carries a one-time setup charge
+  covering the Solana deposit Turbo fronts, and it is shown as its own line.
+  Quoting the name price alone understated a purchase by more than half.
+- **Renewing, upgrading and adding undername slots need no wallet approval at
+  all** — they settle from credits with nothing to sign.
+- **Turbo-custodied names are gone**, along with the claim flow that existed to
+  get out of them. Sponsorship removes the reason they existed.
+
+### Fixed
+- **Renewal was blocked for wallets holding no SOL.** The check that made sense
+  when the wallet paid its own fees was still gating a payment Turbo now
+  covers, so a name could become un-renewable — and an un-renewable lease is a
+  name eventually lost.
+- **Record edits could write empty values over fields you never opened.** Saves
+  sent every metadata field rather than the ones that changed.
+- Some wallets return a signature in a wrapper the service could not read, so
+  approvals from them failed as though the wrong wallet was connected.
+
+### Notes
+- Four actions still need a small amount of SOL: setting a primary name,
+  releasing a name, pointing it at a different name token, and editing the
+  name's own details. Buying from an auction and paying in ARIO also use your
+  own SOL. Each says so before you commit.
+- Controllers can still edit records, and pay their own network fee for it —
+  Turbo covers the owner's fees only.
+
 ## [4.6.0] - 2026-08-28
 
 ### Fixed

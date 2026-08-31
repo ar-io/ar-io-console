@@ -287,16 +287,16 @@ export default function RecordsTable({
   return (
     <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
       {/*
-        Said once, above the table.
+        Said once, above the table, and true for THIS wallet.
 
-        The approval happens on every save, so "one click" would be false — and
-        it is a MESSAGE signature, which is visibly not a payment. Naming that
-        is what makes the wallet opening feel routine instead of alarming.
+        An owner's edits are sponsored and free; a controller's are not, because
+        Turbo verifies the owner proof against the on-chain owner. Showing the
+        owner's promise to a controller would be a claim they discover is false
+        at the wallet prompt — the exact failure this copy exists to prevent.
       */}
-      {canManage && (
+      {canManage && undernameWrites.costNote && (
         <p className="mb-3 text-xs text-foreground/60">
-          Saving a record is free. Your wallet will ask you to approve a
-          message — it costs nothing and needs no SOL.
+          {undernameWrites.costNote}
         </p>
       )}
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

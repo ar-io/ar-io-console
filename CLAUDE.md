@@ -21,7 +21,7 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~58 suites, the bulk in three clusters: `src/features/arns/` (26 — ANT roles, custody, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (13 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore). One stray outside them: `src/components/modals/bodyScrollLock.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~58 suites, the bulk in three clusters: `src/features/arns/` (30+ — ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (13 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore). One stray outside them: `src/components/modals/bodyScrollLock.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: '/'` — absolute asset paths, required so nested routes (`/domains/:name`) resolve assets on direct navigation. This trades away Arweave *subpath* compatibility (the old `'./'` value): the build assumes it is served from a domain root (`console.ar.io`, or an ArNS name root), not from `gateway/<txid>/`. Don't flip it back without re-checking nested-route deep links.
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
@@ -168,42 +168,80 @@ Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit p
 
 ### ArNS Feature (`src/features/arns/`)
 
-The largest feature in the repo (~75 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
+The largest feature in the repo (~110 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
 
-**ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet. That's why the capability matrix says Solana-only for ArNS updates.
+**ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet — but since Turbo sponsors the fees, that wallet needs **no SOL balance**. Email sign-in creates one (see `PrivySolanaBridge`), so a user who has never held cryptocurrency can own and run a name.
 
-**Custody models** (`services/custodyStrategy.ts`):
-- **Model B (user-owned)** — the *client* spawns the ANT with a Solana signer (`services/antSpawn.ts`), so the user self-owns it from the first block; the bundler only settles (debits credits, writes the record). **Preferred — the ladder below tries hard to reach it.**
-- **Model A (custodial)** — the bundler spawns and custodies the ANT, and performs the three operations it exposes on the user's behalf (`/v1/arns/transfer/:antId`, `/v1/arns/manage/:antId/set-record`, `.../remove-record`). **Built, then retired before launch — see the switch below.** The code stays reachable; nothing sells it.
+**Turbo sponsors the Solana fees** (`actions/`). Twelve actions are gas-sponsored:
+Turbo is fee payer, the user pays in Turbo Credits, and the ANT is minted
+straight to the buyer. **Turbo takes custody of nothing** — there is no claim
+step, no transfer-out, and no "Turbo-held name". Don't build one, and don't
+imply one in copy. The custody tree that predated this (`custodyStrategy`,
+`nameCustody`, `mergeCustodialNames`, `ClaimToContinueModal`,
+`CustodialNamePanel`) is **deleted**, not disabled.
 
-`purchase/cardPlan.ts` picks between them, and `custodialPurchaseEnabled()` in
-that file is the single switch. **It returns `false` everywhere — not an
-environment gate.** Custody removed the need to hold SOL but never the need for
-a wallet to sign with (`needsLinking` always meant "no *Solana* wallet"; a
-session identity is required to reach checkout at all), and every sub-flow was
-broken as written. With it off the ladder is `self-custody → reconnect → link`;
-a buyer short on SOL falls through to self-custody so the existing balance
-gating stops them and names the shortfall.
+turbo-sdk owns the protocol — the two response shapes, the nonce discipline and
+the `x-owner-*` proof — via `buyArNSName`, `setArNSRecord` and friends. **Never
+hand-roll the HTTP.** What console owns is the half the SDK cannot: the browser
+wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
+`ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
+is sponsored (`actions/sponsorship.ts`).
 
-The intended replacement is **fee sponsorship**, and the SDK already supports
-it: `buildCreateAntInstruction` takes `authority` and `payer` as separate
-addresses, and `buildSpawnAntInstructions` returns the ordered instructions
-without sending. So Turbo can pay rent on an ANT the user owns from the first
-block. That needs a bundler endpoint (Turbo's keypair signs as fee payer) and
-the `ario_ant::initialize` instruction, which is not exported in the SDK types.
+**Pin turbo-sdk EXACTLY.** Stable `1.42.0` sorts *above* `1.42.0-alpha.10` in
+semver and contains **no ArNS surface at all**, so a caret range or a routine
+`npm update` silently deletes this feature and nothing fails until someone tries
+to buy a name.
 
-`custody/nameCustody.ts` is the authority on what a custodial name can do. Registry operations (extend, upgrade, add undernames) are payments and work regardless of who holds the ANT; ANT operations (records, controllers, transfer, release) need the owner's signature, so under custody all but set-record/remove-record/transfer are **genuinely impossible**, not merely unimplemented — which is why they render as disabled controls with a reason rather than buttons that fail. `GET /v1/arns/my-names/:address` returns a per-name `custodial` flag; `custody/mergeCustodialNames.ts` folds it into "your names".
-- There is no hybrid *via the high-level API*: a transfer wipes controllers, and `ANT.spawn` takes one signer documented as "pays rent + receives the NFT". The low-level builders do separate the two roles — see the sponsorship note above before assuming this is a protocol limit.
+**Sponsorship is not universal, and the exceptions are the whole UX problem.**
+Not sponsored, each still costing the user SOL:
+- **Returned-name auctions** (`useBuyReturnedName`) — ARIO-funded, needs a
+  client-spawned ANT (`services/antSpawn.ts`, which survives for this path
+  alone, ~0.02 SOL) and is the only flow with **two** wallet approvals.
+- **Paying with ARIO** — not a page but an option in the payment picker,
+  wearing a "Best price" badge. It is the user's own `buyRecord`, not a Turbo
+  action, so their wallet pays the rent. `paymentOptions.ts` applies the SOL
+  block to the ARIO option *alone*; applying it broadly blocks exactly the
+  zero-SOL buyers sponsorship exists for.
+- Primary name, release, reassign, and **ANT-level** metadata
+  (`EditDetailsModal`). Record-level metadata is a different thing that sits
+  next to it in the program — label them distinctly.
+
+**Turbo cannot change a name on its own.** Buying grants Turbo controller
+rights in the same transaction that mints the name, but `setArNSRecord` takes
+an `ArNSOwnerSigner` **unconditionally** and the service verifies that proof
+against the **current on-chain owner**. So every record write carries the
+owner's own action-bound, single-use signature. The grant only decides what the
+owner approves: a cheap offline message while it stands, a full transaction once
+revoked. Copy must say what the grant is *for* (Turbo paying the fee), never
+what it lets Turbo do — which is nothing alone.
+
+**A controller is not sponsored** (`records/writerChoice.ts`). Because the proof
+must come from the owner, a controller's signature is rejected. They keep the
+capability and pay their own fee, so record writes fork by role: owner →
+`records/sponsoredWriter.ts`, controller → `records/antWriter.ts`. `unknown`
+**blocks** rather than guessing — guessing sponsored for a controller burns a
+wallet prompt on a request that 401s, guessing self-signed for an owner charges
+a fee they don't owe. This matters far beyond the records table: "your names" is
+Owned ∪ Controlled, so controlled names flow into Deploy Site, Capture, Assign
+Domain and Pages publish through `useOwnedArNSNames.updateArNSRecord`.
+
+**Metadata fields are tri-state** (`recordFields.ts`). Omitted leaves a field
+unchanged, `null` clears it, a value sets it — and they are bound *distinctly*
+in the owner proof, so "clear" and "set to empty string" are different
+authorizations. **Never normalise `null` to `''`.** `toRecordChange` therefore
+diffs against the record as loaded rather than sending a snapshot;
+`withoutClears` drops the nulls for the ANT-direct path, which has no way to
+express a clear, and is what gets deleted when those actions land.
 
 **Linked Solana wallet** (`hooks/useLinkedSolanaWallet.ts`): Arweave/Ethereum users link a **secondary** Solana wallet for ArNS without changing their primary session identity. `linkedSolanaAddress` + `linkedSolanaWalletName` persist in the store, and `getArNSAddress()` returns the primary address for Solana sessions or the linked address otherwise. Read-only lookups work from the persisted address alone; **writes need a live signer**, so the hook auto-reconnects the named adapter on page load (the Solana `WalletProvider` runs `autoConnect=false`). `hooks/useArNSTurboSigner.ts` turns that into the two things writes need: a `walletAdapter` for `TurboFactory.authenticated` and a `@solana/kit` `SolanaSigner` for `ANT.spawn`.
 
-**Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): an ANT spawn costs real SOL (~0.02) and a submitted purchase has already debited credits. Both `processId` (spawned ANT) and `nonce` (server idempotency + status key) are persisted the instant they exist. On retry, **reuse the persisted `processId` instead of spawning again** — otherwise every failed attempt bleeds SOL and orphans an ANT. Resuming by `nonce` is a pure read (`GET /v1/arns/purchase/:nonce`), so it can never double-debit.
+**Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): **credits are debited when the action is CREATED**, not when it is signed, so an abandoned wallet prompt has already been charged (Turbo refunds it on TTL expiry). The nonce is persisted via the SDK's `onNonce`, which fires *before* the wallet opens — that is the only route back to a paid-for purchase if the page reloads mid-approval. Resuming by nonce is a pure read (`GET /v1/arns/actions/:nonce`) and can never double-debit; **re-creating an action always can.** `processId` persistence now serves the auction path only, where a client spawn still happens and a retry must reuse it rather than bleed another ~0.02 SOL.
 
 **Owner vs. controller gating** (`antRole.ts`): `getArNSRecordsForAddress` returns `Owned ∪ Controlled`, so a name in "your names" may be one the wallet only *controls*. Controllers can edit records/metadata/undernames; **transfer, reassign, release, and controller changes are owner-only**. Use `deriveAntRole` (optimistic — `unknown` treated leniently) only on owned-name surfaces where every row is in the ACL; use `deriveAntRoleStrict` (`none` is a real answer) anywhere a name isn't guaranteed to be the wallet's, such as the public Name Detail page. `isOwnerOnlyAllowed` denies both `unknown` and `controller` so destructive actions never flash before ownership is confirmed.
 
 **ACL drift** (`services/aclDrift.ts`): the on-chain ANT ACL is an eventually-consistent index powering "your names". A **raw Metaplex Core transfer** (direct send or NFT-marketplace sale) moves the asset but does *not* update the ACL, so a newly-owned name goes missing until `syncAcl` is called. Drift is detected by scanning MPL Core assets by owner and diffing against the ACL owner set.
 
-**Service layer** (`services/TurboArNSClient.ts`): framework-agnostic (plain `fetch` + turbo-sdk), holds no React state, and takes **signers injected per call** rather than reading `window.solana`. Intents: `Buy-Name`, `Extend-Lease`, `Increase-Undername-Limit`, `Upgrade-Name`.
+**Service layer** (`services/TurboArNSClient.ts`): framework-agnostic (plain `fetch` + turbo-sdk), holds no React state, and takes **signers injected per call** rather than reading `window.solana`. Intents: `Buy-Name`, `Extend-Lease`, `Increase-Undername-Limit`, `Upgrade-Name`. `purchaseWithCredits` dispatches to the SDK's per-action methods; `Buy-Name` is the only one needing an `owner` signer, and the only one that opens a wallet.
 
 `features/arns/index.ts` is the public surface — import from there, not via deep relative paths.
 
@@ -364,11 +402,11 @@ Network-specific settings in `constants.ts`:
 | Buy Credits (Crypto) | ✅ AR/ARIO | ✅ ETH/Base-ETH/Base-ARIO/POL/USDC | ✅ SOL |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ❌ | ❌ | ✅ |
+| Update ArNS Records | ❌ | ❌ | ✅ (no SOL needed) |
 | JIT Payments | ❌ | ✅ Base-ETH, Base-USDC | ✅ SOL |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
-The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet — in both cases the primary identity is unchanged.
+The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet — in both cases the primary identity is unchanged. That wallet signs but never pays: Turbo is fee payer, so its SOL balance can stay at zero for the life of the name. The exceptions are listed under the ArNS feature above.
 
 ## Environment Variables
 

@@ -118,6 +118,10 @@ export {
   assertOwnerSlotOnly,
   browserArNSOwnerSigner,
 } from './actions/browserOwnerSigner';
+export { antRecordWriter } from './records/antWriter';
+export type { ANTRecordWriteable } from './records/antWriter';
+export { writerForRole, writerCostNote } from './records/writerChoice';
+export type { WriterKind } from './records/writerChoice';
 export type { BrowserOwnerSignerAdapter } from './actions/browserOwnerSigner';
 export {
   SPONSORED_ACTIONS,
