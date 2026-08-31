@@ -200,3 +200,21 @@ describe('network-cost blocking', () => {
     expect(defaultPaymentOption(o)?.kind).toBe('balance');
   });
 });
+
+describe('paying with a token', () => {
+  it('does not vouch for affordability it was never given a price for', () => {
+    /*
+      `tokenPrices` is not supplied by the purchase card, so every token option
+      reports `sufficient: true`. That is the correct conservative answer here —
+      an unknown price must not read as "you cannot afford this" — but it means
+      the picker is NOT the thing protecting a SOL-poor wallet on a top-up.
+      ArNSPurchaseCard owns that check; this test exists so the next person to
+      "tidy up" that gate finds out here rather than in production.
+    */
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 0,
+      extraTokens: ['ario'], tokenBalances: { solana: 0 },
+    });
+    expect(o.find((x) => x.id === 'token:solana')?.sufficient).toBe(true);
+  });
+});

@@ -75,13 +75,13 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
               Register an ArNS Name
             </h3>
             <p className="text-sm text-foreground/80">
-              {/* Leads on the thing that changed. The old line named payment
-                  methods, which nobody is worried about; what stops people is
-                  not knowing whether they need crypto. Say that first, and say
-                  the wallet approval too — it is the one prompt they will see,
-                  and hiding it is what makes it feel like a bait and switch. */}
-              Search for a name and buy it with credits or a card. Turbo pays
-              the Solana fees, so you never need SOL — you&apos;ll approve the
+              {/* Leads on the thing that changed, and scopes the promise to
+                  the routes it holds for. "You never need SOL" was false as a
+                  blanket claim on this very panel: paying in ARIO is the
+                  buyer's own transaction and needs SOL, and the picker below
+                  offers it. Naming credits and card keeps it true. */}
+              Search for a name and buy it with credits or a card — Turbo pays
+              the Solana fees, so neither needs SOL. You&apos;ll approve the
               purchase once in your wallet, and the name is yours.
             </p>
             <a

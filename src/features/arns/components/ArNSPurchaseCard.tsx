@@ -278,10 +278,34 @@ export function ArNSPurchaseCard({
       ? Number(tokenSmallestUnitForName) /
         Number(getTokenSmallestUnit(route.token as SupportedTokenType))
       : 0);
+  /*
+    Paying with a token means transferring it, and that has to be affordable.
+
+    Distinct from the network-fee question. Turbo covers the Solana fee on a
+    top-up, but the buyer still hands over the token that buys the credits — so
+    a wallet holding 0 SOL cannot pay for a name in SOL. The old SOL gate
+    happened to cover this; scoping that gate to ARIO removed the only check,
+    and nothing else caught it: `tokenPrices` is not supplied to the picker, so
+    every token option reports `sufficient: true`.
+  */
+  const tokenNeededForPayment =
+    route.kind === 'topup' && tokenSmallestUnitForName
+      ? Number(tokenSmallestUnitForName) /
+        Number(getTokenSmallestUnit(route.token as SupportedTokenType))
+      : undefined;
+  const insufficientToken =
+    route.kind === 'topup' &&
+    route.token === 'solana' &&
+    tokenNeededForPayment !== undefined &&
+    !balances.loading &&
+    // An unknown balance must not read as sufficient here — this route takes
+    // the transfer before anything else happens.
+    (balances.sol === undefined || balances.sol < tokenNeededForPayment);
+
   const insufficientSol =
-    // Only the ARIO route spends the buyer's own SOL. Every credits-settled
-    // route is paid by Turbo, so applying this gate there would block exactly
-    // the buyers this whole change exists to serve: the ones with none.
+    // Only the ARIO route spends the buyer's own SOL on NETWORK costs. Every
+    // credits-settled route has those paid by Turbo, so applying this gate
+    // there would block exactly the buyers this change exists to serve.
     !sponsored &&
     // Only a KNOWN balance can block the action. `undefined` means the lookup
     // failed or never ran — blocking on that told funded users to go buy SOL.
@@ -380,6 +404,7 @@ export function ArNSPurchaseCard({
     priceReady &&
     !gasUnavailable &&
     !insufficientSol &&
+    !insufficientToken &&
     !insufficientFunds &&
     !isBusy;
 
@@ -638,6 +663,15 @@ export function ArNSPurchaseCard({
     // so a second copy would be the same sentence twice.
     if (insufficientSol) return null;
     /*
+      The token route buys credits by transferring the token, so being short of
+      it stops the purchase before anything is charged. Said here because the
+      cost panel shows a credits total on this route and would not explain a
+      dead button.
+    */
+    if (insufficientToken) {
+      return { text: 'Not enough SOL in your wallet to pay for this name.' };
+    }
+    /*
       The token route disables on its own conditions, so it needs its own
       reason — otherwise it greys out silently, which is what a zero shortfall
       used to do. A missing quote is the only case the checks above don't cover.
@@ -653,7 +687,7 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route, sponsored,
+    insufficientFunds, route, sponsored, insufficientToken,
     balances.sol, balances.loading,
     tokenSmallestUnitForName,
   ]);
@@ -890,6 +924,7 @@ export function ArNSPurchaseCard({
               name now, so there is no spawn to fund and no such failure; the
               gates would only block buyers who correctly hold nothing.
             */
+            insufficientToken ||
             (!sponsored && (gasUnavailable || insufficientSol || balances.sol === undefined))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
