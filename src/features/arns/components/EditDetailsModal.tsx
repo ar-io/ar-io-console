@@ -299,7 +299,11 @@ export default function EditDetailsModal({
               </summary>
               <div className="mt-2 space-y-1 text-foreground/70">
                 <p>
-                  This name is controlled by a token (an ANT) on Solana that
+                  {/* Inside an "On-chain details" disclosure the reader has
+                      deliberately opened — the one place the underlying term
+                      is worth giving, since they can then recognise it in an
+                      explorer. Elsewhere it is noise. */}
+                  This name is controlled by a token on Solana (an ANT) that
                   holds all its records.
                 </p>
                 <div className="flex items-center justify-between gap-2 pt-1">

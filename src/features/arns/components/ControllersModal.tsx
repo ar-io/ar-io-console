@@ -126,10 +126,17 @@ export default function ControllersModal({
           controller is one wallet approval, and needs no SOL.
         </div>
 
-        {/* The live figure, rather than "a small amount" in prose that nothing
-            keeps honest. Adding and removing are priced separately — add is
-            shown here because it is the action this panel's button performs. */}
-        <ActionCostNote action="add-controller" className="mb-4" />
+        {/* Both figures, because adding and removing are separate actions and
+            genuinely differ: on testnet one is roughly ten times the other,
+            while production charges the same for both. One number for two
+            buttons is right on prod and wrong where we test. */}
+        <ActionCostNote
+          action="add-controller"
+          secondaryAction="remove-controller"
+          primaryVerb="Adding a controller"
+          secondaryVerb="removing one"
+          className="mb-4"
+        />
 
         {/* Existing controllers */}
         {state.isLoading ? (
