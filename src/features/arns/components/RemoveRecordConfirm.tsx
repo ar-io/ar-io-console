@@ -51,7 +51,13 @@ export default function RemoveRecordConfirm({
           })} credits`;
 
   return (
-    <BaseModal onClose={onCancel} showCloseButton>
+    /*
+      Not dismissible mid-removal. Escape, a backdrop click or the close button
+      would otherwise cancel the DIALOG while the write is still in flight —
+      the user sees it vanish, assumes nothing happened, and the record
+      disappears a moment later with no explanation.
+    */
+    <BaseModal onClose={onCancel} showCloseButton dismissible={!busy}>
       <div className="w-[92vw] max-w-md p-4 sm:p-5">
         <ModalHeader
           icon={Trash2}

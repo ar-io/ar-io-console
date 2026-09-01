@@ -62,7 +62,7 @@ export default function ReleaseDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-md p-4 sm:p-5">
         <ModalHeader
           icon={Flame}

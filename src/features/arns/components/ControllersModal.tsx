@@ -82,7 +82,7 @@ export default function ControllersModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-lg p-4 sm:p-5">
         <ModalHeader
           icon={Users}

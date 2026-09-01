@@ -141,7 +141,7 @@ export default function EditDetailsModal({
     'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-lg p-4 sm:p-5">
         <ModalHeader
           icon={Tag}

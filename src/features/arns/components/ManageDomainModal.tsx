@@ -298,7 +298,7 @@ export default function ManageDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       {/*
         Wider than the default modal: this one carries the full payment row
         (Balance, Card, ARIO, SOL) and at max-w-lg the options were clipped, so

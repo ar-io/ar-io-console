@@ -143,7 +143,7 @@ export default function PrimaryNameModal({
   }, [pendingRequest, ownedNames]);
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-lg p-4 sm:p-5">
         <ModalHeader
           icon={Star}
@@ -151,7 +151,19 @@ export default function PrimaryNameModal({
           description="The one name that stands for your wallet across ar.io apps."
         />
 
-        <NeedsSolNote action="Setting a primary name" className="mb-4" />
+        {/* The label follows `mode` — in approve mode the user is approving
+            someone else's request, not setting their own, and a fee notice
+            that describes the wrong action is worse than none. */}
+        <NeedsSolNote
+          action={
+            mode === 'approve'
+              ? 'Approving a primary-name request'
+              : mode === 'change'
+                ? 'Changing your primary name'
+                : 'Setting a primary name'
+          }
+          className="mb-4"
+        />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
