@@ -2,6 +2,19 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Renewing a name now tells you what changed**, not just that it worked —
+  the new expiry date, or that the name is permanent, with a link to the
+  transaction.
+- **Payment options no longer get cut off.** Card, ARIO, SOL and Balance were
+  laid out side-on and the last one could be clipped out of view; they now
+  stack, so every way to pay stays visible.
+- **Costs are shown where the change is made** rather than in a note above the
+  list, and the actions that still need SOL say so inside the window that
+  performs them.
+
 ## [4.7.0] - 2026-09-01
 
 ### Added

@@ -308,8 +308,18 @@ export default function RecordsTable({
       {/* Named before the click — especially the two-approval case, which is
           otherwise invisible until the second prompt appears, after the first
           has already been charged. */}
-      {costLine && (
-        <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
+      {/*
+        Cost sits on the save being made, not above the whole list — a standing
+        note at the top is read once and forgotten by the time anyone edits,
+        and it cannot know what THIS change will cost. Owners see credits;
+        a controller sees the Solana fee they pay instead.
+      */}
+      {undernameWrites.paysNetworkDirectly ? (
+        <p className="mt-2 text-xs text-foreground/60">
+          {undernameWrites.costNote}
+        </p>
+      ) : (
+        costLine && <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
       )}
       {cost.insufficient && (
         <p className="mt-1 flex items-start gap-1.5 text-xs text-error">
@@ -346,22 +356,6 @@ export default function RecordsTable({
 
   return (
     <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
-      {/*
-        Said once, above the table, and true for THIS wallet.
-
-        An owner's edits are billed in credits and Turbo covers the Solana fee;
-        a controller's are not sponsored at all, because Turbo verifies the
-        owner proof against the on-chain owner, so their own wallet pays the
-        network. Two different bills — showing one wallet the other's promise is
-        the exact failure this copy exists to prevent. The credits figure is
-        fetched live: it differs by network and is not zero.
-      */}
-      {canManage && undernameWrites.costNote && (
-        <p className="mb-3 text-xs text-foreground/60">
-          {undernameWrites.costNote}
-        </p>
-      )}
-
       {/*
         Row-action failures need somewhere to land when no row is open.
 

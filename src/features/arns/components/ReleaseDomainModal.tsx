@@ -15,6 +15,7 @@ import SolanaGateButton from '../../../components/SolanaGateButton';
 import { lowerCaseDomain } from '../utils';
 import { useReleaseName } from '../hooks/useReleaseName';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import NeedsSolNote from './NeedsSolNote';
 
 interface ReleaseDomainModalProps {
   domain: ArNSName;
@@ -74,6 +75,8 @@ export default function ReleaseDomainModal({
           }
           description="Give up the name to a 14-day auction"
         />
+
+        <NeedsSolNote action="Releasing a name" className="mb-4" />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">

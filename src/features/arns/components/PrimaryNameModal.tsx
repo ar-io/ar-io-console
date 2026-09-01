@@ -16,6 +16,7 @@ import BaseModal from '../../../components/modals/BaseModal';
 import { usePrimaryNameActions } from '../hooks/usePrimaryNameActions';
 import { parsePrimaryName } from '../utils';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import NeedsSolNote from './NeedsSolNote';
 
 export type PrimaryNameModalMode = 'set' | 'change' | 'approve';
 
@@ -147,6 +148,8 @@ export default function PrimaryNameModal({
           title={TITLES[mode]}
           description="The one name that stands for your wallet across ar.io apps."
         />
+
+        <NeedsSolNote action="Setting a primary name" className="mb-4" />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">

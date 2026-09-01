@@ -25,6 +25,7 @@ import {
 } from '../hooks/useSetArNSMetadata';
 import LogoUploadField from './LogoUploadField';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import NeedsSolNote from './NeedsSolNote';
 import {
 } from '../recordFields';
 
@@ -155,6 +156,8 @@ export default function EditDetailsModal({
           description="Details shown wherever this name appears"
         />
 
+        <NeedsSolNote action="Editing a name’s own details" className="mb-4" />
+
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
@@ -185,12 +188,11 @@ export default function EditDetailsModal({
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
               {/* These are the name's OWN details, which Turbo does not
-                  sponsor — unlike a record's details, which it does. "Free
-                  apart from a small SOL network fee" buried the only cost
-                  there is on this screen in a subordinate clause. */}
-              These are the name&apos;s own details, and Turbo doesn&apos;t
-              cover them — your wallet pays a small Solana fee for each field
-              you change, and approves each one separately.
+                  sponsor — unlike a RECORD's details, which it does. The two
+                  sit next to each other in the program and differ on cost, so
+                  they must not read the same. */}
+              These are the name&apos;s own details, not a record&apos;s. Each
+              field you change is a separate wallet approval.
             </div>
 
             {/* Nickname */}

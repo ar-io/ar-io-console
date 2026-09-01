@@ -13,6 +13,7 @@ import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useReassignArNSName } from '../hooks/useReassignArNSName';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import NeedsSolNote from './NeedsSolNote';
 
 interface ReassignDomainModalProps {
   domain: ArNSName;
@@ -64,6 +65,8 @@ export default function ReassignDomainModal({
           }
           description="Point this name at a different name token"
         />
+
+        <NeedsSolNote action="Reassigning a name" className="mb-4" />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
