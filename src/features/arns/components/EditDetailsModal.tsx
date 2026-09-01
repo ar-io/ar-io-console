@@ -184,9 +184,13 @@ export default function EditDetailsModal({
           <>
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-              Each ANT-metadata field is a separate wallet approval; the record
-              saves in one approval (all its fields together). Free apart from a
-              small SOL network fee.
+              {/* These are the name's OWN details, which Turbo does not
+                  sponsor — unlike a record's details, which it does. "Free
+                  apart from a small SOL network fee" buried the only cost
+                  there is on this screen in a subordinate clause. */}
+              These are the name&apos;s own details, and Turbo doesn&apos;t
+              cover them — your wallet pays a small Solana fee for each field
+              you change, and approves each one separately.
             </div>
 
             {/* Nickname */}

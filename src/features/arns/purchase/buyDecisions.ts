@@ -128,7 +128,7 @@ export function routeBuyError({
    * settlement can run out of credits; on the ARIO path a shortfall is an ARIO
    * shortfall, and offering a credits top-up would not resolve it.
    */
-  mechanism: 'ario-direct' | 'turbo-credits' | 'turbo-fiat';
+  mechanism: 'ario-direct' | 'turbo-credits';
   isInsufficientCredits: boolean;
 }): BuyErrorRoute {
   if (mechanism === 'turbo-credits' && isInsufficientCredits) {

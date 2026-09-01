@@ -21,6 +21,10 @@ import {
   validateRecordFields,
 } from '../recordFields';
 import { DEFAULT_TTL, isValidUndername } from '../utils';
+import { useStore } from '@/store/useStore';
+import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
+import { hasMetadataChange } from '../records/recordWriter';
+import { recordCostNote, recordSaveCost } from '../records/recordCost';
 import { useUndernameWrites, type UndernameRecord } from '../hooks/useUndernames';
 import { useSetArNSMetadata } from '../hooks/useSetArNSMetadata';
 import type { ANTDetails } from '../hooks/useANTDetails';
@@ -169,7 +173,41 @@ export default function RecordsTable({
   const validation = validateRecordFields(draft);
   const isAdding = editKey === '__new__';
   const nameValid = !isAdding || (isValidUndername(newName) && !rows.some((r) => r.key === newName));
-  const canSave = validation.allValid && nameValid;
+  /*
+    What this save will actually cost, and whether it can be afforded.
+
+    Two prices because a save can be two actions: the record itself and its
+    metadata are billed and approved separately, which the single form gives no
+    hint of. Only an owner is billed in credits — a controller pays the Solana
+    network directly, so `billed` is false for them and no credits figure is
+    quoted.
+  */
+  const creditBalance = useStore((s) => s.creditBalance);
+  const recordPrice = useArNSActionPrice('set-record');
+  const metadataPrice = useArNSActionPrice('set-record-metadata');
+
+  const pendingChange = useMemo(
+    () => toRecordChange(draft, original),
+    [draft, original],
+  );
+  const changesRecord =
+    !original ||
+    draft.target.trim() !== original.target.trim() ||
+    draft.ttl !== original.ttl ||
+    draft.protocol !== original.protocol ||
+    draft.priority.trim() !== original.priority.trim();
+
+  const cost = recordSaveCost({
+    actionPrice: recordPrice.credits,
+    metadataPrice: metadataPrice.credits,
+    changesRecord,
+    changesMetadata: hasMetadataChange(pendingChange),
+    creditBalance,
+    billed: !undernameWrites.paysNetworkDirectly,
+  });
+  const costLine = recordCostNote(cost);
+
+  const canSave = validation.allValid && nameValid && !cost.insufficient;
   const busyKey = undernameWrites.busyKey;
   const busy = undernameWrites.isBusy || metadata.isBusy;
 
@@ -266,6 +304,19 @@ export default function RecordsTable({
         idPrefix={`rec-${r?.key ?? 'new'}`}
         promoteIdentity={r?.kind !== 'apex'}
       />
+
+      {/* Named before the click — especially the two-approval case, which is
+          otherwise invisible until the second prompt appears, after the first
+          has already been charged. */}
+      {costLine && (
+        <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
+      )}
+      {cost.insufficient && (
+        <p className="mt-1 flex items-start gap-1.5 text-xs text-error">
+          <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+          Not enough credits for this change. Add credits and try again.
+        </p>
+      )}
 
       {rowError && <p className="mt-2 text-sm text-error">{rowError}</p>}
 

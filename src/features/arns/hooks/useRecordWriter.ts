@@ -103,5 +103,11 @@ export function useRecordWriter(processId: string | undefined) {
     isResolving: kind === 'blocked' && role === 'unknown',
     /** What this wallet's edits cost, for the note above the editor. */
     costNote: writerCostNote(kind, credits),
+    /**
+     * True for a controller. Their writes are not sponsored, so they pay the
+     * Solana network directly and are never billed in credits — quoting a
+     * credits figure to them would name a cost they never see.
+     */
+    paysNetworkDirectly: kind === 'self-signed',
   };
 }

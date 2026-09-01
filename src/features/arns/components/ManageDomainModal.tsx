@@ -435,7 +435,6 @@ export default function ManageDomainModal({
                 solBalance={balances.sol}
                 insufficientFunds={insufficientFunds}
                 insufficientSol={insufficientSol}
-                networkCostCovered={route.kind === 'card'}
               />
             </div>
 

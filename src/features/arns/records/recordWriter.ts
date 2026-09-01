@@ -24,6 +24,10 @@ export interface RecordWriteInput {
   undername: string;
   transactionId: string;
   ttlSeconds: number;
+  /**
+   * Optional so a `RecordChangeParams` (which omits it when unset) is directly
+   * assignable — the editor builds one of those and hands it straight here.
+   */
   targetProtocol?: number;
   priority?: number;
   displayName?: string | null;
@@ -32,8 +36,19 @@ export interface RecordWriteInput {
   keywords?: string[] | null;
 }
 
-/** True when a change touches any metadata field, tri-state included. */
-export function hasMetadataChange(p: RecordWriteInput): boolean {
+/**
+ * True when a change touches any metadata field, tri-state included.
+ *
+ * Takes only the metadata fields rather than a whole write input, so both the
+ * editor's `RecordChangeParams` (no undername yet — the row supplies it) and a
+ * full `RecordWriteInput` can be passed without a cast.
+ */
+export function hasMetadataChange(p: {
+  displayName?: string | null;
+  logo?: string | null;
+  description?: string | null;
+  keywords?: string[] | null;
+}): boolean {
   return (
     p.displayName !== undefined ||
     p.logo !== undefined ||

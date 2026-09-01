@@ -119,7 +119,7 @@ export function useUndernameWrites(_name?: string, processId?: string) {
   const signer = useArNSTurboSigner();
   // One writer now: Turbo performs every record write and pays the Solana fee,
   // and the owner approves it. Nothing to resolve first, so nothing to block on.
-  const { getWriter, costNote } = useRecordWriter(processId);
+  const { getWriter, costNote, paysNetworkDirectly } = useRecordWriter(processId);
   const [phase, setPhase] = useState<UndernameWritePhase>('idle');
   /** The undername currently being written (for per-row busy state). */
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -244,8 +244,10 @@ export function useUndernameWrites(_name?: string, processId?: string) {
     saveUndername,
     removeUndername,
     transferUndernameOwnership,
-    /** What this wallet's edits cost — free for the owner, SOL for a controller. */
+    /** One line on what this wallet's edits cost. */
     costNote,
+    /** True for a controller: they pay the Solana network, not credits. */
+    paysNetworkDirectly,
     reset,
     phase,
     busyKey,

@@ -16,6 +16,11 @@ All notable changes to the ar.io Console are documented in this file.
   Quoting the name price alone understated a purchase by more than half.
 - **Renewing, upgrading and adding undername slots need no wallet approval at
   all** — they settle from credits with nothing to sign.
+- **Every change now shows what it costs before you make it**, including the
+  cases where one save is billed twice — changing a record and its details
+  together is two charges and two approvals, and the editor says so up front.
+  If your credits won't cover a change, the button explains that rather than
+  failing when you press it.
 - **A record's display name, logo, description and keywords can now be edited
   and cleared**, and the cost of each change is shown before you make it.
   Editing records, changing controllers and transferring all cost a small

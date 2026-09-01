@@ -4,6 +4,7 @@ import { Info, Loader2, Plus, Trash2, Users, XCircle } from 'lucide-react';
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import ActionCostNote from './ActionCostNote';
 import {
   MAX_CONTROLLERS,
   isControllerLimitReached,
@@ -122,9 +123,13 @@ export default function ControllersModal({
           or sell it. Turbo is listed so it can cover the Solana fees on your
           changes — it still can&apos;t change anything without your approval,
           which your wallet asks for every time. Adding or removing a
-          controller costs a small amount of credits and one wallet approval,
-          and needs no SOL.
+          controller is one wallet approval, and needs no SOL.
         </div>
+
+        {/* The live figure, rather than "a small amount" in prose that nothing
+            keeps honest. Adding and removing are priced separately — add is
+            shown here because it is the action this panel's button performs. */}
+        <ActionCostNote action="add-controller" className="mb-4" />
 
         {/* Existing controllers */}
         {state.isLoading ? (

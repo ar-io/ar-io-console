@@ -95,15 +95,6 @@ interface Props {
   insufficientFunds: boolean;
   insufficientSol: boolean;
   /**
-   * The payment service performs the on-chain write itself and covers the
-   * Solana rent + fee from its own keypair — true on the card path.
-   *
-   * Card is the option that works for someone holding no crypto at all, so
-   * showing them a SOL requirement (let alone blocking on it) contradicts the
-   * only reason to offer it.
-   */
-  networkCostCovered?: boolean;
-  /**
    * Turbo pays the Solana fees and rent for this purchase.
    *
    * True for registration, renewal, upgrade and undername actions, where the
@@ -207,7 +198,6 @@ export function ArNSCostBreakdown({
   solBalance,
   insufficientFunds,
   insufficientSol,
-  networkCostCovered = false,
   sponsored = false,
   setupCredits,
   tokenForName,
@@ -227,7 +217,7 @@ export function ArNSCostBreakdown({
    * repeating either would double-count in the reader's head.
    */
   const nameCostSummary: string | undefined = (() => {
-    if (networkCostCovered || tokenForName) return undefined;
+    if (tokenForName) return undefined;
     // A card pays dollars — quoting the credits it buys would name our unit
     // rather than the one being charged.
     if (isCardRoute) {
@@ -424,34 +414,6 @@ export function ArNSCostBreakdown({
             <Loader2 className="h-4 w-4 animate-spin" /> Estimating network
             cost…
           </div>
-        ) : networkCostCovered ? (
-          <>
-            {/* Paying by card custodially: the service does the on-chain write
-                from its own keypair, so there is no SOL for the buyer to hold
-                or be short of. */}
-            <Row label="Network costs">
-              <span className="text-sm text-foreground/80">Included</span>
-            </Row>
-            {/*
-              This branch skips the SOL rows, so it would otherwise have no
-              prominent figure at all once the name price was demoted. Here the
-              name price IS the total — network costs are covered — so it gets
-              the same weight every other route's total gets.
-            */}
-            {cardUsdPrice != null && (
-              <>
-                <div className="my-2 border-t border-border/10" />
-                <Row label="Total" strong>
-                  <span className="text-lg font-bold text-foreground">
-                    {`$${cardUsdPrice.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`}
-                  </span>
-                </Row>
-              </>
-            )}
-          </>
         ) : gasError ? (
           <div className="flex items-center gap-2 py-1 text-sm text-error">
             <AlertTriangle className="h-4 w-4" /> Network cost unavailable — try
@@ -508,18 +470,11 @@ export function ArNSCostBreakdown({
               </span>
             </Row>
             {/*
-              Why a card purchase still asks for SOL.
-
-              This is the one genuinely surprising thing in the flow: "pay by
-              card" implies no crypto, and then a Solana wallet prompt appears.
-              The custodial branch above explains its side ("Turbo holds the
-              ANT so you don't need SOL"); without the matching sentence here,
-              the self-custody side just looks broken.
-
-              Framed as the trade it is, rather than as an apology — the fee
-              buys self-ownership, and that is the reason the ladder works this
-              hard to reach this branch at all. Card-only: a SOL or ARIO payer
-              is not surprised to need SOL.
+              Only the ARIO route reaches here now — a card or credits purchase
+              takes the sponsored branch above, where Turbo pays the Solana
+              costs. Paying in ARIO is the buyer's own transaction, so their
+              wallet covers the rent, and saying why beats letting them meet it
+              at the wallet prompt.
             */}
             {isCardRoute && (
               <p className="pb-1 text-[11px] leading-snug text-foreground/60">

@@ -13,6 +13,7 @@ import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useTransferArNSName } from '../hooks/useTransferArNSName';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import ActionCostNote from './ActionCostNote';
 
 interface TransferDomainModalProps {
   domain: ArNSName;
@@ -95,16 +96,23 @@ export default function TransferDomainModal({
                 Irreversible — transfer with care
               </div>
               <p className="text-foreground/80">
-                This sends full ownership of {domain.displayName}.ar.io and its
-                ANT to the wallet below. You&apos;ll permanently lose control of
-                the name and every record on it, and it cannot be undone.{' '}
+                {/* "and its ANT" is jargon on the one screen where the user
+                    most needs to understand exactly what leaves their control.
+                    Say what goes: the name and everything on it. */}
+                This sends full ownership of {domain.displayName}.ar.io to the
+                wallet below — the name and every record on it. You&apos;ll
+                permanently lose control of it, and it cannot be undone.{' '}
                 <span className="font-medium text-foreground">
                   Double-check the address
                 </span>{' '}
-                — sending to a wrong or inaccessible wallet bricks the name for
+                — sending to a wrong or inaccessible wallet loses the name for
                 good.
               </p>
             </div>
+
+            {/* Transfer is one of the priced actions; the warning above is
+                about permanence, not cost, and both need saying. */}
+            <ActionCostNote action="transfer" className="mb-4" />
 
             <label className="mb-2 block text-sm font-medium">
               Recipient Solana address
