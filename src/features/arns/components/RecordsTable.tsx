@@ -13,6 +13,7 @@ import {
 import CopyButton from '@/components/CopyButton';
 import SolanaGateButton from '@/components/SolanaGateButton';
 import RecordFieldsEditor from './RecordFieldsEditor';
+import RemoveRecordConfirm from './RemoveRecordConfirm';
 import {
   blankRecordFields,
   RecordFieldsState,
@@ -115,6 +116,12 @@ export default function RecordsTable({
   const [original, setOriginal] = useState<RecordFieldsState | undefined>();
   const [newName, setNewName] = useState('');
   const [rowError, setRowError] = useState<string | null>(null);
+  /*
+    Removing is charged and fires from a COLLAPSED row, so the editor's cost
+    line never applies to it — without a confirm the user presses a small icon
+    in a row of icons and is billed with no warning.
+  */
+  const [confirmRemove, setConfirmRemove] = useState<Row | null>(null);
 
   const undernameWrites = useUndernameWrites(name, processId);
   const metadata = useSetArNSMetadata();
@@ -261,9 +268,14 @@ export default function RecordsTable({
     setRowError(null);
     try {
       await undernameWrites.removeUndername(processId, r.key);
+      setConfirmRemove(null);
       onSuccess();
     } catch (err) {
+      // Keep the dialog open on failure: closing it would hide the reason and
+      // leave the row looking untouched, which is what "nothing happened" felt
+      // like before row errors surfaced at all.
       setRowError(err instanceof Error ? err.message : 'Remove failed');
+      setConfirmRemove(null);
     }
   };
 
@@ -308,8 +320,18 @@ export default function RecordsTable({
       {/* Named before the click — especially the two-approval case, which is
           otherwise invisible until the second prompt appears, after the first
           has already been charged. */}
-      {costLine && (
-        <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
+      {/*
+        Cost sits on the save being made, not above the whole list — a standing
+        note at the top is read once and forgotten by the time anyone edits,
+        and it cannot know what THIS change will cost. Owners see credits;
+        a controller sees the Solana fee they pay instead.
+      */}
+      {undernameWrites.paysNetworkDirectly ? (
+        <p className="mt-2 text-xs text-foreground/60">
+          {undernameWrites.costNote}
+        </p>
+      ) : (
+        costLine && <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
       )}
       {cost.insufficient && (
         <p className="mt-1 flex items-start gap-1.5 text-xs text-error">
@@ -347,22 +369,6 @@ export default function RecordsTable({
   return (
     <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
       {/*
-        Said once, above the table, and true for THIS wallet.
-
-        An owner's edits are billed in credits and Turbo covers the Solana fee;
-        a controller's are not sponsored at all, because Turbo verifies the
-        owner proof against the on-chain owner, so their own wallet pays the
-        network. Two different bills — showing one wallet the other's promise is
-        the exact failure this copy exists to prevent. The credits figure is
-        fetched live: it differs by network and is not zero.
-      */}
-      {canManage && undernameWrites.costNote && (
-        <p className="mb-3 text-xs text-foreground/60">
-          {undernameWrites.costNote}
-        </p>
-      )}
-
-      {/*
         Row-action failures need somewhere to land when no row is open.
 
         `rowError` was only rendered inside the expanded editor, so deleting a
@@ -371,6 +377,16 @@ export default function RecordsTable({
         user saw absolutely nothing. Shown here whenever the editor that would
         otherwise carry it is closed.
       */}
+      {confirmRemove && (
+        <RemoveRecordConfirm
+          undername={confirmRemove.label}
+          displayName={name}
+          busy={undernameWrites.busyKey === confirmRemove.key}
+          onConfirm={() => void remove(confirmRemove)}
+          onCancel={() => setConfirmRemove(null)}
+        />
+      )}
+
       {!editKey && rowError && (
         <p className="mb-3 flex items-start gap-1.5 text-sm text-error">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
@@ -458,7 +474,7 @@ export default function RecordsTable({
                         {r.kind === 'undername' && (
                           <SolanaGateButton
                             variant="inline"
-                            onAction={() => void remove(r)}
+                            onAction={() => setConfirmRemove(r)}
                             disabled={busy}
                             ariaLabel={`Remove record ${r.label}`}
                             actionVerb="remove this record"

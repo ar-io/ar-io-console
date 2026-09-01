@@ -2,6 +2,28 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Renewing a name now tells you what changed**, not just that it worked —
+  the new expiry date, or that the name is permanent.
+- **Every completed change links its transaction**, so you can check it on
+  chain. Some screens showed a raw identifier you could do nothing with, and
+  others showed nothing at all.
+- **Payment options no longer get cut off.** Card, ARIO, SOL and Balance were
+  laid out side-on and the last one could be clipped out of view; they now
+  stack, so every way to pay stays visible.
+- **Costs are shown where the change is made** rather than in a note above the
+  list, and the actions that still need SOL say so inside the window that
+  performs them.
+- **Pressing Escape during a change no longer looks like cancelling it.**
+  Closing the window never stopped the action — it only hid it — so a transfer
+  or release could land after you thought you had backed out. Windows now stay
+  put until the change finishes.
+- **Removing a record now asks first**, and says what it costs. The trash icon
+  sits beside the edit pencil at icon size, so it was easy to hit by accident —
+  and removing is a charged action that gave no warning.
+
 ## [4.7.0] - 2026-09-01
 
 ### Added

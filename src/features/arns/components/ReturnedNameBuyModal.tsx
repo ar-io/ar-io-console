@@ -31,6 +31,7 @@ import EditDetailsModal from './EditDetailsModal';
 import ReturnedNamePremiumChart from './ReturnedNamePremiumChart';
 import { toUnicodeName } from '@/utils/punycode';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import TransactionReceipt from './TransactionReceipt';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -395,12 +396,14 @@ export default function ReturnedNameBuyModal({
                 <p className="mt-1 text-sm text-foreground/70">
                   The name is now yours and resolves across the ar.io network.
                 </p>
-                <div className="mt-2 break-all font-mono text-xs text-foreground/50">
-                  tx: {buyState.result.messageId}
-                </div>
-                <div className="mt-1 break-all font-mono text-xs text-foreground/50">
-                  ANT: {buyState.result.processId}
-                </div>
+                <TransactionReceipt
+                  txId={buyState.result.messageId}
+                  className="mt-3"
+                />
+                {/* A bare id labelled with a protocol term is noise on a
+                    success screen — the transaction receipt above is what a
+                    buyer can act on, and the name's own page carries the token
+                    address for anyone who wants it. */}
 
                 <p className="mt-4 text-sm font-medium text-foreground">
                   What&apos;s next?

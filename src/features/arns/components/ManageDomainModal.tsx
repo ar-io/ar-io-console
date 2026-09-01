@@ -30,6 +30,7 @@ import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOp
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import TransactionReceipt from './TransactionReceipt';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
@@ -127,7 +128,7 @@ export default function ManageDomainModal({
   */
   const mechanism = settlementMechanismFor(route);
 
-  const { manage, phase, statusMessage, error, insufficientCredits, isBusy } =
+  const { manage, phase, statusMessage, result, error, insufficientCredits, isBusy } =
     useManageArNSName();
 
   const active = phase !== 'success';
@@ -248,6 +249,39 @@ export default function ManageDomainModal({
       ? `Expires in ${daysUntil(domain.endTimestamp, Date.now())} days`
       : 'Permanent';
 
+  /*
+    The resulting state, phrased as the answer to why they opened this modal.
+
+    Derived rather than read back: the write has landed, but the indexer that
+    serves `domain` has not necessarily caught up, so re-reading it would show
+    the OLD value and read as a failure. The inputs are exact and the arithmetic
+    is trivial, so computing is both accurate and immediate.
+  */
+  const outcomeLine = (() => {
+    if (action === 'Upgrade-Name') {
+      return 'This name is now permanent — it will never expire.';
+    }
+    if (action === 'Increase-Undername-Limit') {
+      return `${qty} more undername ${qty === 1 ? 'slot' : 'slots'} added.`;
+    }
+    if (action === 'Extend-Lease') {
+      const from =
+        typeof domain.endTimestamp === 'number'
+          ? domain.endTimestamp
+          : undefined;
+      if (from === undefined) return `Extended by ${years} year${years === 1 ? '' : 's'}.`;
+      const extended = new Date(from);
+      extended.setFullYear(extended.getFullYear() + years);
+      return `Now expires ${extended.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}.`;
+    }
+    return undefined;
+  })();
+
+
   const handleConfirm = async () => {
     try {
       const res = await manage({
@@ -264,7 +298,7 @@ export default function ManageDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       {/*
         Wider than the default modal: this one carries the full payment row
         (Balance, Card, ARIO, SOL) and at max-w-lg the options were clipped, so
@@ -292,9 +326,24 @@ export default function ManageDomainModal({
             <p className="font-semibold text-foreground">
               {statusMessage || 'Done!'}
             </p>
+
+            {/*
+              What the name IS now, not just that something happened.
+
+              "Done — 'ipfs' updated!" confirms the click landed and answers
+              nothing a user actually wondered: how long have I got, is it
+              permanent, how many undernames do I have. The outcome is the
+              reason they came.
+            */}
+            {outcomeLine && (
+              <p className="mt-1 text-sm text-foreground/70">{outcomeLine}</p>
+            )}
+
+            <TransactionReceipt txId={result?.messageId} className="mt-3" />
+
             <button
               onClick={onClose}
-              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="mt-4 block w-full rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Close
             </button>

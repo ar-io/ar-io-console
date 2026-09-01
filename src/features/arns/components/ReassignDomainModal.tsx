@@ -13,6 +13,8 @@ import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useReassignArNSName } from '../hooks/useReassignArNSName';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import NeedsSolNote from './NeedsSolNote';
+import TransactionReceipt from './TransactionReceipt';
 
 interface ReassignDomainModalProps {
   domain: ArNSName;
@@ -50,7 +52,7 @@ export default function ReassignDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-md p-4 sm:p-5">
         <ModalHeader
           icon={Shuffle}
@@ -65,6 +67,8 @@ export default function ReassignDomainModal({
           description="Point this name at a different name token"
         />
 
+        <NeedsSolNote action="Reassigning a name" className="mb-4" />
+
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
@@ -74,11 +78,7 @@ export default function ReassignDomainModal({
             <p className="mt-1 text-sm text-foreground/70">
               The name now points at the new ANT.
             </p>
-            {txId && (
-              <div className="mt-2 break-all font-mono text-xs text-foreground/50">
-                tx: {txId}
-              </div>
-            )}
+            <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
               className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
