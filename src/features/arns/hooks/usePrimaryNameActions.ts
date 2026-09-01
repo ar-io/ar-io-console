@@ -34,6 +34,11 @@ export interface UsePrimaryNameActionsResult {
   /** Remove the connected wallet's current primary name (clears reverse link). */
   removePrimary: (name: string) => Promise<string | undefined>;
   reset: () => void;
+  /**
+   * Solana transaction for the last successful action, so the success screen
+   * can show a receipt like every other ArNS surface.
+   */
+  txId: string | undefined;
   phase: PrimaryNamePhase;
   statusMessage: string;
   error: Error | undefined;
@@ -117,6 +122,14 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
   const [phase, setPhase] = useState<PrimaryNamePhase>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [error, setError] = useState<Error | undefined>();
+  /*
+    The Solana transaction for the last successful op.
+    
+    Each of the three ops already had the id in hand and returned it to the
+    caller, but nothing kept it — so the success screen had no receipt to show
+    while every other ArNS action offered one.
+  */
+  const [txId, setTxId] = useState<string | undefined>();
   const [insufficientCredits, setInsufficientCredits] = useState(false);
 
   const reset = useCallback(() => {
@@ -124,6 +137,9 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
     setStatusMessage('');
     setError(undefined);
     setInsufficientCredits(false);
+    // Cleared with everything else, or the next action opens showing the
+    // previous one's receipt.
+    setTxId(undefined);
   }, []);
 
   const ensureSigner = useCallback(() => {
@@ -167,6 +183,7 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
               setStatusMessage(progressMessage(step, lowered)),
           },
         );
+        setTxId(res?.id);
         setPhase('success');
         setStatusMessage(`Done — '${lowered}' is now your primary name.`);
         window.dispatchEvent(new CustomEvent('refresh-balance'));
@@ -213,6 +230,7 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
           { name: lowered, fundFrom, referrer: APP_NAME },
           WRITE_OPTIONS,
         );
+        setTxId(res?.id);
         setPhase('success');
         setStatusMessage(
           `Requested '${lowered}' — the name's owner must approve it.`,
@@ -260,6 +278,7 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
           { initiator: address, name: lowered },
           WRITE_OPTIONS,
         );
+        setTxId(res?.id);
         setPhase('success');
         setStatusMessage(`Approved '${lowered}'.`);
         window.dispatchEvent(new CustomEvent('refresh-balance'));
@@ -286,6 +305,7 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
         // No high-level SDK path on Solana — build the ario-core remove
         // instructions directly (see utils/arIOConfig.removePrimaryName).
         const id = await removePrimaryName(lowered, signer.getSolanaSigner());
+        setTxId(id);
         setPhase('success');
         setStatusMessage(`Removed '${lowered}' as your primary name.`);
         window.dispatchEvent(new CustomEvent('refresh-balance'));
@@ -305,6 +325,7 @@ export function usePrimaryNameActions(): UsePrimaryNameActionsResult {
     requestPrimaryName,
     approveRequest,
     removePrimary,
+    txId,
     reset,
     phase,
     statusMessage,

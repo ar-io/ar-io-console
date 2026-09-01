@@ -30,7 +30,7 @@ import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOp
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
-import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
+import TransactionReceipt from './TransactionReceipt';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
@@ -281,10 +281,6 @@ export default function ManageDomainModal({
     return undefined;
   })();
 
-  // ArNS writes settle on Solana, whatever the buyer paid with.
-  const successTxUrl = result?.messageId
-    ? getExplorerTxUrl(result.messageId, 'solana')
-    : null;
 
   const handleConfirm = async () => {
     try {
@@ -343,20 +339,7 @@ export default function ManageDomainModal({
               <p className="mt-1 text-sm text-foreground/70">{outcomeLine}</p>
             )}
 
-            {/*
-              The receipt. An on-chain write with no way to see it asks the user
-              to take our word for it; linked, it is verifiable by anyone.
-            */}
-            {successTxUrl && (
-              <a
-                href={successTxUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-block text-xs font-medium text-primary hover:underline"
-              >
-                View transaction
-              </a>
-            )}
+            <TransactionReceipt txId={result?.messageId} className="mt-3" />
 
             <button
               onClick={onClose}

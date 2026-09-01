@@ -16,6 +16,7 @@ import { lowerCaseDomain } from '../utils';
 import { useReleaseName } from '../hooks/useReleaseName';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
+import TransactionReceipt from './TransactionReceipt';
 
 interface ReleaseDomainModalProps {
   domain: ArNSName;
@@ -88,11 +89,7 @@ export default function ReleaseDomainModal({
               It&apos;s now in a 14-day returned-name auction, where anyone can
               buy it. You no longer own it.
             </p>
-            {txId && (
-              <div className="mt-2 break-all font-mono text-xs text-foreground/50">
-                tx: {txId}
-              </div>
-            )}
+            <TransactionReceipt txId={txId} className="mt-3" />
             <div className="mt-4 flex flex-col items-center gap-2">
               <button
                 onClick={() => {

@@ -17,6 +17,7 @@ import { usePrimaryNameActions } from '../hooks/usePrimaryNameActions';
 import { parsePrimaryName } from '../utils';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
+import TransactionReceipt from './TransactionReceipt';
 
 export type PrimaryNameModalMode = 'set' | 'change' | 'approve';
 
@@ -70,6 +71,7 @@ export default function PrimaryNameModal({
     error,
     insufficientCredits,
     isBusy,
+    txId,
   } = usePrimaryNameActions();
 
   // --- set / change: pick an owned name ---
@@ -155,6 +157,7 @@ export default function PrimaryNameModal({
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
             <p className="font-semibold text-foreground">{statusMessage}</p>
+            <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
               className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"

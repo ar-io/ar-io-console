@@ -6,8 +6,10 @@ All notable changes to the ar.io Console are documented in this file.
 
 ### Changed
 - **Renewing a name now tells you what changed**, not just that it worked —
-  the new expiry date, or that the name is permanent, with a link to the
-  transaction.
+  the new expiry date, or that the name is permanent.
+- **Every completed change links its transaction**, so you can check it on
+  chain. Some screens showed a raw identifier you could do nothing with, and
+  others showed nothing at all.
 - **Payment options no longer get cut off.** Card, ARIO, SOL and Balance were
   laid out side-on and the last one could be clipped out of view; they now
   stack, so every way to pay stays visible.

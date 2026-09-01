@@ -14,6 +14,7 @@ import { isValidSolanaAddress } from '../utils';
 import { useTransferArNSName } from '../hooks/useTransferArNSName';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import ActionCostNote from './ActionCostNote';
+import TransactionReceipt from './TransactionReceipt';
 
 interface TransferDomainModalProps {
   domain: ArNSName;
@@ -76,11 +77,7 @@ export default function TransferDomainModal({
             <p className="mt-1 text-sm text-foreground/70">
               Ownership now belongs to the recipient wallet.
             </p>
-            {txId && (
-              <div className="mt-2 break-all font-mono text-xs text-foreground/50">
-                tx: {txId}
-              </div>
-            )}
+            <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
               className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
