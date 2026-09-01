@@ -205,9 +205,12 @@ removing a record is 0 on testnet but 0.05 on production. A baked-in number is
 right in development and wrong in front of users. An unloaded price must
 degrade to "a small amount", never to "free".
 
-`TurboArNSClient.getArNSActionPrice` is a hand-rolled unauthenticated GET only
-because the SDK's `getArNSActionPrice` (turbo-sdk#463) is merged but unreleased
-— swap to it when the alpha lands.
+Use the SDK's `getArNSActionPrice(action)` (alpha.13+), which is
+unauthenticated and creates nothing — it is a preview, not a quote.
+
+**Buying already grants Turbo as controller**, in the same transaction the user
+signs (`ARNS_CONTROLLER_GRANT_ENABLED` defaults on). Never follow a purchase
+with `add-controller`: it is redundant and would charge a second time.
 
 **Sponsorship is not universal, and the exceptions are the whole UX problem.**
 Not sponsored, each still costing the user SOL:

@@ -4,6 +4,11 @@ All notable changes to the ar.io Console are documented in this file.
 
 ## [4.7.0] - 2026-09-01
 
+### Added
+- **A "What's new" page**, listing every release. The version number in the
+  footer links to it — "which version am I on" and "did that get fixed" are
+  usually the same question.
+
 ### Changed
 - **Buying and running an ArNS name no longer needs SOL.** Turbo pays the
   Solana fees and rent; you pay in Turbo Credits and the name is minted

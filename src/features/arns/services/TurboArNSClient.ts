@@ -8,6 +8,7 @@ import {
   TurboUnauthenticatedClient,
   TurboAuthenticatedClient,
   ArNSOwnerSigner,
+  ArNSAction,
 } from '@ardrive/turbo-sdk/web';
 
 import { lowerCaseDomain } from '../utils';
@@ -198,30 +199,22 @@ export class TurboArNSClient {
    * What a non-purchase action costs, in winc.
    *
    * The eight non-purchase actions are NOT free — the bundler charges a small
-   * margin on each. The SDK's own doc comments still say "free" and the README
-   * said so until recently; both are stale, and believing them puts a false
-   * promise in front of a charge.
+   * margin on each. The SDK's older doc comments called them free; that was
+   * stale, and believing it puts a promise of no charge in front of a real one.
    *
    * Prices are per-environment and genuinely differ: removing a record is 0 on
    * testnet and 0.05 credits on production. Never hardcode one, and never infer
    * production's from testnet's.
    *
-   * Hand-rolled only because `getArNSActionPrice` has not been published yet
-   * (turbo-sdk#463 is merged, unreleased). It is an unauthenticated GET with no
-   * protocol to get wrong; swap it for the SDK method when the alpha lands.
-   * The four purchase intents are NOT served here — they keep
-   * `getArNSPrice`, which prices a specific name.
+   * Unauthenticated, like `getArNSPrice` — a preview, so it creates nothing and
+   * debits nothing. The four PURCHASE intents are not served here; they price
+   * per name through `getArNSPrice`.
    */
   public async getArNSActionPrice(
-    action: string,
+    action: ArNSAction,
   ): Promise<{ action: string; wincQty: string }> {
-    const res = await fetch(
-      `${this.paymentUrl}/v1/arns/actions/${encodeURIComponent(action)}/price`,
-    );
-    if (!res.ok) {
-      throw new Error(`Could not price "${action}" (${res.status}).`);
-    }
-    return (await res.json()) as { action: string; wincQty: string };
+    const turbo = this.unauthenticated('solana');
+    return turbo.getArNSActionPrice(action);
   }
 
   /**

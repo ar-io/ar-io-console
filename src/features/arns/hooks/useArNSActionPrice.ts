@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ArNSAction } from '@ardrive/turbo-sdk/web';
 
 import { useArNSConfigKey } from './useArNSConfigKey';
 import { useTurboArNSClient } from './useTurboArNSClient';
@@ -15,7 +16,7 @@ import { wincToCredits } from '../utils';
  * Keyed by config so switching environments refetches rather than showing the
  * other network's price.
  */
-export function useArNSActionPrice(action: string | undefined) {
+export function useArNSActionPrice(action: ArNSAction | undefined) {
   const client = useTurboArNSClient();
   const configKey = useArNSConfigKey();
 

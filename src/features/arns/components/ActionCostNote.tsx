@@ -1,3 +1,5 @@
+import type { ArNSAction } from '@ardrive/turbo-sdk/web';
+
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
 
 /**
@@ -17,8 +19,8 @@ export default function ActionCostNote({
   action,
   className = '',
 }: {
-  /** The sponsored action name, e.g. `add-controller`, `transfer`. */
-  action: string;
+  /** The sponsored action, typed against the SDK so a typo cannot compile. */
+  action: ArNSAction;
   className?: string;
 }) {
   const { credits } = useArNSActionPrice(action);
