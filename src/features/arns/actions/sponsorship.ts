@@ -59,7 +59,15 @@ export function isSponsoredAction(value: string): value is ArNSAction {
 }
 
 export interface SponsoredActionFacts {
-  /** Debits the payer's Turbo Credits. Only the four purchase actions do. */
+  /**
+   * Debits the payer's Turbo Credits.
+   *
+   * ALL twelve do. The eight non-purchase actions were free at launch and now
+   * carry a small margin (ar-io-bundler#303) — the SDK's doc comments still say
+   * "free", and they are stale. The amount is per-environment and must be
+   * fetched (`useArNSActionPrice`), never assumed: removing a record is 0 on
+   * testnet and 0.05 credits on production.
+   */
   costsCredits: boolean;
   /**
    * What to TELL the user to expect — never what to branch on.
@@ -113,12 +121,12 @@ export const SPONSORED_ACTION_FACTS: Record<ArNSAction, SponsoredActionFacts> = 
   // Free to the user. Completes Turbo-alone while the grant stands; needs the
   // owner's transaction signature once it is revoked.
   'set-record': {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'conditional',
     requiresOwnerProof: true,
   },
   'remove-record': {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'conditional',
     requiresOwnerProof: true,
   },
@@ -129,17 +137,17 @@ export const SPONSORED_ACTION_FACTS: Record<ArNSAction, SponsoredActionFacts> = 
     controller grant safe to accept in the first place.
   */
   'add-controller': {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'transaction',
     requiresOwnerProof: false,
   },
   'remove-controller': {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'transaction',
     requiresOwnerProof: false,
   },
   transfer: {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'transaction',
     requiresOwnerProof: false,
   },
@@ -149,12 +157,12 @@ export const SPONSORED_ACTION_FACTS: Record<ArNSAction, SponsoredActionFacts> = 
     target and the metadata costs two approvals, because they are two actions.
   */
   'set-record-metadata': {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'conditional',
     requiresOwnerProof: true,
   },
   'remove-record-metadata': {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'conditional',
     requiresOwnerProof: true,
   },
@@ -164,7 +172,7 @@ export const SPONSORED_ACTION_FACTS: Record<ArNSAction, SponsoredActionFacts> = 
     so they must never share confirmation copy.
   */
   'transfer-record': {
-    costsCredits: false,
+    costsCredits: true,
     expectedPrompt: 'transaction',
     requiresOwnerProof: false,
   },

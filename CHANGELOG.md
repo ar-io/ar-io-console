@@ -16,8 +16,11 @@ All notable changes to the ar.io Console are documented in this file.
   Quoting the name price alone understated a purchase by more than half.
 - **Renewing, upgrading and adding undername slots need no wallet approval at
   all** — they settle from credits with nothing to sign.
-- **A record's display name, logo, description and keywords are now free to
-  edit**, and can be cleared as well as changed.
+- **A record's display name, logo, description and keywords can now be edited
+  and cleared**, and the cost of each change is shown before you make it.
+  Editing records, changing controllers and transferring all cost a small
+  amount of credits — the exact figure is shown where you make the change,
+  because it differs by network.
 - **Turbo-custodied names are gone**, along with the claim flow that existed to
   get out of them. Sponsorship removes the reason they existed.
 

@@ -192,6 +192,23 @@ semver and contains **no ArNS surface at all**, so a caret range or a routine
 `npm update` silently deletes this feature and nothing fails until someone tries
 to buy a name.
 
+**Every action costs credits, and the SDK says otherwise.** The eight
+non-purchase actions were free at launch and now carry a small margin
+(ar-io-bundler#303). The published SDK's doc comments still call them "free" —
+stale, and believing them puts a promise of no charge in front of a real one.
+
+Prices come from `GET /v1/arns/actions/:action/price` (`useArNSActionPrice`),
+NOT from `/v1/arns/price/:intent/:name`, which serves only the four purchase
+intents. **Fetch, never hardcode:** the figures differ per environment — a
+record write is 0.1699 credits on testnet and 0.1714 on production, and
+removing a record is 0 on testnet but 0.05 on production. A baked-in number is
+right in development and wrong in front of users. An unloaded price must
+degrade to "a small amount", never to "free".
+
+`TurboArNSClient.getArNSActionPrice` is a hand-rolled unauthenticated GET only
+because the SDK's `getArNSActionPrice` (turbo-sdk#463) is merged but unreleased
+— swap to it when the alpha lands.
+
 **Sponsorship is not universal, and the exceptions are the whole UX problem.**
 Not sponsored, each still costing the user SOL:
 - **Returned-name auctions** (`useBuyReturnedName`) — ARIO-funded, needs a

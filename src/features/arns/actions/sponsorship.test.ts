@@ -35,12 +35,19 @@ describe('sponsored action catalogue', () => {
     }
   });
 
-  it('charges credits for exactly the four purchase actions', () => {
+  it('charges credits for EVERY action, not just the purchases', () => {
+    /*
+      The eight non-purchase actions were free at launch and now carry a small
+      margin (ar-io-bundler#303). The published SDK's doc comments still say
+      "free" — they are stale, and trusting them puts a promise of no charge in
+      front of a real one.
+
+      The AMOUNT is deliberately not asserted anywhere: it differs by network
+      (removing a record is 0 on testnet, 0.05 credits on production) and must
+      be fetched via `useArNSActionPrice`.
+    */
     expect(SPONSORED_ACTIONS.filter(actionCostsCredits)).toEqual([
-      'buy-name',
-      'extend-lease',
-      'upgrade-name',
-      'increase-undername-limit',
+      ...SPONSORED_ACTIONS,
     ]);
   });
 

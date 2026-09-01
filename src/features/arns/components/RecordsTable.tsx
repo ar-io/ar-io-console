@@ -298,10 +298,12 @@ export default function RecordsTable({
       {/*
         Said once, above the table, and true for THIS wallet.
 
-        An owner's edits are sponsored and free; a controller's are not, because
-        Turbo verifies the owner proof against the on-chain owner. Showing the
-        owner's promise to a controller would be a claim they discover is false
-        at the wallet prompt — the exact failure this copy exists to prevent.
+        An owner's edits are billed in credits and Turbo covers the Solana fee;
+        a controller's are not sponsored at all, because Turbo verifies the
+        owner proof against the on-chain owner, so their own wallet pays the
+        network. Two different bills — showing one wallet the other's promise is
+        the exact failure this copy exists to prevent. The credits figure is
+        fetched live: it differs by network and is not zero.
       */}
       {canManage && undernameWrites.costNote && (
         <p className="mb-3 text-xs text-foreground/60">

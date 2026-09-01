@@ -27,14 +27,34 @@ export function writerForRole(role: StrictAntRole): WriterKind {
   }
 }
 
-/** What this wallet's edits will cost, for the note above the records editor. */
-export function writerCostNote(kind: WriterKind): string | undefined {
+/**
+ * What this wallet's edits will cost, for the note above the records editor.
+ *
+ * `credits` is the live price for the action, which must be FETCHED — the
+ * amount differs by environment and the actions are no longer free. Passing
+ * `undefined` (still loading, or the lookup failed) deliberately produces a
+ * note that promises nothing rather than one that says "free": the whole point
+ * of this line is that nobody meets a charge they weren't told about.
+ */
+export function writerCostNote(
+  kind: WriterKind,
+  credits?: number,
+): string | undefined {
   switch (kind) {
-    case 'sponsored':
-      return 'Saving a record is free. Your wallet will ask you to approve a message — it costs nothing and needs no SOL.';
+    case 'sponsored': {
+      const cost =
+        credits === undefined
+          ? 'Saving a record costs a small amount of credits.'
+          : credits === 0
+            ? 'Saving a record is free on this network.'
+            : `Saving a record costs about ${credits.toLocaleString(undefined, {
+                maximumFractionDigits: 4,
+              })} credits.`;
+      return `${cost} Your wallet will ask you to approve a message — that part needs no SOL.`;
+    }
     case 'self-signed':
       // Said plainly rather than apologetically: they control this name but do
-      // not own it, and Turbo covers the owner's fees only.
+      // not own it, so Turbo does not cover their Solana fee.
       return 'You control this name but don’t own it, so your wallet pays the Solana fee on each change.';
     case 'blocked':
       return undefined;

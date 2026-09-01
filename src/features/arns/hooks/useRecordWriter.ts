@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import { useAntSummaries } from './useAntLogos';
+import { useArNSActionPrice } from './useArNSActionPrice';
 import { browserArNSOwnerSigner } from '../actions/browserOwnerSigner';
 import { deriveAntRoleStrict } from '../antRole';
 import { getWritableANT } from '../../../utils';
@@ -41,6 +42,13 @@ export function useRecordWriter(processId: string | undefined) {
     signer.address,
   );
   const kind = writerForRole(role);
+  /*
+    Only the sponsored path is charged in credits; a controller pays SOL to the
+    network instead, so pricing the action would state a cost they never see.
+  */
+  const { credits } = useArNSActionPrice(
+    kind === 'sponsored' ? 'set-record' : undefined,
+  );
 
   const getWriter = useCallback(
     async (antId?: string): Promise<RecordWriter> => {
@@ -94,6 +102,6 @@ export function useRecordWriter(processId: string | undefined) {
     /** True while the role is still resolving — writes must wait, not guess. */
     isResolving: kind === 'blocked' && role === 'unknown',
     /** What this wallet's edits cost, for the note above the editor. */
-    costNote: writerCostNote(kind),
+    costNote: writerCostNote(kind, credits),
   };
 }

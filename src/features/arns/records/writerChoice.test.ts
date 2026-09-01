@@ -28,13 +28,39 @@ describe('writerForRole', () => {
 
 describe('writerCostNote', () => {
   it('promises no SOL only where that is true', () => {
-    expect(writerCostNote('sponsored')).toMatch(/needs no SOL/i);
+    expect(writerCostNote('sponsored', 0.17)).toMatch(/needs no SOL/i);
     expect(writerCostNote('self-signed')).toMatch(/pays the Solana fee/i);
     expect(writerCostNote('self-signed')).not.toMatch(/free/i);
   });
 
+  it('quotes the fetched price rather than a hardcoded one', () => {
+    // Prices differ by network — a record write is 0.1699 credits on testnet
+    // and 0.1714 on production — so anything baked in would be wrong for real
+    // users while looking right in development.
+    expect(writerCostNote('sponsored', 0.1714)).toContain('0.1714');
+    expect(writerCostNote('sponsored', 0.1699)).toContain('0.1699');
+  });
+
+  it('never says "free" while the price is still unknown', () => {
+    /*
+      The whole point of this line is that nobody meets a charge they were not
+      told about. An unloaded price must therefore degrade to "costs a small
+      amount", never to silence and never to "free" — these actions carry a
+      margin now, and the SDK's own docs still wrongly call them free.
+    */
+    const note = writerCostNote('sponsored', undefined)!;
+    expect(note).not.toMatch(/free/i);
+    expect(note).toMatch(/small amount of credits/i);
+  });
+
+  it('says free only when the price is genuinely zero', () => {
+    // Several actions really are 0 on testnet, so this must stay expressible.
+    expect(writerCostNote('sponsored', 0)).toMatch(/free on this network/i);
+  });
+
   it('says nothing when no write is possible', () => {
     expect(writerCostNote('blocked')).toBeUndefined();
+    expect(writerCostNote('blocked', 0.17)).toBeUndefined();
   });
 });
 
