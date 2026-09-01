@@ -2,7 +2,7 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [Unreleased]
+## [4.7.0] - 2026-09-01
 
 ### Changed
 - **Buying and running an ArNS name no longer needs SOL.** Turbo pays the
