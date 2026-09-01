@@ -4,6 +4,7 @@ import { Info, Loader2, Plus, Trash2, Users, XCircle } from 'lucide-react';
 import { ArNSName } from '@/types';
 import BaseModal from '../../../components/modals/BaseModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import ActionCostNote from './ActionCostNote';
 import {
   MAX_CONTROLLERS,
   isControllerLimitReached,
@@ -96,11 +97,39 @@ export default function ControllersModal({
           description="Who can edit this name's records"
         />
 
+        {/*
+          "Controller" is the protocol's own word — it appears in the SDK, in
+          explorers, and in every other ArNS tool. Renaming it here to
+          something friendlier (this said "helpers" briefly) buys a little
+          reassurance and costs the user the ability to recognise the same
+          concept anywhere else. The scary reading is better answered by
+          stating the limit outright, which the first sentence does.
+
+          Turbo appears in this list on every name bought here, because buying
+          adds it in the same approval that mints the name. Worth explaining
+          plainly next to the button that removes it: being able to remove it
+          is the whole reason the arrangement is safe to accept.
+
+          "Removing it is free" was true at launch and is not any more:
+          remove-controller carries a margin like every other action, and the
+          amount differs by network (0 on testnet, 0.05 credits on production).
+          Rather than put a number in prose that nothing keeps honest, this says
+          "a small amount of credits" — the live figure belongs next to the
+          button, from `useArNSActionPrice`, when that lands here.
+        */}
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-          Controllers can manage this name&apos;s records and metadata but cannot
-          transfer or sell it. Each change is a separate wallet approval.
+          Controllers can edit this name&apos;s records but can never transfer
+          or sell it. Turbo is listed so it can cover the Solana fees on your
+          changes — it still can&apos;t change anything without your approval,
+          which your wallet asks for every time. Adding or removing a
+          controller is one wallet approval, and needs no SOL.
         </div>
+
+        {/* The live figure, rather than "a small amount" in prose that nothing
+            keeps honest. Adding and removing are priced separately — add is
+            shown here because it is the action this panel's button performs. */}
+        <ActionCostNote action="add-controller" className="mb-4" />
 
         {/* Existing controllers */}
         {state.isLoading ? (
@@ -114,7 +143,7 @@ export default function ControllersModal({
           </div>
         ) : controllers.length === 0 ? (
           <p className="py-4 text-sm text-foreground/60">
-            No controllers yet. The owner can always manage this name.
+            No controllers yet. You can always manage this name yourself.
           </p>
         ) : (
           <ul className="mb-2 space-y-2">

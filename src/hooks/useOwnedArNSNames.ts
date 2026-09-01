@@ -1,18 +1,29 @@
-import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { getARIO, getANT, getWritableANT, createWalletAdapterTransactionSendingSigner } from '../utils';
+import {
+  getARIO,
+  getANT,
+  getWritableANT,
+  createWalletAdapterTransactionSendingSigner,
+} from '../utils';
 import { ArNSName } from '@/types';
 // Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
 // URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
 import { toUnicodeName as decodePunycode } from '../utils/punycode';
-import { useTurboNameCustody } from '../features/arns/hooks/useNameCustody';
 import { useCustodyOwnerClient } from '../features/arns/hooks/useCustodyOwnerClient';
-import { mergeCustodialNames } from '../features/arns/custody/mergeCustodialNames';
+import { browserArNSOwnerSigner } from '../features/arns/actions/browserOwnerSigner';
+import { useAntSummaries } from '../features/arns/hooks/useAntLogos';
+import { deriveAntRoleStrict } from '../features/arns/antRole';
 import {
-  turboRecordWriter,
-  type TurboRecordClient,
-} from '../features/arns/custody/writers';
+  antRecordWriter,
+  type ANTRecordWriteable,
+} from '../features/arns/records/antWriter';
+import { writerForRole } from '../features/arns/records/writerChoice';
+import {
+  sponsoredRecordWriter,
+  type SponsoredRecordClient,
+} from '../features/arns/records/sponsoredWriter';
 
 interface ArNSUpdateResult {
   success: boolean;
@@ -21,19 +32,6 @@ interface ArNSUpdateResult {
 }
 
 /** Structural view of the ANT writeable's record setters (v4.1.1 API). */
-type ANTRecordWriteable = {
-  setBaseNameRecord(p: {
-    transactionId: string;
-    ttlSeconds: number;
-    targetProtocol: number;
-  }): Promise<{ id: string }>;
-  setUndernameRecord(p: {
-    undername: string;
-    transactionId: string;
-    ttlSeconds: number;
-    targetProtocol: number;
-  }): Promise<{ id: string }>;
-};
 
 export function useOwnedArNSNames() {
   const { setOwnedArNSNames, getOwnedArNSNames, getArNSAddress } = useStore();
@@ -46,31 +44,24 @@ export function useOwnedArNSNames() {
   // update state, preventing a slow earlier request from overwriting a newer one.
   const fetchSeqRef = useRef(0);
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
-  const { connection: solanaConnection } = useConnection();
-  const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction } = useWallet();
-
-  /*
-    Custodial names are invisible to everything above.
-
-    `names` is derived from the ANT ACL, which indexes each ANT's OWNER — and
-    for a Turbo-held name that is Turbo. So a name bought by card was missing
-    from every picker built on this hook: Deploy Site, Capture and Assign
-    Domain all offered a list that could not contain it. Pointing a name at a
-    deployment is the main thing anyone does with one, so the buyer this route
-    exists for could not do the main thing.
-  */
-  const { custodyOf, rows: custodyRows } = useTurboNameCustody();
   const { getClient: getOwnerClient } = useCustodyOwnerClient();
-
+  const { connection: solanaConnection } = useConnection();
   /*
-    Folded in at the boundary so every consumer sees them, rather than each
-    picker remembering to merge — MyDomainsPage already had to do this by hand.
-  */
-  const namesWithCustodial = useMemo(
-    () => mergeCustodialNames(names, custodyRows),
-    [names, custodyRows],
-  ) as ArNSName[];
+    Roles for every name in the list, in one bulk read.
 
+    "Your names" is Owned UNION Controlled, and the two write differently:
+    Turbo sponsors the owner's record changes and rejects a controller's, since
+    it verifies the owner proof against the current on-chain owner. Deploy Site,
+    Capture, Assign Domain and Pages all publish through this hook, so getting
+    this wrong breaks "deploy to a name I control" — an ordinary collaboration
+    setup that worked before sponsorship.
+  */
+  const antSummaries = useAntSummaries(names.map((n) => n.processId));
+  const {
+    publicKey: solanaPublicKey,
+    signTransaction: solanaSignTransaction,
+    signMessage: solanaSignMessage,
+  } = useWallet();
 
   // Fetch names owned by the ArNS address (primary Solana or linked Solana)
   const fetchOwnedNames = useCallback(
@@ -186,7 +177,7 @@ export function useOwnedArNSNames() {
   // Update ArNS name to point to new manifest
   const updateArNSRecord = useCallback(
     async (name: string, manifestId: string, undername?: string, customTTL?: number): Promise<ArNSUpdateResult> => {
-      const nameRecord = namesWithCustodial.find((n) => n.name === name);
+      const nameRecord = names.find((n) => n.name === name);
       if (!nameRecord) {
         return {
           success: false,
@@ -198,78 +189,98 @@ export function useOwnedArNSNames() {
 
       try {
         /*
-          A Turbo-held name cannot be written this way at all: the ANT belongs
-          to Turbo, so signing the transaction with the user's wallet is
-          rejected on-chain — and the buyer may hold no Solana wallet to sign
-          with, that being why they are on this route. Turbo performs the write
-          on their behalf instead, authenticated by the owner's signature.
-        */
-        if (custodyOf(name) === 'turbo-custodial') {
-          const antId = nameRecord.processId;
-          const turbo = (await getOwnerClient()) as unknown as TurboRecordClient;
-          const writer = turboRecordWriter(antId, turbo);
-          const ttlForTurbo =
-            customTTL ??
-            (undername ? nameRecord.undernameTTLs?.[undername] : nameRecord.ttl) ??
-            600;
-          const res = await writer.setRecord({
-            // The base name is '@' on the wire; the callers pass '' for it.
-            undername: undername || '@',
-            transactionId: manifestId,
-            ttlSeconds: ttlForTurbo,
-          });
-          return { success: true, transactionId: res.id };
-        }
+          Every record write goes through Turbo now, whoever owns the name.
 
-        if (!solanaPublicKey || !solanaSignTransaction) {
+          This used to fork: a Turbo-held name was written by Turbo, a
+          user-owned one by the wallet's own ANT transaction. Custody is gone,
+          and the sponsored route is strictly better for the surviving case —
+          it is free, Turbo pays the Solana fee, and the owner approves a
+          message rather than a transaction. So the fork, and the wallet's SOL
+          requirement with it, collapses to one path.
+
+          It also fixes a gap the fork had: the custodial branch returned
+          early, so a write through Turbo never triggered the refresh below and
+          the row kept showing its old target until a full reload.
+        */
+        if (!solanaPublicKey || !solanaSignTransaction || !solanaSignMessage) {
           return {
             success: false,
-            error: 'Solana wallet not connected. Please reconnect to update ArNS records.',
+            error:
+              'Connect the Solana wallet that owns this name to update its records.',
           };
         }
 
-        const signer = createWalletAdapterTransactionSendingSigner(
+        // Custom > existing > default. Preserving a record's own TTL matters:
+        // silently resetting it changes how long the old target stays cached,
+        // which reads as the update not having taken effect.
+        const ttlToUse =
+          customTTL ??
+          (undername
+            ? nameRecord.undernameTTLs?.[undername]
+            : nameRecord.ttl) ??
+          600;
+
+        /*
+          Owner → Turbo pays the Solana fee. Controller → they sign and pay for
+          themselves, which is what they were doing before sponsorship existed.
+          An unresolved role waits rather than guessing: the wrong guess either
+          burns a wallet prompt on a request that 401s, or charges an owner a
+          fee they do not owe.
+        */
+        const role = deriveAntRoleStrict(
+          antSummaries.get(nameRecord.processId),
           solanaPublicKey.toBase58(),
-          solanaConnection,
-          undefined,
-          solanaSignTransaction
         );
+        /*
+          An unresolved role falls back to signing rather than blocking.
 
-        const ant = await getWritableANT(nameRecord.processId, signer) as unknown as ANTRecordWriteable;
+          The records editor blocks instead, and should: a person is watching,
+          the summary resolves in a moment, and a wrong guess there costs a
+          wallet prompt. This path is different — it runs mid-deploy, mid-
+          capture, mid-publish, with nobody able to "try again in a moment".
+          Blocking here would fail a deploy that used to work, which is a worse
+          outcome than an owner occasionally paying a fee they could have
+          avoided. It is also exactly what this path did before sponsorship.
 
-        // Determine TTL to use: custom > existing > default (600)
-        let ttlToUse: number;
-        if (customTTL !== undefined) {
-          // User explicitly set a custom TTL
-          ttlToUse = customTTL;
-        } else if (undername && nameRecord.undernameTTLs?.[undername]) {
-          // Preserve existing undername TTL
-          ttlToUse = nameRecord.undernameTTLs[undername];
-        } else if (!undername && nameRecord.ttl) {
-          // Preserve existing base name TTL
-          ttlToUse = nameRecord.ttl;
+          ACL drift makes this more than theoretical: "your names" is an
+          eventually-consistent index, so a name can legitimately be in the
+          list while the summary has not caught up.
+        */
+        const kind = writerForRole(role);
+
+        let writer;
+        if (kind !== 'sponsored') {
+          const signer = createWalletAdapterTransactionSendingSigner(
+            solanaPublicKey.toBase58(),
+            solanaConnection,
+            undefined,
+            solanaSignTransaction,
+          );
+          writer = antRecordWriter(
+            (await getWritableANT(
+              nameRecord.processId,
+              signer,
+            )) as unknown as ANTRecordWriteable,
+          );
         } else {
-          // Default for new records
-          ttlToUse = 600;
+          const turbo = (await getOwnerClient()) as unknown as SponsoredRecordClient;
+          writer = sponsoredRecordWriter(
+            nameRecord.processId,
+            turbo,
+            browserArNSOwnerSigner({
+              address: solanaPublicKey.toBase58(),
+              signTransaction: solanaSignTransaction,
+              signMessage: solanaSignMessage,
+            }),
+          );
         }
 
-        let result;
-        if (undername) {
-          // Update undername record
-          result = await ant.setUndernameRecord({
-            undername,
-            transactionId: manifestId,
-            ttlSeconds: ttlToUse,
-            targetProtocol: 0, // Arweave
-          });
-        } else {
-          // Update base name record (@)
-          result = await ant.setBaseNameRecord({
-            transactionId: manifestId,
-            ttlSeconds: ttlToUse,
-            targetProtocol: 0, // Arweave
-          });
-        }
+        const result = await writer.setRecord({
+          // The base name is '@' on the wire; callers pass '' for it.
+          undername: undername || '@',
+          transactionId: manifestId,
+          ttlSeconds: ttlToUse,
+        });
 
         // Refresh only the updated name's state for efficiency
         if (arnsAddress) {
@@ -277,7 +288,7 @@ export function useOwnedArNSNames() {
           setTimeout(async () => {
             try {
               // Get fresh ANT state for just this name
-              const nameRecord = namesWithCustodial.find((n) => n.name === name);
+              const nameRecord = names.find((n) => n.name === name);
               if (nameRecord) {
                 const ant = await getANT(nameRecord.processId);
                 const freshState = await ant.getState();
@@ -346,23 +357,24 @@ export function useOwnedArNSNames() {
       }
     },
     [
-      namesWithCustodial,
-      custodyOf,
+      names,
       getOwnerClient,
       arnsAddress,
       fetchOwnedNames,
       getOwnedArNSNames,
       setOwnedArNSNames,
       solanaPublicKey,
-      solanaConnection,
       solanaSignTransaction,
+      solanaSignMessage,
+      solanaConnection,
+      antSummaries,
     ]
   );
 
   // Fetch ANT details for a specific name (on-demand)
   const fetchNameDetails = useCallback(
     async (name: string): Promise<ArNSName | null> => {
-      const nameRecord = namesWithCustodial.find((n) => n.name === name);
+      const nameRecord = names.find((n) => n.name === name);
       if (!nameRecord) return null;
 
       // Check if we already have complete details (both currentTarget and undernames defined)
@@ -467,7 +479,7 @@ export function useOwnedArNSNames() {
         setLoadingDetails((prev) => ({ ...prev, [name]: false }));
       }
     },
-    [namesWithCustodial, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
+    [names, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
 
   // Refresh a specific ArNS name's state
@@ -476,7 +488,7 @@ export function useOwnedArNSNames() {
       if (!arnsAddress) return false;
 
       console.log('Refreshing specific ArNS name:', name);
-      const nameRecord = namesWithCustodial.find((n) => n.name === name);
+      const nameRecord = names.find((n) => n.name === name);
 
       if (!nameRecord) {
         console.warn('Name not found in local state:', name);
@@ -549,7 +561,7 @@ export function useOwnedArNSNames() {
         return false;
       }
     },
-    [namesWithCustodial, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
+    [names, arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
 
   // Auto-fetch when ArNS address is available (primary Solana or linked wallet)
@@ -560,7 +572,7 @@ export function useOwnedArNSNames() {
   }, [arnsAddress, fetchOwnedNames]);
 
   return {
-    names: namesWithCustodial,
+    names: names,
     loading,
     fetchError,
     updating,

@@ -6,6 +6,10 @@ import { useTurboArNSClient } from './useTurboArNSClient';
 import type { TurboArNSIntent } from '../services/TurboArNSClient';
 import { lowerCaseDomain, wincToCredits } from '../utils';
 import { fiatAmountToMajorUnits } from '../purchase/fiatQuote';
+import {
+  fiatCentsForPurchase,
+  readWincTotals,
+} from '../purchase/priceTotals';
 
 export type ArNSRegistrationType = 'lease' | 'permabuy';
 
@@ -19,11 +23,33 @@ export type ArNSPriceResult = {
   /** Best-effort USD estimate, from the bundler fiat estimate or the rate. */
   usd: number | undefined;
   /**
-   * USD including the ANT-spawn surcharge — what a CUSTODIAL card purchase
-   * costs (no `processId`, so Turbo spawns and owns the ANT and recovers its
-   * SOL rent). Absent for intents that can't provision an ANT.
+   * USD including the ANT-spawn surcharge — what a GAS-SPONSORED purchase
+   * costs, where Turbo spawns the ANT and recovers the SOL rent it fronted.
+   * Absent for intents that can't provision an ANT.
    */
   usdWithAntSpawn: number | undefined;
+  /**
+   * Winc for a gas-sponsored purchase: `winc` plus the rent-recovery surcharge.
+   *
+   * Separate from `winc` rather than replacing it, because BOTH are correct —
+   * for different settlement paths. A buyer spawning their own ANT pays `winc`
+   * and their own SOL; a buyer holding no SOL pays this. Quoting `winc` on a
+   * sponsored buy under-quotes by more than half at current testnet rates, so
+   * pick with `wincForPurchase(price, turboSpawnsAnt)` rather than by habit.
+   */
+  sponsoredWinc: string;
+  /** `sponsoredWinc` in Turbo Credits. */
+  sponsoredCredits: number;
+  /**
+   * The rent-recovery surcharge alone, for disclosure.
+   *
+   * Worth showing as its own line: it is operator-configured, differs by
+   * environment, and is currently larger than the name itself on testnet — a
+   * total that appears without explanation reads as a pricing bug.
+   */
+  surchargeWinc: string;
+  /** `surchargeWinc` in Turbo Credits. `0` when the intent mints no ANT. */
+  surchargeCredits: number;
 };
 
 /**
@@ -84,8 +110,9 @@ export function useArNSPrice({
         // with the fee off, so the fallback below under-quotes the card path.
         currency: 'usd',
       });
-      const credits = wincToCredits(price.winc);
-      const fiatCents = price.fiatEstimate?.paymentAmount;
+      const totals = readWincTotals(price);
+      const credits = wincToCredits(totals.baseWinc);
+      const fiatCents = fiatCentsForPurchase(price, false);
       const usd =
         typeof fiatCents === 'number' && fiatCents > 0
           ? // Serialized in cents; assigning it raw showed $5.00 as $500.
@@ -93,17 +120,21 @@ export function useArNSPrice({
           : creditsPerUSD
             ? credits / creditsPerUSD
             : undefined;
-      const withAntCents = price.fiatEstimate?.paymentAmountWithAntSpawn;
+      const withAntCents = fiatCentsForPurchase(price, true);
       const usdWithAntSpawn =
         typeof withAntCents === 'number' && withAntCents > 0
           ? fiatAmountToMajorUnits(withAntCents, 'usd')
           : undefined;
       return {
-        winc: price.winc,
+        winc: totals.baseWinc,
         credits,
         mARIO: price.mARIO,
         usd,
         usdWithAntSpawn,
+        sponsoredWinc: totals.totalWinc,
+        sponsoredCredits: wincToCredits(totals.totalWinc),
+        surchargeWinc: totals.surchargeWinc,
+        surchargeCredits: wincToCredits(totals.surchargeWinc),
       };
     },
   });

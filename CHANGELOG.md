@@ -2,6 +2,66 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.7.0] - 2026-09-01
+
+### Added
+- **A "What's new" page**, listing every release. The version number in the
+  footer links to it — "which version am I on" and "did that get fixed" are
+  usually the same question.
+
+### Changed
+- **Buying and running an ArNS name no longer needs SOL.** Turbo pays the
+  Solana fees and rent; you pay in Turbo Credits and the name is minted
+  straight to your wallet. Turbo holds nothing, so there is no claim step and
+  nothing to transfer out later. Signing in with an email address already
+  creates a Solana wallet, so someone who has never held cryptocurrency can buy
+  a name and keep it.
+- **Prices now show the total.** A registration carries a one-time setup charge
+  covering the Solana deposit Turbo fronts, and it is shown as its own line.
+  Quoting the name price alone understated a purchase by more than half.
+- **Renewing, upgrading and adding undername slots need no wallet approval at
+  all** — they settle from credits with nothing to sign.
+- **Every change now shows what it costs before you make it**, including the
+  cases where one save is billed twice — changing a record and its details
+  together is two charges and two approvals, and the editor says so up front.
+  If your credits won't cover a change, the button explains that rather than
+  failing when you press it.
+- **A record's display name, logo, description and keywords can now be edited
+  and cleared**, and the cost of each change is shown before you make it.
+  Editing records, changing controllers and transferring all cost a small
+  amount of credits — the exact figure is shown where you make the change,
+  because it differs by network.
+- **Turbo-custodied names are gone**, along with the claim flow that existed to
+  get out of them. Sponsorship removes the reason they existed.
+
+### Fixed
+- **Renewing, upgrading and adding undernames returned "not found".** The
+  console was still calling payment routes the service has since replaced, so
+  every credits-paid change to a name failed outright.
+- **Editing an undername's display name, logo, description or keywords did
+  nothing.** The values were accepted, then dropped before they were sent. The
+  main record was unaffected, which is why this went unnoticed.
+- **Deleting a record appeared to do nothing.** The failure was real but had
+  nowhere to show itself unless the row happened to be open for editing.
+- **The renew window was too narrow to show every way to pay**, clipping the
+  options rather than wrapping them.
+- **Renewal was blocked for wallets holding no SOL.** The check that made sense
+  when the wallet paid its own fees was still gating a payment Turbo now
+  covers, so a name could become un-renewable — and an un-renewable lease is a
+  name eventually lost.
+- **Record edits could write empty values over fields you never opened.** Saves
+  sent every metadata field rather than the ones that changed.
+- Some wallets return a signature in a wrapper the service could not read, so
+  approvals from them failed as though the wrong wallet was connected.
+
+### Notes
+- Four actions still need a small amount of SOL: setting a primary name,
+  releasing a name, pointing it at a different name token, and editing the
+  name's own details. Buying from an auction and paying in ARIO also use your
+  own SOL. Each says so before you commit.
+- Controllers can still edit records, and pay their own network fee for it —
+  Turbo covers the owner's fees only.
+
 ## [4.6.0] - 2026-08-28
 
 ### Fixed

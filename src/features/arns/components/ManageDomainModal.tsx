@@ -162,7 +162,20 @@ export default function ManageDomainModal({
     enabled: active,
   });
 
+  /*
+    Renewing, upgrading and adding undername slots are registry payments Turbo
+    settles from credits — it pays the Solana fee, so the user's SOL balance is
+    irrelevant to them.
+
+    Only the ARIO route spends the user's own SOL, because that one is not a
+    Turbo action at all. Gating every route on SOL meant a wallet holding
+    plenty of credits and no SOL could not renew a name it owned — and a lease
+    that cannot be renewed is a name eventually lost, which is the worst
+    outcome this modal has.
+  */
+  const sponsored = priceUnit === 'credits';
   const insufficientSol =
+    !sponsored &&
     // Only a KNOWN balance can block the action. `undefined` means the lookup
     // failed or never ran — blocking on that told funded users to go buy SOL.
     !!cost &&
@@ -172,7 +185,7 @@ export default function ManageDomainModal({
   // Only the CHOSEN method can be short; a card is sized to the price.
   const insufficientFunds = useMemo(() => {
     if (route.kind === 'credits') {
-      return creditsPrice ? balances.credits < creditsPrice.credits : false;
+      return creditsPrice ? balances.credits < creditsPrice.sponsoredCredits : false;
     }
     if (route.kind !== 'ario') return false;
     return (cost?.shortfallMARIO ?? 0) > 0;
@@ -183,7 +196,7 @@ export default function ManageDomainModal({
       buildPaymentOptions({
         walletType: 'solana',
         credits: balances.credits,
-        priceInCredits: creditsPrice?.credits,
+        priceInCredits: creditsPrice?.sponsoredCredits,
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
         // next to a silent SOL row states a fact we don't have and reads as
         // "you're broke" to someone who simply hasn't connected yet.
@@ -194,7 +207,7 @@ export default function ManageDomainModal({
         isTokenSelectable,
         cardEnabled,
       }),
-    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.credits],
+    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits],
   );
 
   const priceReady =
@@ -203,7 +216,10 @@ export default function ManageDomainModal({
   // payment method. If that query errored (or resolved with no data), we have
   // no estimate — don't render a misleading "~0 SOL" and don't let the user
   // confirm against an absent estimate.
-  const gasUnavailable = !!costError || (!cost && !costLoading);
+  // A missing SOL estimate cannot block a sponsored action either — there is
+  // no Solana cost for the user to be short of.
+  const gasUnavailable =
+    !sponsored && (!!costError || (!cost && !costLoading));
   const canConfirm =
     !isBusy &&
     priceReady &&
@@ -214,19 +230,17 @@ export default function ManageDomainModal({
   // Credit shortfall → on-demand top-up (credits method only).
   const creditShortfall =
     creditsPrice
-      ? Math.max(0, creditsPrice.credits - balances.credits)
+      ? Math.max(0, creditsPrice.sponsoredCredits - balances.credits)
       : 0;
   const topUpUsd =
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
-  // Only offer a credits top-up when SOL gas is sufficient — otherwise topping
-  // up credits still can't make the transaction succeed.
-  // Card ignores the SOL gate — the service does the on-chain write and pays
-  // the rent itself, so a buyer with no SOL can still renew or upgrade.
+  // Turbo pays the Solana cost on every credits-settled route, so topping up
+  // credits is always enough to make the change succeed.
   const needsPaymentStep =
     !!address &&
-    (route.kind === 'card' || (route.kind === 'topup' && !insufficientSol)) &&
+    (route.kind === 'card' || route.kind === 'topup') &&
     !isBusy;
 
   const expiryLabel =
@@ -251,7 +265,13 @@ export default function ManageDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-4 sm:p-5">
+      {/*
+        Wider than the default modal: this one carries the full payment row
+        (Balance, Card, ARIO, SOL) and at max-w-lg the options were clipped, so
+        a buyer could not see — let alone choose — the method they wanted.
+        Matches ArNSPaymentModal, which shows the same row.
+      */}
+      <div className="w-[92vw] max-w-xl p-4 sm:p-5">
         {/* Header */}
         <ModalHeader
           icon={Layers}
@@ -386,9 +406,21 @@ export default function ManageDomainModal({
 
             {/* Cost breakdown */}
             <div className="mb-4">
+              {/* Registry payments settle from credits with no wallet prompt
+                  at all — worth saying, because the hesitation before clicking
+                  is usually "what is this going to ask me for". */}
+              {priceUnit === 'credits' && (
+                <p className="mb-2 text-xs text-foreground/60">
+                  Paid from your credits. No wallet approval, and no SOL.
+                </p>
+              )}
               <ArNSCostBreakdown
                 priceUnit={priceUnit}
-                creditsPrice={creditsPrice?.credits}
+                creditsPrice={creditsPrice?.sponsoredCredits}
+                /* Renew, upgrade and undername slots are registry payments
+                   Turbo settles from credits — no Solana cost to the user, and
+                   nothing minted, so no setup charge either. */
+                sponsored={sponsored}
                 cardUsdPrice={
                   route.kind === 'card' ? creditsPrice?.usd : undefined
                 }
@@ -403,7 +435,6 @@ export default function ManageDomainModal({
                 solBalance={balances.sol}
                 insufficientFunds={insufficientFunds}
                 insufficientSol={insufficientSol}
-                networkCostCovered={route.kind === 'card'}
               />
             </div>
 

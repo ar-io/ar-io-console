@@ -25,15 +25,11 @@ describe('buildPaymentOptions', () => {
     expect(first.detail).toBe('with Stripe');
   });
 
-  it('says on the Card option when Turbo will hold the name', () => {
-    // Custody changes WHAT you get, not just how you pay, so it belongs at the
-    // point of choice rather than in the breakdown underneath.
+  it('names the processor on the Card option, with no custody caveat', () => {
+    // Turbo holds nothing now — the name is minted straight to the buyer — so
+    // there is no longer a "what you get" difference to disclose here.
     const normal = buildPaymentOptions({ ...base, walletType: 'solana' });
     expect(normal.find((o) => o.kind === 'card')?.detail).toBe('with Stripe');
-    const custodial = buildPaymentOptions({
-      ...base, walletType: 'solana', cardIsCustodial: true,
-    });
-    expect(custodial.find((o) => o.kind === 'card')?.detail).toMatch(/turbo holds/i);
   });
 
   it('drops card when the payment service has fiat disabled', () => {
@@ -165,30 +161,26 @@ describe('network-cost blocking', () => {
       networkSolRequired: 0.015, solBalance,
     });
 
-  it('blocks every route that needs SOL when the wallet is short', () => {
-    // Creating a name costs account rent whoever pays for the name, so an
-    // ARIO-rich wallet with no SOL previously saw ARIO as usable and failed
-    // at signing.
+  it('blocks ARIO alone, because only ARIO spends the buyer’s own SOL', () => {
+    /*
+      Paying in ARIO is the buyer's own `buyRecord` transaction, so their
+      wallet covers the Solana rent. Every other route settles in credits and
+      Turbo pays that rent — blocking those would stop exactly the buyers
+      sponsorship exists to serve, the ones holding no SOL at all.
+    */
     const o = withSol(0);
-    for (const id of ['token:ario', 'token:solana', 'balance']) {
-      expect(o.find((x) => x.id === id)?.blockedReason).toMatch(/network costs/i);
+    expect(o.find((x) => x.id === 'token:ario')?.blockedReason).toMatch(
+      /network costs/i,
+    );
+    for (const id of ['balance', 'token:solana']) {
+      expect(o.find((x) => x.id === id)?.blockedReason).toBeUndefined();
     }
   });
 
-  it('leaves the CUSTODIAL card usable — it is the escape hatch', () => {
-    const o = buildPaymentOptions({
-      ...base, walletType: 'solana', credits: 0, cardIsCustodial: true,
-      networkSolRequired: 0.015, solBalance: 0,
-    });
-    const card = o.find((x) => x.kind === 'card')!;
-    expect(card.blockedReason).toBeUndefined();
-    // Named for why it works, not for the processor.
-    expect(card.detail).toMatch(/no crypto needed/i);
-  });
-
-  it('blocks a SELF-CUSTODY card, which still needs the wallet to pay rent', () => {
+  it('never blocks the card, whatever the wallet holds', () => {
     const card = withSol(0).find((x) => x.kind === 'card')!;
-    expect(card.blockedReason).toMatch(/network costs/i);
+    expect(card.blockedReason).toBeUndefined();
+    expect(card.detail).toBe('with Stripe');
   });
 
   it('blocks nothing when the SOL balance is UNKNOWN', () => {
@@ -201,12 +193,28 @@ describe('network-cost blocking', () => {
     for (const o of withSol(1)) expect(o.blockedReason).toBeUndefined();
   });
 
-  it('never preselects a blocked option', () => {
+  it('still preselects a usable option, leaving the blocked one aside', () => {
+    // Balance leads and is no longer blocked, so it wins outright — the SOL
+    // shortfall only ever costs the buyer the ARIO route.
+    const o = withSol(0);
+    expect(defaultPaymentOption(o)?.kind).toBe('balance');
+  });
+});
+
+describe('paying with a token', () => {
+  it('does not vouch for affordability it was never given a price for', () => {
+    /*
+      `tokenPrices` is not supplied by the purchase card, so every token option
+      reports `sufficient: true`. That is the correct conservative answer here —
+      an unknown price must not read as "you cannot afford this" — but it means
+      the picker is NOT the thing protecting a SOL-poor wallet on a top-up.
+      ArNSPurchaseCard owns that check; this test exists so the next person to
+      "tidy up" that gate finds out here rather than in production.
+    */
     const o = buildPaymentOptions({
-      ...base, walletType: 'solana', credits: 50, extraTokens: ['ario'],
-      cardIsCustodial: true, networkSolRequired: 0.015, solBalance: 0,
+      ...base, walletType: 'solana', credits: 0,
+      extraTokens: ['ario'], tokenBalances: { solana: 0 },
     });
-    // Balance would normally lead; it is blocked, so the card wins.
-    expect(defaultPaymentOption(o)?.kind).toBe('card');
+    expect(o.find((x) => x.id === 'token:solana')?.sufficient).toBe(true);
   });
 });

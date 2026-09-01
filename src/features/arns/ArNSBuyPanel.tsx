@@ -75,11 +75,14 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
               Register an ArNS Name
             </h3>
             <p className="text-sm text-foreground/80">
-              {/* Named the two crypto routes and omitted the one that needs no
-                  crypto at all — which is the option a newcomer is looking for.
-                  Lead with the card. */}
-              Search, price, and buy a name with a card, ARIO, or SOL — no
-              leaving the console.
+              {/* Leads on the thing that changed, and scopes the promise to
+                  the routes it holds for. "You never need SOL" was false as a
+                  blanket claim on this very panel: paying in ARIO is the
+                  buyer's own transaction and needs SOL, and the picker below
+                  offers it. Naming credits and card keeps it true. */}
+              Search for a name and buy it with credits or a card — Turbo pays
+              the Solana fees, so neither needs SOL. You&apos;ll approve the
+              purchase once in your wallet, and the name is yours.
             </p>
             <a
               href="https://docs.ar.io/learn/arns"
@@ -184,13 +187,6 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
           onTokenFunded={() => setTokenFunded(true)}
-          onCardSuccess={(messageId) =>
-            buyState.markExternalSuccess({
-              nonce: '',
-              messageId,
-              receipt: {},
-            })
-          }
         />
       )}
 
