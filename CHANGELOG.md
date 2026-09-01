@@ -16,6 +16,9 @@ All notable changes to the ar.io Console are documented in this file.
 - **Costs are shown where the change is made** rather than in a note above the
   list, and the actions that still need SOL say so inside the window that
   performs them.
+- **Removing a record now asks first**, and says what it costs. The trash icon
+  sits beside the edit pencil at icon size, so it was easy to hit by accident —
+  and removing is a charged action that gave no warning.
 
 ## [4.7.0] - 2026-09-01
 

@@ -13,6 +13,7 @@ import {
 import CopyButton from '@/components/CopyButton';
 import SolanaGateButton from '@/components/SolanaGateButton';
 import RecordFieldsEditor from './RecordFieldsEditor';
+import RemoveRecordConfirm from './RemoveRecordConfirm';
 import {
   blankRecordFields,
   RecordFieldsState,
@@ -115,6 +116,12 @@ export default function RecordsTable({
   const [original, setOriginal] = useState<RecordFieldsState | undefined>();
   const [newName, setNewName] = useState('');
   const [rowError, setRowError] = useState<string | null>(null);
+  /*
+    Removing is charged and fires from a COLLAPSED row, so the editor's cost
+    line never applies to it — without a confirm the user presses a small icon
+    in a row of icons and is billed with no warning.
+  */
+  const [confirmRemove, setConfirmRemove] = useState<Row | null>(null);
 
   const undernameWrites = useUndernameWrites(name, processId);
   const metadata = useSetArNSMetadata();
@@ -261,9 +268,14 @@ export default function RecordsTable({
     setRowError(null);
     try {
       await undernameWrites.removeUndername(processId, r.key);
+      setConfirmRemove(null);
       onSuccess();
     } catch (err) {
+      // Keep the dialog open on failure: closing it would hide the reason and
+      // leave the row looking untouched, which is what "nothing happened" felt
+      // like before row errors surfaced at all.
       setRowError(err instanceof Error ? err.message : 'Remove failed');
+      setConfirmRemove(null);
     }
   };
 
@@ -365,6 +377,16 @@ export default function RecordsTable({
         user saw absolutely nothing. Shown here whenever the editor that would
         otherwise carry it is closed.
       */}
+      {confirmRemove && (
+        <RemoveRecordConfirm
+          undername={confirmRemove.label}
+          displayName={name}
+          busy={undernameWrites.busyKey === confirmRemove.key}
+          onConfirm={() => void remove(confirmRemove)}
+          onCancel={() => setConfirmRemove(null)}
+        />
+      )}
+
       {!editKey && rowError && (
         <p className="mb-3 flex items-start gap-1.5 text-sm text-error">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
@@ -452,7 +474,7 @@ export default function RecordsTable({
                         {r.kind === 'undername' && (
                           <SolanaGateButton
                             variant="inline"
-                            onAction={() => void remove(r)}
+                            onAction={() => setConfirmRemove(r)}
                             disabled={busy}
                             ariaLabel={`Remove record ${r.label}`}
                             actionVerb="remove this record"
