@@ -1,6 +1,6 @@
 import type { ArNSOwnerSigner } from '@ardrive/turbo-sdk/web';
 
-import type { RecordWriter } from './recordWriter';
+import { hasMetadataChange, type RecordWriter } from './recordWriter';
 
 /**
  * The single record writer: Turbo performs the write, the owner approves it.
@@ -24,6 +24,21 @@ export interface SponsoredRecordClient {
     undername?: string;
     ttlSeconds?: number;
   }): Promise<{ messageId: string }>;
+  /**
+   * A SEPARATE action from `setArNSRecord`, so a save touching both the target
+   * and the metadata costs two approvals. Only called when metadata actually
+   * changed, which is why `toRecordChange` diffs rather than snapshots — a
+   * snapshot would have made every save a two-prompt save.
+   */
+  setArNSRecordMetadata(p: {
+    antId: string;
+    owner: ArNSOwnerSigner;
+    undername?: string;
+    displayName?: string | null;
+    recordLogo?: string | null;
+    recordDescription?: string | null;
+    recordKeywords?: string[] | null;
+  }): Promise<{ messageId: string }>;
   removeArNSRecord(p: {
     antId: string;
     owner: ArNSOwnerSigner;
@@ -40,7 +55,8 @@ export function sponsoredRecordWriter(
   owner: ArNSOwnerSigner,
 ): RecordWriter {
   return {
-    async setRecord({ undername, transactionId, ttlSeconds }) {
+    async setRecord(change) {
+      const { undername, transactionId, ttlSeconds } = change;
       const res = await turbo.setArNSRecord({
         antId,
         owner,
@@ -48,6 +64,31 @@ export function sponsoredRecordWriter(
         undername,
         ttlSeconds,
       });
+
+      /*
+        Metadata is its own action, so it is only sent when something actually
+        changed. The record write is what the caller asked for and its id is
+        what they get back; a metadata failure after a successful record write
+        must not read as "nothing saved", so it is reported on its own terms.
+      */
+      if (hasMetadataChange(change)) {
+        await turbo.setArNSRecordMetadata({
+          antId,
+          owner,
+          undername,
+          ...(change.displayName !== undefined
+            ? { displayName: change.displayName }
+            : {}),
+          ...(change.logo !== undefined ? { recordLogo: change.logo } : {}),
+          ...(change.description !== undefined
+            ? { recordDescription: change.description }
+            : {}),
+          ...(change.keywords !== undefined
+            ? { recordKeywords: change.keywords }
+            : {}),
+        });
+      }
+
       return { id: res.messageId };
     },
 

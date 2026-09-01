@@ -34,7 +34,22 @@ export const UNSPONSORED_OPERATIONS = [
   'primary-name',
   'release-name',
   'reassign',
+  /*
+    The name's OWN details — nickname, ticker, description, keywords, logo.
+
+    Distinct from RECORD metadata, which `set-record-metadata` does sponsor,
+    and the two sit next to each other in the program. Same-looking fields,
+    different bill: editing a record's display name is free, editing the
+    name's own is not. Label them so nobody has to discover that at a wallet
+    prompt.
+  */
   'ant-metadata',
+  /*
+    Auctions, deliberately excluded — the premium is unbounded, so Turbo will
+    not front it. The costliest exception by far: ARIO-funded, ~0.02 SOL, and
+    the only flow with two wallet approvals.
+  */
+  'buy-returned-name',
 ] as const;
 
 export type UnsponsoredOperation = (typeof UNSPONSORED_OPERATIONS)[number];
@@ -124,6 +139,31 @@ export const SPONSORED_ACTION_FACTS: Record<ArNSAction, SponsoredActionFacts> = 
     requiresOwnerProof: false,
   },
   transfer: {
+    costsCredits: false,
+    expectedPrompt: 'transaction',
+    requiresOwnerProof: false,
+  },
+  /*
+    Record-scoped metadata, sponsored as of alpha.11. Free, and needing the
+    owner's proof like any record write — so a save that changes BOTH the
+    target and the metadata costs two approvals, because they are two actions.
+  */
+  'set-record-metadata': {
+    costsCredits: false,
+    expectedPrompt: 'conditional',
+    requiresOwnerProof: true,
+  },
+  'remove-record-metadata': {
+    costsCredits: false,
+    expectedPrompt: 'conditional',
+    requiresOwnerProof: true,
+  },
+  /*
+    Hands over ONE record, not the name. `transfer` moves the whole thing and
+    every record on it; confusing the two gives away far more than intended,
+    so they must never share confirmation copy.
+  */
+  'transfer-record': {
     costsCredits: false,
     expectedPrompt: 'transaction',
     requiresOwnerProof: false,

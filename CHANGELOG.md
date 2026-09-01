@@ -16,10 +16,22 @@ All notable changes to the ar.io Console are documented in this file.
   Quoting the name price alone understated a purchase by more than half.
 - **Renewing, upgrading and adding undername slots need no wallet approval at
   all** — they settle from credits with nothing to sign.
+- **A record's display name, logo, description and keywords are now free to
+  edit**, and can be cleared as well as changed.
 - **Turbo-custodied names are gone**, along with the claim flow that existed to
   get out of them. Sponsorship removes the reason they existed.
 
 ### Fixed
+- **Renewing, upgrading and adding undernames returned "not found".** The
+  console was still calling payment routes the service has since replaced, so
+  every credits-paid change to a name failed outright.
+- **Editing an undername's display name, logo, description or keywords did
+  nothing.** The values were accepted, then dropped before they were sent. The
+  main record was unaffected, which is why this went unnoticed.
+- **Deleting a record appeared to do nothing.** The failure was real but had
+  nowhere to show itself unless the row happened to be open for editing.
+- **The renew window was too narrow to show every way to pay**, clipping the
+  options rather than wrapping them.
 - **Renewal was blocked for wallets holding no SOL.** The check that made sense
   when the wallet paid its own fees was still gating a payment Turbo now
   covers, so a name could become un-renewable — and an un-renewable lease is a

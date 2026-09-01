@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Globe, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Globe,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
 
 import CopyButton from '@/components/CopyButton';
 import SolanaGateButton from '@/components/SolanaGateButton';
@@ -297,6 +306,22 @@ export default function RecordsTable({
       {canManage && undernameWrites.costNote && (
         <p className="mb-3 text-xs text-foreground/60">
           {undernameWrites.costNote}
+        </p>
+      )}
+
+      {/*
+        Row-action failures need somewhere to land when no row is open.
+
+        `rowError` was only rendered inside the expanded editor, so deleting a
+        record — which happens from a COLLAPSED row — set the error into state
+        with nothing to display it. The click worked, the write failed, and the
+        user saw absolutely nothing. Shown here whenever the editor that would
+        otherwise carry it is closed.
+      */}
+      {!editKey && rowError && (
+        <p className="mb-3 flex items-start gap-1.5 text-sm text-error">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+          {rowError}
         </p>
       )}
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

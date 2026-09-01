@@ -7,12 +7,43 @@
  * and the owner approves it with a message signature. Callers (the records
  * table, the details editor) only need "a record can be set or removed".
  */
+/**
+ * A record write, including its metadata.
+ *
+ * The metadata fields used to be dropped here: this interface carried only
+ * undername/transactionId/ttlSeconds, so editing an undername's display name,
+ * logo, description or keywords silently did nothing. The apex record was
+ * unaffected because it takes a different route (`setBaseNameRecord` bundles
+ * everything), which is exactly why the gap survived so long — it only showed
+ * on undernames.
+ *
+ * Metadata is tri-state on the wire: omitted leaves a field alone, `null`
+ * clears it. See `recordFields.toRecordChange`, which builds that diff.
+ */
+export interface RecordWriteInput {
+  undername: string;
+  transactionId: string;
+  ttlSeconds: number;
+  targetProtocol?: number;
+  priority?: number;
+  displayName?: string | null;
+  logo?: string | null;
+  description?: string | null;
+  keywords?: string[] | null;
+}
+
+/** True when a change touches any metadata field, tri-state included. */
+export function hasMetadataChange(p: RecordWriteInput): boolean {
+  return (
+    p.displayName !== undefined ||
+    p.logo !== undefined ||
+    p.description !== undefined ||
+    p.keywords !== undefined
+  );
+}
+
 export interface RecordWriter {
-  setRecord(p: {
-    undername: string;
-    transactionId: string;
-    ttlSeconds: number;
-  }): Promise<{ id: string }>;
+  setRecord(p: RecordWriteInput): Promise<{ id: string }>;
   removeRecord(p: { undername: string }): Promise<{ id: string }>;
 }
 

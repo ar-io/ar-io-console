@@ -148,7 +148,14 @@ export function useUndernameWrites(_name?: string, processId?: string) {
       setBusyKey(undername);
       try {
         const writer = await getWriter(processId);
+        /*
+          Forward the WHOLE change. This used to pass three fields, so every
+          metadata edit on an undername was silently discarded — the apex was
+          fine because it takes a different route entirely, which is why the
+          gap went unnoticed.
+        */
         await writer.setRecord({
+          ...record,
           undername,
           transactionId: record.transactionId ?? '',
           ttlSeconds: record.ttlSeconds ?? 0,

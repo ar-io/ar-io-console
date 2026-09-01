@@ -72,3 +72,62 @@ describe('sponsoredRecordWriter', () => {
     expect(turbo.removeArNSRecord).not.toHaveBeenCalled();
   });
 });
+
+describe('record metadata', () => {
+  const withMeta = () => ({
+    setArNSRecord: vi.fn(async () => ({ messageId: 'set-1' })),
+    setArNSRecordMetadata: vi.fn(async () => ({ messageId: 'meta-1' })),
+    removeArNSRecord: vi.fn(async () => ({ messageId: 'rm-1' })),
+  });
+
+  it('does not touch metadata when none changed — that would cost a 2nd approval', () => {
+    const turbo = withMeta();
+    return sponsoredRecordWriter('AnT1', turbo, owner)
+      .setRecord({ undername: '@', transactionId: 'TX1', ttlSeconds: 900 })
+      .then(() => {
+        expect(turbo.setArNSRecord).toHaveBeenCalledTimes(1);
+        // Metadata is a SEPARATE action, so sending it unconditionally would
+        // make every save a two-prompt save.
+        expect(turbo.setArNSRecordMetadata).not.toHaveBeenCalled();
+      });
+  });
+
+  it('sends metadata under the SDK’s prefixed field names', async () => {
+    const turbo = withMeta();
+    await sponsoredRecordWriter('AnT1', turbo, owner).setRecord({
+      undername: 'docs',
+      transactionId: 'TX1',
+      ttlSeconds: 900,
+      displayName: 'Docs',
+      logo: 'L'.repeat(43),
+      description: 'the manual',
+      keywords: ['a'],
+    });
+    // displayName is unprefixed; the other three are recordLogo /
+    // recordDescription / recordKeywords. Getting this wrong drops the field.
+    expect(turbo.setArNSRecordMetadata).toHaveBeenCalledWith({
+      antId: 'AnT1',
+      owner,
+      undername: 'docs',
+      displayName: 'Docs',
+      recordLogo: 'L'.repeat(43),
+      recordDescription: 'the manual',
+      recordKeywords: ['a'],
+    });
+  });
+
+  it('forwards an explicit clear as null, not as an omission', async () => {
+    const turbo = withMeta();
+    await sponsoredRecordWriter('AnT1', turbo, owner).setRecord({
+      undername: 'docs',
+      transactionId: 'TX1',
+      ttlSeconds: 900,
+      description: null,
+    });
+    const sent = turbo.setArNSRecordMetadata.mock.calls[0][0];
+    expect(sent.recordDescription).toBeNull();
+    // Untouched siblings stay out entirely — omitted means "leave alone".
+    expect(sent).not.toHaveProperty('displayName');
+    expect(sent).not.toHaveProperty('recordLogo');
+  });
+});

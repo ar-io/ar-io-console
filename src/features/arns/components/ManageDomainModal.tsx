@@ -265,7 +265,13 @@ export default function ManageDomainModal({
 
   return (
     <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-4 sm:p-5">
+      {/*
+        Wider than the default modal: this one carries the full payment row
+        (Balance, Card, ARIO, SOL) and at max-w-lg the options were clipped, so
+        a buyer could not see — let alone choose — the method they wanted.
+        Matches ArNSPaymentModal, which shows the same row.
+      */}
+      <div className="w-[92vw] max-w-xl p-4 sm:p-5">
         {/* Header */}
         <ModalHeader
           icon={Layers}

@@ -10,8 +10,14 @@ import {
 
 describe('sponsored action catalogue', () => {
   it('tracks the SDK list, so it cannot drift from the bundler', () => {
-    expect(SPONSORED_ACTIONS).toHaveLength(9);
+    // Nine at launch, twelve since alpha.11 added the record-scoped actions.
+    // Asserted against the SDK's own export rather than a literal, so the next
+    // time the bundler grows an action this fails loudly instead of silently
+    // under-reporting what is sponsored.
+    expect(SPONSORED_ACTIONS).toHaveLength(12);
     expect(isSponsoredAction('buy-name')).toBe(true);
+    expect(isSponsoredAction('set-record-metadata')).toBe(true);
+    expect(isSponsoredAction('transfer-record')).toBe(true);
   });
 
   it('excludes the four operations that still cost the user SOL', () => {
@@ -38,11 +44,27 @@ describe('sponsored action catalogue', () => {
     ]);
   });
 
-  it('requires an owner proof for both record actions, grant or no grant', () => {
+  it('requires an owner proof for every record action, grant or no grant', () => {
     const proofed = SPONSORED_ACTIONS.filter(
       (a) => SPONSORED_ACTION_FACTS[a].requiresOwnerProof,
     );
-    expect(proofed).toEqual(['set-record', 'remove-record']);
+    expect(proofed).toEqual([
+      'set-record',
+      'remove-record',
+      'set-record-metadata',
+      'remove-record-metadata',
+    ]);
+  });
+
+  it('keeps transfer-record distinct from transfer', () => {
+    // One hands over a single record; the other hands over the name and every
+    // record on it. Confusing them gives away far more than intended, so they
+    // must never share confirmation copy.
+    expect(isSponsoredAction('transfer')).toBe(true);
+    expect(isSponsoredAction('transfer-record')).toBe(true);
+    expect(SPONSORED_ACTION_FACTS['transfer-record'].expectedPrompt).toBe(
+      'transaction',
+    );
   });
 
   it('marks record writes conditional, because the grant is revocable', () => {

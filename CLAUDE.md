@@ -172,7 +172,7 @@ The largest feature in the repo (~110 files) and the least guessable — read th
 
 **ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet — but since Turbo sponsors the fees, that wallet needs **no SOL balance**. Email sign-in creates one (see `PrivySolanaBridge`), so a user who has never held cryptocurrency can own and run a name.
 
-**Turbo sponsors the Solana fees** (`actions/`). Twelve actions are gas-sponsored:
+**Turbo sponsors the Solana fees** (`actions/`). Twelve actions are gas-sponsored (nine at launch; `set-record-metadata`, `remove-record-metadata` and `transfer-record` arrived in turbo-sdk `1.42.0-alpha.11`):
 Turbo is fee payer, the user pays in Turbo Credits, and the ANT is minted
 straight to the buyer. **Turbo takes custody of nothing** — there is no claim
 step, no transfer-out, and no "Turbo-held name". Don't build one, and don't
@@ -187,7 +187,7 @@ wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
 `ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
 is sponsored (`actions/sponsorship.ts`).
 
-**Pin turbo-sdk EXACTLY.** Stable `1.42.0` sorts *above* `1.42.0-alpha.10` in
+**Pin turbo-sdk EXACTLY.** Stable `1.42.0` sorts *above* the `1.42.0-alpha.x` line in
 semver and contains **no ArNS surface at all**, so a caret range or a routine
 `npm update` silently deletes this feature and nothing fails until someone tries
 to buy a name.
@@ -203,8 +203,18 @@ Not sponsored, each still costing the user SOL:
   block to the ARIO option *alone*; applying it broadly blocks exactly the
   zero-SOL buyers sponsorship exists for.
 - Primary name, release, reassign, and **ANT-level** metadata
-  (`EditDetailsModal`). Record-level metadata is a different thing that sits
-  next to it in the program — label them distinctly.
+  (`EditDetailsModal`). Record-level metadata IS sponsored
+  (`set-record-metadata`) and the two sit next to each other in the program:
+  editing a record's display name is free, editing the name's own is not.
+  Label them distinctly or users meet the difference at a wallet prompt.
+
+**A record save can cost TWO approvals.** `setArNSRecord` (target + TTL) and
+`setArNSRecordMetadata` (display name, logo, description, keywords) are
+separate actions, so changing both prompts twice. `toRecordChange` diffs
+against the loaded record precisely so metadata is sent only when it actually
+changed — a snapshot would make every save a two-prompt save. The
+controller path has the opposite shape: the ANT program bundles record and
+metadata into one transaction, so a self-signed save is always one signature.
 
 **Turbo cannot change a name on its own.** Buying grants Turbo controller
 rights in the same transaction that mints the name, but `setArNSRecord` takes
