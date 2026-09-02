@@ -163,17 +163,17 @@ export function ArNSPurchaseCard({
    * existing balance when there is one. `route` is where that choice turns back
    * into machinery; see settlementRoute.ts for why the two differ.
    *
-   * `walletType` is hard-coded, and the real reason is narrower than "ArNS is
-   * Solana-only". A CRYPTO top-up credits whoever sent the tokens, and the
-   * purchase spends the credits of the wallet that will own the name — always
-   * the Solana one. Offering an Ethereum session its own chains here would put
-   * the credits on the session address and leave the purchase unfunded, so the
-   * token menu stays bound to the wallet that gets debited. The card route has
-   * no such limit: it names its destination explicitly (`ownerAddress` below).
-   *
-   * It also means a signed-out visitor sees the real menu, with
+   * `walletType` is hard-coded so a signed-out visitor sees the real menu, with
    * SolanaGateButton owning the connect gate — collapsing it to a lone "Card"
    * would understate the page.
+   *
+   * It is NOT justified by where the credits go, whatever a previous version of
+   * this comment claimed. The PAYER on every credits-settled route is the
+   * session identity (`purchaseWithCredits` takes `client: getOwnerClient()`),
+   * so an Ethereum session's own chains would credit exactly the right account
+   * — while SOL, which this menu does offer everyone, credits the linked Solana
+   * wallet and leaves the purchase unfunded. The binding is backwards; see the
+   * review notes before extending it either way.
    *
    * Built twice, deliberately. Which options EXIST doesn't depend on the price,
    * but whether each one can COVER it does — and the price query's `enabled`
