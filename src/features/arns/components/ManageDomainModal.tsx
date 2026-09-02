@@ -26,6 +26,7 @@ import {
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
+import { useStore } from '../../../store/useStore';
 import {
   getTokenSmallestUnit,
   useSmallestUnitForWinc,
@@ -80,6 +81,20 @@ export default function ManageDomainModal({
   const isLease = domain.type !== 'permabuy';
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
+
+  /*
+    A token top-up credits whoever SENT the tokens — here the Solana wallet
+    that will own the name — while the purchase spends the SESSION identity's
+    credits. One wallet on a Solana session, two on any other, and in the
+    second case the tokens leave and the purchase stays unfunded. Offering the
+    option at all takes real money for nothing.
+
+    Signed out the menu stays complete: there is no session to mismatch yet,
+    and SolanaGateButton owns the connect gate.
+  */
+  const sessionWalletType = useStore((s) => s.walletType);
+  const creditTopUpsUnavailable =
+    !!sessionWalletType && sessionWalletType !== 'solana';
   const balances = useArNSPaymentBalances(address);
 
   // Lease names can renew / upgrade / add undernames; permabuy can only add.
@@ -106,10 +121,11 @@ export default function ManageDomainModal({
         walletType: 'solana',
         credits: balances.credits,
         extraTokens: ['ario'],
+        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [balances.credits, cardEnabled],
+    [balances.credits, cardEnabled, creditTopUpsUnavailable],
   );
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
@@ -234,10 +250,11 @@ export default function ManageDomainModal({
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
         extraTokens: ['ario'],
+        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits],
+    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits, creditTopUpsUnavailable],
   );
 
   const priceReady =

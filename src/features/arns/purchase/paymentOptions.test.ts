@@ -257,3 +257,61 @@ describe('what a payment card says', () => {
     expect(o.find((x) => x.kind === 'balance')?.detail).toBe('2.49 credits');
   });
 });
+
+describe('creditTopUpsUnavailable — the payer must be the one credited', () => {
+  const arns = {
+    ...base,
+    walletType: 'solana',
+    extraTokens: ['ario'],
+  } as const;
+
+  /*
+    THE REGRESSION GUARD. A Solana session sends the tokens and spends the
+    credits with the same wallet, so nothing about its menu may move.
+  */
+  it('changes nothing for a Solana session', () => {
+    const before = buildPaymentOptions({ ...arns });
+    const after = buildPaymentOptions({ ...arns, creditTopUpsUnavailable: false });
+    expect(after).toEqual(before);
+    expect(ids(before)).toContain('token:solana');
+  });
+
+  it('defaults to offering them, so every existing caller is unaffected', () => {
+    expect(ids(buildPaymentOptions({ ...arns }))).toEqual(
+      ids(buildPaymentOptions({ ...arns, creditTopUpsUnavailable: false })),
+    );
+  });
+
+  /*
+    On an Ethereum or Arweave session the tokens are sent by the linked Solana
+    wallet and the purchase spends the session's credits. Offering SOL there
+    takes real money and leaves the purchase unfunded.
+  */
+  it('withdraws the credit-buying token when the payer would not be credited', () => {
+    const ids_ = ids(buildPaymentOptions({ ...arns, creditTopUpsUnavailable: true }));
+    expect(ids_).not.toContain('token:solana');
+  });
+
+  it('keeps ARIO, which pays the registry directly and touches no credits', () => {
+    expect(
+      ids(buildPaymentOptions({ ...arns, creditTopUpsUnavailable: true })),
+    ).toContain('token:ario');
+  });
+
+  it('leaves the routes that already credit the payer correctly', () => {
+    const withBalance = buildPaymentOptions({
+      ...arns,
+      credits: 50,
+      creditTopUpsUnavailable: true,
+    });
+    // Card and Balance both settle against the session identity already.
+    expect(ids(withBalance)).toContain('card');
+    expect(ids(withBalance)).toContain('balance');
+  });
+
+  it('never leaves a wallet with nothing to pay with', () => {
+    const opts = buildPaymentOptions({ ...arns, creditTopUpsUnavailable: true });
+    expect(opts.length).toBeGreaterThan(1);
+    expect(defaultPaymentOption(opts)).toBeDefined();
+  });
+});

@@ -84,6 +84,27 @@ export interface PaymentOptionsInput {
    */
   extraTokens?: SupportedTokenType[];
   isTokenSelectable: (t: SupportedTokenType) => boolean;
+  /**
+   * Drop the credit-buying tokens, keeping the extras.
+   *
+   * A token top-up credits WHOEVER SENT THE TOKENS, and these flows send from
+   * the Solana wallet that will own the name. Every credits-settled ArNS action
+   * then spends the SESSION identity's credits (`purchaseWithCredits` takes
+   * `client: getOwnerClient()`). On a Solana session those are one wallet and
+   * all is well; on an Ethereum or Arweave session they are two, so the tokens
+   * leave, the credits land somewhere the purchase never reads, and the buyer
+   * is out real SOL with no name.
+   *
+   * The extras survive on purpose: ARIO pays the registry directly through
+   * `@ar.io/sdk` and never touches credits, so it has no payer to mismatch.
+   *
+   * This removes an option rather than repairing it. Repairing it means sending
+   * the top-up from the SESSION wallet using its own chains, which is a larger
+   * change than a release should carry. Until then the working route for these
+   * users is /topup — which credits the session wallet correctly — followed by
+   * paying from Balance.
+   */
+  creditTopUpsUnavailable?: boolean;
   /** Card is unavailable when the payment service has Stripe disabled (503). */
   cardEnabled?: boolean;
   /**
@@ -105,6 +126,7 @@ export function buildPaymentOptions({
   tokenPrices = {},
   extraTokens = [],
   isTokenSelectable,
+  creditTopUpsUnavailable = false,
   cardEnabled = true,
   networkSolRequired,
   solBalance,
@@ -171,7 +193,9 @@ export function buildPaymentOptions({
     });
   }
 
-  const walletTokens = availableTokensForWallet(walletType, isTokenSelectable);
+  const walletTokens = creditTopUpsUnavailable
+    ? []
+    : availableTokensForWallet(walletType, isTokenSelectable);
   // Extras lead, then the wallet's own set, deduped. A wallet with no signer
   // gets neither — an option it cannot sign is worse than one less option.
   const tokens =
