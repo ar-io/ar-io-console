@@ -55,17 +55,17 @@ interface TopUpPanelProps {
   /**
    * Where the credits must land, when that is NOT the signed-in wallet.
    *
-   * Credits are held per address, and an ArNS purchase spends the credits of
-   * the wallet that will OWN the name — always a Solana one. For an Ethereum
-   * or Arweave session that wallet is the LINKED Solana wallet, a different
-   * account from the session identity this panel would otherwise credit. So a
-   * card top-up funded the session address while the purchase went looking for
-   * credits on the Solana address, found none, and failed with money already
-   * spent on the wrong account.
+   * NOT for ArNS. It is tempting — a name is owned by a Solana wallet that is
+   * frequently not the session identity — but the PAYER and the OWNER are
+   * different roles and only the payer's balance is ever spent. Every
+   * credits-settled ArNS action passes `client: await getOwnerClient()`, a
+   * client authenticated as the SESSION identity, so the session wallet is the
+   * one that must be credited. Pointing this at the owner sends the money to an
+   * address the purchase never reads. See `purchaseWithCredits`, whose `client`
+   * parameter is documented as "already authenticated as the PAYER".
    *
-   * Only the fiat path can honour this: a crypto top-up credits whoever sent
-   * the tokens, which is why the ArNS token menu stays bound to the Solana
-   * wallet rather than offering the session wallet's chains.
+   * Only the fiat path can honour it at all: a crypto top-up credits whoever
+   * sent the tokens.
    */
   creditDestination?: { address: string; type: 'arweave' | 'ethereum' | 'solana' };
   /**
