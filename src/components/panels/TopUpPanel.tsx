@@ -820,15 +820,22 @@ export default function TopUpPanel({
   }
 
   if (paymentMethod === 'fiat' && fiatFlowStep !== 'amount') {
-    // Determine target address for payment (use target if set, otherwise connected wallet)
-    const targetAddress = resolveCreditTarget({
+    /*
+      Address and wallet type must come from the SAME resolution. Reading the
+      address from the resolved target while leaving the type on the session
+      wallet hands the payment panels a Solana address labelled `ethereum`
+      whenever an Ethereum session buys a name — the exact mismatch this
+      resolver exists to prevent, reintroduced one line below it.
+    */
+    const target = resolveCreditTarget({
       destination: creditDestination,
       paymentTargetAddress,
       paymentTargetType: paymentTargetType as CreditWalletType | null,
       sessionAddress: address,
       sessionWalletType: walletType as CreditWalletType | null,
-    })?.address;
-    const targetWalletType = paymentTargetType || walletType;
+    });
+    const targetAddress = target?.address;
+    const targetWalletType = target?.type;
 
     switch (fiatFlowStep) {
       case 'details':
