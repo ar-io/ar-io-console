@@ -2,7 +2,26 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [Unreleased]
+## [4.7.0] - 2026-09-02
+
+### Fixed
+- **The cost breakdown now adds up.** The name price line was showing the full
+  total with the one-time setup already inside it, and the setup was then
+  listed again — so the three lines never reconciled and the total looked
+  wrong. The name line now shows the name alone.
+- **"Not enough credits" now sits against the total**, the figure it is
+  actually measured against.
+
+- **Paying with SOL now shows SOL.** Renewing a name quoted the cost in
+  credits even when SOL was the chosen payment, leaving you to convert it
+  yourself; and on registration the setup line was priced in credits while the
+  rows above and below it were in SOL, so the three could not be checked
+  against each other.
+
+### Added
+- **A "What's new" page**, listing every release. The version number in the
+  footer links to it — "which version am I on" and "did that get fixed" are
+  usually the same question.
 
 ### Changed
 - **Renewing a name now tells you what changed**, not just that it worked —
@@ -23,29 +42,6 @@ All notable changes to the ar.io Console are documented in this file.
 - **Removing a record now asks first**, and says what it costs. The trash icon
   sits beside the edit pencil at icon size, so it was easy to hit by accident —
   and removing is a charged action that gave no warning.
-
-### Fixed
-- **The cost breakdown now adds up.** The name price line was showing the full
-  total with the one-time setup already inside it, and the setup was then
-  listed again — so the three lines never reconciled and the total looked
-  wrong. The name line now shows the name alone.
-- **"Not enough credits" now sits against the total**, the figure it is
-  actually measured against.
-
-- **Paying with SOL now shows SOL.** Renewing a name quoted the cost in
-  credits even when SOL was the chosen payment, leaving you to convert it
-  yourself; and on registration the setup line was priced in credits while the
-  rows above and below it were in SOL, so the three could not be checked
-  against each other.
-
-## [4.7.0] - 2026-09-01
-
-### Added
-- **A "What's new" page**, listing every release. The version number in the
-  footer links to it — "which version am I on" and "did that get fixed" are
-  usually the same question.
-
-### Changed
 - **Buying and running an ArNS name no longer needs SOL.** Turbo pays the
   Solana fees and rent; you pay in Turbo Credits and the name is minted
   straight to your wallet. Turbo holds nothing, so there is no claim step and
@@ -69,35 +65,6 @@ All notable changes to the ar.io Console are documented in this file.
   because it differs by network.
 - **Turbo-custodied names are gone**, along with the claim flow that existed to
   get out of them. Sponsorship removes the reason they existed.
-
-### Fixed
-- **Renewing, upgrading and adding undernames returned "not found".** The
-  console was still calling payment routes the service has since replaced, so
-  every credits-paid change to a name failed outright.
-- **Editing an undername's display name, logo, description or keywords did
-  nothing.** The values were accepted, then dropped before they were sent. The
-  main record was unaffected, which is why this went unnoticed.
-- **Deleting a record appeared to do nothing.** The failure was real but had
-  nowhere to show itself unless the row happened to be open for editing.
-- **The renew window was too narrow to show every way to pay**, clipping the
-  options rather than wrapping them.
-- **Renewal was blocked for wallets holding no SOL.** The check that made sense
-  when the wallet paid its own fees was still gating a payment Turbo now
-  covers, so a name could become un-renewable — and an un-renewable lease is a
-  name eventually lost.
-- **Record edits could write empty values over fields you never opened.** Saves
-  sent every metadata field rather than the ones that changed.
-- Some wallets return a signature in a wrapper the service could not read, so
-  approvals from them failed as though the wrong wallet was connected.
-
-### Notes
-- Four actions still need a small amount of SOL: setting a primary name,
-  releasing a name, pointing it at a different name token, and editing the
-  name's own details. Buying from an auction and paying in ARIO also use your
-  own SOL. Each says so before you commit.
-- Controllers can still edit records, and pay their own network fee for it —
-  Turbo covers the owner's fees only.
-
 ## [4.6.0] - 2026-08-28
 
 ### Fixed
