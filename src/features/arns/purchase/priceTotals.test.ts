@@ -4,6 +4,7 @@ import {
   fiatCentsForPurchase,
   readWincTotals,
   wincForPurchase,
+  splitNameAndSetup,
   type ArNSPriceFields,
 } from './priceTotals';
 
@@ -156,3 +157,39 @@ describe('fiatCentsForPurchase', () => {
     ).toBeUndefined();
   });
 });
+
+describe('splitNameAndSetup', () => {
+  it('makes the three displayed lines add up', () => {
+    // The panel showed the TOTAL on the name row as well, so setup appeared to
+    // be excluded from both figures and the total read as wrong.
+    const { nameCredits } = splitNameAndSetup(3.0198, 2);
+    expect(nameCredits).toBeCloseTo(1.0198, 6);
+    expect((nameCredits ?? 0) + 2).toBeCloseTo(3.0198, 6);
+  });
+
+  it('scales a token sub-figure by the same ratio', () => {
+    // 0.1058 SOL is the TOTAL in SOL; the name's share is proportional because
+    // both derive linearly from winc.
+    const { ratio } = splitNameAndSetup(3.5666, 2);
+    expect(0.1058 * ratio).toBeCloseTo(0.0465, 4);
+  });
+
+  it('leaves the price alone when nothing was charged for setup', () => {
+    // Extend, upgrade and undernames mint nothing, so they carry no setup.
+    expect(splitNameAndSetup(1.5, 0)).toEqual({ nameCredits: 1.5, ratio: 1 });
+    expect(splitNameAndSetup(1.5, undefined)).toEqual({
+      nameCredits: 1.5,
+      ratio: 1,
+    });
+  });
+
+  it('reports nothing when the total is unknown', () => {
+    expect(splitNameAndSetup(undefined, 2).nameCredits).toBeUndefined();
+  });
+
+  it('never produces a negative name price', () => {
+    // A setup larger than the total means a malformed response; an implausible
+    // zero beats a negative figure rendered as fact.
+    expect(splitNameAndSetup(1, 2).nameCredits).toBe(0);
+  });
+})

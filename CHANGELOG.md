@@ -24,6 +24,14 @@ All notable changes to the ar.io Console are documented in this file.
   sits beside the edit pencil at icon size, so it was easy to hit by accident —
   and removing is a charged action that gave no warning.
 
+### Fixed
+- **The cost breakdown now adds up.** The name price line was showing the full
+  total with the one-time setup already inside it, and the setup was then
+  listed again — so the three lines never reconciled and the total looked
+  wrong. The name line now shows the name alone.
+- **"Not enough credits" now sits against the total**, the figure it is
+  actually measured against.
+
 ## [4.7.0] - 2026-09-01
 
 ### Added

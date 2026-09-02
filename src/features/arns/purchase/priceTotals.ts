@@ -157,3 +157,35 @@ export function fiatCentsForPurchase(
 function positiveOrUndefined(value: number | undefined): number | undefined {
   return typeof value === 'number' && value > 0 ? value : undefined;
 }
+
+/**
+ * Split a sponsored total back into the name and its one-time setup.
+ *
+ * The cost panel receives the TOTAL — that is the figure that gets debited —
+ * but has to show three lines that add up. Printing the total on the "Name
+ * price" row as well as the "Total" row, with setup itemised between them, made
+ * the setup look excluded from both and the total look wrong:
+ *
+ *     Name price      3.0198 credits
+ *     One-time setup  2.0000 credits
+ *     Total           3.0198 credits
+ *
+ * Subtraction is exact — both figures come from one price response — and the
+ * token amount scales linearly with winc, so a SOL sub-figure can be scaled by
+ * the same ratio rather than converted again.
+ */
+export function splitNameAndSetup(
+  totalCredits: number | undefined,
+  setupCredits: number | undefined,
+): { nameCredits: number | undefined; ratio: number } {
+  if (totalCredits === undefined) return { nameCredits: undefined, ratio: 1 };
+  if (!setupCredits) return { nameCredits: totalCredits, ratio: 1 };
+
+  // Never below zero: a setup larger than the total would mean a malformed
+  // response, and a negative name price is worse than an implausible one.
+  const nameCredits = Math.max(0, totalCredits - setupCredits);
+  return {
+    nameCredits,
+    ratio: totalCredits > 0 ? nameCredits / totalCredits : 1,
+  };
+}
