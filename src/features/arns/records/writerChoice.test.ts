@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { writerCostNote, writerForRole } from './writerChoice';
+import {
+  chooseWriter,
+  writerCostNote,
+  writerForRole,
+  MIN_SOL_FOR_RECORD_WRITE as MIN_SOL,
+} from './writerChoice';
 
 describe('writerForRole', () => {
   it('sponsors the owner — Turbo pays their Solana fee', () => {
@@ -87,5 +92,113 @@ describe('what an unresolved role means, per surface', () => {
     expect(roles.filter((r) => writerForRole(r) === 'sponsored')).toEqual([
       'owner',
     ]);
+  });
+});
+
+describe('chooseWriter — the funds-aware fallback', () => {
+  const RICH = { credits: 10, priceCredits: 0.17, sol: 1 };
+
+  it('keeps an owner who can pay on the credits route', () => {
+    expect(chooseWriter('owner', RICH)).toEqual({
+      kind: 'sponsored',
+      reason: 'owner',
+    });
+  });
+
+  /*
+    The dead end this exists for: the action costs a fraction of a cent and the
+    minimum top-up is $5, so "go buy credits" is not a real answer.
+  */
+  it('lets an owner short on credits sign and pay the SOL themselves', () => {
+    expect(
+      chooseWriter('owner', { credits: 0.01, priceCredits: 0.17, sol: 0.5 }),
+    ).toEqual({ kind: 'self-signed', reason: 'insufficient-credits' });
+  });
+
+  it('stays on credits when the owner cannot cover the SOL either', () => {
+    // The credits route names the shortfall; a wallet-level failure would not.
+    expect(
+      chooseWriter('owner', { credits: 0, priceCredits: 0.17, sol: 0 }).kind,
+    ).toBe('sponsored');
+  });
+
+  it('treats dust as not enough SOL', () => {
+    expect(
+      chooseWriter('owner', {
+        credits: 0,
+        priceCredits: 0.17,
+        sol: MIN_SOL / 2,
+      }).kind,
+    ).toBe('sponsored');
+    expect(
+      chooseWriter('owner', { credits: 0, priceCredits: 0.17, sol: MIN_SOL })
+        .kind,
+    ).toBe('self-signed');
+  });
+
+  /*
+    Balances and prices load asynchronously. Treating "not yet" as "can't
+    afford it" would swap the route, and the cost sentence with it, under a
+    user who is already reading it.
+  */
+  it('never reroutes on a figure that has not loaded', () => {
+    for (const funds of [
+      { credits: undefined, priceCredits: 0.17, sol: 1 },
+      { credits: 0, priceCredits: undefined, sol: 1 },
+      { credits: 0, priceCredits: 0.17, sol: undefined },
+      undefined,
+    ]) {
+      expect(chooseWriter('owner', funds).kind).toBe('sponsored');
+    }
+  });
+
+  it('does not reroute when credits exactly cover the price', () => {
+    expect(
+      chooseWriter('owner', { credits: 0.17, priceCredits: 0.17, sol: 1 }).kind,
+    ).toBe('sponsored');
+  });
+
+  it('leaves a controller self-signing however rich they are', () => {
+    // Turbo will not take their signature, so credits cannot help them.
+    expect(chooseWriter('controller', RICH)).toEqual({
+      kind: 'self-signed',
+      reason: 'controller',
+    });
+  });
+
+  it('still blocks an unresolved role regardless of funds', () => {
+    expect(chooseWriter('unknown', RICH).kind).toBe('blocked');
+    expect(chooseWriter('none', RICH).kind).toBe('blocked');
+  });
+
+  it('keeps writerForRole on the role-only behaviour its callers expect', () => {
+    expect(writerForRole('owner')).toBe('sponsored');
+    expect(writerForRole('controller')).toBe('self-signed');
+  });
+});
+
+describe('writerCostNote — the two people who self-sign', () => {
+  /*
+    An owner reroutes here by running out of credits. Telling them they do not
+    own the name is wrong, and alarming in a way that reads as a bug.
+  */
+  it('does not tell a rerouted OWNER they do not own the name', () => {
+    const note = writerCostNote('self-signed', undefined, 'insufficient-credits')!;
+    expect(note).not.toMatch(/don.t own/i);
+    expect(note).toMatch(/not enough credits/i);
+    expect(note).toMatch(/solana fee/i);
+  });
+
+  it('still explains the controller case in its own terms', () => {
+    const note = writerCostNote('self-signed', undefined, 'controller')!;
+    expect(note).toMatch(/don.t own/i);
+  });
+
+  it('never quotes credits to anyone who is paying the network', () => {
+    for (const reason of ['controller', 'insufficient-credits'] as const) {
+      expect(writerCostNote('self-signed', 0.1685, reason)).not.toContain(
+        '0.1685',
+      );
+    }
   });
 });

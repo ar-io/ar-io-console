@@ -5,6 +5,11 @@ All notable changes to the ar.io Console are documented in this file.
 ## [4.7.0] - 2026-09-02
 
 ### Fixed
+- **Running out of credits no longer blocks a record change you can sign
+  yourself.** An owner short on credits is offered the direct route — their
+  wallet signs and pays the Solana fee — instead of being sent to buy a $5
+  minimum of credits for an action costing a fraction of a cent. Credits stay
+  the default, because that price can be quoted exactly before you click.
 - **Buying a name with a card no longer funds the wrong wallet.** Credits are
   held per address, and a name is paid for by the Solana wallet that will own
   it. An Ethereum or Arweave user buying with a card had the credits added to

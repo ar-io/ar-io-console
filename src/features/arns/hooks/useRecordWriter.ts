@@ -16,7 +16,8 @@ import {
   sponsoredRecordWriter,
   type SponsoredRecordClient,
 } from '../records/sponsoredWriter';
-import { writerCostNote, writerForRole } from '../records/writerChoice';
+import { chooseWriter, writerCostNote } from '../records/writerChoice';
+import { useArNSPaymentBalances } from './useArNSPaymentBalances';
 
 /**
  * The writer for a name's records, chosen by what this wallet is to the name.
@@ -29,8 +30,9 @@ import { writerCostNote, writerForRole } from '../records/writerChoice';
  * Two identities are involved on the sponsored path and they are frequently
  * different wallets: the PAYER (the session identity, whose Turbo client makes
  * the request) and the OWNER (the Solana wallet that holds the name and
- * approves the write). A record write costs no credits, so the payer here is
- * only proving who is asking.
+ * approves the write). A record write DOES cost credits — the fee Turbo pays
+ * on Solana, billed back — so the payer is settling, not merely identifying
+ * itself. That is what makes running out of credits reroutable.
  */
 export function useRecordWriter(processId: string | undefined) {
   const signer = useArNSTurboSigner();
@@ -41,14 +43,29 @@ export function useRecordWriter(processId: string | undefined) {
     processId ? summaries.get(processId) : undefined,
     signer.address,
   );
-  const kind = writerForRole(role);
   /*
-    Only the sponsored path is charged in credits; a controller pays SOL to the
-    network instead, so pricing the action would state a cost they never see.
+    Priced whenever the wallet OWNS the name, not only when the sponsored route
+    is chosen — the choice now depends on whether credits cover the price, so
+    fetching only for the sponsored case would be circular. A controller still
+    skips it: they pay SOL, and quoting credits would state a cost they never
+    see.
   */
-  const { credits } = useArNSActionPrice(
-    kind === 'sponsored' ? 'set-record' : undefined,
+  const { credits: priceCredits } = useArNSActionPrice(
+    role === 'owner' ? 'set-record' : undefined,
   );
+
+  /*
+    Balances decide the fallback. `credits` here is the SESSION wallet's, which
+    is the one the sponsored route bills; `sol` is the owner's, which is the
+    one that pays if we fall back to signing directly.
+  */
+  const balances = useArNSPaymentBalances(signer.address ?? undefined);
+
+  const { kind, reason } = chooseWriter(role, {
+    credits: balances.credits,
+    priceCredits,
+    sol: balances.sol,
+  });
 
   const getWriter = useCallback(
     async (antId?: string): Promise<RecordWriter> => {
@@ -102,12 +119,15 @@ export function useRecordWriter(processId: string | undefined) {
     /** True while the role is still resolving — writes must wait, not guess. */
     isResolving: kind === 'blocked' && role === 'unknown',
     /** What this wallet's edits cost, for the note above the editor. */
-    costNote: writerCostNote(kind, credits),
+    costNote: writerCostNote(kind, priceCredits, reason),
     /**
-     * True for a controller. Their writes are not sponsored, so they pay the
-     * Solana network directly and are never billed in credits — quoting a
-     * credits figure to them would name a cost they never see.
+     * True whenever this wallet signs the Solana transaction itself and pays
+     * the network fee — a controller always, and an owner who fell back for
+     * want of credits. Either way a credits figure would name a cost they
+     * never see.
      */
     paysNetworkDirectly: kind === 'self-signed',
+    /** Why, so a surface can explain an unexpected route. */
+    writerReason: reason,
   };
 }
