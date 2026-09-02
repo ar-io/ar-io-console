@@ -29,6 +29,7 @@ import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { planNamePurchase } from '../purchase/cardPlan';
 import { useStore } from '../../../store/useStore';
+import { walletSplitNote } from '../purchase/walletRoles';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
@@ -169,6 +170,19 @@ export function ArNSPurchaseCard({
   const sessionWalletType = useStore((s) => s.walletType);
   const creditTopUpsUnavailable =
     !!sessionWalletType && sessionWalletType !== 'solana';
+
+  /*
+    The two wallets, said out loud. On an Ethereum or Arweave session the payer
+    and the owner are different accounts, and no surface used to mention it —
+    so a balance reading empty, or credits landing somewhere unexpected, had
+    nothing on screen to explain it.
+  */
+  const sessionAddress = useStore((s) => s.address);
+  const walletSplit = walletSplitNote({
+    sessionWalletType,
+    sessionAddress,
+    ownerAddress: address,
+  });
 
 
   const balances = useArNSPaymentBalances(address);
@@ -829,6 +843,10 @@ export function ArNSPurchaseCard({
 
       {/* Payment method + source */}
       <div className="mb-4">
+        {walletSplit && (
+          <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
+        )}
+
         <ArNSPaymentSelector
           options={paymentOptions}
           selectedId={selectedOption?.id ?? ''}

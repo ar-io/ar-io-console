@@ -150,3 +150,4 @@ export {
   wincForPurchase,
 } from './purchase/priceTotals';
 export type { ArNSPriceFields, ArNSWincTotals } from './purchase/priceTotals';
+export { walletSplitNote, shortAddress } from './purchase/walletRoles';

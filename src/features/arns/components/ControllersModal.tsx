@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Info, Loader2, Plus, Trash2, Users, XCircle } from 'lucide-react';
 
 import { ArNSName } from '@/types';
@@ -36,7 +37,15 @@ export default function ControllersModal({
   onSuccess,
 }: ControllersModalProps) {
   const state = useControllersState(domain.processId, true);
-  const { addController, removeController, busyKey, error, isBusy } =
+  const navigate = useNavigate();
+  const {
+    addController,
+    removeController,
+    busyKey,
+    error,
+    insufficientCredits,
+    isBusy,
+  } =
     useControllerWrites();
 
   const controllers = state.data?.controllers ?? [];
@@ -261,9 +270,26 @@ export default function ControllersModal({
 
         {/* Errors */}
         {error && (
-          <div className="mt-4 flex items-start gap-2 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
-            <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-            <span>{error.message}</span>
+          <div className="mt-4 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
+            <div className="flex items-start gap-2">
+              <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span>{error.message}</span>
+            </div>
+            {insufficientCredits && (
+              /*
+                Same dead end as the transfer modal: a price was quoted, the
+                balance never checked, and the failure offered nowhere to go.
+              */
+              <button
+                onClick={() => {
+                  onClose();
+                  navigate('/topup');
+                }}
+                className="mt-2 font-semibold text-primary hover:underline"
+              >
+                Top up credits →
+              </button>
+            )}
           </div>
         )}
       </div>
