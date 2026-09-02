@@ -495,30 +495,6 @@ export function ArNSCostBreakdown({
               </p>
             )}
 
-        {/*
-          Rendered below BOTH totals rather than inside either branch: it is
-          measured against the total, and living in the sponsored arm silently
-          stripped the ARIO route of its warning and its swap link.
-        */}
-        {insufficientFunds && !priceLoading && (
-          <p className="flex items-center justify-end gap-1 text-xs text-error">
-            <AlertTriangle className="h-3 w-3" />
-            {priceUnit === 'credits'
-              ? 'Not enough Turbo Credits'
-              : 'Not enough ARIO in this source'}
-            {priceUnit !== 'credits' && (
-              <a
-                href={GET_ARIO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
-              >
-                Swap for ARIO
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </p>
-        )}
             <p
               className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
             >
@@ -567,6 +543,39 @@ export function ArNSCostBreakdown({
               )}
             </p>
           </>
+        )}
+
+        {/*
+          After the ternary, not inside an arm.
+
+          This landed in the wrong arm twice: first the sponsored one,
+          which stripped ARIO of its warning and swap link, then the ARIO
+          one, which stripped the credits/card/SOL routes of theirs — the
+          very warning a user had just reported seeing. Placed after the
+          branch it renders under whichever total was drawn, which is the
+          only version true for every route.
+
+          Measured against the TOTAL, which is why it sits below it rather
+          than under the name row where it used to be.
+        */}
+        {insufficientFunds && !priceLoading && (
+          <p className="flex items-center justify-end gap-1 text-xs text-error">
+            <AlertTriangle className="h-3 w-3" />
+            {priceUnit === 'credits'
+              ? 'Not enough Turbo Credits'
+              : 'Not enough ARIO in this source'}
+            {priceUnit !== 'credits' && (
+              <a
+                href={GET_ARIO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+              >
+                Swap for ARIO
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </p>
         )}
       </div>
       {/*
