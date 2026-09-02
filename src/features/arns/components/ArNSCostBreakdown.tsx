@@ -259,6 +259,11 @@ export function ArNSCostBreakdown({
     hasSetup && tokenForName
       ? { ...tokenForName, amount: tokenForName.amount * ratio }
       : tokenForName;
+  // The setup's share of the token amount: whatever the name's is not.
+  const setupToken =
+    hasSetup && tokenForName
+      ? { ...tokenForName, amount: tokenForName.amount * (1 - ratio) }
+      : undefined;
 
   const amountNode = (
     credits: number | undefined,
@@ -394,8 +399,30 @@ export function ArNSCostBreakdown({
                   </span>
                 }
               >
-                <span className="text-sm text-foreground/80">
-                  {fmtNum(setupCredits)} credits
+                {/*
+                  Priced in whatever the other two rows use.
+
+                  It read "2 credits" while the name and total read SOL, so the
+                  panel showed 0.0375 SOL + 2 credits = 0.1074 SOL — three rows
+                  a reader cannot reconcile because the middle one is in another
+                  unit. The token share scales by the same ratio as the name's,
+                  both being linear in winc.
+                */}
+                <span className="flex flex-col items-end">
+                  {setupToken ? (
+                    <>
+                      <span className="text-sm text-foreground/80">
+                        {`${fmtSol(setupToken.amount)} ${setupToken.label}`}
+                      </span>
+                      <span className="text-[11px] text-foreground/50">
+                        {`${fmtNum(setupCredits)} credits`}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-foreground/80">
+                      {`${fmtNum(setupCredits)} credits`}
+                    </span>
+                  )}
                 </span>
               </Row>
             )}

@@ -193,3 +193,25 @@ describe('splitNameAndSetup', () => {
     expect(splitNameAndSetup(1, 2).nameCredits).toBe(0);
   });
 })
+
+describe('token-denominated rows', () => {
+  it('splits a SOL total so the three rows reconcile', () => {
+    /*
+      Reported from staging: name 0.0375 SOL, setup "2 credits", total 0.1074
+      SOL — unreconcilable, because the middle row was in another unit. Both
+      shares are linear in winc, so the same ratio applies to the token.
+    */
+    const totalSol = 0.1074;
+    const { ratio } = splitNameAndSetup(3.0698, 2);
+    const nameSol = totalSol * ratio;
+    const setupSol = totalSol * (1 - ratio);
+    expect(nameSol + setupSol).toBeCloseTo(totalSol, 6);
+    expect(nameSol).toBeCloseTo(0.0374, 3);
+  });
+
+  it('gives the whole token amount to the name when nothing is set up', () => {
+    // Renew, upgrade and undernames mint nothing, so there is no setup share.
+    const { ratio } = splitNameAndSetup(0.357, 0);
+    expect(ratio).toBe(1);
+  });
+});
