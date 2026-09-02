@@ -32,6 +32,12 @@ All notable changes to the ar.io Console are documented in this file.
 - **"Not enough credits" now sits against the total**, the figure it is
   actually measured against.
 
+- **Paying with SOL now shows SOL.** Renewing a name quoted the cost in
+  credits even when SOL was the chosen payment, leaving you to convert it
+  yourself; and on registration the setup line was priced in credits while the
+  rows above and below it were in SOL, so the three could not be checked
+  against each other.
+
 ## [4.7.0] - 2026-09-01
 
 ### Added

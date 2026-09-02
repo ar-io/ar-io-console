@@ -26,6 +26,10 @@ import {
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
+import {
+  getTokenSmallestUnit,
+  useSmallestUnitForWinc,
+} from '../../../hooks/useCryptoPrice';
 import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
@@ -175,6 +179,31 @@ export default function ManageDomainModal({
     outcome this modal has.
   */
   const sponsored = priceUnit === 'credits';
+
+  /*
+    What actually leaves the wallet when paying with a token.
+
+    A token top-up buys credits first, so the cost is settled in credits — but
+    the user is handing over SOL, and quoting only the credits figure asks them
+    to convert it themselves at a rate we know and they do not. The purchase
+    card has always shown the token amount; this modal never did, so renewing
+    with SOL showed "0.357 credits" and no SOL at all.
+  */
+  const tokenSmallestUnitForName = useSmallestUnitForWinc(
+    route.kind === 'topup' && creditsPrice?.sponsoredCredits
+      ? creditsPrice.sponsoredCredits * 1e12
+      : undefined,
+    route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
+  );
+  const tokenForName =
+    route.kind === 'topup' && tokenSmallestUnitForName
+      ? {
+          amount:
+            Number(tokenSmallestUnitForName) /
+            Number(getTokenSmallestUnit(route.token as SupportedTokenType)),
+          label: tokenLabels[route.token as SupportedTokenType],
+        }
+      : undefined;
   const insufficientSol =
     !sponsored &&
     // Only a KNOWN balance can block the action. `undefined` means the lookup
@@ -458,7 +487,10 @@ export default function ManageDomainModal({
               {/* Registry payments settle from credits with no wallet prompt
                   at all — worth saying, because the hesitation before clicking
                   is usually "what is this going to ask me for". */}
-              {priceUnit === 'credits' && (
+              {/* Only true when the credits are already there. On a token
+                  top-up the user is about to send SOL, so "no SOL" is the one
+                  thing they can see is false. */}
+              {route.kind === 'credits' && (
                 <p className="mb-2 text-xs text-foreground/60">
                   Paid from your credits. No wallet approval, and no SOL.
                 </p>
@@ -466,6 +498,7 @@ export default function ManageDomainModal({
               <ArNSCostBreakdown
                 priceUnit={priceUnit}
                 creditsPrice={creditsPrice?.sponsoredCredits}
+                tokenForName={tokenForName}
                 /* Renew, upgrade and undername slots are registry payments
                    Turbo settles from credits — no Solana cost to the user, and
                    nothing minted, so no setup charge either. */
