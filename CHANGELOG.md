@@ -5,6 +5,10 @@ All notable changes to the ar.io Console are documented in this file.
 ## [4.7.0] - 2026-09-02
 
 ### Fixed
+- **The payment options read as one set.** Large balances were cut off
+  mid-number, each card was a different height, and the four described
+  themselves three different ways. Holdings are now shortened rather than
+  truncated, and every card carries the same amount-and-unit line.
 - **The cost breakdown now adds up.** The name price line was showing the full
   total with the one-time setup already inside it, and the setup was then
   listed again — so the three lines never reconciled and the total looked
