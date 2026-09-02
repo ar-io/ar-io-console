@@ -5,6 +5,12 @@ All notable changes to the ar.io Console are documented in this file.
 ## [4.7.0] - 2026-09-02
 
 ### Fixed
+- **Paying for a name with SOL no longer strands the credits** when you signed
+  in with an Ethereum or Arweave wallet. The tokens were sent by the linked
+  Solana wallet while the purchase spent the credits of the wallet you signed in
+  with, so the SOL left and the name was never bought. The option is withdrawn
+  for those sessions until it can send from the right wallet; Top Up then
+  Balance works today, and Solana sessions are unaffected.
 - **Running out of credits no longer blocks a record change you can sign
   yourself.** An owner short on credits is offered the direct route — their
   wallet signs and pays the Solana fee — instead of being sent to buy a $5

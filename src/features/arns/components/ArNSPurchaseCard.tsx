@@ -28,6 +28,7 @@ import {
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { planNamePurchase } from '../purchase/cardPlan';
+import { useStore } from '../../../store/useStore';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
@@ -155,6 +156,20 @@ export function ArNSPurchaseCard({
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
 
+  /*
+    A token top-up credits whoever SENT the tokens — here the Solana wallet
+    that will own the name — while the purchase spends the SESSION identity's
+    credits. One wallet on a Solana session, two on any other, and in the
+    second case the tokens leave and the purchase stays unfunded. Offering the
+    option at all takes real money for nothing.
+
+    Signed out the menu stays complete: there is no session to mismatch yet,
+    and SolanaGateButton owns the connect gate.
+  */
+  const sessionWalletType = useStore((s) => s.walletType);
+  const creditTopUpsUnavailable =
+    !!sessionWalletType && sessionWalletType !== 'solana';
+
 
   const balances = useArNSPaymentBalances(address);
 
@@ -187,10 +202,11 @@ export function ArNSPurchaseCard({
         walletType: 'solana',
         credits: balances.credits,
         extraTokens: ['ario'],
+        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [balances.credits, cardEnabled],
+    [balances.credits, cardEnabled, creditTopUpsUnavailable],
   );
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
@@ -391,11 +407,12 @@ export function ArNSPurchaseCard({
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
         extraTokens: ['ario'],
+        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
     [
-      address, balances.credits, balances.sol, balances.totalArio,
+      address, balances.credits, balances.sol, balances.totalArio, creditTopUpsUnavailable,
       creditsPrice?.sponsoredCredits, cardEnabled,
       cost?.gasTotalSol, balances.loading,
     ],
