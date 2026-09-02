@@ -9,6 +9,7 @@ import {
 
 import type { ArNSPriceUnit } from './ArNSPaymentSelector';
 import PriceAmount from './PriceAmount';
+import { splitNameAndSetup } from '../purchase/priceTotals';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
 /** Where to send users who need SOL for the network deposit. Configurable. */
@@ -243,7 +244,27 @@ export function ArNSCostBreakdown({
     solBalance,
   );
 
-  const priceNode = priceLoading ? (
+  /*
+    The name on its own, with the one-time setup taken back out, so the three
+    displayed lines add up. See `splitNameAndSetup`, which carries the reasoning
+    and the tests — the arithmetic lives there rather than inline because
+    getting it wrong prints a total nobody can reconcile.
+  */
+  const hasSetup = sponsored && setupCredits != null && setupCredits > 0;
+  const { nameCredits: nameOnlyCredits, ratio } = splitNameAndSetup(
+    creditsPrice,
+    hasSetup ? setupCredits : undefined,
+  );
+  const nameOnlyToken =
+    hasSetup && tokenForName
+      ? { ...tokenForName, amount: tokenForName.amount * ratio }
+      : tokenForName;
+
+  const amountNode = (
+    credits: number | undefined,
+    token: { amount: number; label: string } | undefined,
+  ) =>
+    priceLoading ? (
     <span className="flex items-center gap-2 text-sm text-foreground/70">
       <Loader2 className="h-4 w-4 animate-spin" /> Fetching…
     </span>
@@ -257,16 +278,16 @@ export function ArNSCostBreakdown({
   isCardRoute && cardUsdPrice == null ? (
     // Card price not resolved yet — wait rather than quoting another unit.
     <span className="text-sm text-foreground/50">…</span>
-  ) : tokenForName ? (
+  ) : token ? (
     /*
       Dollars lead, the token amount beneath — the two answer different
       questions ("what does this cost" vs "what leaves my wallet") and both are
       wanted, which is why the toggle that hid one behind the other went.
     */
     <span className="flex flex-col items-end">
-      {usdPerCredit != null && creditsPrice != null && (
+      {usdPerCredit != null && credits != null && (
         <span className="text-sm font-medium text-foreground">
-          {`~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+          {`~$${(credits * usdPerCredit).toLocaleString(undefined, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}`}
@@ -274,12 +295,12 @@ export function ArNSCostBreakdown({
       )}
       <span
         className={
-          usdPerCredit != null && creditsPrice != null
+          usdPerCredit != null && credits != null
             ? 'text-xs text-foreground/50'
             : 'text-sm font-medium text-foreground'
         }
       >
-        {`${fmtSol(tokenForName.amount)} ${tokenForName.label}`}
+        {`${fmtSol(token.amount)} ${token.label}`}
       </span>
     </span>
   ) : cardUsdPrice != null ? (
@@ -290,7 +311,7 @@ export function ArNSCostBreakdown({
       })}`}
     </span>
   ) : priceUnit === 'credits' ? (
-    creditsPrice != null ? (
+    credits != null ? (
       // Casing convention across ArNS priced surfaces: "Turbo Credits" is the
       // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
       // lowercase "credits" is the unit that follows an amount. Keep it lowercase
@@ -298,7 +319,7 @@ export function ArNSCostBreakdown({
       <span className="flex flex-col items-end">
         {usdPerCredit != null && (
           <span className="text-sm font-medium text-foreground">
-            {`~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+            {`~$${(credits * usdPerCredit).toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`}
@@ -311,7 +332,7 @@ export function ArNSCostBreakdown({
               : 'text-sm font-medium text-foreground'
           }
         >
-          {`${fmtNum(creditsPrice)} credits`}
+          {`${fmtNum(credits)} credits`}
         </span>
       </span>
     ) : (
@@ -326,7 +347,10 @@ export function ArNSCostBreakdown({
     />
   ) : (
     <span className="text-sm text-foreground/50">—</span>
-  );
+    );
+
+  const priceNode = amountNode(nameOnlyCredits, nameOnlyToken);
+  const totalNode = amountNode(creditsPrice, tokenForName);
 
   return (
     <>
@@ -352,26 +376,6 @@ export function ArNSCostBreakdown({
         >
           {priceNode}
         </Row>
-        {insufficientFunds && !priceLoading && (
-          <p className="flex items-center justify-end gap-1 text-xs text-error">
-            <AlertTriangle className="h-3 w-3" />
-            {priceUnit === 'credits'
-              ? 'Not enough Turbo Credits'
-              : 'Not enough ARIO in this source'}
-            {priceUnit !== 'credits' && (
-              <a
-                href={GET_ARIO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
-              >
-                Swap for ARIO
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </p>
-        )}
-
         <div className="my-2 border-t border-border/10" />
 
         {/*
@@ -396,16 +400,23 @@ export function ArNSCostBreakdown({
               </Row>
             )}
             <div className="my-2 border-t border-border/10" />
+            {/*
+              `totalNode`, not `priceNode` — the latter is now the name WITHOUT
+              the one-time setup, so reusing it here would under-state the total
+              by exactly the charge itemised above it.
+
+              No caption underneath either. It read "Turbo pays the Solana fees
+              — you don't need SOL": extra text answering a question nobody asks
+              while paying, and plainly false on the token route, where the
+              figure above IS the SOL leaving their wallet. The setup row's own
+              tooltip already says who covers the network deposit, at the line
+              where that actually matters.
+            */}
             <Row label="Total" strong>
-              <span className="flex flex-col items-end">
-                <span
-                  className={`text-lg font-bold ${insufficientFunds ? 'text-error' : 'text-foreground'}`}
-                >
-                  {priceNode}
-                </span>
-                <span className="text-[11px] font-normal text-foreground/60">
-                  Turbo pays the Solana fees — you don&apos;t need SOL
-                </span>
+              <span
+                className={`text-lg font-bold ${insufficientFunds ? 'text-error' : 'text-foreground'}`}
+              >
+                {totalNode}
               </span>
             </Row>
           </>
@@ -483,6 +494,7 @@ export function ArNSCostBreakdown({
                 is what puts the name in your wallet rather than ours.
               </p>
             )}
+
             <p
               className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
             >
@@ -531,6 +543,39 @@ export function ArNSCostBreakdown({
               )}
             </p>
           </>
+        )}
+
+        {/*
+          After the ternary, not inside an arm.
+
+          This landed in the wrong arm twice: first the sponsored one,
+          which stripped ARIO of its warning and swap link, then the ARIO
+          one, which stripped the credits/card/SOL routes of theirs — the
+          very warning a user had just reported seeing. Placed after the
+          branch it renders under whichever total was drawn, which is the
+          only version true for every route.
+
+          Measured against the TOTAL, which is why it sits below it rather
+          than under the name row where it used to be.
+        */}
+        {insufficientFunds && !priceLoading && (
+          <p className="flex items-center justify-end gap-1 text-xs text-error">
+            <AlertTriangle className="h-3 w-3" />
+            {priceUnit === 'credits'
+              ? 'Not enough Turbo Credits'
+              : 'Not enough ARIO in this source'}
+            {priceUnit !== 'credits' && (
+              <a
+                href={GET_ARIO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+              >
+                Swap for ARIO
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </p>
         )}
       </div>
       {/*
