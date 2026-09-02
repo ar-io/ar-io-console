@@ -22,7 +22,7 @@ describe('buildPaymentOptions', () => {
     const first = buildPaymentOptions({ ...base, walletType: 'solana' })[0];
     expect(first.kind).toBe('card');
     // Naming the processor is the reassurance a card row exists to give.
-    expect(first.detail).toBe('Visa, Mastercard, Amex');
+    expect(first.detail).toBe('via Stripe');
   });
 
   it('names the processor on the Card option, with no custody caveat', () => {
@@ -30,7 +30,7 @@ describe('buildPaymentOptions', () => {
     // there is no longer a "what you get" difference to disclose here.
     const normal = buildPaymentOptions({ ...base, walletType: 'solana' });
     expect(normal.find((o) => o.kind === 'card')?.detail).toBe(
-      'Visa, Mastercard, Amex',
+      'via Stripe',
     );
   });
 
@@ -182,7 +182,7 @@ describe('network-cost blocking', () => {
   it('never blocks the card, whatever the wallet holds', () => {
     const card = withSol(0).find((x) => x.kind === 'card')!;
     expect(card.blockedReason).toBeUndefined();
-    expect(card.detail).toBe('Visa, Mastercard, Amex');
+    expect(card.detail).toBe('via Stripe');
   });
 
   it('blocks nothing when the SOL balance is UNKNOWN', () => {

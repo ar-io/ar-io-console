@@ -164,7 +164,7 @@ export function buildPaymentOptions({
         naming the processor. "Turbo holds the name" describes the trade; "No
         crypto needed" describes the reason to take it.
       */
-      detail: 'Visa, Mastercard, Amex',
+      detail: 'via Stripe',
       // A card can always cover the price — the charge is sized to it — and
       // Turbo pays the Solana costs, so no SOL block applies.
       sufficient: true,
