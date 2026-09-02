@@ -9,12 +9,12 @@ All notable changes to the ar.io Console are documented in this file.
   Both are signed by your wallet and paid for in SOL — they never touch credits
   — but both quoted a credits price, naming a charge that never arrives while
   saying nothing about the fee that does.
-- **Paying for a name with SOL no longer strands the credits** when you signed
-  in with an Ethereum or Arweave wallet. The tokens were sent by the linked
-  Solana wallet while the purchase spent the credits of the wallet you signed in
-  with, so the SOL left and the name was never bought. The option is withdrawn
-  for those sessions until it can send from the right wallet; Top Up then
-  Balance works today, and Solana sessions are unaffected.
+- **You can pay for a name with your own wallet's tokens.** Signed in with
+  Ethereum, you can now pay in Base USDC, ETH, POL or USDC; with Arweave, in AR.
+  Previously the only crypto option was SOL, which was sent by the linked Solana
+  wallet while the purchase spent the credits of the wallet you signed in with —
+  so the SOL left and the name was never bought. Payment now comes from the same
+  wallet the purchase draws on. Solana sessions are unchanged.
 - **Running out of credits no longer blocks a record change you can sign
   yourself.** An owner short on credits is offered the direct route — their
   wallet signs and pays the Solana fee — instead of being sent to buy a $5
