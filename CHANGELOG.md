@@ -5,6 +5,10 @@ All notable changes to the ar.io Console are documented in this file.
 ## [4.7.0] - 2026-09-02
 
 ### Fixed
+- **Transferring a name and changing controllers say what they actually cost.**
+  Both are signed by your wallet and paid for in SOL — they never touch credits
+  — but both quoted a credits price, naming a charge that never arrives while
+  saying nothing about the fee that does.
 - **Paying for a name with SOL no longer strands the credits** when you signed
   in with an Ethereum or Arweave wallet. The tokens were sent by the linked
   Solana wallet while the purchase spent the credits of the wallet you signed in

@@ -30,6 +30,7 @@ export default function ActionCostNote({
   secondaryVerb,
   primaryVerb,
   className = '',
+  paysNetworkDirectly,
 }: {
   /** The sponsored action, typed against the SDK so a typo cannot compile. */
   action: ArNSAction;
@@ -48,11 +49,34 @@ export default function ActionCostNote({
   /** Verb for the secondary, e.g. "removing one". */
   secondaryVerb?: string;
   className?: string;
+  /**
+   * True when this wallet signs the Solana transaction itself.
+   *
+   * `transfer`, `add-controller` and `remove-controller` are performed through
+   * `getWritableANT` — `ANT.init({ rpc, signer })`, a direct Solana client with
+   * no Turbo in the path. They spend no credits at all, so quoting a credits
+   * price named a charge that never arrives while saying nothing about the SOL
+   * that does. Same defect as the remove-undername confirmation, on a surface
+   * where nobody had checked which rail the action actually runs on.
+   */
+  paysNetworkDirectly?: boolean;
 }) {
-  const primary = useArNSActionPrice(action);
+  // Priced only when Turbo is the one being paid.
+  const primary = useArNSActionPrice(paysNetworkDirectly ? undefined : action);
   // Called unconditionally — hooks cannot be conditional, and the query is
   // disabled when there is no second action to price.
-  const secondary = useArNSActionPrice(secondaryAction);
+  const secondary = useArNSActionPrice(
+    paysNetworkDirectly ? undefined : secondaryAction,
+  );
+
+  if (paysNetworkDirectly) {
+    return (
+      <p className={`text-xs text-foreground/60 ${className}`}>
+        Your wallet signs this and pays the Solana network fee. It doesn&apos;t
+        use credits.
+      </p>
+    );
+  }
 
   /*
     NOT a subsidy. Turbo is the fee payer on the Solana transaction and bills
