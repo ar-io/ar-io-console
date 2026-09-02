@@ -1,4 +1,5 @@
 import type { SupportedTokenType } from '../../../constants';
+import { formatHeldBalance } from './formatBalance';
 import { availableTokensForWallet, type WalletKind } from '../../../utils/walletTokens';
 
 /**
@@ -147,7 +148,8 @@ export function buildPaymentOptions({
       kind: 'balance',
       id: 'balance',
       label: 'Balance',
-      detail: `${credits.toLocaleString(undefined, { maximumFractionDigits: 4 })} credits`,
+      // Same shape as the token cards: an amount and its unit, nothing else.
+      detail: `${formatHeldBalance(credits)} credits`,
       sufficient: priceInCredits === undefined ? true : credits >= priceInCredits,
     });
   }
@@ -162,7 +164,7 @@ export function buildPaymentOptions({
         naming the processor. "Turbo holds the name" describes the trade; "No
         crypto needed" describes the reason to take it.
       */
-      detail: 'with Stripe',
+      detail: 'via Stripe',
       // A card can always cover the price — the charge is sized to it — and
       // Turbo pays the Solana costs, so no SOL block applies.
       sufficient: true,
@@ -187,12 +189,22 @@ export function buildPaymentOptions({
       kind: 'token',
       id: `token:${token}`,
       label: TOKEN_LABEL[token] ?? token,
+      /*
+        "1,505,829.1436 available" overflowed the card and was CSS-truncated
+        mid-digits — a number cut that way reads as broken, not shortened. The
+        amount is abbreviated instead.
+
+        The NETWORK stays. `usdc` and `base-usdc` are different tokens on
+        different chains, so dropping it to save width would make two distinct
+        options read identically — which is exactly the confusion the ticker
+        and network together exist to prevent.
+      */
       detail:
         held === undefined
           ? network
-          : `${network ? `${network} · ` : ''}${held.toLocaleString(undefined, {
-              maximumFractionDigits: 4,
-            })} available`,
+          : `${formatHeldBalance(held)} ${TOKEN_LABEL[token] ?? token}${
+              network ? ` · ${network}` : ''
+            }`,
       token,
       /*
         ARIO pays the ARIO registry directly and never touches the Turbo infra

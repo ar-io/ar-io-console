@@ -395,7 +395,7 @@ export function ArNSCostBreakdown({
                 label={
                   <span className="inline-flex items-center gap-1.5">
                     One-time setup
-                    <InfoTip text="Registers your name on Solana. Turbo pays the network deposit and this covers it. Charged once, only when you buy." />
+                    <InfoTip text="Registers your name on Solana. This charge covers the network deposit, so you don't need SOL of your own for it. Charged once, when you buy." />
                   </span>
                 }
               >

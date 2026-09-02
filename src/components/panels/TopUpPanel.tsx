@@ -22,6 +22,11 @@ import { getTurboBalance } from '../../utils';
 import { availableTokensForWallet } from '../../utils/walletTokens';
 
 
+import {
+  resolveCreditTarget,
+  type CreditWalletType,
+} from '../../utils/creditTarget';
+
 export type TopUpHostStep = 'amount' | 'details' | 'review' | 'success';
 
 interface TopUpPanelProps {
@@ -47,6 +52,22 @@ interface TopUpPanelProps {
    * purchase.
    */
   purpose?: { kind: 'arns-name'; name: string };
+  /**
+   * Where the credits must land, when that is NOT the signed-in wallet.
+   *
+   * Credits are held per address, and an ArNS purchase spends the credits of
+   * the wallet that will OWN the name — always a Solana one. For an Ethereum
+   * or Arweave session that wallet is the LINKED Solana wallet, a different
+   * account from the session identity this panel would otherwise credit. So a
+   * card top-up funded the session address while the purchase went looking for
+   * credits on the Solana address, found none, and failed with money already
+   * spent on the wrong account.
+   *
+   * Only the fiat path can honour this: a crypto top-up credits whoever sent
+   * the tokens, which is why the ArNS token menu stays bound to the Solana
+   * wallet rather than offering the session wallet's chains.
+   */
+  creditDestination?: { address: string; type: 'arweave' | 'ethereum' | 'solana' };
   /**
    * Open straight onto card or crypto. The ArNS checkout asks "how do you want
    * to pay" once, up front, so re-presenting the same tabs here would be asking
@@ -90,6 +111,7 @@ export default function TopUpPanel({
   initialUsdAmount,
   initialCreditAmount,
   purpose,
+  creditDestination,
   initialPaymentMethod,
   initialToken,
   onCancel,
@@ -297,6 +319,15 @@ export default function TopUpPanel({
   };
 
   // Truncate address for display
+  // Displayed and charged must be the same account — see `resolveCreditTarget`.
+  const creditTargetAddress = resolveCreditTarget({
+    destination: creditDestination,
+    paymentTargetAddress,
+    paymentTargetType: paymentTargetType as CreditWalletType | null,
+    sessionAddress: address,
+    sessionWalletType: walletType as CreditWalletType | null,
+  })?.address;
+
   const truncateAddress = (addr: string) => {
     if (!addr) return '';
     if (addr.length <= 16) return addr;
@@ -416,8 +447,15 @@ export default function TopUpPanel({
 
     if (paymentMethod === 'fiat') {
       // For fiat, we need either a connected wallet OR a target address
-      const targetAddress = paymentTargetAddress || address;
-      const targetToken = paymentTargetType || walletType;
+      const target = resolveCreditTarget({
+        destination: creditDestination,
+        paymentTargetAddress,
+        paymentTargetType: paymentTargetType as CreditWalletType | null,
+        sessionAddress: address,
+        sessionWalletType: walletType as CreditWalletType | null,
+      });
+      const targetAddress = target?.address;
+      const targetToken = target?.type;
 
       if (!targetAddress) {
         setErrorMessage('Please sign in or enter a recipient address');
@@ -782,9 +820,22 @@ export default function TopUpPanel({
   }
 
   if (paymentMethod === 'fiat' && fiatFlowStep !== 'amount') {
-    // Determine target address for payment (use target if set, otherwise connected wallet)
-    const targetAddress = paymentTargetAddress || address;
-    const targetWalletType = paymentTargetType || walletType;
+    /*
+      Address and wallet type must come from the SAME resolution. Reading the
+      address from the resolved target while leaving the type on the session
+      wallet hands the payment panels a Solana address labelled `ethereum`
+      whenever an Ethereum session buys a name — the exact mismatch this
+      resolver exists to prevent, reintroduced one line below it.
+    */
+    const target = resolveCreditTarget({
+      destination: creditDestination,
+      paymentTargetAddress,
+      paymentTargetType: paymentTargetType as CreditWalletType | null,
+      sessionAddress: address,
+      sessionWalletType: walletType as CreditWalletType | null,
+    });
+    const targetAddress = target?.address;
+    const targetWalletType = target?.type;
 
     switch (fiatFlowStep) {
       case 'details':
@@ -1032,7 +1083,7 @@ export default function TopUpPanel({
                   <MapPin className="w-5 h-5 text-foreground/80" />
                   <div className="text-left">
                     <div className="text-sm font-medium text-foreground">
-                      Buying for: {truncateAddress(paymentTargetAddress || address)}
+                      Buying for: {truncateAddress(creditTargetAddress || '')}
                       {(!paymentTargetAddress || paymentTargetAddress === address) && (
                         <span className="text-foreground/80 ml-2">(You)</span>
                       )}
@@ -1335,7 +1386,7 @@ export default function TopUpPanel({
                   <MapPin className="w-5 h-5 text-foreground/80" />
                   <div className="text-left">
                     <div className="text-sm font-medium text-foreground">
-                      Buying for: {truncateAddress(paymentTargetAddress || address)}
+                      Buying for: {truncateAddress(creditTargetAddress || '')}
                       {(!paymentTargetAddress || paymentTargetAddress === address) && (
                         <span className="text-foreground/80 ml-2">(You)</span>
                       )}

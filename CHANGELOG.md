@@ -5,6 +5,24 @@ All notable changes to the ar.io Console are documented in this file.
 ## [4.7.0] - 2026-09-02
 
 ### Fixed
+- **Running out of credits no longer blocks a record change you can sign
+  yourself.** An owner short on credits is offered the direct route — their
+  wallet signs and pays the Solana fee — instead of being sent to buy a $5
+  minimum of credits for an action costing a fraction of a cent. Credits stay
+  the default, because that price can be quoted exactly before you click.
+- **Buying a name with a card no longer funds the wrong wallet.** Credits are
+  held per address, and a name is paid for by the Solana wallet that will own
+  it. An Ethereum or Arweave user buying with a card had the credits added to
+  the wallet they signed in with instead, so the purchase found none and failed
+  with the money already spent. The card now credits the wallet being charged,
+  and says which one that is.
+- **Removing an undername quotes the cost you will actually pay.** Controllers
+  sign and pay the Solana fee themselves — Turbo's paid route accepts the
+  owner's signature only — but the confirmation quoted credits to everyone.
+- **The payment options read as one set.** Large balances were cut off
+  mid-number, each card was a different height, and the four described
+  themselves three different ways. Holdings are now shortened rather than
+  truncated, and every card carries the same amount-and-unit line.
 - **The cost breakdown now adds up.** The name price line was showing the full
   total with the one-time setup already inside it, and the setup was then
   listed again — so the three lines never reconciled and the total looked
@@ -64,7 +82,8 @@ All notable changes to the ar.io Console are documented in this file.
   amount of credits — the exact figure is shown where you make the change,
   because it differs by network.
 - **Turbo-custodied names are gone**, along with the claim flow that existed to
-  get out of them. Sponsorship removes the reason they existed.
+  get out of them. Paying the Solana fees in credits removes the reason they
+  existed.
 ## [4.6.0] - 2026-08-28
 
 ### Fixed
@@ -117,7 +136,8 @@ All notable changes to the ar.io Console are documented in this file.
 ### Changed
 - **Turbo-custodied purchases are retired.** They removed the need to hold SOL
   but never the need for a wallet to sign with, and every sub-flow was broken as
-  written. Sponsored gas removes the SOL requirement without handing Turbo the
+  written. Paying the network fees in credits removes the SOL requirement
+  without handing Turbo the
   asset, a surcharge, a reduced action set and a claim flow, so custody waits for
   that rather than being repaired. Card buyers now need a Solana wallet holding
   the network deposit.

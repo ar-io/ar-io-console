@@ -24,6 +24,7 @@ export default function RemoveRecordConfirm({
   undername,
   displayName,
   busy,
+  paysNetworkDirectly,
   onConfirm,
   onCancel,
 }: {
@@ -36,13 +37,28 @@ export default function RemoveRecordConfirm({
    */
   displayName?: string;
   busy?: boolean;
+  /**
+   * True for a controller. Turbo's paid route accepts the OWNER's signature
+   * only, so a controller signs the Solana transaction with their own wallet
+   * and pays the network directly in SOL. Quoting credits to them names a cost
+   * they will never be charged — reported after someone removed a record, was
+   * told "about 0.001 credits", and paid in SOL.
+   *
+   * Nothing here is subsidised either way: on the owner's route Turbo is the
+   * fee payer and bills the fee back in credits.
+   */
+  paysNetworkDirectly?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const { credits } = useArNSActionPrice('remove-record');
+  // Priced only when Turbo is the one being paid.
+  const { credits } = useArNSActionPrice(
+    paysNetworkDirectly ? undefined : 'remove-record',
+  );
 
-  const cost =
-    credits === undefined
+  const cost = paysNetworkDirectly
+    ? 'a small Solana network fee, paid by your wallet'
+    : credits === undefined
       ? 'a small amount of credits'
       : credits === 0
         ? 'nothing on this network'

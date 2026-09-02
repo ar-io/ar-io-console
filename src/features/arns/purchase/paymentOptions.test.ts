@@ -22,14 +22,16 @@ describe('buildPaymentOptions', () => {
     const first = buildPaymentOptions({ ...base, walletType: 'solana' })[0];
     expect(first.kind).toBe('card');
     // Naming the processor is the reassurance a card row exists to give.
-    expect(first.detail).toBe('with Stripe');
+    expect(first.detail).toBe('via Stripe');
   });
 
   it('names the processor on the Card option, with no custody caveat', () => {
     // Turbo holds nothing now — the name is minted straight to the buyer — so
     // there is no longer a "what you get" difference to disclose here.
     const normal = buildPaymentOptions({ ...base, walletType: 'solana' });
-    expect(normal.find((o) => o.kind === 'card')?.detail).toBe('with Stripe');
+    expect(normal.find((o) => o.kind === 'card')?.detail).toBe(
+      'via Stripe',
+    );
   });
 
   it('drops card when the payment service has fiat disabled', () => {
@@ -180,7 +182,7 @@ describe('network-cost blocking', () => {
   it('never blocks the card, whatever the wallet holds', () => {
     const card = withSol(0).find((x) => x.kind === 'card')!;
     expect(card.blockedReason).toBeUndefined();
-    expect(card.detail).toBe('with Stripe');
+    expect(card.detail).toBe('via Stripe');
   });
 
   it('blocks nothing when the SOL balance is UNKNOWN', () => {
@@ -216,5 +218,42 @@ describe('paying with a token', () => {
       extraTokens: ['ario'], tokenBalances: { solana: 0 },
     });
     expect(o.find((x) => x.id === 'token:solana')?.sufficient).toBe(true);
+  });
+});
+
+describe('what a payment card says', () => {
+  it('keeps the network on a token, so same-ticker chains stay distinct', () => {
+    /*
+      `usdc` and `base-usdc` are different tokens on different chains. Dropping
+      the network to save width — which shortening the detail line briefly did
+      — makes two distinct options read identically.
+    */
+    const o = buildPaymentOptions({
+      ...base, walletType: 'ethereum',
+      tokenBalances: { 'base-usdc': 40 },
+    });
+    const usdc = o.find((x) => x.id === 'token:base-usdc');
+    expect(usdc?.detail).toContain('USDC');
+    expect(usdc?.detail).toContain('Base');
+  });
+
+  it('abbreviates a holding rather than letting it be cut mid-digits', () => {
+    // Reported from the picker as "1,505,829.1436 …".
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', extraTokens: ['ario'],
+      tokenBalances: { ario: 1_505_829.1436 },
+    });
+    const ario = o.find((x) => x.id === 'token:ario');
+    expect(ario?.detail).toContain('1.51M');
+    expect(ario?.detail).not.toContain('1,505,829');
+  });
+
+  it('gives every card the same shape: an amount and its unit', () => {
+    // Three different grammars across four cards read as four unrelated
+    // controls rather than one choice.
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 2.4862,
+    });
+    expect(o.find((x) => x.kind === 'balance')?.detail).toBe('2.49 credits');
   });
 });

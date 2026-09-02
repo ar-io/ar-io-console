@@ -382,6 +382,7 @@ export default function RecordsTable({
           undername={confirmRemove.label}
           displayName={name}
           busy={undernameWrites.busyKey === confirmRemove.key}
+          paysNetworkDirectly={undernameWrites.paysNetworkDirectly}
           onConfirm={() => void remove(confirmRemove)}
           onCancel={() => setConfirmRemove(null)}
         />
