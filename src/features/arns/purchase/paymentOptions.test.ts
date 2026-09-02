@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isTokenSelectable } from '../../../constants';
 import { buildPaymentOptions, defaultPaymentOption } from './paymentOptions';
+import { availableTokensForWallet } from '../../../utils/walletTokens';
 
 // The real predicate, not a permissive stub — it withdraws polygon-usdc and
 // base-ario, and a test that stubs it past that asserts a UI we never render.
@@ -258,60 +259,58 @@ describe('what a payment card says', () => {
   });
 });
 
-describe('creditTopUpsUnavailable — the payer must be the one credited', () => {
-  const arns = {
-    ...base,
-    walletType: 'solana',
-    extraTokens: ['ario'],
-  } as const;
+describe('the token menu follows the payer', () => {
+  const arns = { ...base, extraTokens: ['ario'] } as const;
 
   /*
-    THE REGRESSION GUARD. A Solana session sends the tokens and spends the
-    credits with the same wallet, so nothing about its menu may move.
+    A token top-up credits WHOEVER SENT THE TOKENS, and the purchase spends the
+    session identity's credits. So the menu has to be derived from the session
+    wallet: anything else offers a route that funds an account the purchase
+    never reads. `availableTokensForWallet` is exactly "what this wallet can
+    sign", which makes the two line up by construction.
   */
-  it('changes nothing for a Solana session', () => {
-    const before = buildPaymentOptions({ ...arns });
-    const after = buildPaymentOptions({ ...arns, creditTopUpsUnavailable: false });
-    expect(after).toEqual(before);
-    expect(ids(before)).toContain('token:solana');
+  it('offers a Solana session SOL, unchanged', () => {
+    expect(ids(buildPaymentOptions({ ...arns, walletType: 'solana' })))
+      .toEqual(['card', 'token:ario', 'token:solana']);
   });
 
-  it('defaults to offering them, so every existing caller is unaffected', () => {
-    expect(ids(buildPaymentOptions({ ...arns }))).toEqual(
-      ids(buildPaymentOptions({ ...arns, creditTopUpsUnavailable: false })),
-    );
+  it('offers an Ethereum session its own chains, and no SOL', () => {
+    const offered = ids(buildPaymentOptions({ ...arns, walletType: 'ethereum' }));
+    expect(offered).toContain('token:base-usdc');
+    // SOL would be sent by the LINKED wallet and credit that address instead.
+    expect(offered).not.toContain('token:solana');
+  });
+
+  it('offers an Arweave session AR, and no SOL', () => {
+    const offered = ids(buildPaymentOptions({ ...arns, walletType: 'arweave' }));
+    expect(offered).toContain('token:arweave');
+    expect(offered).not.toContain('token:solana');
   });
 
   /*
-    On an Ethereum or Arweave session the tokens are sent by the linked Solana
-    wallet and the purchase spends the session's credits. Offering SOL there
-    takes real money and leaves the purchase unfunded.
+    ARIO is an EXTRA, not a credit top-up: it pays the registry directly
+    through @ar.io/sdk and never becomes credits, so it has no payer to
+    mismatch and survives on every session.
   */
-  it('withdraws the credit-buying token when the payer would not be credited', () => {
-    const ids_ = ids(buildPaymentOptions({ ...arns, creditTopUpsUnavailable: true }));
-    expect(ids_).not.toContain('token:solana');
+  it('keeps ARIO on every wallet type', () => {
+    for (const w of ['solana', 'ethereum', 'arweave'] as const) {
+      expect(ids(buildPaymentOptions({ ...arns, walletType: w }))).toContain(
+        'token:ario',
+      );
+    }
   });
 
-  it('keeps ARIO, which pays the registry directly and touches no credits', () => {
-    expect(
-      ids(buildPaymentOptions({ ...arns, creditTopUpsUnavailable: true })),
-    ).toContain('token:ario');
-  });
-
-  it('leaves the routes that already credit the payer correctly', () => {
-    const withBalance = buildPaymentOptions({
-      ...arns,
-      credits: 50,
-      creditTopUpsUnavailable: true,
-    });
-    // Card and Balance both settle against the session identity already.
-    expect(ids(withBalance)).toContain('card');
-    expect(ids(withBalance)).toContain('balance');
-  });
-
-  it('never leaves a wallet with nothing to pay with', () => {
-    const opts = buildPaymentOptions({ ...arns, creditTopUpsUnavailable: true });
-    expect(opts.length).toBeGreaterThan(1);
-    expect(defaultPaymentOption(opts)).toBeDefined();
+  it('never offers a credit-buying token the wallet cannot sign', () => {
+    for (const w of ['solana', 'ethereum', 'arweave'] as const) {
+      const signable = new Set([
+        ...availableTokensForWallet(w, isTokenSelectable).map((t) => `token:${t}`),
+        'token:ario',
+        'card',
+        'balance',
+      ]);
+      for (const id of ids(buildPaymentOptions({ ...arns, walletType: w, credits: 9 }))) {
+        expect(signable.has(id)).toBe(true);
+      }
+    }
   });
 });

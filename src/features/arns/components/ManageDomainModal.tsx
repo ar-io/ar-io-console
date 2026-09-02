@@ -83,18 +83,13 @@ export default function ManageDomainModal({
   const address = signer.address ?? undefined;
 
   /*
-    A token top-up credits whoever SENT the tokens — here the Solana wallet
-    that will own the name — while the purchase spends the SESSION identity's
-    credits. One wallet on a Solana session, two on any other, and in the
-    second case the tokens leave and the purchase stays unfunded. Offering the
-    option at all takes real money for nothing.
-
-    Signed out the menu stays complete: there is no session to mismatch yet,
-    and SolanaGateButton owns the connect gate.
+    The menu follows the PAYER. `availableTokensForWallet` returns what this
+    session's wallet can sign, and a top-up credits whoever sent the tokens, so
+    deriving the options from the session identity is what makes the credits
+    land where the purchase will spend them. Signed out it falls back to the
+    Solana menu, which is the honest preview of the feature.
   */
   const sessionWalletType = useStore((s) => s.walletType);
-  const creditTopUpsUnavailable =
-    !!sessionWalletType && sessionWalletType !== 'solana';
   const balances = useArNSPaymentBalances(address);
 
   // Lease names can renew / upgrade / add undernames; permabuy can only add.
@@ -118,14 +113,13 @@ export default function ManageDomainModal({
   const routingOptions = useMemo(
     () =>
       buildPaymentOptions({
-        walletType: 'solana',
+        walletType: sessionWalletType ?? 'solana',
         credits: balances.credits,
         extraTokens: ['ario'],
-        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [balances.credits, cardEnabled, creditTopUpsUnavailable],
+    [balances.credits, cardEnabled, sessionWalletType],
   );
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
@@ -240,7 +234,7 @@ export default function ManageDomainModal({
   const paymentOptions = useMemo(
     () =>
       buildPaymentOptions({
-        walletType: 'solana',
+        walletType: sessionWalletType ?? 'solana',
         credits: balances.credits,
         priceInCredits: creditsPrice?.sponsoredCredits,
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
@@ -250,11 +244,10 @@ export default function ManageDomainModal({
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
         extraTokens: ['ario'],
-        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits, creditTopUpsUnavailable],
+    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits, sessionWalletType],
   );
 
   const priceReady =

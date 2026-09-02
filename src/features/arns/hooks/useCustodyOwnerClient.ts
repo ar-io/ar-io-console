@@ -6,6 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useStore } from '../../../store/useStore';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import { useEthereumTurboClient } from '../../../hooks/useEthereumTurboClient';
+import type { SupportedTokenType } from '../../../constants';
 
 /**
  * An authenticated Turbo client that signs as the name's OWNER.
@@ -45,7 +46,17 @@ export function useCustodyOwnerClient() {
         : 'arweave',
   );
 
-  const getClient = useCallback(async (): Promise<TurboAuthenticatedClient> => {
+  const getClient = useCallback(async (
+    /*
+     * Which token this client will move, when that matters.
+     *
+     * Only the Ethereum branch cares: one wallet signs for base-usdc, base-eth,
+     * pol and the rest, and `topUpWithTokens` needs the client built for the
+     * token actually being sent. Arweave and Solana each have exactly one, so
+     * the override is inert there. Omitted, everything behaves as before.
+     */
+    tokenOverride?: SupportedTokenType,
+  ): Promise<TurboAuthenticatedClient> => {
     if (!address || !walletType) {
       throw new Error('Connect your wallet to manage this name.');
     }
@@ -63,7 +74,7 @@ export function useCustodyOwnerClient() {
       case 'ethereum':
         // Reuses the console's cached Ethereum signer, so the user signs the
         // connect message once per session rather than once per action.
-        return createEthereumTurboClient('ethereum');
+        return createEthereumTurboClient(tokenOverride ?? 'ethereum');
 
       case 'solana':
         if (!publicKey || !signMessage || !signTransaction) {

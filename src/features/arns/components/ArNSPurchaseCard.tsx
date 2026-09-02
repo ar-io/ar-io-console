@@ -158,18 +158,13 @@ export function ArNSPurchaseCard({
   const address = signer.address ?? undefined;
 
   /*
-    A token top-up credits whoever SENT the tokens — here the Solana wallet
-    that will own the name — while the purchase spends the SESSION identity's
-    credits. One wallet on a Solana session, two on any other, and in the
-    second case the tokens leave and the purchase stays unfunded. Offering the
-    option at all takes real money for nothing.
-
-    Signed out the menu stays complete: there is no session to mismatch yet,
-    and SolanaGateButton owns the connect gate.
+    The menu follows the PAYER. `availableTokensForWallet` returns what this
+    session's wallet can sign, and a top-up credits whoever sent the tokens, so
+    deriving the options from the session identity is what makes the credits
+    land where the purchase will spend them. Signed out it falls back to the
+    Solana menu, which is the honest preview of the feature.
   */
   const sessionWalletType = useStore((s) => s.walletType);
-  const creditTopUpsUnavailable =
-    !!sessionWalletType && sessionWalletType !== 'solana';
 
   /*
     The two wallets, said out loud. On an Ethereum or Arweave session the payer
@@ -213,14 +208,13 @@ export function ArNSPurchaseCard({
   const routingOptions = useMemo(
     () =>
       buildPaymentOptions({
-        walletType: 'solana',
+        walletType: sessionWalletType ?? 'solana',
         credits: balances.credits,
         extraTokens: ['ario'],
-        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [balances.credits, cardEnabled, creditTopUpsUnavailable],
+    [balances.credits, cardEnabled, sessionWalletType],
   );
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
@@ -404,7 +398,7 @@ export function ArNSPurchaseCard({
   const paymentOptions = useMemo(
     () =>
       buildPaymentOptions({
-        walletType: 'solana',
+        walletType: sessionWalletType ?? 'solana',
         credits: balances.credits,
         priceInCredits: creditsPrice?.sponsoredCredits,
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
@@ -421,12 +415,11 @@ export function ArNSPurchaseCard({
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
         extraTokens: ['ario'],
-        creditTopUpsUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
     [
-      address, balances.credits, balances.sol, balances.totalArio, creditTopUpsUnavailable,
+      address, balances.credits, balances.sol, balances.totalArio, sessionWalletType,
       creditsPrice?.sponsoredCredits, cardEnabled,
       cost?.gasTotalSol, balances.loading,
     ],
@@ -528,11 +521,19 @@ export function ArNSPurchaseCard({
    * for credits that were already available.
    */
   const readTurboCredits = useCallback(async (): Promise<number> => {
-    if (!address) return 0;
-    const balance = await getTurboBalance(address, 'solana');
+    /*
+      The SESSION wallet's balance, because that is the one the purchase
+      spends. It used to read `address` — the Solana OWNER — under the token
+      namespace 'solana', which is the same account only on a Solana session.
+      On any other, this waited on an address the credits were never going to
+      reach, and would have reported success against a balance the purchase
+      could not touch.
+    */
+    if (!sessionAddress || !sessionWalletType) return 0;
+    const balance = await getTurboBalance(sessionAddress, sessionWalletType);
     const winc = balance?.effectiveBalance ?? balance?.winc ?? 0;
     return Number(winc) / 1e12;
-  }, [address]);
+  }, [sessionAddress, sessionWalletType]);
 
   /**
    * Register once the money has landed, reporting a failure as "funded, not
