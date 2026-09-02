@@ -115,11 +115,33 @@ describe('chooseWriter — the funds-aware fallback', () => {
     ).toEqual({ kind: 'self-signed', reason: 'insufficient-credits' });
   });
 
-  it('stays on credits when the owner cannot cover the SOL either', () => {
-    // The credits route names the shortfall; a wallet-level failure would not.
+  it('flags the owner who can cover neither, without changing route', () => {
+    // Nothing better to route to — but worth saying before they compose a
+    // record and meet the failure on save.
     expect(
-      chooseWriter('owner', { credits: 0, priceCredits: 0.17, sol: 0 }).kind,
-    ).toBe('sponsored');
+      chooseWriter('owner', { credits: 0, priceCredits: 0.17, sol: 0 }),
+    ).toEqual({ kind: 'sponsored', reason: 'insufficient-both' });
+  });
+
+  it('warns up front instead of failing on save', () => {
+    const note = writerCostNote('sponsored', 0.17, 'insufficient-both')!;
+    expect(note).toMatch(/more than you have/i);
+    expect(note).toMatch(/add credits/i);
+    // The other way out, since a $5 top-up for this is absurd.
+    expect(note).toMatch(/sol/i);
+  });
+
+  it('warns even before the price has loaded', () => {
+    const note = writerCostNote('sponsored', undefined, 'insufficient-both')!;
+    expect(note).toMatch(/not enough credits/i);
+    expect(note).not.toMatch(/undefined/);
+  });
+
+  it('leaves the ordinary owner note alone', () => {
+    expect(writerCostNote('sponsored', 0.17, 'owner')).toMatch(/needs no SOL/i);
+    expect(writerCostNote('sponsored', 0.17, 'owner')).not.toMatch(
+      /more than you have/i,
+    );
   });
 
   it('treats dust as not enough SOL', () => {

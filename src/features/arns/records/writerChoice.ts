@@ -27,6 +27,8 @@ export type WriterReason =
   | 'controller'
   /** Owner who cannot cover the credits price but can cover the SOL. */
   | 'insufficient-credits'
+  /** Owner who can cover neither — worth saying before they click, not after. */
+  | 'insufficient-both'
   /** Role not yet known, or this wallet has no say over the name. */
   | 'unresolved';
 
@@ -106,12 +108,18 @@ export function chooseWriter(
   const shortOnCredits =
     credits !== undefined && price !== undefined && credits < price;
 
-  if (shortOnCredits && sol !== undefined && sol >= MIN_SOL_FOR_RECORD_WRITE) {
-    return { kind: 'self-signed', reason: 'insufficient-credits' };
+  if (shortOnCredits && sol !== undefined) {
+    return sol >= MIN_SOL_FOR_RECORD_WRITE
+      ? { kind: 'self-signed', reason: 'insufficient-credits' }
+      : /*
+          Neither will cover it. Still the credits route — there is nothing
+          better to route to — but flagged so the editor can say so up front
+          rather than letting them fill in a record and meet the failure on
+          save.
+        */
+        { kind: 'sponsored', reason: 'insufficient-both' };
   }
 
-  // Includes the owner who can cover neither: the credits route names the
-  // shortfall plainly, which beats a wallet-level failure.
   return { kind: 'sponsored', reason: 'owner' };
 }
 
@@ -142,6 +150,19 @@ export function writerCostNote(
 ): string | undefined {
   switch (kind) {
     case 'sponsored': {
+      /*
+        Said before the click. The alternative is letting someone compose a
+        record and meet "insufficient credits" on save, having been told all
+        along what it would cost and nothing about whether they could pay it.
+      */
+      if (reason === 'insufficient-both') {
+        return credits === undefined
+          ? 'Not enough credits to save changes. Add credits, or fund this wallet with a little SOL to sign it yourself.'
+          : `Saving a record costs about ${credits.toLocaleString(undefined, {
+              maximumFractionDigits: 4,
+            })} credits, which is more than you have. Add credits, or fund this wallet with a little SOL to sign it yourself.`;
+      }
+
       const cost =
         credits === undefined
           ? 'Saving a record costs a small amount of credits.'
