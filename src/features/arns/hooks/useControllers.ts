@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 
-import { isInsufficientCredits } from './useManageArNSName';
 import { useQuery } from '@tanstack/react-query';
 
 import { getANT, getWritableANT } from '@/utils';
@@ -67,11 +66,6 @@ export function useControllerWrites() {
   /** The controller address currently being written (for per-row busy state). */
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<Error | undefined>();
-  /*
-    Adding or removing a controller is billed in credits. Same gap as
-    `useTransferArNSName`: priced up front, then whatever the service returned.
-  */
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
 
   const ensureSigner = useCallback(() => {
     if (!signer.isReady || !signer.walletAdapter) {
@@ -87,7 +81,6 @@ export function useControllerWrites() {
   const addController = useCallback(
     async (processId: string, controller: string): Promise<boolean> => {
       setError(undefined);
-      setInsufficientCredits(false);
       ensureSigner();
       setPhase('submitting');
       setBusyKey(controller);
@@ -103,7 +96,6 @@ export function useControllerWrites() {
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));
         setPhase('error');
-        setInsufficientCredits(isInsufficientCredits(normalized));
         setError(normalized);
         throw normalized;
       } finally {
@@ -116,7 +108,6 @@ export function useControllerWrites() {
   const removeController = useCallback(
     async (processId: string, controller: string): Promise<boolean> => {
       setError(undefined);
-      setInsufficientCredits(false);
       ensureSigner();
       setPhase('submitting');
       setBusyKey(controller);
@@ -132,7 +123,6 @@ export function useControllerWrites() {
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));
         setPhase('error');
-        setInsufficientCredits(isInsufficientCredits(normalized));
         setError(normalized);
         throw normalized;
       } finally {
@@ -146,7 +136,6 @@ export function useControllerWrites() {
     setPhase('idle');
     setBusyKey(null);
     setError(undefined);
-    setInsufficientCredits(false);
   }, []);
 
   return {
@@ -156,8 +145,6 @@ export function useControllerWrites() {
     phase,
     busyKey,
     error,
-    /** True when the failure was insufficient credits — the UI offers Top-Up. */
-    insufficientCredits,
     isBusy: phase === 'submitting',
   };
 }

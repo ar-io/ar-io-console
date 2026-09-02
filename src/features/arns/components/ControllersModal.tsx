@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Info, Loader2, Plus, Trash2, Users, XCircle } from 'lucide-react';
 
 import { ArNSName } from '@/types';
@@ -37,15 +36,7 @@ export default function ControllersModal({
   onSuccess,
 }: ControllersModalProps) {
   const state = useControllersState(domain.processId, true);
-  const navigate = useNavigate();
-  const {
-    addController,
-    removeController,
-    busyKey,
-    error,
-    insufficientCredits,
-    isBusy,
-  } =
+  const { addController, removeController, busyKey, error, isBusy } =
     useControllerWrites();
 
   const controllers = state.data?.controllers ?? [];
@@ -140,6 +131,7 @@ export default function ControllersModal({
             while production charges the same for both. One number for two
             buttons is right on prod and wrong where we test. */}
         <ActionCostNote
+          paysNetworkDirectly
           action="add-controller"
           secondaryAction="remove-controller"
           primaryVerb="Adding a controller"
@@ -275,21 +267,6 @@ export default function ControllersModal({
               <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
               <span>{error.message}</span>
             </div>
-            {insufficientCredits && (
-              /*
-                Same dead end as the transfer modal: a price was quoted, the
-                balance never checked, and the failure offered nowhere to go.
-              */
-              <button
-                onClick={() => {
-                  onClose();
-                  navigate('/topup');
-                }}
-                className="mt-2 font-semibold text-primary hover:underline"
-              >
-                Top up credits →
-              </button>
-            )}
           </div>
         )}
       </div>

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 
-import { isInsufficientCredits } from './useManageArNSName';
 
 import { getWritableANT } from '../../../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
@@ -23,26 +22,17 @@ export function useTransferArNSName() {
   const [phase, setPhase] = useState<TransferPhase>('idle');
   const [error, setError] = useState<Error | undefined>();
   const [txId, setTxId] = useState<string | undefined>();
-  /*
-    A transfer is billed in credits, and running out of them is the one failure
-    with an obvious next step. Every other ArNS action already routes it to a
-    Top-Up prompt (`usePrimaryNameActions`, `useBuyReturnedName`); this one
-    quoted a price and then handed back whatever the service said.
-  */
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
 
   const reset = useCallback(() => {
     setPhase('idle');
     setError(undefined);
-    setInsufficientCredits(false);
     setTxId(undefined);
   }, []);
 
   const transfer = useCallback(
     async (processId: string, target: string): Promise<string | undefined> => {
       setError(undefined);
-      setInsufficientCredits(false);
-      if (!signer.isReady || !signer.walletAdapter) {
+        if (!signer.isReady || !signer.walletAdapter) {
         const e = new Error(
           'Connect a Solana wallet with a live signer to transfer this name.',
         );
@@ -64,7 +54,6 @@ export function useTransferArNSName() {
       } catch (err) {
         const normalized = err instanceof Error ? err : new Error(String(err));
         setPhase('error');
-        setInsufficientCredits(isInsufficientCredits(normalized));
         setError(normalized);
         throw normalized;
       }
@@ -77,8 +66,6 @@ export function useTransferArNSName() {
     reset,
     phase,
     error,
-    /** True when the failure was insufficient credits — the UI offers Top-Up. */
-    insufficientCredits,
     txId,
     isBusy: phase === 'submitting',
   };
