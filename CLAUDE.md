@@ -263,6 +263,31 @@ diffs against the record as loaded rather than sending a snapshot;
 `withoutClears` drops the nulls for the ANT-direct path, which has no way to
 express a clear, and is what gets deleted when those actions land.
 
+**PAYER vs OWNER — get this right before touching checkout.** Two wallets, two
+roles, and they are the same wallet only on a Solana session:
+
+- The **owner** is the Solana wallet that receives the ANT and signs writes. It
+  is `signer.address` from `useArNSTurboSigner`, and on an Arweave/Ethereum
+  session it is the *linked* wallet.
+- The **payer** is the **session identity**, always. Every credits-settled
+  action passes `client: await getOwnerClient()` (`useCustodyOwnerClient`, built
+  from the store's `address`/`walletType`), and `purchaseWithCredits` documents
+  that parameter as "already authenticated as the PAYER". `owner` is a separate
+  parameter precisely because the roles differ.
+
+So **credits are debited from the session wallet, not the name's owner.**
+`useArNSPaymentBalances` agrees — its credits come from
+`useStore(s => s.creditBalance)`; its `address` argument only feeds the ARIO and
+SOL queries. The checkout reading a Solana address for balances does *not* mean
+the Solana address pays.
+
+Two consequences worth stating, because both have been implemented backwards:
+a top-up must credit the **session** wallet (pointing it at the owner funds an
+account the purchase never reads), and a *token* top-up credits **whoever sent
+the tokens** — so sending from the linked Solana wallet on a non-Solana session
+strands the credits, which is why `creditTopUpsUnavailable` withdraws that
+option there.
+
 **Linked Solana wallet** (`hooks/useLinkedSolanaWallet.ts`): Arweave/Ethereum users link a **secondary** Solana wallet for ArNS without changing their primary session identity. `linkedSolanaAddress` + `linkedSolanaWalletName` persist in the store, and `getArNSAddress()` returns the primary address for Solana sessions or the linked address otherwise. Read-only lookups work from the persisted address alone; **writes need a live signer**, so the hook auto-reconnects the named adapter on page load (the Solana `WalletProvider` runs `autoConnect=false`). `hooks/useArNSTurboSigner.ts` turns that into the two things writes need: a `walletAdapter` for `TurboFactory.authenticated` and a `@solana/kit` `SolanaSigner` for `ANT.spawn`.
 
 **Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): **credits are debited when the action is CREATED**, not when it is signed, so an abandoned wallet prompt has already been charged (Turbo refunds it on TTL expiry). The nonce is persisted via the SDK's `onNonce`, which fires *before* the wallet opens — that is the only route back to a paid-for purchase if the page reloads mid-approval. Resuming by nonce is a pure read (`GET /v1/arns/actions/:nonce`) and can never double-debit; **re-creating an action always can.** `processId` persistence now serves the auction path only, where a client spawn still happens and a retry must reuse it rather than bleed another ~0.02 SOL.

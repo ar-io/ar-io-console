@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -35,7 +36,9 @@ export default function TransferDomainModal({
 }: TransferDomainModalProps) {
   const [recipient, setRecipient] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
-  const { transfer, phase, error, txId, isBusy } = useTransferArNSName();
+  const navigate = useNavigate();
+  const { transfer, phase, error, insufficientCredits, txId, isBusy } =
+    useTransferArNSName();
 
   // Trim once and use the SAME value to validate and to write, so the gate can
   // never green-light one address while the transfer submits another.
@@ -142,9 +145,27 @@ export default function TransferDomainModal({
             </label>
 
             {phase === 'error' && error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
-                <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                <span>{error.message}</span>
+              <div className="mb-4 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
+                <div className="flex items-start gap-2">
+                  <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <span>{error.message}</span>
+                </div>
+                {insufficientCredits && (
+                  /*
+                    The one failure with an obvious next step. Every other ArNS
+                    action already offers this; these two priced the action and
+                    then dead-ended on it.
+                  */
+                  <button
+                    onClick={() => {
+                      onClose();
+                      navigate('/topup');
+                    }}
+                    className="mt-2 font-semibold text-primary hover:underline"
+                  >
+                    Top up credits →
+                  </button>
+                )}
               </div>
             )}
 
