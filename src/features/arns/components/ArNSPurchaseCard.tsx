@@ -1063,7 +1063,6 @@ export function ArNSPurchaseCard({
           initialUsdAmount={topUpUsd}
           shortfallCredits={creditsPrice?.sponsoredCredits}
           arnsName={name}
-          ownerAddress={address}
           paymentMethod={route.kind === 'card' ? 'fiat' : 'crypto'}
           token={route.kind === 'topup' ? (route.token as SupportedTokenType) : undefined}
           tokenLabel={

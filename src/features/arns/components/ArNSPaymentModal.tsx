@@ -8,7 +8,6 @@ import TopUpPanel, {
 } from '../../../components/panels/TopUpPanel';
 import type { SupportedTokenType } from '../../../constants';
 import ModalHeader from '../../../components/modals/ModalHeader';
-import { useStore } from '../../../store/useStore';
 
 interface ArNSPaymentModalProps {
   /** USD to pre-seed the amount (rounded up to cover the name's price). */
@@ -23,13 +22,6 @@ interface ArNSPaymentModalProps {
   tokenLabel?: string;
   /** The name being bought — makes the fiat panels speak about it, not storage. */
   arnsName?: string;
-  /**
-   * The wallet that will OWN the name, and therefore the one whose credits the
-   * purchase spends. Always Solana; for an Ethereum or Arweave session it is
-   * the LINKED wallet, not the session identity. Forwarded so a card top-up
-   * credits the account that is about to be debited.
-   */
-  ownerAddress?: string;
   onClose: () => void;
   /** Fired when payment completes (credits landed). */
   onComplete: () => void;
@@ -57,21 +49,11 @@ export default function ArNSPaymentModal({
   token,
   tokenLabel,
   arnsName,
-  ownerAddress,
   onClose,
   onComplete,
 }: ArNSPaymentModalProps) {
   const [busy, setBusy] = useState(false);
-  const sessionAddress = useStore((s) => s.address);
 
-  /*
-    An Ethereum or Arweave user pays from one wallet and owns the name with
-    another. Crediting a wallet they did not choose is surprising enough to say
-    out loud — and it is the wallet the price will be charged against, so it is
-    the one they need to recognise.
-  */
-  const creditsGoElsewhere =
-    !!ownerAddress && !!sessionAddress && ownerAddress !== sessionAddress;
   const [step, setStep] = useState<TopUpHostStep>('details');
   const payingByCard = paymentMethod === 'fiat';
 
@@ -122,16 +104,6 @@ export default function ArNSPaymentModal({
         />
         )}
 
-        {creditsGoElsewhere && (
-          <p className="mb-4 rounded-xl border border-border/20 bg-background px-4 py-3 text-xs text-foreground/80">
-            Credits go to your Solana wallet{' '}
-            <span className="font-mono text-foreground">
-              {ownerAddress!.slice(0, 4)}…{ownerAddress!.slice(-4)}
-            </span>
-            . That's the wallet paying for this name.
-          </p>
-        )}
-
         <StripeElementsProvider>
           <TopUpPanel
             embedded
@@ -142,9 +114,6 @@ export default function ArNSPaymentModal({
             initialPaymentMethod={paymentMethod}
             purpose={arnsName ? { kind: 'arns-name', name: arnsName } : undefined}
             initialToken={token}
-            creditDestination={
-              ownerAddress ? { address: ownerAddress, type: 'solana' } : undefined
-            }
             // The card flow opens on the card form; its Back has nothing behind
             // it inside the panel, so it closes the modal instead.
             onCancel={onClose}

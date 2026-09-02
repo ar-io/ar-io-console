@@ -613,8 +613,7 @@ export default function ManageDomainModal({
                 initialUsdAmount={topUpUsd}
                 shortfallCredits={creditShortfall}
                 paymentMethod="crypto"
-                ownerAddress={address}
-                token={route.token as SupportedTokenType}
+                      token={route.token as SupportedTokenType}
                 tokenLabel={tokenLabels[route.token as SupportedTokenType]}
                 onClose={() => setShowPayment(false)}
                 onComplete={() => setShowPayment(false)}

@@ -23,18 +23,17 @@ describe('resolveCreditTarget', () => {
   });
 
   /*
-    The bug this module exists for. An Ethereum session buying an ArNS name
-    spends the credits of the LINKED Solana wallet, so crediting the session
-    address takes the money and leaves the purchase unfunded.
+    A host that names a destination gets it. ArNS deliberately does NOT: its
+    payer is the session identity, so it leaves this unset and takes the
+    default below.
   */
-  it('credits the name owner, not the Ethereum session paying for it', () => {
+  it('honours a destination the host names explicitly', () => {
     const target = resolveCreditTarget({
       destination: { address: SOL, type: 'solana' },
       sessionAddress: ETH,
       sessionWalletType: 'ethereum',
     });
     expect(target).toEqual({ address: SOL, type: 'solana' });
-    expect(target?.address).not.toBe(ETH);
   });
 
   it('lets the owner destination beat a stale payment target too', () => {

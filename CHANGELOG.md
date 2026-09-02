@@ -10,12 +10,6 @@ All notable changes to the ar.io Console are documented in this file.
   wallet signs and pays the Solana fee — instead of being sent to buy a $5
   minimum of credits for an action costing a fraction of a cent. Credits stay
   the default, because that price can be quoted exactly before you click.
-- **Buying a name with a card no longer funds the wrong wallet.** Credits are
-  held per address, and a name is paid for by the Solana wallet that will own
-  it. An Ethereum or Arweave user buying with a card had the credits added to
-  the wallet they signed in with instead, so the purchase found none and failed
-  with the money already spent. The card now credits the wallet being charged,
-  and says which one that is.
 - **Removing an undername quotes the cost you will actually pay.** Controllers
   sign and pay the Solana fee themselves — Turbo's paid route accepts the
   owner's signature only — but the confirmation quoted credits to everyone.
