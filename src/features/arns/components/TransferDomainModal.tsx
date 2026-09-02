@@ -35,7 +35,8 @@ export default function TransferDomainModal({
 }: TransferDomainModalProps) {
   const [recipient, setRecipient] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
-  const { transfer, phase, error, txId, isBusy } = useTransferArNSName();
+  const { transfer, phase, error, paysNetworkDirectly, txId, isBusy } =
+    useTransferArNSName(domain.processId);
 
   // Trim once and use the SAME value to validate and to write, so the gate can
   // never green-light one address while the transfer submits another.
@@ -109,7 +110,11 @@ export default function TransferDomainModal({
 
             {/* Transfer is one of the priced actions; the warning above is
                 about permanence, not cost, and both need saying. */}
-            <ActionCostNote action="transfer" paysNetworkDirectly className="mb-4" />
+            <ActionCostNote
+              action="transfer"
+              paysNetworkDirectly={paysNetworkDirectly}
+              className="mb-4"
+            />
 
             <label className="mb-2 block text-sm font-medium">
               Recipient Solana address

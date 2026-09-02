@@ -151,3 +151,6 @@ export {
 } from './purchase/priceTotals';
 export type { ArNSPriceFields, ArNSWincTotals } from './purchase/priceTotals';
 export { walletSplitNote, shortAddress } from './purchase/walletRoles';
+export { chooseOwnerActionWriter } from './records/writerChoice';
+export { sponsoredOwnerOpWriter, antOwnerOpWriter } from './records/ownerOps';
+export { useOwnerOpWriter } from './hooks/useOwnerOpWriter';

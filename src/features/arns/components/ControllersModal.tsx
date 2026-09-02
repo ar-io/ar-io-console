@@ -36,8 +36,15 @@ export default function ControllersModal({
   onSuccess,
 }: ControllersModalProps) {
   const state = useControllersState(domain.processId, true);
-  const { addController, removeController, busyKey, error, isBusy } =
-    useControllerWrites();
+  const {
+    addController,
+    removeController,
+    busyKey,
+    error,
+    paysNetworkDirectly,
+    isBusy,
+  } =
+    useControllerWrites(domain.processId);
 
   const controllers = state.data?.controllers ?? [];
   const owner = state.data?.owner;
@@ -131,7 +138,7 @@ export default function ControllersModal({
             while production charges the same for both. One number for two
             buttons is right on prod and wrong where we test. */}
         <ActionCostNote
-          paysNetworkDirectly
+          paysNetworkDirectly={paysNetworkDirectly}
           action="add-controller"
           secondaryAction="remove-controller"
           primaryVerb="Adding a controller"
