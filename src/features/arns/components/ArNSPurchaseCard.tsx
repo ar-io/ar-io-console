@@ -891,7 +891,8 @@ export function ArNSPurchaseCard({
               <>
                 You&apos;ll need a wallet to hold the name. Sign in with email
                 and we&apos;ll make one for you, or connect Phantom or Solflare.
-                Turbo pays the Solana fees, so it never needs a balance.
+                The Solana fees are included in the price, so it never needs a
+                balance.
               </>
             )}
           </p>

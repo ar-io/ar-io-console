@@ -54,7 +54,14 @@ export default function ActionCostNote({
   // disabled when there is no second action to price.
   const secondary = useArNSActionPrice(secondaryAction);
 
-  const solLine = "Turbo covers the Solana fee, so you don't need SOL.";
+  /*
+    NOT a subsidy. Turbo is the fee payer on the Solana transaction and bills
+    the cost back in the credits quoted immediately before this sentence, so
+    "Turbo covers it" was the wrong word — it reads as a giveaway and sets up
+    the wrong expectation the first time a price appears. What the user is
+    actually buying is not having to hold SOL.
+  */
+  const solLine = "The Solana fee is included, so you don't need SOL.";
 
   if (!secondaryAction) {
     return (
