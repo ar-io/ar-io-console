@@ -127,10 +127,10 @@ export default function ControllersModal({
         <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
           <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
           Controllers can edit this name&apos;s records but can never transfer
-          or sell it. Turbo is listed so it can cover the Solana fees on your
+          or sell it. Turbo is listed so it can pay the Solana fees on your
           changes — it still can&apos;t change anything without your approval,
           which your wallet asks for every time. Adding or removing a
-          controller is one wallet approval, and needs no SOL.
+          controller is one wallet approval.
         </div>
 
         {/* Both figures, because adding and removing are separate actions and

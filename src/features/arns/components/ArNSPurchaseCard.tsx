@@ -30,6 +30,7 @@ import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { planNamePurchase } from '../purchase/cardPlan';
 import { useStore } from '../../../store/useStore';
 import { walletSplitNote } from '../purchase/walletRoles';
+import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
@@ -332,14 +333,48 @@ export function ArNSPurchaseCard({
       ? Number(tokenSmallestUnitForName) /
         Number(getTokenSmallestUnit(route.token as SupportedTokenType))
       : undefined;
+  /*
+    The balance of the token about to be spent, when that is not SOL.
+
+    One lookup rather than six: the only balance that can block this purchase is
+    the one being spent, and `route` is already resolved from the price-free
+    option list above. Without it the tokens opened up to Ethereum and Arweave
+    sessions showed no holding and had no shortfall check, while SOL had both —
+    parity in what you can pay with, but not in what the screen tells you.
+  */
+  const payingToken =
+    route.kind === 'topup' ? (route.token as SupportedTokenType) : null;
+  const sessionToken =
+    payingToken && payingToken !== 'solana' ? payingToken : null;
+  const sessionTokenBalance = useTokenBalance(
+    sessionToken,
+    sessionWalletType ?? null,
+    sessionAddress ?? null,
+    !!sessionToken,
+  );
+  /** `undefined` when unknown — a failed lookup must never read as zero. */
+  const heldForPayment = sessionToken
+    ? sessionTokenBalance.error || sessionTokenBalance.loading
+      ? undefined
+      : sessionTokenBalance.balance
+    : balances.sol;
+
   const insufficientToken =
     route.kind === 'topup' &&
-    route.token === 'solana' &&
     tokenNeededForPayment !== undefined &&
-    !balances.loading &&
-    // An unknown balance must not read as sufficient here — this route takes
-    // the transfer before anything else happens.
-    (balances.sol === undefined || balances.sol < tokenNeededForPayment);
+    (sessionToken
+      ? /*
+          Block only on a KNOWN shortfall. SOL keeps the stricter rule below
+          because its balance is always fetched; for a token whose lookup can
+          fail outright, treating "unknown" as empty would tell a funded wallet
+          it has nothing.
+        */
+        heldForPayment !== undefined && heldForPayment < tokenNeededForPayment
+      : !balances.loading &&
+        // An unknown balance must not read as sufficient here — this route
+        // takes the transfer before anything else happens.
+        (balances.sol === undefined ||
+          balances.sol < tokenNeededForPayment));
 
   const insufficientSol =
     // Only the ARIO route spends the buyer's own SOL on NETWORK costs. Every
@@ -420,7 +455,14 @@ export function ArNSPurchaseCard({
         networkSolRequired: cost?.gasTotalSol,
         solBalance: balances.loading ? undefined : balances.sol,
         tokenBalances: address
-          ? { solana: balances.sol, ario: balances.totalArio }
+          ? {
+              solana: balances.sol,
+              ario: balances.totalArio,
+              // The token being paid with, so its row reads like the SOL row.
+              ...(sessionToken && heldForPayment !== undefined
+                ? { [sessionToken]: heldForPayment }
+                : {}),
+            }
           : {},
         extraTokens: ['ario'],
         creditPurchasesUnavailable,
@@ -428,7 +470,7 @@ export function ArNSPurchaseCard({
         cardEnabled,
       }),
     [
-      address, balances.credits, balances.sol, balances.totalArio, sessionWalletType, creditPurchasesUnavailable,
+      address, balances.credits, balances.sol, balances.totalArio, sessionWalletType, creditPurchasesUnavailable, sessionToken, heldForPayment,
       creditsPrice?.sponsoredCredits, cardEnabled,
       cost?.gasTotalSol, balances.loading,
     ],
