@@ -21,7 +21,7 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~58 suites, the bulk in three clusters: `src/features/arns/` (30+ — ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (13 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore). One stray outside them: `src/components/modals/bodyScrollLock.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~67 suites, the bulk in three clusters: `src/features/arns/` (32 — ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (16 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore). One stray outside them: `src/components/modals/bodyScrollLock.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: '/'` — absolute asset paths, required so nested routes (`/domains/:name`) resolve assets on direct navigation. This trades away Arweave *subpath* compatibility (the old `'./'` value): the build assumes it is served from a domain root (`console.ar.io`, or an ArNS name root), not from `gateway/<txid>/`. Don't flip it back without re-checking nested-route deep links.
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
@@ -168,7 +168,7 @@ Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit p
 
 ### ArNS Feature (`src/features/arns/`)
 
-The largest feature in the repo (~110 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
+The largest feature in the repo (~127 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
 
 **ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet — but since Turbo sponsors the fees, that wallet needs **no SOL balance**. Email sign-in creates one (see `PrivySolanaBridge`), so a user who has never held cryptocurrency can own and run a name.
 
@@ -223,10 +223,39 @@ Not sponsored, each still costing the user SOL:
   block to the ARIO option *alone*; applying it broadly blocks exactly the
   zero-SOL buyers sponsorship exists for.
 - Primary name, release, reassign, and **ANT-level** metadata
-  (`EditDetailsModal`). Record-level metadata IS sponsored
-  (`set-record-metadata`) and the two sit next to each other in the program:
-  editing a record's display name is free, editing the name's own is not.
-  Label them distinctly or users meet the difference at a wallet prompt.
+  (`EditDetailsModal`). Record-level metadata IS a Turbo action
+  (`set-record-metadata`) and the two sit next to each other in the program.
+  The difference is WHICH ASSET pays, not whether anything does: a record's
+  display name costs credits, the name's own costs SOL. **Neither is free** —
+  saying so here is what put the same claim in the code. Label them distinctly
+  or users meet the difference at a wallet prompt.
+
+**Two rails, and the choice is by funds** (`records/writerChoice.ts`). Every
+write Turbo lists in `arNSActions` can go either way: Turbo as fee payer,
+billed in credits, or the wallet signing the Solana transaction and paying the
+network. `chooseWriter` prefers **credits** — that price can be quoted exactly
+before the click, and the route is one message signature with no transaction to
+confirm or fail — and falls back to the wallet only on a **known** shortfall.
+Unknown balances never reroute: both figures load asynchronously, and treating
+"not yet" as "can't afford it" would swap the route, and the cost sentence with
+it, under someone already reading it.
+
+`chooseOwnerActionWriter` is the same ladder for transfer and controller
+changes, minus the controller branch — a controller may edit records but cannot
+transfer a name or change who controls it, so a non-owner blocks rather than
+falling through to a transaction the program rejects. Anything self-signed must
+set `paysNetworkDirectly` so the surface stops quoting credits; both mistakes
+have been made here, in both directions.
+
+**The payment menu derives from the SESSION wallet**, not from ArNS being
+Solana-only. A token top-up credits *whoever sent the tokens*, and the purchase
+spends the session identity's credits, so `availableTokensForWallet(session)` is
+what makes those the same account — by construction rather than by guard. Send
+non-SOL top-ups through `useCustodyOwnerClient.getClient(token)`, never the
+linked Solana adapter. `creditPurchasesUnavailable` withdraws card, balance and
+token routes when `isPaymentServiceAvailable()` is false (x402-only mode); ARIO
+survives it, because it pays the registry directly and never touches that
+service.
 
 **A record save can cost TWO approvals.** `setArNSRecord` (target + TTL) and
 `setArNSRecordMetadata` (display name, logo, description, keywords) are
