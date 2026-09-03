@@ -11,52 +11,6 @@ All notable changes to the ar.io Console are documented in this file.
   the exact price shown before you confirm, and your wallet signing and paying
   the Solana fee when credits are short. Only the owner can perform them either
   way.
-
-### Fixed
-- **Paying with your wallet's own token shows the balance and blocks a
-  shortfall**, the way paying in SOL always did. Ethereum and Arweave sessions
-  could pick a token with nothing behind it and only find out at the wallet.
-- **Renewing a name says which wallet pays and which holds it**, matching the
-  purchase screen, when those are two different wallets.
-- **In x402-only mode, name purchases only offer the option that can work.**
-  Card, balance and token top-ups all settle through the payment service, which
-  that mode turns off, so all three failed at the last step. ARIO pays the
-  registry directly and still works, and is now what you're offered.
-- **Transferring a name and changing controllers say what they actually cost.**
-  Both quoted a credits price while being paid for in SOL. The cost shown now
-  follows the route actually taken.
-- **You can pay for a name with your own wallet's tokens.** Signed in with
-  Ethereum, you can now pay in Base USDC, ETH, POL or USDC; with Arweave, in AR.
-  Previously the only crypto option was SOL, which was sent by the linked Solana
-  wallet while the purchase spent the credits of the wallet you signed in with —
-  so the SOL left and the name was never bought. Payment now comes from the same
-  wallet the purchase draws on. Solana sessions are unchanged.
-- **Running out of credits no longer blocks a record change you can sign
-  yourself.** An owner short on credits is offered the direct route — their
-  wallet signs and pays the Solana fee — instead of being sent to buy a $5
-  minimum of credits for an action costing a fraction of a cent. Credits stay
-  the default, because that price can be quoted exactly before you click.
-- **Removing an undername quotes the cost you will actually pay.** Controllers
-  sign and pay the Solana fee themselves — Turbo's paid route accepts the
-  owner's signature only — but the confirmation quoted credits to everyone.
-- **The payment options read as one set.** Large balances were cut off
-  mid-number, each card was a different height, and the four described
-  themselves three different ways. Holdings are now shortened rather than
-  truncated, and every card carries the same amount-and-unit line.
-- **The cost breakdown now adds up.** The name price line was showing the full
-  total with the one-time setup already inside it, and the setup was then
-  listed again — so the three lines never reconciled and the total looked
-  wrong. The name line now shows the name alone.
-- **"Not enough credits" now sits against the total**, the figure it is
-  actually measured against.
-
-- **Paying with SOL now shows SOL.** Renewing a name quoted the cost in
-  credits even when SOL was the chosen payment, leaving you to convert it
-  yourself; and on registration the setup line was priced in credits while the
-  rows above and below it were in SOL, so the three could not be checked
-  against each other.
-
-### Added
 - **A "What's new" page**, listing every release. The version number in the
   footer links to it — "which version am I on" and "did that get fixed" are
   usually the same question.
@@ -104,6 +58,47 @@ All notable changes to the ar.io Console are documented in this file.
 - **Turbo-custodied names are gone**, along with the claim flow that existed to
   get out of them. Paying the Solana fees in credits removes the reason they
   existed.
+
+### Fixed
+- **Paying with your wallet's own token shows the balance and blocks a
+  shortfall**, the way paying in SOL always did. Ethereum and Arweave sessions
+  could pick a token with nothing behind it and only find out at the wallet.
+- **Renewing a name says which wallet pays and which holds it**, matching the
+  purchase screen, when those are two different wallets.
+- **In x402-only mode, name purchases only offer the option that can work.**
+  Card, balance and token top-ups all settle through the payment service, which
+  that mode turns off, so all three failed at the last step. ARIO pays the
+  registry directly and still works, and is now what you're offered.
+- **You can pay for a name with your own wallet's tokens.** Signed in with
+  Ethereum, you can now pay in Base USDC, ETH, POL or USDC; with Arweave, in AR.
+  Previously the only crypto option was SOL, which was sent by the linked Solana
+  wallet while the purchase spent the credits of the wallet you signed in with —
+  so the SOL left and the name was never bought. Payment now comes from the same
+  wallet the purchase draws on. Solana sessions are unchanged.
+- **Running out of credits no longer blocks a record change you can sign
+  yourself.** An owner short on credits is offered the direct route — their
+  wallet signs and pays the Solana fee — instead of being sent to buy a $5
+  minimum of credits for an action costing a fraction of a cent. Credits stay
+  the default, because that price can be quoted exactly before you click.
+- **Removing an undername quotes the cost you will actually pay.** Controllers
+  sign and pay the Solana fee themselves — Turbo's paid route accepts the
+  owner's signature only — but the confirmation quoted credits to everyone.
+- **The payment options read as one set.** Large balances were cut off
+  mid-number, each card was a different height, and the four described
+  themselves three different ways. Holdings are now shortened rather than
+  truncated, and every card carries the same amount-and-unit line.
+- **The cost breakdown now adds up.** The name price line was showing the full
+  total with the one-time setup already inside it, and the setup was then
+  listed again — so the three lines never reconciled and the total looked
+  wrong. The name line now shows the name alone.
+- **"Not enough credits" now sits against the total**, the figure it is
+  actually measured against.
+- **Paying with SOL now shows SOL.** Renewing a name quoted the cost in
+  credits even when SOL was the chosen payment, leaving you to convert it
+  yourself; and on registration the setup line was priced in credits while the
+  rows above and below it were in SOL, so the three could not be checked
+  against each other.
+
 ## [4.6.0] - 2026-08-28
 
 ### Fixed
