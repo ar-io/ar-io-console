@@ -68,6 +68,13 @@ const mergeTags = (
   return [...customTags, ...nonOverriddenDefaults];
 };
 
+/**
+ * How long to wait for a crypto top-up to become spendable. Measured at ~67s on
+ * devnet for base-usdc, so the window is generous — the alternative is failing
+ * an upload the user has already paid for.
+ */
+const TOPUP_SETTLE_TIMEOUT_MS = 5 * 60 * 1000;
+
 export function useFileUpload() {
   const { address, walletType } = useStore();
   const { wallets } = useWallets(); // Get Privy wallets
@@ -532,6 +539,15 @@ export function useFileUpload() {
     // abortControllerRef can't affect this one.
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    // Only the batch that currently owns the ref may reset shared UI state. A
+    // cancelled batch can still be unwinding (a crypto top-up is not abortable)
+    // after a newer batch has started, and must not clear its progress.
+    const isActiveBatch = () => abortControllerRef.current === controller;
+    const releaseUi = () => {
+      if (!isActiveBatch()) return;
+      setUploading(false);
+      setActiveUploads([]);
+    };
 
     // Calculate total size
     const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -541,8 +557,33 @@ export function useFileUpload() {
     const results: UploadResult[] = [];
     const failedFileNames: string[] = [];
 
-    // Handle crypto payment: top up once for all files before uploading
+    // Handle crypto payment: top up once for all files before uploading.
+    // `paidWithoutUpload` is what the caller needs to tell the user their money
+    // is not lost: the top-up is on-chain and irreversible, so any exit after it
+    // settles has to say the credits are sitting in their balance.
+    let toppedUp = false;
     const selectedToken = options?.selectedToken || options?.selectedJitToken;
+
+    /** Credit balance by address, or undefined if it cannot be read. */
+    const readCreditBalance = async (): Promise<number | undefined> => {
+      if (!address) return undefined;
+      try {
+        const cfg = getCurrentConfig();
+        const unauth = TurboFactory.unauthenticated({
+          paymentServiceConfig: { url: cfg.paymentServiceUrl },
+          uploadServiceConfig: { url: cfg.uploadServiceUrl },
+          ...(selectedToken ? { token: selectedToken as any } : {}),
+        });
+        const bal = await unauth.getBalance(address);
+        return Number(bal?.effectiveBalance ?? 0);
+      } catch (e) {
+        console.warn('[useFileUpload] could not read credit balance:', e);
+        return undefined;
+      }
+    };
+    const creditedBefore = (options?.cryptoPayment && selectedToken && options?.tokenAmount)
+      ? await readCreditBalance()
+      : undefined;
     if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
       try {
         const turbo = await createTurboClient(selectedToken);
@@ -551,7 +592,47 @@ export function useFileUpload() {
           tokenAmount: BigInt(options.tokenAmount),
         });
         console.log('[DEBUG] topUpWithTokens result:', JSON.stringify(topUpResult, (_, v) => typeof v === 'bigint' ? v.toString() : v));
+        toppedUp = true;
         window.dispatchEvent(new CustomEvent('refresh-balance'));
+
+        /*
+          Settling is NOT instant, and 'confirmed' is not the common case.
+
+          Measured against the devnet bundler on Base Sepolia: a base-usdc
+          top-up returns status 'pending' and the balance does not reflect it
+          for ~67 seconds. Uploading the moment topUpWithTokens resolves —
+          which is what this code used to do — walks into an
+          insufficient-balance rejection with the payment already settled. That
+          is the same "paid, got nothing" outcome a correctly-sized payment was
+          supposed to eliminate.
+
+          So wait for the credits to actually appear rather than trusting the
+          status. Balance is read by address through an unauthenticated client
+          because getBalance() on the walletAdapter-backed payment client
+          derives its address from a public key the adapter need not carry.
+        */
+        if (creditedBefore !== undefined) {
+          const settleDeadline = Date.now() + TOPUP_SETTLE_TIMEOUT_MS;
+          let settled = false;
+          while (Date.now() < settleDeadline) {
+            if (controller.signal.aborted) break;
+            await new Promise((r) => setTimeout(r, 3000));
+            const current = await readCreditBalance();
+            if (current !== undefined && current > creditedBefore) {
+              settled = true;
+              window.dispatchEvent(new CustomEvent('refresh-balance'));
+              break;
+            }
+          }
+          if (!settled && !controller.signal.aborted) {
+            releaseUi();
+            throw new Error(
+              'Your payment went through but the credits have not landed yet. Nothing ' +
+              'was uploaded and you will not be charged again — the credits will appear ' +
+              'in your balance shortly, and uploading again will spend them.'
+            );
+          }
+        }
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
 
@@ -584,38 +665,38 @@ export function useFileUpload() {
             const retryResult = await unauthenticatedTurbo.submitFundTransaction({ txId });
             console.log('Retry submitFundTransaction succeeded:', retryResult);
 
-            if (retryResult.status !== 'failed') {
+            if (retryResult.status === 'confirmed') {
+              toppedUp = true;
               window.dispatchEvent(new CustomEvent('refresh-balance'));
               // Success - continue with uploads
             } else {
               throw new Error('Transaction confirmation failed after retry');
             }
           } catch (retryError) {
-            setUploading(false);
+            releaseUi();
             const retryMsg = retryError instanceof Error ? retryError.message : 'Unknown error';
             throw new Error(`Crypto payment polling timed out. Your transaction (${txId}) may have succeeded - check your balance or try "Buy Credits" to resubmit. Error: ${retryMsg}`);
           }
         } else {
-          setUploading(false);
+          releaseUi();
           throw new Error(`Crypto payment failed: ${errorMessage}`);
         }
       }
     }
 
     // A cancel during the (non-abortable) crypto pre-top-up can't undo the
-    // on-chain payment, but it must stop us from uploading afterwards.
+    // on-chain payment, but it must stop us from uploading afterwards. It must
+    // also not exit silently: the user paid, so say where the money went.
     if (controller.signal.aborted) {
-      setUploading(false);
-      setActiveUploads([]);
-      return { results, failedFiles: failedFileNames };
+      releaseUi();
+      return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp };
     }
 
     for (const file of files) {
       // Check if cancelled (synchronously — this batch's controller).
       if (controller.signal.aborted) {
-        setUploading(false);
-        setActiveUploads([]);
-        return { results, failedFiles: failedFileNames };
+        releaseUi();
+        return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
       }
 
       try {
@@ -697,9 +778,9 @@ export function useFileUpload() {
       window.dispatchEvent(new CustomEvent('refresh-balance'));
     }
 
-    setUploading(false);
-    return { results, failedFiles: failedFileNames };
-  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig]);
+    releaseUi();
+    return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
+  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig, address]);
 
   const reset = useCallback(() => {
     setUploadProgress({});

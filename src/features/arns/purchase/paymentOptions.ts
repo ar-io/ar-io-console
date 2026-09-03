@@ -1,4 +1,5 @@
 import type { SupportedTokenType } from '../../../constants';
+import { formatHeldBalance } from './formatBalance';
 import { availableTokensForWallet, type WalletKind } from '../../../utils/walletTokens';
 
 /**
@@ -83,6 +84,20 @@ export interface PaymentOptionsInput {
    */
   extraTokens?: SupportedTokenType[];
   isTokenSelectable: (t: SupportedTokenType) => boolean;
+  /**
+   * The payment service is unreachable, so nothing that BUYS CREDITS can settle.
+   *
+   * True in x402-only mode, where `isPaymentServiceAvailable()` is false by
+   * definition. Card, token top-ups and spending an existing balance all settle
+   * through that service, so offering them produces a failure at the last step
+   * of a flow the user has already committed to.
+   *
+   * The extras survive, and that is the whole reason this is not simply
+   * "hide ArNS": ARIO pays the registry directly through `@ar.io/sdk` and never
+   * touches the payment service, so buying a name still works — with one option
+   * instead of four.
+   */
+  creditPurchasesUnavailable?: boolean;
   /** Card is unavailable when the payment service has Stripe disabled (503). */
   cardEnabled?: boolean;
   /**
@@ -94,14 +109,6 @@ export interface PaymentOptionsInput {
    */
   networkSolRequired?: number;
   solBalance?: number;
-  /**
-   * Paying by card will leave Turbo holding the name's ANT.
-   *
-   * Surfaced on the option itself because it changes what you get, not just how
-   * you pay — and a difference that large should be visible while choosing,
-   * not discovered in the cost breakdown after.
-   */
-  cardIsCustodial?: boolean;
 }
 
 export function buildPaymentOptions({
@@ -112,15 +119,23 @@ export function buildPaymentOptions({
   tokenPrices = {},
   extraTokens = [],
   isTokenSelectable,
+  creditPurchasesUnavailable = false,
   cardEnabled = true,
-  cardIsCustodial = false,
   networkSolRequired,
   solBalance,
 }: PaymentOptionsInput): PaymentOption[] {
   /*
-    Creating a name costs SOL in account rent, whoever pays for the name itself.
-    A custodial card is the sole exception — Turbo spawns the ANT from its own
-    keypair — which is exactly why it exists as a fallback.
+    Only ARIO spends the buyer's own SOL.
+
+    Paying in ARIO is not a Turbo action — it is the buyer's own `buyRecord`
+    transaction, so their wallet covers the Solana account rent. Every other
+    route settles in credits and Turbo pays that rent, so the block below is
+    applied to the ARIO option alone. Applying it broadly is what would block
+    the buyers this change exists to serve: the ones holding no SOL at all.
+
+    It is stated on the option rather than at submit, because ARIO also carries
+    the "Best price" badge — the cheapest route being the only one with a SOL
+    requirement is exactly the trade someone should see before choosing.
   */
   const shortOnNetworkSol =
     networkSolRequired !== undefined &&
@@ -143,18 +158,18 @@ export function buildPaymentOptions({
     option that works with no crypto at all, and the one a newcomer is looking
     for.
   */
-  if (credits > 0) {
+  if (credits > 0 && !creditPurchasesUnavailable) {
     options.push({
       kind: 'balance',
       id: 'balance',
       label: 'Balance',
-      detail: `${credits.toLocaleString(undefined, { maximumFractionDigits: 4 })} credits`,
+      // Same shape as the token cards: an amount and its unit, nothing else.
+      detail: `${formatHeldBalance(credits)} credits`,
       sufficient: priceInCredits === undefined ? true : credits >= priceInCredits,
-      blockedReason: networkBlock,
     });
   }
 
-  if (cardEnabled) {
+  if (cardEnabled && !creditPurchasesUnavailable) {
     options.push({
       kind: 'card',
       id: 'card',
@@ -164,19 +179,18 @@ export function buildPaymentOptions({
         naming the processor. "Turbo holds the name" describes the trade; "No
         crypto needed" describes the reason to take it.
       */
-      detail: cardIsCustodial
-        ? shortOnNetworkSol
-          ? 'No crypto needed'
-          : 'Turbo holds the name'
-        : 'with Stripe',
-      // A card can always cover the price — the charge is sized to it. And a
-      // custodial card needs no SOL, so the network block never applies.
+      detail: 'via Stripe',
+      // A card can always cover the price — the charge is sized to it — and
+      // Turbo pays the Solana costs, so no SOL block applies.
       sufficient: true,
-      ...(cardIsCustodial ? {} : { blockedReason: networkBlock }),
     });
   }
 
-  const walletTokens = availableTokensForWallet(walletType, isTokenSelectable);
+  // Token top-ups buy credits through the payment service, so they fail for the
+  // same reason card and balance do.
+  const walletTokens = creditPurchasesUnavailable
+    ? []
+    : availableTokensForWallet(walletType, isTokenSelectable);
   // Extras lead, then the wallet's own set, deduped. A wallet with no signer
   // gets neither — an option it cannot sign is worse than one less option.
   const tokens =
@@ -194,12 +208,22 @@ export function buildPaymentOptions({
       kind: 'token',
       id: `token:${token}`,
       label: TOKEN_LABEL[token] ?? token,
+      /*
+        "1,505,829.1436 available" overflowed the card and was CSS-truncated
+        mid-digits — a number cut that way reads as broken, not shortened. The
+        amount is abbreviated instead.
+
+        The NETWORK stays. `usdc` and `base-usdc` are different tokens on
+        different chains, so dropping it to save width would make two distinct
+        options read identically — which is exactly the confusion the ticker
+        and network together exist to prevent.
+      */
       detail:
         held === undefined
           ? network
-          : `${network ? `${network} · ` : ''}${held.toLocaleString(undefined, {
-              maximumFractionDigits: 4,
-            })} available`,
+          : `${formatHeldBalance(held)} ${TOKEN_LABEL[token] ?? token}${
+              network ? ` · ${network}` : ''
+            }`,
       token,
       /*
         ARIO pays the ARIO registry directly and never touches the Turbo infra
@@ -209,7 +233,8 @@ export function buildPaymentOptions({
         correcting the ARIO rate was to make that difference visible.
       */
       badge: token === 'ario' ? 'Best price' : undefined,
-      blockedReason: networkBlock,
+      // ARIO alone; see the note on `shortOnNetworkSol`.
+      blockedReason: token === 'ario' ? networkBlock : undefined,
       // Unknown holdings or unknown price must NOT read as insufficient — the
       // same conflation that made a funded wallet look empty elsewhere.
       sufficient: held === undefined || price === undefined ? true : held >= price,

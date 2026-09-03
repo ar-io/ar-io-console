@@ -1,16 +1,31 @@
 import { useMemo, useState } from 'react';
-import { Globe, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Globe,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
 
 import CopyButton from '@/components/CopyButton';
 import SolanaGateButton from '@/components/SolanaGateButton';
 import RecordFieldsEditor from './RecordFieldsEditor';
+import RemoveRecordConfirm from './RemoveRecordConfirm';
 import {
   blankRecordFields,
   RecordFieldsState,
   toRecordChange,
+  withoutClears,
   validateRecordFields,
 } from '../recordFields';
 import { DEFAULT_TTL, isValidUndername } from '../utils';
+import { useStore } from '@/store/useStore';
+import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
+import { hasMetadataChange } from '../records/recordWriter';
+import { recordCostNote, recordSaveCost } from '../records/recordCost';
 import { useUndernameWrites, type UndernameRecord } from '../hooks/useUndernames';
 import { useSetArNSMetadata } from '../hooks/useSetArNSMetadata';
 import type { ANTDetails } from '../hooks/useANTDetails';
@@ -90,8 +105,23 @@ export default function RecordsTable({
   /** Row key currently expanded for editing, or '__new__' for the add form. */
   const [editKey, setEditKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<RecordFieldsState>(() => blankRecordFields(DEFAULT_TTL));
+  /*
+    The record as loaded, kept alongside the draft.
+
+    Metadata fields are tri-state on the wire — omitted means "leave alone",
+    null means "clear" — and only a diff against this can tell those apart. A
+    blank box with no original is a field the user never filled in; a blank box
+    that HAD a value is a deliberate clear.
+  */
+  const [original, setOriginal] = useState<RecordFieldsState | undefined>();
   const [newName, setNewName] = useState('');
   const [rowError, setRowError] = useState<string | null>(null);
+  /*
+    Removing is charged and fires from a COLLAPSED row, so the editor's cost
+    line never applies to it — without a confirm the user presses a small icon
+    in a row of icons and is billed with no warning.
+  */
+  const [confirmRemove, setConfirmRemove] = useState<Row | null>(null);
 
   const undernameWrites = useUndernameWrites(name, processId);
   const metadata = useSetArNSMetadata();
@@ -150,19 +180,58 @@ export default function RecordsTable({
   const validation = validateRecordFields(draft);
   const isAdding = editKey === '__new__';
   const nameValid = !isAdding || (isValidUndername(newName) && !rows.some((r) => r.key === newName));
-  const canSave = validation.allValid && nameValid;
+  /*
+    What this save will actually cost, and whether it can be afforded.
+
+    Two prices because a save can be two actions: the record itself and its
+    metadata are billed and approved separately, which the single form gives no
+    hint of. Only an owner is billed in credits — a controller pays the Solana
+    network directly, so `billed` is false for them and no credits figure is
+    quoted.
+  */
+  const creditBalance = useStore((s) => s.creditBalance);
+  const recordPrice = useArNSActionPrice('set-record');
+  const metadataPrice = useArNSActionPrice('set-record-metadata');
+
+  const pendingChange = useMemo(
+    () => toRecordChange(draft, original),
+    [draft, original],
+  );
+  const changesRecord =
+    !original ||
+    draft.target.trim() !== original.target.trim() ||
+    draft.ttl !== original.ttl ||
+    draft.protocol !== original.protocol ||
+    draft.priority.trim() !== original.priority.trim();
+
+  const cost = recordSaveCost({
+    actionPrice: recordPrice.credits,
+    metadataPrice: metadataPrice.credits,
+    changesRecord,
+    changesMetadata: hasMetadataChange(pendingChange),
+    creditBalance,
+    billed: !undernameWrites.paysNetworkDirectly,
+  });
+  const costLine = recordCostNote(cost);
+
+  const canSave = validation.allValid && nameValid && !cost.insufficient;
   const busyKey = undernameWrites.busyKey;
   const busy = undernameWrites.isBusy || metadata.isBusy;
 
   const openEdit = (r: Row) => {
     setRowError(null);
-    setDraft(r.seed());
+    const seeded = r.seed();
+    setDraft(seeded);
+    setOriginal(seeded);
     setEditKey(r.key);
   };
   const openAdd = () => {
     setRowError(null);
     setNewName('');
     setDraft(blankRecordFields(DEFAULT_TTL));
+    // A new record has nothing on chain, so every blank field is simply absent
+    // rather than cleared.
+    setOriginal(undefined);
     setEditKey('__new__');
   };
   const close = () => {
@@ -175,10 +244,18 @@ export default function RecordsTable({
     try {
       if (r?.kind === 'apex') {
         // One bundled setBaseNameRecord write.
-        await metadata.apply(processId, { baseRecord: toRecordChange(draft) });
+        // `withoutClears` until the sponsored record actions land — the ANT
+        // write has no way to clear a field, only to overwrite one.
+        await metadata.apply(processId, {
+          baseRecord: withoutClears(toRecordChange(draft, original)),
+        });
       } else {
         const key = r ? r.key : newName;
-        await undernameWrites.saveUndername(processId, key, toRecordChange(draft));
+        await undernameWrites.saveUndername(
+          processId,
+          key,
+          withoutClears(toRecordChange(draft, original)),
+        );
       }
       close();
       onSuccess();
@@ -191,9 +268,14 @@ export default function RecordsTable({
     setRowError(null);
     try {
       await undernameWrites.removeUndername(processId, r.key);
+      setConfirmRemove(null);
       onSuccess();
     } catch (err) {
+      // Keep the dialog open on failure: closing it would hide the reason and
+      // leave the row looking untouched, which is what "nothing happened" felt
+      // like before row errors surfaced at all.
       setRowError(err instanceof Error ? err.message : 'Remove failed');
+      setConfirmRemove(null);
     }
   };
 
@@ -235,6 +317,29 @@ export default function RecordsTable({
         promoteIdentity={r?.kind !== 'apex'}
       />
 
+      {/* Named before the click — especially the two-approval case, which is
+          otherwise invisible until the second prompt appears, after the first
+          has already been charged. */}
+      {/*
+        Cost sits on the save being made, not above the whole list — a standing
+        note at the top is read once and forgotten by the time anyone edits,
+        and it cannot know what THIS change will cost. Owners see credits;
+        a controller sees the Solana fee they pay instead.
+      */}
+      {undernameWrites.paysNetworkDirectly ? (
+        <p className="mt-2 text-xs text-foreground/60">
+          {undernameWrites.costNote}
+        </p>
+      ) : (
+        costLine && <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
+      )}
+      {cost.insufficient && (
+        <p className="mt-1 flex items-start gap-1.5 text-xs text-error">
+          <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+          Not enough credits for this change. Add credits and try again.
+        </p>
+      )}
+
       {rowError && <p className="mt-2 text-sm text-error">{rowError}</p>}
 
       <div className="mt-3 flex items-center gap-2">
@@ -263,6 +368,32 @@ export default function RecordsTable({
 
   return (
     <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
+      {/*
+        Row-action failures need somewhere to land when no row is open.
+
+        `rowError` was only rendered inside the expanded editor, so deleting a
+        record — which happens from a COLLAPSED row — set the error into state
+        with nothing to display it. The click worked, the write failed, and the
+        user saw absolutely nothing. Shown here whenever the editor that would
+        otherwise carry it is closed.
+      */}
+      {confirmRemove && (
+        <RemoveRecordConfirm
+          undername={confirmRemove.label}
+          displayName={name}
+          busy={undernameWrites.busyKey === confirmRemove.key}
+          paysNetworkDirectly={undernameWrites.paysNetworkDirectly}
+          onConfirm={() => void remove(confirmRemove)}
+          onCancel={() => setConfirmRemove(null)}
+        />
+      )}
+
+      {!editKey && rowError && (
+        <p className="mb-3 flex items-start gap-1.5 text-sm text-error">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+          {rowError}
+        </p>
+      )}
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-primary" />
@@ -344,7 +475,7 @@ export default function RecordsTable({
                         {r.kind === 'undername' && (
                           <SolanaGateButton
                             variant="inline"
-                            onAction={() => void remove(r)}
+                            onAction={() => setConfirmRemove(r)}
                             disabled={busy}
                             ariaLabel={`Remove record ${r.label}`}
                             actionVerb="remove this record"

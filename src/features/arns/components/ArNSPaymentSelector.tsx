@@ -81,47 +81,82 @@ function OptionCard({
       aria-pressed={active}
       onClick={onClick}
       disabled={disabled || !!option.blockedReason}
-      className={`flex flex-1 items-start gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 sm:basis-0 ${
+      /*
+        Stacked, not side-by-side.
+
+        The icon used to sit BESIDE the label and amount, which made each card
+        as wide as its longest line plus an icon. Four of those in one row
+        overflowed the modal and clipped the last option — you cannot choose a
+        payment method you cannot see. Stacking drops the intrinsic width to
+        the widest single line, so all four fit without the modal growing.
+
+        `min-w-0` is what lets the amount truncate instead of forcing the card
+        wider; without it `truncate` silently does nothing inside a flex child.
+      */
+      className={`flex min-w-0 flex-1 flex-col gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 sm:basis-0 ${
         active
           ? 'border-primary bg-primary/10'
           : 'border-border/20 bg-card hover:border-primary/40'
       }`}
     >
+      {/*
+        A fixed three-slot rhythm: icon, name, one detail line. Every card
+        reserves the same vertical space whether or not it has a badge or a
+        detail, so four of them sit on a shared baseline instead of each being
+        as tall as its own content — which is what made the row look ragged.
+      */}
       <span
-        className={`flex h-5 w-5 flex-shrink-0 items-center justify-center ${
+        className={`flex h-5 w-5 items-center justify-center ${
           active ? 'text-primary' : 'text-foreground/60'
         }`}
       >
         <OptionIcon option={option} active={active} />
       </span>
-      <span className="min-w-0">
-        <span className="flex items-center gap-1.5">
-          <span className="font-medium text-foreground">{option.label}</span>
+
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="flex min-w-0 items-baseline gap-1.5">
+          <span className="truncate font-medium leading-tight text-foreground">
+            {option.label}
+          </span>
           {option.badge && (
-            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            /*
+              Inline and small. On its own line it pushed the detail down and
+              made this card taller than its neighbours, so the row lost its
+              baseline for the sake of one word.
+            */
+            <span className="flex-none rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-primary">
               {option.badge}
             </span>
           )}
         </span>
-        {option.detail && (
-          <span className="block truncate text-xs text-foreground/60">
-            {option.detail}
-          </span>
-        )}
+
         {/*
-          Say why it cannot be used, here rather than on submit. A blocked
-          reason outranks "Not enough": running out of SOL for network costs is
-          a different problem from not holding enough of this asset, and needs a
-          different remedy.
+          Reserved even when empty, so a card without a detail does not shrink
+          and pull the row out of alignment.
         */}
-        {option.blockedReason ? (
-          <span className="block text-xs text-foreground/60">
-            {option.blockedReason}
-          </span>
-        ) : !option.sufficient ? (
-          <span className="block text-xs text-foreground/60">Not enough</span>
-        ) : null}
+        <span
+          className="block min-w-0 truncate text-xs leading-tight text-foreground/60"
+          title={option.detail}
+        >
+          {option.detail ?? '\u00A0'}
+        </span>
       </span>
+
+      {/*
+        Say why it cannot be used, here rather than on submit. A blocked reason
+        outranks "Not enough": running out of SOL for network costs is a
+        different problem from not holding enough of this asset, and needs a
+        different remedy. Allowed to wrap — a truncated reason is no reason.
+      */}
+      {option.blockedReason ? (
+        <span className="block text-xs leading-snug text-error/80">
+          {option.blockedReason}
+        </span>
+      ) : !option.sufficient ? (
+        <span className="block text-xs leading-tight text-error/80">
+          Not enough
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -207,7 +242,7 @@ export function ArNSPaymentSelector({
             read as two groups rather than one row of equals — the whole point
             of flattening it.
           */}
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-stretch">
             {options.map((option) => (
               <OptionCard
                 key={option.id}

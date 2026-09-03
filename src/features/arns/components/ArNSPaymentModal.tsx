@@ -22,14 +22,6 @@ interface ArNSPaymentModalProps {
   tokenLabel?: string;
   /** The name being bought — makes the fiat panels speak about it, not storage. */
   arnsName?: string;
-  /**
-   * SOL the wallet still pays for network costs, on top of this payment.
-   *
-   * This route funds the NAME only; the ANT's account rent is paid by the
-   * user's own Solana wallet at registration. "This covers your name" is true
-   * and easy to read as "this covers everything", which it does not.
-   */
-  networkSol?: number;
   onClose: () => void;
   /** Fired when payment completes (credits landed). */
   onComplete: () => void;
@@ -57,11 +49,11 @@ export default function ArNSPaymentModal({
   token,
   tokenLabel,
   arnsName,
-  networkSol,
   onClose,
   onComplete,
 }: ArNSPaymentModalProps) {
   const [busy, setBusy] = useState(false);
+
   const [step, setStep] = useState<TopUpHostStep>('details');
   const payingByCard = paymentMethod === 'fiat';
 
@@ -102,18 +94,10 @@ export default function ArNSPaymentModal({
                 {/* Trimmed: this was the tallest thing in the modal, and at
                     ~110 characters it wrapped to three lines and pushed the
                     terms link below the fold. */}
-                Covers the name only
-                {networkSol != null && networkSol > 0 ? (
-                  <>
-                    {' '}
-                    — your wallet pays ~
-                    {networkSol.toLocaleString(undefined, {
-                      maximumFractionDigits: 4,
-                    })}{' '}
-                    SOL in network costs next
-                  </>
-                ) : null}
-                .
+                {/* The SOL follow-up is gone: Turbo pays the Solana costs on
+                    every route that settles in credits, which is every route
+                    that reaches this modal. */}
+                Covers the name in full.
               </>
             ) : undefined
           }

@@ -5,12 +5,14 @@ import type { TurboArNSIntent } from './TurboArNSClient';
  * step and must survive a reload / tab close / failed attempt. Persisted so a
  * retry resumes rather than repeats work that costs money:
  *
- * - `processId` is captured the instant a Model-B ANT is spawned client-side
+ * - `processId` is captured the instant an ANT is spawned client-side, which
+ *   now happens only on the AUCTION path — a sponsored registration mints the
+ *   name through Turbo and never spawns one
  *   (real SOL, ~0.02). A retry MUST reuse this ANT instead of spawning another,
  *   or every failed attempt bleeds SOL and orphans an ANT.
  * - `nonce` is the server-side idempotency + status key captured once the
  *   purchase is submitted (credits debited, on-chain write in flight). Resuming
- *   is a pure read (`GET /v1/arns/purchase/:nonce`); it never re-submits, so it
+ *   is a pure read (`GET /v1/arns/actions/:nonce`); it never re-submits, so it
  *   can never double-debit.
  *
  * At least one of `nonce` / `processId` is always present. Ported verbatim from

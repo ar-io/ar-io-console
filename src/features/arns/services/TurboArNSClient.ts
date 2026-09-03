@@ -1,6 +1,5 @@
 import {
   ArNSFiatPurchaseQuoteResponse,
-  ArNSPurchaseResponse,
   Currency,
   SolanaWalletAdapter as TurboSolanaWalletAdapter,
   TurboArNSNamesResponse,
@@ -8,9 +7,12 @@ import {
   TurboFactory,
   TurboUnauthenticatedClient,
   TurboAuthenticatedClient,
+  ArNSOwnerSigner,
+  ArNSAction,
 } from '@ardrive/turbo-sdk/web';
 
 import { lowerCaseDomain } from '../utils';
+import type { ArNSPriceFields } from '../purchase/priceTotals';
 
 /**
  * TurboArNSClient — read-only access to the bundler's ArNS surface.
@@ -49,8 +51,16 @@ export interface TurboArNSClientConfig {
   gatewayUrl: string;
 }
 
-/** Price response for an ArNS intent (`GET /v1/arns/price/:intent/:name`). */
-export type TurboArNSIntentPriceResponse = {
+/**
+ * Price response for an ArNS intent (`GET /v1/arns/price/:intent/:name`).
+ *
+ * The winc/surcharge fields and their fiat counterparts are described on
+ * `ArNSPriceFields`, which this extends — including which of them are legacy
+ * and must never be added to a total. Use `readWincTotals` / `wincForPurchase`
+ * rather than reaching for a field directly: which total applies depends on who
+ * spawns the ANT, and that is a property of the settlement path.
+ */
+export type TurboArNSIntentPriceResponse = ArNSPriceFields & {
   mARIO: string;
   winc: string;
   fiatEstimate?: {
@@ -186,6 +196,28 @@ export class TurboArNSClient {
   }
 
   /**
+   * What a non-purchase action costs, in winc.
+   *
+   * The eight non-purchase actions are NOT free — the bundler charges a small
+   * margin on each. The SDK's older doc comments called them free; that was
+   * stale, and believing it puts a promise of no charge in front of a real one.
+   *
+   * Prices are per-environment and genuinely differ: removing a record is 0 on
+   * testnet and 0.05 credits on production. Never hardcode one, and never infer
+   * production's from testnet's.
+   *
+   * Unauthenticated, like `getArNSPrice` — a preview, so it creates nothing and
+   * debits nothing. The four PURCHASE intents are not served here; they price
+   * per name through `getArNSPrice`.
+   */
+  public async getArNSActionPrice(
+    action: ArNSAction,
+  ): Promise<{ action: string; wincQty: string }> {
+    const turbo = this.unauthenticated('solana');
+    return turbo.getArNSActionPrice(action);
+  }
+
+  /**
    * Quote a **fiat (card) purchase** — the one-step card → name path.
    *
    * Distinct from `getArNSPrice`, which prices the purchase in credits/mARIO.
@@ -233,96 +265,108 @@ export class TurboArNSClient {
   }
 
   /**
-   * Settle an ArNS intent against the signer's TURBO CREDIT balance.
+   * Settle an ArNS purchase against the payer's TURBO CREDIT balance.
    *
-   * This is the only way to spend credits. `@ar.io/sdk`'s Solana writes accept
-   * `fundFrom: 'turbo'` and then ignore it — every branch treats it as
-   * `'balance'` and debits the wallet's ARIO — so routing a credits purchase
-   * through `buyRecord` charged the wrong asset entirely.
+   * All four purchase actions are gas-sponsored: Turbo pays every lamport of
+   * Solana fee and rent, and the buyer's SOL balance can be zero for the life
+   * of the name. Only `Buy-Name` opens a wallet, and that one signature covers
+   * minting the name to the buyer AND granting Turbo the helper rights that
+   * keep later record edits cheap.
    *
-   * `processId` matters for a Buy: supplied, the name is assigned to an ANT the
-   * user already owns; omitted, the bundler provisions a TURBO-OWNED one. Only
-   * the deliberately-custodial card path wants the latter.
+   * Two identities, and they are frequently different wallets:
+   *  - the PAYER, whose credits these are, identified by the request signature
+   *    (Arweave, Ethereum or Solana — `client` is already authenticated as it);
+   *  - the OWNER, always a Solana wallet, which receives the name.
+   *
+   * `owner` is required for `Buy-Name` and meaningless for the rest, which act
+   * on a name that already exists and need no signature at all.
    */
   public async purchaseWithCredits({
-    walletAdapter,
     client,
-    allowServiceCustody = false,
     name,
     intent = 'Buy-Name',
     type,
     years,
     increaseQty,
-    processId,
+    owner,
     paidBy,
+    onNonce,
   }: {
     /**
-     * Typed against the SDK's own adapter rather than this file's looser
-     * local alias — a cast here would silence the compiler on a call that
-     * spends money.
-     */
-    walletAdapter?: TurboSolanaWalletAdapter;
-    /**
-     * A client already authenticated as the payer. Preferred.
+     * A client already authenticated as the PAYER.
      *
-     * The service identifies the payer from the request SIGNATURE — its
-     * middleware accepts Arweave, Ethereum, Solana and ED25519 — and debits
-     * that identity's credits. Building a Solana client here regardless meant
-     * an Arweave or Ethereum holder could not spend their own credits on a
-     * name they own, which is every custodial buyer.
+     * The service reads the payer from the request signature and debits that
+     * identity. Building a Solana client here regardless meant an Arweave or
+     * Ethereum holder could not spend their own credits on a name they own.
      */
-    client?: TurboAuthenticatedClient;
+    client: TurboAuthenticatedClient;
     name: string;
     intent?: TurboArNSIntent;
     type?: 'lease' | 'permabuy';
     years?: number;
     increaseQty?: number;
-    /** User-owned ANT for a Buy. Omitting it makes the SERVICE spawn one. */
-    processId?: string;
-    /**
-     * Permit a Buy with no `processId`, which hands the new ANT to Turbo.
-     *
-     * Guarded rather than implied. Omitting `processId` was the difference
-     * between a name the buyer owns and one Turbo holds, expressed as an
-     * absent field — so any upstream bug that let it fall through as undefined
-     * would have quietly sold custody, in an environment where custody is
-     * switched off and nothing downstream would notice. The custodial route
-     * does not even come through here; it quotes and settles via
-     * `getFiatQuote`. So this stays off, and a missing id is a crash rather
-     * than a silent change of ownership.
-     */
-    allowServiceCustody?: boolean;
+    /** Solana wallet that will own the name. Required for `Buy-Name`. */
+    owner?: ArNSOwnerSigner;
     paidBy?: string | string[];
-  }): Promise<ArNSPurchaseResponse> {
-    if (intent === 'Buy-Name' && !processId && !allowServiceCustody) {
-      throw new Error(
-        'Refusing to buy a name with no ANT: without a processId the service ' +
-          'spawns and keeps one. Pass the spawned ANT, or set ' +
-          'allowServiceCustody when custody is genuinely intended.',
-      );
-    }
-    if (!client && !walletAdapter) {
-      throw new Error(
-        'purchaseWithCredits needs either an authenticated client or a Solana wallet adapter.',
-      );
-    }
-    const turbo =
-      client ??
-      TurboFactory.authenticated({
-        token: 'solana',
-        walletAdapter: walletAdapter as TurboSolanaWalletAdapter,
-        paymentServiceConfig: { url: this.paymentUrl },
-        uploadServiceConfig: { url: this.uploadUrl },
-        gatewayUrl: this.gatewayUrl,
-      });
-    const params = {
-      ...intentParams({ name, intent, type, years, increaseQty }),
-      ...(processId ? { processId } : {}),
-      ...(paidBy ? { paidBy } : {}),
+    /**
+     * Called with the idempotency key the instant it exists, BEFORE the wallet
+     * is prompted. Credits are already reserved by then, so this is the only
+     * route back to a paid-for purchase if the page reloads mid-approval.
+     */
+    onNonce?: (nonce: string) => void;
+  }): Promise<ArNSSettlementResult> {
+    const lowered = lowerCaseDomain(name);
+    const settled = await (async () => {
+      switch (intent) {
+        case 'Buy-Name': {
+          if (!owner) {
+            /*
+              A Buy with no owner is not a recoverable state to paper over: the
+              name has to be minted TO someone, and guessing would either fail
+              at the service or mint to the wrong wallet. Crash here, where the
+              message can say what is missing.
+            */
+            throw new Error(
+              'Connect the Solana wallet that will own this name.',
+            );
+          }
+          return client.buyArNSName({
+            name: lowered,
+            owner,
+            ...(type ? { type } : {}),
+            ...(years ? { years } : {}),
+            ...(paidBy ? { paidBy } : {}),
+            ...(onNonce ? { onNonce } : {}),
+          });
+        }
+        case 'Extend-Lease':
+          return client.extendArNSLease({
+            name: lowered,
+            years: years ?? 1,
+            ...(paidBy ? { paidBy } : {}),
+            ...(onNonce ? { onNonce } : {}),
+          });
+        case 'Upgrade-Name':
+          return client.upgradeArNSName({
+            name: lowered,
+            ...(paidBy ? { paidBy } : {}),
+            ...(onNonce ? { onNonce } : {}),
+          });
+        case 'Increase-Undername-Limit':
+          return client.increaseArNSUndernameLimit({
+            name: lowered,
+            increaseQty: increaseQty ?? 1,
+            ...(paidBy ? { paidBy } : {}),
+            ...(onNonce ? { onNonce } : {}),
+          });
+      }
+    })();
+
+    return {
+      nonce: settled.nonce,
+      messageId: settled.messageId,
+      receipt: settled as unknown as Record<string, unknown>,
     };
-    return turbo.purchaseArNSName(
-      params as Parameters<typeof turbo.purchaseArNSName>[0],
-    );
   }
 
   /**

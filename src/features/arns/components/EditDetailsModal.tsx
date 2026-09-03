@@ -25,6 +25,7 @@ import {
 } from '../hooks/useSetArNSMetadata';
 import LogoUploadField from './LogoUploadField';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import NeedsSolNote from './NeedsSolNote';
 import {
 } from '../recordFields';
 
@@ -140,7 +141,7 @@ export default function EditDetailsModal({
     'w-full rounded-2xl border border-border/20 bg-card p-3 text-sm text-foreground focus:border-primary disabled:opacity-50';
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-lg p-4 sm:p-5">
         <ModalHeader
           icon={Tag}
@@ -152,8 +153,10 @@ export default function EditDetailsModal({
               </span>
             </>
           }
-          description="Name metadata stored on the ANT"
+          description="Details shown wherever this name appears"
         />
+
+        <NeedsSolNote action="Editing a name’s own details" className="mb-4" />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
@@ -184,9 +187,12 @@ export default function EditDetailsModal({
           <>
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 bg-card p-3 text-xs text-foreground/70">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
-              Each ANT-metadata field is a separate wallet approval; the record
-              saves in one approval (all its fields together). Free apart from a
-              small SOL network fee.
+              {/* These are the name's OWN details, which Turbo does not
+                  sponsor — unlike a RECORD's details, which it does. The two
+                  sit next to each other in the program and differ on cost, so
+                  they must not read the same. */}
+              These are the name&apos;s own details, not a record&apos;s. Each
+              field you change is a separate wallet approval.
             </div>
 
             {/* Nickname */}
@@ -293,11 +299,15 @@ export default function EditDetailsModal({
               </summary>
               <div className="mt-2 space-y-1 text-foreground/70">
                 <p>
-                  This name is controlled by a token (an ANT) on Solana that
+                  {/* Inside an "On-chain details" disclosure the reader has
+                      deliberately opened — the one place the underlying term
+                      is worth giving, since they can then recognise it in an
+                      explorer. Elsewhere it is noise. */}
+                  This name is controlled by a token on Solana (an ANT) that
                   holds all its records.
                 </p>
                 <div className="flex items-center justify-between gap-2 pt-1">
-                  <span className="text-foreground/50">Name token (ANT)</span>
+                  <span className="text-foreground/50">Name token</span>
                   <a
                     href={explorerAddressUrl(domain.processId, configMode)}
                     target="_blank"

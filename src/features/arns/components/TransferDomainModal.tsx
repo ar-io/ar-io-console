@@ -13,6 +13,8 @@ import SolanaGateButton from '../../../components/SolanaGateButton';
 import { isValidSolanaAddress } from '../utils';
 import { useTransferArNSName } from '../hooks/useTransferArNSName';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import ActionCostNote from './ActionCostNote';
+import TransactionReceipt from './TransactionReceipt';
 
 interface TransferDomainModalProps {
   domain: ArNSName;
@@ -33,7 +35,8 @@ export default function TransferDomainModal({
 }: TransferDomainModalProps) {
   const [recipient, setRecipient] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
-  const { transfer, phase, error, txId, isBusy } = useTransferArNSName();
+  const { transfer, phase, error, paysNetworkDirectly, txId, isBusy } =
+    useTransferArNSName(domain.processId);
 
   // Trim once and use the SAME value to validate and to write, so the gate can
   // never green-light one address while the transfer submits another.
@@ -51,7 +54,7 @@ export default function TransferDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-md p-4 sm:p-5">
         <ModalHeader
           icon={Send}
@@ -75,11 +78,7 @@ export default function TransferDomainModal({
             <p className="mt-1 text-sm text-foreground/70">
               Ownership now belongs to the recipient wallet.
             </p>
-            {txId && (
-              <div className="mt-2 break-all font-mono text-xs text-foreground/50">
-                tx: {txId}
-              </div>
-            )}
+            <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
               className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
@@ -95,16 +94,27 @@ export default function TransferDomainModal({
                 Irreversible — transfer with care
               </div>
               <p className="text-foreground/80">
-                This sends full ownership of {domain.displayName}.ar.io and its
-                ANT to the wallet below. You&apos;ll permanently lose control of
-                the name and every record on it, and it cannot be undone.{' '}
+                {/* "and its ANT" is jargon on the one screen where the user
+                    most needs to understand exactly what leaves their control.
+                    Say what goes: the name and everything on it. */}
+                This sends full ownership of {domain.displayName}.ar.io to the
+                wallet below — the name and every record on it. You&apos;ll
+                permanently lose control of it, and it cannot be undone.{' '}
                 <span className="font-medium text-foreground">
                   Double-check the address
                 </span>{' '}
-                — sending to a wrong or inaccessible wallet bricks the name for
+                — sending to a wrong or inaccessible wallet loses the name for
                 good.
               </p>
             </div>
+
+            {/* Transfer is one of the priced actions; the warning above is
+                about permanence, not cost, and both need saying. */}
+            <ActionCostNote
+              action="transfer"
+              paysNetworkDirectly={paysNetworkDirectly}
+              className="mb-4"
+            />
 
             <label className="mb-2 block text-sm font-medium">
               Recipient Solana address
@@ -137,9 +147,11 @@ export default function TransferDomainModal({
             </label>
 
             {phase === 'error' && error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
-                <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                <span>{error.message}</span>
+              <div className="mb-4 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
+                <div className="flex items-start gap-2">
+                  <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <span>{error.message}</span>
+                </div>
               </div>
             )}
 

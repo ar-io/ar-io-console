@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { useWincForOneGiB, usePerDataItemFee } from '../../hooks/useWincForOneGiB';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags, freeTierSummary } from '../../hooks/useFreeUploadLimit';
-import { useX402Pricing } from '../../hooks/useX402Pricing';
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
 import { useImagePreviews } from '../../hooks/useImagePreviews';
 import { wincPerCredit, SupportedTokenType } from '../../constants';
@@ -75,12 +74,6 @@ interface CryptoPaymentDetailsProps {
   onShortageUpdate: (shortage: { amount: number; tokenType: SupportedTokenType } | null) => void;
   localJitMax: number;
   onMaxTokenAmountChange: (amount: number) => void;
-  x402Pricing?: {
-    usdcAmount: number;
-    usdcAmountSmallestUnit: string;
-    loading: boolean;
-    error: string | null;
-  };
 }
 
 function CryptoPaymentDetails({
@@ -93,7 +86,6 @@ function CryptoPaymentDetails({
   onShortageUpdate,
   localJitMax: _localJitMax, // eslint-disable-line @typescript-eslint/no-unused-vars
   onMaxTokenAmountChange,
-  x402Pricing,
 }: CryptoPaymentDetailsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<{
@@ -117,27 +109,22 @@ function CryptoPaymentDetails({
   useEffect(() => {
     const calculate = async () => {
       try {
-        // For base-usdc, use x402 pricing directly
-        if (tokenType === 'base-usdc' && x402Pricing) {
-          // Don't set cost while loading to avoid showing "FREE" flash
-          if (x402Pricing.loading) {
-            setEstimatedCost(null); // Show "Calculating..."
-            return;
-          }
+        /*
+          base-usdc is NOT special-cased any more.
 
-          if (!x402Pricing.error) {
-            setEstimatedCost({
-              tokenAmountReadable: x402Pricing.usdcAmount, // Can be 0 for free uploads
-              estimatedUSD: x402Pricing.usdcAmount, // USDC is 1:1 with USD
-            });
+          It used to be quoted straight off `x402Pricing` — a raw price for the
+          file's bytes, carrying neither the per-data-item fee nor a safety
+          buffer, while the upload is billed `totalCost` (bytes + that fee, per
+          file). The payment was therefore always short: as little as 54% of a
+          1 KB file's cost, ~99.9% of a large one. Either way the top-up settled
+          and the upload it had just paid for was rejected for insufficient
+          balance.
 
-            // For Crypto tab, max is just the buffered cost
-            onMaxTokenAmountChange(x402Pricing.usdcAmount);
-          }
-          return;
-        }
+          Falling through to the shared credits->token conversion below fixes it:
+          `totalCost` already carries the per-item fee, and BUFFER_MULTIPLIER
+          absorbs price drift between quote and settlement.
+        */
 
-        // For other tokens, calculate using regular pricing
         // Always use totalCost for Crypto tab - user is choosing to pay full amount with crypto
         const cost = await calculateRequiredTokenAmount({
           creditsNeeded: totalCost,
@@ -166,8 +153,9 @@ function CryptoPaymentDetails({
       setEstimatedCost({ tokenAmountReadable: 0, estimatedUSD: 0 });
       onMaxTokenAmountChange(0);
     }
+    // x402Pricing is intentionally absent: the cost no longer derives from it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditsNeeded, totalCost, tokenType, bufferPercentage, x402Pricing?.usdcAmount, x402Pricing?.loading, x402Pricing?.error]);
+  }, [creditsNeeded, totalCost, tokenType, bufferPercentage]);
 
   // Validate balance and update shortage info
   useEffect(() => {
@@ -380,7 +368,6 @@ export default function UploadPanel() {
     setLocalJitMax,
     localJitEnabled,
     setLocalJitEnabled,
-    jitSectionExpanded,
     setJitSectionExpanded,
     selectedJitToken,
     setSelectedJitToken,
@@ -401,18 +388,13 @@ export default function UploadPanel() {
   // Per-file free flags, consuming the shared allowance cumulatively across the batch.
   const freeFlags = computeFreeFlags(files.map(f => f.size), effectiveFreeLimit, bytesRemaining);
   const billableFiles = files.filter((_, i) => !freeFlags[i]);
-  const billableFileSize = billableFiles.reduce((acc, file) => acc + file.size, 0);
 
-  // Get x402 pricing ONLY when user has opened the "Pay with Crypto" section
-  // This ensures we show CREDITS by default and only fetch x402 pricing when user clicks "Pay with Crypto"
-  // In x402-only mode, always use x402 pricing since there's no credits option
-  // Use billableFileSize (excluding free files) for accurate x402 pricing
-  const shouldUseX402 =
-    walletType === 'ethereum' &&
-    selectedJitToken === 'base-usdc' &&
-    showConfirmModal &&  // Modal must be open
-    (jitSectionExpanded || x402OnlyMode);  // "Pay with Crypto" section expanded OR x402-only mode
-  const x402Pricing = useX402Pricing(shouldUseX402 ? billableFileSize : 0);
+  /*
+    The x402 byte-price quote is deliberately not fetched any more. Crypto
+    payments — base-usdc included — are sized from the CREDITS the upload needs
+    (`totalCost`, which carries the per-data-item fee) via
+    `calculateRequiredTokenAmount`. See the note in CryptoPaymentDetails.
+  */
 
   const {
     uploadMultipleFiles,
@@ -663,7 +645,7 @@ export default function UploadPanel() {
 
     try {
       // Pre-topup flow for crypto payments (one payment for all files)
-      const { results, failedFiles } = await uploadMultipleFiles(files, {
+      const { results, failedFiles, paidWithoutUpload } = await uploadMultipleFiles(files, {
         cryptoPayment: shouldEnableJit,
         tokenAmount: jitMaxTokenAmountSmallest,
         selectedToken: selectedJitToken,
@@ -704,7 +686,15 @@ export default function UploadPanel() {
         }
       }
       
-      if (failedFiles.length > 0) {
+      // Paid, uploaded nothing. Silence here reads as "my money vanished", so
+      // name where the credits went and that the next attempt will spend them.
+      if (paidWithoutUpload) {
+        setUploadMessage({
+          type: 'info',
+          text: 'Payment went through but the upload was cancelled before it started. '
+              + 'The credits are in your balance — uploading again will use them, no second payment.'
+        });
+      } else if (failedFiles.length > 0) {
         // Failed to upload some files - error is now included in failedFiles entries
         // Format: ["filename.pdf: Error message", ...]
         setUploadMessage({
@@ -1559,7 +1549,6 @@ export default function UploadPanel() {
                           onShortageUpdate={setCryptoShortage}
                           localJitMax={localJitMax}
                           onMaxTokenAmountChange={setLocalJitMax}
-                          x402Pricing={x402Pricing}
                         />
                       )}
                     </>
@@ -1681,8 +1670,11 @@ export default function UploadPanel() {
                           (shouldEnableJit && creditsNeeded > 0 && !jitBalanceSufficient) ||
                           // Disable if in x402-only mode with non-Ethereum wallet for billable uploads
                           (x402OnlyMode && creditsNeeded > 0 && walletType !== 'ethereum') ||
-                          // Disable while x402 pricing is loading (for crypto payments)
-                          (shouldEnableJit && creditsNeeded > 0 && selectedJitToken === 'base-usdc' && x402Pricing?.loading)
+                          // Crypto pricing has not resolved yet: localJitMax is still 0,
+                          // which handleConfirmUpload would send as a falsy tokenAmount —
+                          // silently skipping the top-up and uploading against a balance
+                          // that cannot cover it.
+                          (shouldEnableJit && creditsNeeded > 0 && !(localJitMax > 0))
                         );
                       })()}
                       className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"

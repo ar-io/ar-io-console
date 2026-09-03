@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isTokenSelectable } from '../../../constants';
 import { buildPaymentOptions, defaultPaymentOption } from './paymentOptions';
+import { availableTokensForWallet } from '../../../utils/walletTokens';
 
 // The real predicate, not a permissive stub — it withdraws polygon-usdc and
 // base-ario, and a test that stubs it past that asserts a UI we never render.
@@ -22,18 +23,16 @@ describe('buildPaymentOptions', () => {
     const first = buildPaymentOptions({ ...base, walletType: 'solana' })[0];
     expect(first.kind).toBe('card');
     // Naming the processor is the reassurance a card row exists to give.
-    expect(first.detail).toBe('with Stripe');
+    expect(first.detail).toBe('via Stripe');
   });
 
-  it('says on the Card option when Turbo will hold the name', () => {
-    // Custody changes WHAT you get, not just how you pay, so it belongs at the
-    // point of choice rather than in the breakdown underneath.
+  it('names the processor on the Card option, with no custody caveat', () => {
+    // Turbo holds nothing now — the name is minted straight to the buyer — so
+    // there is no longer a "what you get" difference to disclose here.
     const normal = buildPaymentOptions({ ...base, walletType: 'solana' });
-    expect(normal.find((o) => o.kind === 'card')?.detail).toBe('with Stripe');
-    const custodial = buildPaymentOptions({
-      ...base, walletType: 'solana', cardIsCustodial: true,
-    });
-    expect(custodial.find((o) => o.kind === 'card')?.detail).toMatch(/turbo holds/i);
+    expect(normal.find((o) => o.kind === 'card')?.detail).toBe(
+      'via Stripe',
+    );
   });
 
   it('drops card when the payment service has fiat disabled', () => {
@@ -165,30 +164,26 @@ describe('network-cost blocking', () => {
       networkSolRequired: 0.015, solBalance,
     });
 
-  it('blocks every route that needs SOL when the wallet is short', () => {
-    // Creating a name costs account rent whoever pays for the name, so an
-    // ARIO-rich wallet with no SOL previously saw ARIO as usable and failed
-    // at signing.
+  it('blocks ARIO alone, because only ARIO spends the buyer’s own SOL', () => {
+    /*
+      Paying in ARIO is the buyer's own `buyRecord` transaction, so their
+      wallet covers the Solana rent. Every other route settles in credits and
+      Turbo pays that rent — blocking those would stop exactly the buyers
+      sponsorship exists to serve, the ones holding no SOL at all.
+    */
     const o = withSol(0);
-    for (const id of ['token:ario', 'token:solana', 'balance']) {
-      expect(o.find((x) => x.id === id)?.blockedReason).toMatch(/network costs/i);
+    expect(o.find((x) => x.id === 'token:ario')?.blockedReason).toMatch(
+      /network costs/i,
+    );
+    for (const id of ['balance', 'token:solana']) {
+      expect(o.find((x) => x.id === id)?.blockedReason).toBeUndefined();
     }
   });
 
-  it('leaves the CUSTODIAL card usable — it is the escape hatch', () => {
-    const o = buildPaymentOptions({
-      ...base, walletType: 'solana', credits: 0, cardIsCustodial: true,
-      networkSolRequired: 0.015, solBalance: 0,
-    });
-    const card = o.find((x) => x.kind === 'card')!;
-    expect(card.blockedReason).toBeUndefined();
-    // Named for why it works, not for the processor.
-    expect(card.detail).toMatch(/no crypto needed/i);
-  });
-
-  it('blocks a SELF-CUSTODY card, which still needs the wallet to pay rent', () => {
+  it('never blocks the card, whatever the wallet holds', () => {
     const card = withSol(0).find((x) => x.kind === 'card')!;
-    expect(card.blockedReason).toMatch(/network costs/i);
+    expect(card.blockedReason).toBeUndefined();
+    expect(card.detail).toBe('via Stripe');
   });
 
   it('blocks nothing when the SOL balance is UNKNOWN', () => {
@@ -201,12 +196,164 @@ describe('network-cost blocking', () => {
     for (const o of withSol(1)) expect(o.blockedReason).toBeUndefined();
   });
 
-  it('never preselects a blocked option', () => {
+  it('still preselects a usable option, leaving the blocked one aside', () => {
+    // Balance leads and is no longer blocked, so it wins outright — the SOL
+    // shortfall only ever costs the buyer the ARIO route.
+    const o = withSol(0);
+    expect(defaultPaymentOption(o)?.kind).toBe('balance');
+  });
+});
+
+describe('paying with a token', () => {
+  it('does not vouch for affordability it was never given a price for', () => {
+    /*
+      `tokenPrices` is not supplied by the purchase card, so every token option
+      reports `sufficient: true`. That is the correct conservative answer here —
+      an unknown price must not read as "you cannot afford this" — but it means
+      the picker is NOT the thing protecting a SOL-poor wallet on a top-up.
+      ArNSPurchaseCard owns that check; this test exists so the next person to
+      "tidy up" that gate finds out here rather than in production.
+    */
     const o = buildPaymentOptions({
-      ...base, walletType: 'solana', credits: 50, extraTokens: ['ario'],
-      cardIsCustodial: true, networkSolRequired: 0.015, solBalance: 0,
+      ...base, walletType: 'solana', credits: 0,
+      extraTokens: ['ario'], tokenBalances: { solana: 0 },
     });
-    // Balance would normally lead; it is blocked, so the card wins.
-    expect(defaultPaymentOption(o)?.kind).toBe('card');
+    expect(o.find((x) => x.id === 'token:solana')?.sufficient).toBe(true);
+  });
+});
+
+describe('what a payment card says', () => {
+  it('keeps the network on a token, so same-ticker chains stay distinct', () => {
+    /*
+      `usdc` and `base-usdc` are different tokens on different chains. Dropping
+      the network to save width — which shortening the detail line briefly did
+      — makes two distinct options read identically.
+    */
+    const o = buildPaymentOptions({
+      ...base, walletType: 'ethereum',
+      tokenBalances: { 'base-usdc': 40 },
+    });
+    const usdc = o.find((x) => x.id === 'token:base-usdc');
+    expect(usdc?.detail).toContain('USDC');
+    expect(usdc?.detail).toContain('Base');
+  });
+
+  it('abbreviates a holding rather than letting it be cut mid-digits', () => {
+    // Reported from the picker as "1,505,829.1436 …".
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', extraTokens: ['ario'],
+      tokenBalances: { ario: 1_505_829.1436 },
+    });
+    const ario = o.find((x) => x.id === 'token:ario');
+    expect(ario?.detail).toContain('1.51M');
+    expect(ario?.detail).not.toContain('1,505,829');
+  });
+
+  it('gives every card the same shape: an amount and its unit', () => {
+    // Three different grammars across four cards read as four unrelated
+    // controls rather than one choice.
+    const o = buildPaymentOptions({
+      ...base, walletType: 'solana', credits: 2.4862,
+    });
+    expect(o.find((x) => x.kind === 'balance')?.detail).toBe('2.49 credits');
+  });
+});
+
+describe('the token menu follows the payer', () => {
+  const arns = { ...base, extraTokens: ['ario'] } as const;
+
+  /*
+    A token top-up credits WHOEVER SENT THE TOKENS, and the purchase spends the
+    session identity's credits. So the menu has to be derived from the session
+    wallet: anything else offers a route that funds an account the purchase
+    never reads. `availableTokensForWallet` is exactly "what this wallet can
+    sign", which makes the two line up by construction.
+  */
+  it('offers a Solana session SOL, unchanged', () => {
+    expect(ids(buildPaymentOptions({ ...arns, walletType: 'solana' })))
+      .toEqual(['card', 'token:ario', 'token:solana']);
+  });
+
+  it('offers an Ethereum session its own chains, and no SOL', () => {
+    const offered = ids(buildPaymentOptions({ ...arns, walletType: 'ethereum' }));
+    expect(offered).toContain('token:base-usdc');
+    // SOL would be sent by the LINKED wallet and credit that address instead.
+    expect(offered).not.toContain('token:solana');
+  });
+
+  it('offers an Arweave session AR, and no SOL', () => {
+    const offered = ids(buildPaymentOptions({ ...arns, walletType: 'arweave' }));
+    expect(offered).toContain('token:arweave');
+    expect(offered).not.toContain('token:solana');
+  });
+
+  /*
+    ARIO is an EXTRA, not a credit top-up: it pays the registry directly
+    through @ar.io/sdk and never becomes credits, so it has no payer to
+    mismatch and survives on every session.
+  */
+  it('keeps ARIO on every wallet type', () => {
+    for (const w of ['solana', 'ethereum', 'arweave'] as const) {
+      expect(ids(buildPaymentOptions({ ...arns, walletType: w }))).toContain(
+        'token:ario',
+      );
+    }
+  });
+
+  it('never offers a credit-buying token the wallet cannot sign', () => {
+    for (const w of ['solana', 'ethereum', 'arweave'] as const) {
+      const signable = new Set([
+        ...availableTokensForWallet(w, isTokenSelectable).map((t) => `token:${t}`),
+        'token:ario',
+        'card',
+        'balance',
+      ]);
+      for (const id of ids(buildPaymentOptions({ ...arns, walletType: w, credits: 9 }))) {
+        expect(signable.has(id)).toBe(true);
+      }
+    }
+  });
+});
+
+describe('when the payment service is unavailable (x402-only mode)', () => {
+  const arns = { ...base, walletType: 'solana', extraTokens: ['ario'] } as const;
+
+  /*
+    Card, token top-ups and spending a balance all settle through the payment
+    service. In x402-only mode `isPaymentServiceAvailable()` is false by
+    definition, so offering them produces a failure at the last step of a flow
+    the user has already committed to.
+  */
+  it('withdraws everything that buys or spends credits', () => {
+    const offered = ids(
+      buildPaymentOptions({
+        ...arns,
+        credits: 50,
+        creditPurchasesUnavailable: true,
+      }),
+    );
+    expect(offered).not.toContain('card');
+    expect(offered).not.toContain('balance');
+    expect(offered).not.toContain('token:solana');
+  });
+
+  /*
+    And why this is not simply "hide ArNS": ARIO pays the registry directly
+    through @ar.io/sdk and never touches the payment service, so a name is
+    still buyable.
+  */
+  it('leaves ARIO, which never touches the payment service', () => {
+    const offered = ids(
+      buildPaymentOptions({ ...arns, creditPurchasesUnavailable: true }),
+    );
+    expect(offered).toEqual(['token:ario']);
+  });
+
+  it('changes nothing when the payment service is up', () => {
+    const before = buildPaymentOptions({ ...arns, credits: 50 });
+    expect(
+      buildPaymentOptions({ ...arns, credits: 50, creditPurchasesUnavailable: false }),
+    ).toEqual(before);
+    expect(ids(before)).toContain('card');
   });
 });

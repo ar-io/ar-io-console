@@ -93,42 +93,136 @@ export interface RecordChangeParams {
   ttlSeconds: number;
   targetProtocol: number;
   priority?: number;
-  displayName?: string;
-  logo?: string;
-  description?: string;
-  keywords?: string[];
+  /**
+   * Metadata fields are TRI-STATE, and the three states are distinct
+   * authorizations — the owner proof binds them separately, so "clear the
+   * description" and "set it to an empty string" are not the same request.
+   *
+   *   omitted  → leave whatever is on chain untouched
+   *   null     → clear it
+   *   a value  → set it
+   *
+   * Never normalise `null` to `''` on the way in or out. The two mean
+   * different things and the service can tell them apart.
+   */
+  displayName?: string | null;
+  logo?: string | null;
+  description?: string | null;
+  keywords?: string[] | null;
 }
 
 /**
- * Convert a record editor state into the SDK param set. Free-text advanced
- * fields are sent verbatim (blanking one sends `''`, which clears it on-chain);
- * priority and logo are OMITTED when blank.
+ * Convert a record editor state into the SDK param set.
  *
- * Logo is not like the other text fields. The ANT program validates it as a
- * 43-character Arweave address, so an empty string is rejected outright:
+ * Takes the ORIGINAL state as well as the current one, because the params are
+ * a diff, not a snapshot. Without the original there is no way to distinguish
+ * the two things a blank box can mean:
  *
- *   AnchorError ... programs/ario-ant/src/lib.rs:1162
- *   Error Code: InvalidLogo. Error Number: 6021.
- *   Error Message: Logo must be a valid 43-character Arweave address.
+ *   - the field was always empty and the user never touched it → omit it, so
+ *     whatever is on chain is left alone;
+ *   - the field HAD a value and the user emptied it → send `null`, which is
+ *     the authorization to clear it.
  *
- * Sending `logo: ''` therefore failed EVERY record write made without a logo —
- * the base `@` record, adding an undername, and editing one — and it failed
- * *after* SetRecord had already succeeded, so the target saved and the metadata
- * did not. Omitting a blank logo means "leave it unchanged", which matches the
- * ANT-level setLogo path that already notes a logo can be changed but not
- * cleared.
+ * Sending the current value unconditionally — which is what this used to do —
+ * gets the first case wrong on every save: an untouched empty box was sent as
+ * `''`, asking the service to write an empty string over a field the user
+ * never opened. Omitting blanks unconditionally gets the second case wrong
+ * instead, and makes a field impossible to clear once set. That was the
+ * standing behaviour for `logo`, noted below as a limitation; it is now fixable.
+ *
+ * Logo has one extra rule that survives: the ANT program validates it as a
+ * 43-character Arweave address and rejects `''` outright (InvalidLogo, 6021),
+ * failing the write AFTER the target had already saved. Clearing a logo is
+ * `null`, never the empty string.
  */
-export function toRecordChange(s: RecordFieldsState): RecordChangeParams {
+export function toRecordChange(
+  s: RecordFieldsState,
+  /**
+   * State as loaded. Omit for a NEW record, where there is nothing on chain to
+   * leave alone and every blank field is simply absent.
+   */
+  original?: RecordFieldsState,
+): RecordChangeParams {
   const priorityTrimmed = s.priority.trim();
-  const logoTrimmed = s.logo.trim();
+
   return {
     transactionId: s.target.trim(),
     ttlSeconds: Number(s.ttl),
     targetProtocol: s.protocol,
     ...(priorityTrimmed !== '' ? { priority: Number(priorityTrimmed) } : {}),
-    displayName: s.displayName,
-    ...(logoTrimmed !== '' ? { logo: logoTrimmed } : {}),
-    description: s.description,
-    keywords: parseKeywords(s.keywordsRaw),
+    ...textField('displayName', s.displayName, original?.displayName),
+    ...textField('logo', s.logo.trim(), original?.logo.trim()),
+    ...textField('description', s.description, original?.description),
+    ...keywordsField(s.keywordsRaw, original?.keywordsRaw),
+  };
+}
+
+/** Tri-state for one free-text field: unchanged → omit, emptied → null. */
+function textField(
+  key: 'displayName' | 'logo' | 'description',
+  current: string,
+  original: string | undefined,
+): Record<string, string | null> | Record<string, never> {
+  // A new record: nothing on chain, so a blank field is simply not set.
+  if (original === undefined) {
+    return current === '' ? {} : { [key]: current };
+  }
+  if (current === original) return {};
+  return { [key]: current === '' ? null : current };
+}
+
+/** Same rule for keywords, compared as parsed lists rather than raw text. */
+function keywordsField(
+  currentRaw: string,
+  originalRaw: string | undefined,
+): { keywords?: string[] | null } {
+  const current = parseKeywords(currentRaw);
+
+  if (originalRaw === undefined) {
+    return current.length > 0 ? { keywords: current } : {};
+  }
+
+  const original = parseKeywords(originalRaw);
+  // Compared parsed, so whitespace and separator edits that change nothing
+  // real do not send a write.
+  if (
+    current.length === original.length &&
+    current.every((k, i) => k === original[i])
+  ) {
+    return {};
+  }
+  return { keywords: current.length === 0 ? null : current };
+}
+
+
+/**
+ * Drop the `null`s, for the write paths that cannot express a clear.
+ *
+ * `toRecordChange` produces the tri-state the SPONSORED record actions accept:
+ * omitted leaves a field alone, `null` clears it. The `@ar.io/sdk` ANT writes
+ * this app still uses have no third state — a field is either sent or it is
+ * not — so a clear degrades here to "leave unchanged", which is exactly the
+ * limitation those writes already had.
+ *
+ * Deliberately a separate step rather than a looser `toRecordChange`. The diff
+ * is worth having on both paths today: it stops every save from writing empty
+ * strings over fields the user never opened. Only the ability to CLEAR has to
+ * wait, and when the sponsored actions land this adapter is what gets deleted.
+ */
+export function withoutClears(
+  params: RecordChangeParams,
+): Omit<RecordChangeParams, 'displayName' | 'logo' | 'description' | 'keywords'> & {
+  displayName?: string;
+  logo?: string;
+  description?: string;
+  keywords?: string[];
+} {
+  const { displayName, logo, description, keywords, ...rest } = params;
+  return {
+    ...rest,
+    ...(typeof displayName === 'string' ? { displayName } : {}),
+    ...(typeof logo === 'string' ? { logo } : {}),
+    ...(typeof description === 'string' ? { description } : {}),
+    ...(Array.isArray(keywords) ? { keywords } : {}),
   };
 }
