@@ -314,3 +314,46 @@ describe('the token menu follows the payer', () => {
     }
   });
 });
+
+describe('when the payment service is unavailable (x402-only mode)', () => {
+  const arns = { ...base, walletType: 'solana', extraTokens: ['ario'] } as const;
+
+  /*
+    Card, token top-ups and spending a balance all settle through the payment
+    service. In x402-only mode `isPaymentServiceAvailable()` is false by
+    definition, so offering them produces a failure at the last step of a flow
+    the user has already committed to.
+  */
+  it('withdraws everything that buys or spends credits', () => {
+    const offered = ids(
+      buildPaymentOptions({
+        ...arns,
+        credits: 50,
+        creditPurchasesUnavailable: true,
+      }),
+    );
+    expect(offered).not.toContain('card');
+    expect(offered).not.toContain('balance');
+    expect(offered).not.toContain('token:solana');
+  });
+
+  /*
+    And why this is not simply "hide ArNS": ARIO pays the registry directly
+    through @ar.io/sdk and never touches the payment service, so a name is
+    still buyable.
+  */
+  it('leaves ARIO, which never touches the payment service', () => {
+    const offered = ids(
+      buildPaymentOptions({ ...arns, creditPurchasesUnavailable: true }),
+    );
+    expect(offered).toEqual(['token:ario']);
+  });
+
+  it('changes nothing when the payment service is up', () => {
+    const before = buildPaymentOptions({ ...arns, credits: 50 });
+    expect(
+      buildPaymentOptions({ ...arns, credits: 50, creditPurchasesUnavailable: false }),
+    ).toEqual(before);
+    expect(ids(before)).toContain('card');
+  });
+});

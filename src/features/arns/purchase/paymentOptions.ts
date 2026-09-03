@@ -84,6 +84,20 @@ export interface PaymentOptionsInput {
    */
   extraTokens?: SupportedTokenType[];
   isTokenSelectable: (t: SupportedTokenType) => boolean;
+  /**
+   * The payment service is unreachable, so nothing that BUYS CREDITS can settle.
+   *
+   * True in x402-only mode, where `isPaymentServiceAvailable()` is false by
+   * definition. Card, token top-ups and spending an existing balance all settle
+   * through that service, so offering them produces a failure at the last step
+   * of a flow the user has already committed to.
+   *
+   * The extras survive, and that is the whole reason this is not simply
+   * "hide ArNS": ARIO pays the registry directly through `@ar.io/sdk` and never
+   * touches the payment service, so buying a name still works — with one option
+   * instead of four.
+   */
+  creditPurchasesUnavailable?: boolean;
   /** Card is unavailable when the payment service has Stripe disabled (503). */
   cardEnabled?: boolean;
   /**
@@ -105,6 +119,7 @@ export function buildPaymentOptions({
   tokenPrices = {},
   extraTokens = [],
   isTokenSelectable,
+  creditPurchasesUnavailable = false,
   cardEnabled = true,
   networkSolRequired,
   solBalance,
@@ -143,7 +158,7 @@ export function buildPaymentOptions({
     option that works with no crypto at all, and the one a newcomer is looking
     for.
   */
-  if (credits > 0) {
+  if (credits > 0 && !creditPurchasesUnavailable) {
     options.push({
       kind: 'balance',
       id: 'balance',
@@ -154,7 +169,7 @@ export function buildPaymentOptions({
     });
   }
 
-  if (cardEnabled) {
+  if (cardEnabled && !creditPurchasesUnavailable) {
     options.push({
       kind: 'card',
       id: 'card',
@@ -171,7 +186,11 @@ export function buildPaymentOptions({
     });
   }
 
-  const walletTokens = availableTokensForWallet(walletType, isTokenSelectable);
+  // Token top-ups buy credits through the payment service, so they fail for the
+  // same reason card and balance do.
+  const walletTokens = creditPurchasesUnavailable
+    ? []
+    : availableTokensForWallet(walletType, isTokenSelectable);
   // Extras lead, then the wallet's own set, deduped. A wallet with no signer
   // gets neither — an option it cannot sign is worse than one less option.
   const tokens =

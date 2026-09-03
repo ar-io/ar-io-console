@@ -165,6 +165,13 @@ export function ArNSPurchaseCard({
     Solana menu, which is the honest preview of the feature.
   */
   const sessionWalletType = useStore((s) => s.walletType);
+  /*
+    x402-only mode turns the payment service off, and everything that buys
+    credits settles through it. ARIO does not, so a name is still buyable —
+    with one option rather than four, which beats four that fail at the end.
+  */
+  const isPaymentServiceAvailable = useStore((s) => s.isPaymentServiceAvailable);
+  const creditPurchasesUnavailable = !isPaymentServiceAvailable();
 
   /*
     The two wallets, said out loud. On an Ethereum or Arweave session the payer
@@ -211,10 +218,11 @@ export function ArNSPurchaseCard({
         walletType: sessionWalletType ?? 'solana',
         credits: balances.credits,
         extraTokens: ['ario'],
+        creditPurchasesUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [balances.credits, cardEnabled, sessionWalletType],
+    [balances.credits, cardEnabled, sessionWalletType, creditPurchasesUnavailable],
   );
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
@@ -415,11 +423,12 @@ export function ArNSPurchaseCard({
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
         extraTokens: ['ario'],
+        creditPurchasesUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
     [
-      address, balances.credits, balances.sol, balances.totalArio, sessionWalletType,
+      address, balances.credits, balances.sol, balances.totalArio, sessionWalletType, creditPurchasesUnavailable,
       creditsPrice?.sponsoredCredits, cardEnabled,
       cost?.gasTotalSol, balances.loading,
     ],
