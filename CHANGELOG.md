@@ -13,6 +13,11 @@ All notable changes to the ar.io Console are documented in this file.
   way.
 
 ### Fixed
+- **Paying with your wallet's own token shows the balance and blocks a
+  shortfall**, the way paying in SOL always did. Ethereum and Arweave sessions
+  could pick a token with nothing behind it and only find out at the wallet.
+- **Renewing a name says which wallet pays and which holds it**, matching the
+  purchase screen, when those are two different wallets.
 - **In x402-only mode, name purchases only offer the option that can work.**
   Card, balance and token top-ups all settle through the payment service, which
   that mode turns off, so all three failed at the last step. ARIO pays the

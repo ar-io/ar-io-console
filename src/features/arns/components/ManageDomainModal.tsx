@@ -27,6 +27,7 @@ import {
 } from './ArNSPaymentSelector';
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
 import { useStore } from '../../../store/useStore';
+import { walletSplitNote } from '../purchase/walletRoles';
 import {
   getTokenSmallestUnit,
   useSmallestUnitForWinc,
@@ -96,6 +97,17 @@ export default function ManageDomainModal({
     with one option rather than four, which beats four that fail at the end.
   */
   const isPaymentServiceAvailable = useStore((s) => s.isPaymentServiceAvailable);
+  /*
+    Renewing has the same two wallets as buying — the session identity pays and
+    the linked Solana wallet holds the name — and said nothing about it. A
+    balance reading empty is just as confusing here.
+  */
+  const sessionAddress = useStore((s) => s.address);
+  const walletSplit = walletSplitNote({
+    sessionWalletType,
+    sessionAddress,
+    ownerAddress: address,
+  });
   const creditPurchasesUnavailable = !isPaymentServiceAvailable();
   const balances = useArNSPaymentBalances(address);
 
@@ -490,6 +502,10 @@ export default function ManageDomainModal({
 
             {/* Payment method + source */}
             <div className="mb-4">
+              {walletSplit && (
+                <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
+              )}
+
               <ArNSPaymentSelector
                 options={paymentOptions}
                 selectedId={selectedOption?.id ?? ''}
