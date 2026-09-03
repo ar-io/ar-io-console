@@ -13,6 +13,10 @@ All notable changes to the ar.io Console are documented in this file.
   way.
 
 ### Fixed
+- **In x402-only mode, name purchases only offer the option that can work.**
+  Card, balance and token top-ups all settle through the payment service, which
+  that mode turns off, so all three failed at the last step. ARIO pays the
+  registry directly and still works, and is now what you're offered.
 - **Transferring a name and changing controllers say what they actually cost.**
   Both quoted a credits price while being paid for in SOL. The cost shown now
   follows the route actually taken.

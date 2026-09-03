@@ -14,7 +14,11 @@ import { arNSActions, type ArNSAction } from '@ardrive/turbo-sdk/web';
  * about cost before the user commits.
  */
 
-/** The nine sponsored actions, taken from the SDK so the list cannot drift. */
+/**
+ * The actions Turbo will act as fee payer for, taken from the SDK so the list
+ * cannot drift. Twelve as of turbo-sdk 1.42.0-alpha.11 — it was nine at launch,
+ * which is why a hardcoded count went stale here once already.
+ */
 export const SPONSORED_ACTIONS: readonly ArNSAction[] = arNSActions;
 
 /**
@@ -37,11 +41,12 @@ export const UNSPONSORED_OPERATIONS = [
   /*
     The name's OWN details — nickname, ticker, description, keywords, logo.
 
-    Distinct from RECORD metadata, which `set-record-metadata` does sponsor,
-    and the two sit next to each other in the program. Same-looking fields,
-    different bill: editing a record's display name is free, editing the
-    name's own is not. Label them so nobody has to discover that at a wallet
-    prompt.
+    Distinct from RECORD metadata, which Turbo does fee-pay for
+    (`set-record-metadata`), and the two sit next to each other in the program.
+    Same-looking fields, different bill — but the difference is WHICH asset,
+    not whether there is a charge: a record's display name costs credits, the
+    name's own costs SOL. Neither is free. Label them so nobody discovers that
+    at a wallet prompt.
   */
   'ant-metadata',
   /*

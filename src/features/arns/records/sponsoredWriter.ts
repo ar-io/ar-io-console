@@ -5,8 +5,9 @@ import { hasMetadataChange, type RecordWriter } from './recordWriter';
 /**
  * The single record writer: Turbo performs the write, the owner approves it.
  *
- * Free to the user and needing no SOL — Turbo is fee payer — but never
- * promptless. The owner's approval is required on every record write, whether
+ * NOT free. Turbo is the fee payer on the Solana transaction and bills that
+ * cost back in credits, which is why this route has a price at all — the user
+ * buys not needing SOL, not a free write. Nor is it promptless. The owner's approval is required on every record write, whether
  * or not Turbo is still a helper on the name, so UI copy says "approve a
  * message" and never "one click".
  *
