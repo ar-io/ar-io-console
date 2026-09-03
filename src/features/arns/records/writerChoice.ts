@@ -187,3 +187,28 @@ export function writerCostNote(
       return undefined;
   }
 }
+
+/**
+ * The writer for an OWNER-ONLY operation: transfer, add/remove controller.
+ *
+ * Same ladder as {@link chooseWriter} for an owner, and a hard stop for anyone
+ * else. A controller may edit records — the program allows it — but cannot
+ * transfer the name or change who controls it, so falling through to
+ * self-signed here would spend a wallet prompt on a transaction the program
+ * rejects.
+ *
+ * These ran self-signed only until now: `getWritableANT` with the owner's
+ * signer, paying SOL. Turbo lists `transfer`, `add-controller` and
+ * `remove-controller` among its actions and takes the same `ArNSOwnerSigner`
+ * as `setArNSRecord`, so the same choice is available — pay in credits and need
+ * no SOL, or sign it yourself and pay the network.
+ */
+export function chooseOwnerActionWriter(
+  role: StrictAntRole,
+  funds?: WriterFunds,
+): WriterChoice {
+  if (role !== 'owner') {
+    return { kind: 'blocked', reason: 'unresolved' };
+  }
+  return chooseWriter('owner', funds);
+}
