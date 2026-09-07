@@ -1,132 +1,51 @@
 /**
- * What a card purchase should actually do, given the wallet's state.
+ * What a purchase needs from the buyer's wallet before it can run.
  *
- * Replaces a binary self-custody/custodial split that collapsed two very
- * different situations into one. "No live signer" was treated as "no Solana
- * wallet", but the Solana provider runs `autoConnect=false` — so a user with a
- * perfectly good linked wallet who simply hadn't reconnected this session was
- * routed into a CUSTODIAL purchase: paying the ANT-spawn surcharge and handing
- * Turbo their name, when one reconnect prompt would have given them
- * self-custody for less. That was almost certainly the most common way custody
- * was being triggered, and none of it was intended.
+ * This used to be a ladder — self-custody, reconnect, link, or hand the name to
+ * Turbo — because the deciding question was whether the wallet held enough SOL
+ * to pay the Solana rent. Turbo pays that now, so the SOL question is gone and
+ * with it every rung that existed to route around it.
  *
- * Custody is a real commitment — Turbo holds the asset, supports only three of
- * the ANT operations, and owes the user a way out forever. It should be the
- * last rung, reached only when the alternatives have actually been offered.
+ * One question remains, and it is not about money: the name is minted directly
+ * to a Solana address, so there has to be a Solana wallet able to sign for it.
+ * That wallet never needs a balance — it needs to exist and be awake.
  */
-export type CardPlan =
-  /** Their own signer buys and owns it. No surcharge. */
-  | { kind: 'self-custody' }
-  /** A linked wallet exists but is cold — reconnect beats giving custody away. */
+export type PurchasePlan =
+  /** A live signer is ready. Nothing to ask for. */
+  | { kind: 'ready' }
+  /** A wallet is linked but asleep — the Solana provider does not auto-connect. */
   | { kind: 'reconnect' }
-  /** No Solana wallet, and custody is switched off: linking is the only path. */
-  | { kind: 'link' }
-  /** Turbo holds the ANT. `reason` drives what the user is told. */
-  | { kind: 'custodial'; reason: 'no-wallet' | 'no-sol' };
+  /** No Solana wallet at all. Email sign-in creates one; so does connecting. */
+  | { kind: 'connect' };
 
-export function planCardPurchase({
+export function planNamePurchase({
   needsLinking,
   signerLive,
-  solCoversGas,
-  custodialEnabled = true,
 }: {
-  /** No Solana wallet is linked (and this isn't a Solana session). */
+  /** No Solana wallet is linked, and this is not a Solana session. */
   needsLinking: boolean;
   /** A Solana adapter is connected and can sign right now. */
   signerLive: boolean;
-  /** `undefined` when the balance is unknown — see below. */
-  solCoversGas: boolean | undefined;
-  /**
-   * Whether Turbo-custodied purchases may be sold at all.
-   *
-   * Off, every route that would have ended in custody instead asks for what
-   * self-custody actually needs: a Solana wallet, and enough SOL for the rent.
-   * The no-SOL case deliberately falls through to `self-custody` rather than
-   * getting a bespoke blocked kind — the balance gating already stops that
-   * purchase and names the shortfall, so this stays one rule instead of two.
-   */
-  custodialEnabled?: boolean;
-}): CardPlan {
+}): PurchasePlan {
   /*
-    No Solana wallet at all — buy it custodially, and say nothing about wallets.
+    Asked before the purchase, not after it fails.
 
-    This used to stop and ask the user to link one first. That gate sat in front
-    of the people least able to answer it: someone buying a domain with a card
-    has no reason to know what Solana is, and the question arrives before they
-    own anything that would make the answer matter. Custody is a legitimate
-    destination for them, not a booby prize — the name works, records work,
-    renewals work, and moving it to their own wallet later is free and needs no
-    SOL. The offer belongs after the purchase, against a name they already own.
-
-    A wallet that EXISTS but is asleep is a different case and still gets woken
-    below: that user has already chosen self-custody, so reconnecting gives them
-    what they picked rather than quietly deciding otherwise for them.
+    An email user already has an embedded Solana wallet, so this is rarer than
+    it looks — and when it does apply, signing in is the answer rather than
+    "install a wallet", which is the sentence that used to lose people who had
+    no reason to know what Solana was.
   */
-  if (needsLinking) {
-    return custodialEnabled
-      ? { kind: 'custodial', reason: 'no-wallet' }
-      : { kind: 'link' };
-  }
+  if (needsLinking) return { kind: 'connect' };
 
-  // A wallet exists; it just isn't awake. This is the case that was silently
-  // costing users their ANT and an extra ~$2.06.
   /*
-    A known-empty wallet outranks a cold one.
+    A wallet that EXISTS but is asleep is not a missing wallet.
 
-    Reconnecting cannot conjure rent, so telling someone with 0 SOL to
-    "reconnect your Solana wallet to buy this name" promises something we can
-    already see is false — and they hit the real wall one click later. Only
-    when the shortfall is KNOWN: an undefined balance still means the signer is
-    the thing to fix.
+    The Solana provider runs `autoConnect=false`, so a returning user routinely
+    arrives with a perfectly good linked wallet and no live signer. Conflating
+    the two is what used to push them down a worse path than one reconnect
+    prompt would have.
   */
-  if (solCoversGas === false && !custodialEnabled) {
-    return { kind: 'self-custody' };
-  }
-
   if (!signerLive) return { kind: 'reconnect' };
 
-  // Known to be short on rent: they cannot complete a self-custody buy, so
-  // Turbo covering it is the only route that works.
-  if (solCoversGas === false && custodialEnabled) {
-    return { kind: 'custodial', reason: 'no-sol' };
-  }
-
-  // Known-good, or unknown. Unknown resolves to self-custody deliberately: an
-  // underfunded attempt fails before any charge, while a custodial purchase
-  // spends real money AND transfers ownership. Never guess toward the outcome
-  // that cannot be undone.
-  return { kind: 'self-custody' };
-}
-
-/** True when Turbo will end up holding the name — drives price and disclosure. */
-export function isCustodialPlan(plan: CardPlan): boolean {
-  return plan.kind === 'custodial';
-}
-
-/**
- * Whether Turbo-custodied purchases are offered, by environment.
- *
- * OFF in production, deliberately, and this is a launch gate rather than a
- * verdict on the feature. Every custodial sub-flow reviewed before launch was
- * broken as written — the quote address, the transfer signature, record
- * writes, assigning a name to a deployment, renewals, and owner/signer
- * agreement — each found by reading, none by running, because no custodial
- * purchase has ever executed. Selling one in that state risks the worst
- * failure this product has: money taken, and a name the buyer cannot reach.
- *
- * OFF everywhere, including testnet — this is not an environment gate.
- *
- * Custody solved the wrong half of the problem. It removed the need to hold
- * SOL, but never the need for a wallet to sign with: `needsLinking` always
- * meant "no SOLANA wallet", and a session identity is required to reach the
- * checkout at all. Sponsored gas removes the SOL requirement without handing
- * Turbo the asset, a surcharge, a reduced action set, or a claim flow — so
- * custody is retired rather than fixed, and this stays false until that
- * replacement ships.
- *
- * Kept as one switch rather than deleted so the decision has a single home,
- * and the code beneath it stays reachable for whoever revisits this.
- */
-export function custodialPurchaseEnabled(): boolean {
-  return false;
+  return { kind: 'ready' };
 }

@@ -97,8 +97,44 @@ interface PriceCache {
   timestamp: number;
 }
 
-const priceCache = new Map<SupportedTokenType, PriceCache>();
+/*
+  Keyed by token AND the endpoints the quote came from. Switching config mode
+  (production <-> testnet <-> custom) repoints the payment service and the token
+  gateway, and a token-only key would serve the previous environment's price for
+  up to five minutes — quoting a mainnet payment at testnet rates, or the
+  reverse.
+*/
+const priceCache = new Map<string, PriceCache>();
 const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const priceCacheKey = (
+  tokenType: SupportedTokenType,
+  paymentServiceUrl: string,
+  gatewayUrl: string | undefined,
+) => `${tokenType}|${paymentServiceUrl}|${gatewayUrl ?? ''}`;
+
+/** 1 trillion winc = 1 credit. */
+export const WINC_PER_CREDIT = 1_000_000_000_000;
+
+/**
+ * Tokens required per credit, given a GiB priced in both units.
+ *
+ * Extracted so the invariant that matters can actually be tested: the tokens a
+ * payment buys must cover the winc the upload is billed. `wincPerGiB` must come
+ * from the same source the upload is billed against (`/price/bytes`, which
+ * INCLUDES the per-data-item fee) — pairing a fee-inclusive cost with a
+ * fee-exclusive rate is what silently under-funded every base-usdc payment.
+ */
+export function tokenPricePerCredit({
+  wincPerGiB,
+  tokensPerGiB,
+}: {
+  wincPerGiB: number;
+  tokensPerGiB: number;
+}): number {
+  const creditsPerGiB = wincPerGiB / WINC_PER_CREDIT;
+  return tokensPerGiB / creditsPerGiB;
+}
 
 /**
  * Calculate the required token amount for a given credit shortage
@@ -118,7 +154,16 @@ export async function calculateRequiredTokenAmount({
   estimatedUSD: number | null;
 }> {
   const now = Date.now();
-  const cached = priceCache.get(tokenType);
+  // Resolve config first: the cache key depends on which endpoints a quote came
+  // from, so it has to be known before the lookup, not just before the fetch.
+  const { useStore } = await import('../store/useStore');
+  const turboConfig = useStore.getState().getCurrentConfig();
+  const cacheKey = priceCacheKey(
+    tokenType,
+    turboConfig.paymentServiceUrl,
+    turboConfig.tokenMap[tokenType as keyof typeof turboConfig.tokenMap],
+  );
+  const cached = priceCache.get(cacheKey);
 
   // Use cached price if available and fresh
   if (cached && (now - cached.timestamp) < PRICE_CACHE_DURATION) {
@@ -136,87 +181,25 @@ export async function calculateRequiredTokenAmount({
 
   // Fetch fresh pricing
   try {
-    // Get current dev mode configuration from store
-    const { useStore } = await import('../store/useStore');
-    const turboConfig = useStore.getState().getCurrentConfig();
-
-    const wincPerCredit = 1_000_000_000_000; // 1 trillion winc = 1 credit
+    const wincPerCredit = WINC_PER_CREDIT;
     const oneGiBBytes = 1024 * 1024 * 1024;
 
     let wincPerGiB: number;
     let tokensPerGiB: number;
     let usdPerToken: number | null = null;
 
-    // X402 pricing for base-usdc (uses x402 signed endpoint)
-    if (tokenType === 'base-usdc') {
-      console.log('[X402 Pricing] Fetching price from x402 signed endpoint for base-usdc...');
+    /*
+      base-usdc is priced exactly like every other token: convert the CREDITS the
+      upload needs into tokens.
 
-      const { configMode } = useStore.getState();
-
-      // Derive x402 URL from base upload URL
-      // x402UploadUrl was removed from config, always derive from uploadServiceUrl
-      const x402Url = `${turboConfig.uploadServiceUrl}/x402/data-item/signed`;
-
-      // Use a 1 MiB probe size to avoid large memory allocation
-      // Content-Length is a forbidden header in browser fetch - browser sets it from actual body
-      // We'll scale the result to 1 GiB after getting the response
-      const probeSizeBytes = 1024 * 1024; // 1 MiB
-      const scaleToGiB = oneGiBBytes / probeSizeBytes; // 1024x scaling factor
-
-      const response = await fetch(x402Url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
-        body: new Uint8Array(probeSizeBytes), // Actual body with correct size
-      });
-
-      // Expect 402 Payment Required response
-      if (response.status !== 402) {
-        throw new Error(`Expected 402 response from x402 endpoint, got ${response.status}`);
-      }
-
-      const priceData = await response.json();
-      console.log('[X402 Pricing] Response for 1 MiB probe:', priceData);
-
-      // Find the Base network requirements
-      const useMainnet = configMode !== 'development';
-      const networkKey = useMainnet ? 'base' : 'base-sepolia';
-      const requirements = priceData.accepts?.find((a: any) => a.network === networkKey);
-
-      if (!requirements) {
-        throw new Error(`Network ${networkKey} not available in x402 pricing response`);
-      }
-
-      // Parse the USDC amount for 1 MiB (in smallest unit - 6 decimals) and scale to 1 GiB
-      const usdcSmallestUnitPerMiB = Number(requirements.maxAmountRequired);
-      const usdcSmallestUnitPerGiB = usdcSmallestUnitPerMiB * scaleToGiB;
-      tokensPerGiB = usdcSmallestUnitPerGiB / 1_000_000; // Convert to readable USDC
-
-      // Calculate winc per GiB based on standard Turbo pricing
-      // Use payment service for winc conversion
-      try {
-        const { TurboFactory } = await import('@ardrive/turbo-sdk/web');
-        const turbo = TurboFactory.unauthenticated({
-          paymentServiceConfig: { url: turboConfig.paymentServiceUrl },
-        });
-        const { winc: wincPerGiBString } = await turbo.getFiatRates();
-        wincPerGiB = Number(wincPerGiBString);
-      } catch (turboError) {
-        throw new Error(`Turbo getFiatRates failed: ${turboError instanceof Error ? turboError.message : String(turboError)}`);
-      }
-
-      // USDC is pegged to USD (1 USDC = $1 USD)
-      usdPerToken = 1.0;
-
-      console.log(`[X402 Pricing] 1 GiB costs ${tokensPerGiB} USDC (${usdcSmallestUnitPerGiB} smallest unit, scaled from 1 MiB probe), ${wincPerGiB} winc`);
-
-      if (wincPerGiB === 0) {
-        throw new Error('Failed to get x402 pricing - wincPerGiB is 0');
-      }
-    }
-    // Regular Turbo SDK pricing for all other tokens
-    else {
+      It used to be special-cased onto a raw byte-price quote from the x402
+      endpoint, which omitted the per-data-item fee. `creditsNeeded` already
+      includes that fee (callers build it from `totalCost`), so routing base-usdc
+      through the same conversion is what makes the payment cover the upload —
+      the old path bought as little as 54% of a small file's cost, and the buyer
+      ate a failed upload on top of a settled payment.
+    */
+    {
       const { TurboFactory } = await import('@ardrive/turbo-sdk/web');
 
       // Create TurboFactory with proper config including dev mode RPC URLs
@@ -260,23 +243,23 @@ export async function calculateRequiredTokenAmount({
       }
     }
 
-    // Calculate: tokens per credit (same for both x402 and regular)
+    // Calculate: tokens per credit
     const creditsPerGiB = wincPerGiB / wincPerCredit;
-    const tokenPricePerCredit = tokensPerGiB / creditsPerGiB;
+    const tokenPrice = tokenPricePerCredit({ wincPerGiB, tokensPerGiB });
 
     console.log(`[JIT ${tokenType}] Winc per GiB:`, wincPerGiB);
     console.log(`[JIT ${tokenType}] Credits per GiB:`, creditsPerGiB);
-    console.log(`[JIT ${tokenType}] Token price per credit:`, tokenPricePerCredit);
+    console.log(`[JIT ${tokenType}] Token price per credit:`, tokenPrice);
 
     // Cache the result
-    priceCache.set(tokenType, {
-      tokenPricePerCredit,
+    priceCache.set(cacheKey, {
+      tokenPricePerCredit: tokenPrice,
       usdPerToken,
       timestamp: now,
     });
 
     // Calculate final amounts
-    const baseAmount = creditsNeeded * tokenPricePerCredit;
+    const baseAmount = creditsNeeded * tokenPrice;
     const bufferedAmount = baseAmount * bufferMultiplier;
 
     console.log(`[JIT ${tokenType}] Credits needed:`, creditsNeeded);
@@ -294,8 +277,7 @@ export async function calculateRequiredTokenAmount({
       estimatedUSD: usdPerToken ? bufferedAmount * usdPerToken : null,
     };
   } catch (error) {
-    const source = tokenType === 'base-usdc' ? 'x402 pricing endpoint' : 'Turbo SDK';
-    console.error(`Failed to calculate JIT payment amount from ${source}:`, error);
+    console.error('Failed to calculate JIT payment amount from Turbo SDK:', error);
     // Fallback: return 0 and let user know pricing failed
     return {
       tokenAmount: 0,

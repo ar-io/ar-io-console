@@ -14,12 +14,6 @@ export interface CryptoPaymentDetailsProps {
   onShortageUpdate: (shortage: { amount: number; tokenType: SupportedTokenType } | null) => void;
   localJitMax: number;
   onMaxTokenAmountChange: (amount: number) => void;
-  x402Pricing?: {
-    usdcAmount: number;
-    usdcAmountSmallestUnit: string;
-    loading: boolean;
-    error: string | null;
-  };
 }
 
 export function CryptoPaymentDetails({
@@ -32,7 +26,6 @@ export function CryptoPaymentDetails({
   onShortageUpdate,
   localJitMax: _localJitMax, // eslint-disable-line @typescript-eslint/no-unused-vars
   onMaxTokenAmountChange,
-  x402Pricing,
 }: CryptoPaymentDetailsProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<{
@@ -56,27 +49,22 @@ export function CryptoPaymentDetails({
   useEffect(() => {
     const calculate = async () => {
       try {
-        // For base-usdc, use x402 pricing directly
-        if (tokenType === 'base-usdc' && x402Pricing) {
-          // Don't set cost while loading to avoid showing "FREE" flash
-          if (x402Pricing.loading) {
-            setEstimatedCost(null); // Show "Calculating..."
-            return;
-          }
+        /*
+          base-usdc is NOT special-cased any more.
 
-          if (!x402Pricing.error) {
-            setEstimatedCost({
-              tokenAmountReadable: x402Pricing.usdcAmount, // Can be 0 for free uploads
-              estimatedUSD: x402Pricing.usdcAmount, // USDC is 1:1 with USD
-            });
+          It used to be quoted straight off `x402Pricing` — a raw price for the
+          file's bytes, carrying neither the per-data-item fee nor a safety
+          buffer, while the upload is billed `totalCost` (bytes + that fee, per
+          file). The payment was therefore always short: as little as 54% of a
+          1 KB file's cost, ~99.9% of a large one. Either way the top-up settled
+          and the upload it had just paid for was rejected for insufficient
+          balance.
 
-            // For Crypto tab, max is just the buffered cost
-            onMaxTokenAmountChange(x402Pricing.usdcAmount);
-          }
-          return;
-        }
+          Falling through to the shared credits->token conversion below fixes it:
+          `totalCost` already carries the per-item fee, and BUFFER_MULTIPLIER
+          absorbs price drift between quote and settlement.
+        */
 
-        // For other tokens, calculate using regular pricing
         // Always use totalCost for Crypto tab - user is choosing to pay full amount with crypto
         const cost = await calculateRequiredTokenAmount({
           creditsNeeded: totalCost,
@@ -105,8 +93,9 @@ export function CryptoPaymentDetails({
       setEstimatedCost({ tokenAmountReadable: 0, estimatedUSD: 0 });
       onMaxTokenAmountChange(0);
     }
+    // x402Pricing is intentionally absent: the cost no longer derives from it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creditsNeeded, totalCost, tokenType, bufferPercentage, x402Pricing?.usdcAmount, x402Pricing?.loading, x402Pricing?.error]);
+  }, [creditsNeeded, totalCost, tokenType, bufferPercentage]);
 
   // Validate balance and update shortage info
   useEffect(() => {

@@ -26,10 +26,17 @@ import {
   ArNSPaymentSelector,
 } from './ArNSPaymentSelector';
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
+import { useStore } from '../../../store/useStore';
+import { walletSplitNote } from '../purchase/walletRoles';
+import {
+  getTokenSmallestUnit,
+  useSmallestUnitForWinc,
+} from '../../../hooks/useCryptoPrice';
 import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import TransactionReceipt from './TransactionReceipt';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
@@ -75,6 +82,33 @@ export default function ManageDomainModal({
   const isLease = domain.type !== 'permabuy';
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
+
+  /*
+    The menu follows the PAYER. `availableTokensForWallet` returns what this
+    session's wallet can sign, and a top-up credits whoever sent the tokens, so
+    deriving the options from the session identity is what makes the credits
+    land where the purchase will spend them. Signed out it falls back to the
+    Solana menu, which is the honest preview of the feature.
+  */
+  const sessionWalletType = useStore((s) => s.walletType);
+  /*
+    x402-only mode turns the payment service off, and everything that buys
+    credits settles through it. ARIO does not, so a name is still buyable —
+    with one option rather than four, which beats four that fail at the end.
+  */
+  const isPaymentServiceAvailable = useStore((s) => s.isPaymentServiceAvailable);
+  /*
+    Renewing has the same two wallets as buying — the session identity pays and
+    the linked Solana wallet holds the name — and said nothing about it. A
+    balance reading empty is just as confusing here.
+  */
+  const sessionAddress = useStore((s) => s.address);
+  const walletSplit = walletSplitNote({
+    sessionWalletType,
+    sessionAddress,
+    ownerAddress: address,
+  });
+  const creditPurchasesUnavailable = !isPaymentServiceAvailable();
   const balances = useArNSPaymentBalances(address);
 
   // Lease names can renew / upgrade / add undernames; permabuy can only add.
@@ -98,13 +132,14 @@ export default function ManageDomainModal({
   const routingOptions = useMemo(
     () =>
       buildPaymentOptions({
-        walletType: 'solana',
+        walletType: sessionWalletType ?? 'solana',
         credits: balances.credits,
         extraTokens: ['ario'],
+        creditPurchasesUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [balances.credits, cardEnabled],
+    [balances.credits, cardEnabled, sessionWalletType, creditPurchasesUnavailable],
   );
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
@@ -127,7 +162,7 @@ export default function ManageDomainModal({
   */
   const mechanism = settlementMechanismFor(route);
 
-  const { manage, phase, statusMessage, error, insufficientCredits, isBusy } =
+  const { manage, phase, statusMessage, result, error, insufficientCredits, isBusy } =
     useManageArNSName();
 
   const active = phase !== 'success';
@@ -162,7 +197,45 @@ export default function ManageDomainModal({
     enabled: active,
   });
 
+  /*
+    Renewing, upgrading and adding undername slots are registry payments Turbo
+    settles from credits — it pays the Solana fee, so the user's SOL balance is
+    irrelevant to them.
+
+    Only the ARIO route spends the user's own SOL, because that one is not a
+    Turbo action at all. Gating every route on SOL meant a wallet holding
+    plenty of credits and no SOL could not renew a name it owned — and a lease
+    that cannot be renewed is a name eventually lost, which is the worst
+    outcome this modal has.
+  */
+  const sponsored = priceUnit === 'credits';
+
+  /*
+    What actually leaves the wallet when paying with a token.
+
+    A token top-up buys credits first, so the cost is settled in credits — but
+    the user is handing over SOL, and quoting only the credits figure asks them
+    to convert it themselves at a rate we know and they do not. The purchase
+    card has always shown the token amount; this modal never did, so renewing
+    with SOL showed "0.357 credits" and no SOL at all.
+  */
+  const tokenSmallestUnitForName = useSmallestUnitForWinc(
+    route.kind === 'topup' && creditsPrice?.sponsoredCredits
+      ? creditsPrice.sponsoredCredits * 1e12
+      : undefined,
+    route.kind === 'topup' ? (route.token as SupportedTokenType) : 'solana',
+  );
+  const tokenForName =
+    route.kind === 'topup' && tokenSmallestUnitForName
+      ? {
+          amount:
+            Number(tokenSmallestUnitForName) /
+            Number(getTokenSmallestUnit(route.token as SupportedTokenType)),
+          label: tokenLabels[route.token as SupportedTokenType],
+        }
+      : undefined;
   const insufficientSol =
+    !sponsored &&
     // Only a KNOWN balance can block the action. `undefined` means the lookup
     // failed or never ran — blocking on that told funded users to go buy SOL.
     !!cost &&
@@ -172,7 +245,7 @@ export default function ManageDomainModal({
   // Only the CHOSEN method can be short; a card is sized to the price.
   const insufficientFunds = useMemo(() => {
     if (route.kind === 'credits') {
-      return creditsPrice ? balances.credits < creditsPrice.credits : false;
+      return creditsPrice ? balances.credits < creditsPrice.sponsoredCredits : false;
     }
     if (route.kind !== 'ario') return false;
     return (cost?.shortfallMARIO ?? 0) > 0;
@@ -181,9 +254,9 @@ export default function ManageDomainModal({
   const paymentOptions = useMemo(
     () =>
       buildPaymentOptions({
-        walletType: 'solana',
+        walletType: sessionWalletType ?? 'solana',
         credits: balances.credits,
-        priceInCredits: creditsPrice?.credits,
+        priceInCredits: creditsPrice?.sponsoredCredits,
         // Signed out, holdings are UNKNOWN, not zero — "0 available" on ARIO
         // next to a silent SOL row states a fact we don't have and reads as
         // "you're broke" to someone who simply hasn't connected yet.
@@ -191,10 +264,11 @@ export default function ManageDomainModal({
           ? { solana: balances.sol, ario: balances.totalArio }
           : {},
         extraTokens: ['ario'],
+        creditPurchasesUnavailable,
         isTokenSelectable,
         cardEnabled,
       }),
-    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.credits],
+    [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits, sessionWalletType, creditPurchasesUnavailable],
   );
 
   const priceReady =
@@ -203,7 +277,10 @@ export default function ManageDomainModal({
   // payment method. If that query errored (or resolved with no data), we have
   // no estimate — don't render a misleading "~0 SOL" and don't let the user
   // confirm against an absent estimate.
-  const gasUnavailable = !!costError || (!cost && !costLoading);
+  // A missing SOL estimate cannot block a sponsored action either — there is
+  // no Solana cost for the user to be short of.
+  const gasUnavailable =
+    !sponsored && (!!costError || (!cost && !costLoading));
   const canConfirm =
     !isBusy &&
     priceReady &&
@@ -214,25 +291,56 @@ export default function ManageDomainModal({
   // Credit shortfall → on-demand top-up (credits method only).
   const creditShortfall =
     creditsPrice
-      ? Math.max(0, creditsPrice.credits - balances.credits)
+      ? Math.max(0, creditsPrice.sponsoredCredits - balances.credits)
       : 0;
   const topUpUsd =
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
-  // Only offer a credits top-up when SOL gas is sufficient — otherwise topping
-  // up credits still can't make the transaction succeed.
-  // Card ignores the SOL gate — the service does the on-chain write and pays
-  // the rent itself, so a buyer with no SOL can still renew or upgrade.
+  // Turbo pays the Solana cost on every credits-settled route, so topping up
+  // credits is always enough to make the change succeed.
   const needsPaymentStep =
     !!address &&
-    (route.kind === 'card' || (route.kind === 'topup' && !insufficientSol)) &&
+    (route.kind === 'card' || route.kind === 'topup') &&
     !isBusy;
 
   const expiryLabel =
     isLease && typeof domain.endTimestamp === 'number'
       ? `Expires in ${daysUntil(domain.endTimestamp, Date.now())} days`
       : 'Permanent';
+
+  /*
+    The resulting state, phrased as the answer to why they opened this modal.
+
+    Derived rather than read back: the write has landed, but the indexer that
+    serves `domain` has not necessarily caught up, so re-reading it would show
+    the OLD value and read as a failure. The inputs are exact and the arithmetic
+    is trivial, so computing is both accurate and immediate.
+  */
+  const outcomeLine = (() => {
+    if (action === 'Upgrade-Name') {
+      return 'This name is now permanent — it will never expire.';
+    }
+    if (action === 'Increase-Undername-Limit') {
+      return `${qty} more undername ${qty === 1 ? 'slot' : 'slots'} added.`;
+    }
+    if (action === 'Extend-Lease') {
+      const from =
+        typeof domain.endTimestamp === 'number'
+          ? domain.endTimestamp
+          : undefined;
+      if (from === undefined) return `Extended by ${years} year${years === 1 ? '' : 's'}.`;
+      const extended = new Date(from);
+      extended.setFullYear(extended.getFullYear() + years);
+      return `Now expires ${extended.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}.`;
+    }
+    return undefined;
+  })();
+
 
   const handleConfirm = async () => {
     try {
@@ -250,8 +358,14 @@ export default function ManageDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
-      <div className="w-[92vw] max-w-lg p-4 sm:p-5">
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
+      {/*
+        Wider than the default modal: this one carries the full payment row
+        (Balance, Card, ARIO, SOL) and at max-w-lg the options were clipped, so
+        a buyer could not see — let alone choose — the method they wanted.
+        Matches ArNSPaymentModal, which shows the same row.
+      */}
+      <div className="w-[92vw] max-w-xl p-4 sm:p-5">
         {/* Header */}
         <ModalHeader
           icon={Layers}
@@ -272,9 +386,24 @@ export default function ManageDomainModal({
             <p className="font-semibold text-foreground">
               {statusMessage || 'Done!'}
             </p>
+
+            {/*
+              What the name IS now, not just that something happened.
+
+              "Done — 'ipfs' updated!" confirms the click landed and answers
+              nothing a user actually wondered: how long have I got, is it
+              permanent, how many undernames do I have. The outcome is the
+              reason they came.
+            */}
+            {outcomeLine && (
+              <p className="mt-1 text-sm text-foreground/70">{outcomeLine}</p>
+            )}
+
+            <TransactionReceipt txId={result?.messageId} className="mt-3" />
+
             <button
               onClick={onClose}
-              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="mt-4 block w-full rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Close
             </button>
@@ -373,6 +502,10 @@ export default function ManageDomainModal({
 
             {/* Payment method + source */}
             <div className="mb-4">
+              {walletSplit && (
+                <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
+              )}
+
               <ArNSPaymentSelector
                 options={paymentOptions}
                 selectedId={selectedOption?.id ?? ''}
@@ -386,9 +519,25 @@ export default function ManageDomainModal({
 
             {/* Cost breakdown */}
             <div className="mb-4">
+              {/* Registry payments settle from credits with no wallet prompt
+                  at all — worth saying, because the hesitation before clicking
+                  is usually "what is this going to ask me for". */}
+              {/* Only true when the credits are already there. On a token
+                  top-up the user is about to send SOL, so "no SOL" is the one
+                  thing they can see is false. */}
+              {route.kind === 'credits' && (
+                <p className="mb-2 text-xs text-foreground/60">
+                  Paid from your credits. No wallet approval, and no SOL.
+                </p>
+              )}
               <ArNSCostBreakdown
                 priceUnit={priceUnit}
-                creditsPrice={creditsPrice?.credits}
+                creditsPrice={creditsPrice?.sponsoredCredits}
+                tokenForName={tokenForName}
+                /* Renew, upgrade and undername slots are registry payments
+                   Turbo settles from credits — no Solana cost to the user, and
+                   nothing minted, so no setup charge either. */
+                sponsored={sponsored}
                 cardUsdPrice={
                   route.kind === 'card' ? creditsPrice?.usd : undefined
                 }
@@ -403,7 +552,6 @@ export default function ManageDomainModal({
                 solBalance={balances.sol}
                 insufficientFunds={insufficientFunds}
                 insufficientSol={insufficientSol}
-                networkCostCovered={route.kind === 'card'}
               />
             </div>
 
@@ -500,7 +648,7 @@ export default function ManageDomainModal({
                 initialUsdAmount={topUpUsd}
                 shortfallCredits={creditShortfall}
                 paymentMethod="crypto"
-                token={route.token as SupportedTokenType}
+                      token={route.token as SupportedTokenType}
                 tokenLabel={tokenLabels[route.token as SupportedTokenType]}
                 onClose={() => setShowPayment(false)}
                 onComplete={() => setShowPayment(false)}

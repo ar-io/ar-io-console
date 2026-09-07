@@ -17,15 +17,13 @@ import type { SettlementRoute } from './settlementRoute';
  *
  * So "pay with credits" silently charged ARIO, and "pay with SOL" bought
  * credits and then charged ARIO on top. Credits are debited only by
- * turbo-sdk's `purchaseArNSName` family.
+ * turbo-sdk's per-action methods (`buyArNSName`, `extendArNSLease`, …).
  */
 export type SettlementMechanism =
   /** `@ar.io/sdk` write, drawn from the wallet's ARIO. */
   | { kind: 'ario-direct'; fundFrom: 'balance' | 'stakes' | 'any' }
   /** turbo-sdk purchase, debiting the signer's credit balance. */
-  | { kind: 'turbo-credits' }
-  /** turbo-sdk fiat quote — the card pays, Turbo settles on-chain. */
-  | { kind: 'turbo-fiat' };
+  | { kind: 'turbo-credits' };
 
 /**
  * `fundFrom` values that actually mean something to `@ar.io/sdk`.
@@ -38,8 +36,6 @@ export type ArioFundFrom = 'balance' | 'stakes' | 'any';
 
 export function settlementMechanismFor(
   route: SettlementRoute,
-  /** Card only: Turbo holds the ANT and settles the fiat charge itself. */
-  custodialCard = false,
 ): SettlementMechanism {
   switch (route.kind) {
     case 'ario':
@@ -51,25 +47,9 @@ export function settlementMechanismFor(
       // The token bought credits; the purchase itself spends those credits.
       return { kind: 'turbo-credits' };
     case 'card':
-      // A self-custody card buys credits first, so it lands on the same
-      // mechanism as Balance. Only the custodial card is settled by Turbo.
-      return custodialCard ? { kind: 'turbo-fiat' } : { kind: 'turbo-credits' };
+      // A card buys credits first, so it lands on the same mechanism as
+      // Balance. The `turbo-fiat` variant went with custody: nothing settles a
+      // card charge on chain for the user any more.
+      return { kind: 'turbo-credits' };
   }
-}
-
-/**
- * Whether this mechanism needs a client-spawned ANT before it can settle.
- *
- * turbo-sdk's buy provisions a TURBO-OWNED ANT when no `processId` is supplied.
- * That is the right behaviour for a custodial card purchase and the wrong one
- * for a credits purchase, where the user is meant to own the name outright — so
- * a credits buy must spawn its own ANT and pass the id.
- */
-export function needsClientSpawn(
-  mechanism: SettlementMechanism,
-  intent: string,
-): boolean {
-  if (mechanism.kind !== 'turbo-credits') return false;
-  // Only a purchase creates a name; the rest act on one that already exists.
-  return intent === 'Buy-Name' || intent === 'Buy-Record';
 }

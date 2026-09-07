@@ -9,6 +9,7 @@ import {
 
 import type { ArNSPriceUnit } from './ArNSPaymentSelector';
 import PriceAmount from './PriceAmount';
+import { splitNameAndSetup } from '../purchase/priceTotals';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
 /** Where to send users who need SOL for the network deposit. Configurable. */
@@ -95,23 +96,22 @@ interface Props {
   insufficientFunds: boolean;
   insufficientSol: boolean;
   /**
-   * The payment service performs the on-chain write itself and covers the
-   * Solana rent + fee from its own keypair — true on the card path.
+   * Turbo pays the Solana fees and rent for this purchase.
    *
-   * Card is the option that works for someone holding no crypto at all, so
-   * showing them a SOL requirement (let alone blocking on it) contradicts the
-   * only reason to offer it.
+   * True for registration, renewal, upgrade and undername actions, where the
+   * buyer's wallet needs no SOL at all. False for a returned-name auction,
+   * which still runs through the buyer's own wallet — the one purchase in the
+   * app that costs real SOL, so it keeps the deposit and fee rows below.
    */
-  networkCostCovered?: boolean;
+  sponsored?: boolean;
   /**
-   * Turbo will hold this name's ANT (a custodial card purchase).
+   * The one-time setup charge, in credits, shown as its own line.
    *
-   * Stated, never asked. The console picks the best custody the wallet can
-   * support, but "who owns this" must not be something the buyer discovers
-   * later — so the one case where they don't own it says so, next to the price
-   * that includes spawning it.
+   * Worth a line rather than folding into the name price: it is operator-
+   * configured, varies by environment, and is currently larger than the name
+   * itself on testnet. A total that jumps with no explanation reads as a bug.
    */
-  custodialAnt?: boolean;
+  setupCredits?: number;
   /**
    * Token spent on the NAME itself, when paying with a token that must become
    * credits first.
@@ -199,8 +199,8 @@ export function ArNSCostBreakdown({
   solBalance,
   insufficientFunds,
   insufficientSol,
-  networkCostCovered = false,
-  custodialAnt = false,
+  sponsored = false,
+  setupCredits,
   tokenForName,
 }: Props) {
   // Credits per $1, inverted. Shown with "~" because this is an indicative
@@ -218,7 +218,7 @@ export function ArNSCostBreakdown({
    * repeating either would double-count in the reader's head.
    */
   const nameCostSummary: string | undefined = (() => {
-    if (networkCostCovered || tokenForName) return undefined;
+    if (tokenForName) return undefined;
     // A card pays dollars — quoting the credits it buys would name our unit
     // rather than the one being charged.
     if (isCardRoute) {
@@ -244,7 +244,32 @@ export function ArNSCostBreakdown({
     solBalance,
   );
 
-  const priceNode = priceLoading ? (
+  /*
+    The name on its own, with the one-time setup taken back out, so the three
+    displayed lines add up. See `splitNameAndSetup`, which carries the reasoning
+    and the tests — the arithmetic lives there rather than inline because
+    getting it wrong prints a total nobody can reconcile.
+  */
+  const hasSetup = sponsored && setupCredits != null && setupCredits > 0;
+  const { nameCredits: nameOnlyCredits, ratio } = splitNameAndSetup(
+    creditsPrice,
+    hasSetup ? setupCredits : undefined,
+  );
+  const nameOnlyToken =
+    hasSetup && tokenForName
+      ? { ...tokenForName, amount: tokenForName.amount * ratio }
+      : tokenForName;
+  // The setup's share of the token amount: whatever the name's is not.
+  const setupToken =
+    hasSetup && tokenForName
+      ? { ...tokenForName, amount: tokenForName.amount * (1 - ratio) }
+      : undefined;
+
+  const amountNode = (
+    credits: number | undefined,
+    token: { amount: number; label: string } | undefined,
+  ) =>
+    priceLoading ? (
     <span className="flex items-center gap-2 text-sm text-foreground/70">
       <Loader2 className="h-4 w-4 animate-spin" /> Fetching…
     </span>
@@ -258,16 +283,16 @@ export function ArNSCostBreakdown({
   isCardRoute && cardUsdPrice == null ? (
     // Card price not resolved yet — wait rather than quoting another unit.
     <span className="text-sm text-foreground/50">…</span>
-  ) : tokenForName ? (
+  ) : token ? (
     /*
       Dollars lead, the token amount beneath — the two answer different
       questions ("what does this cost" vs "what leaves my wallet") and both are
       wanted, which is why the toggle that hid one behind the other went.
     */
     <span className="flex flex-col items-end">
-      {usdPerCredit != null && creditsPrice != null && (
+      {usdPerCredit != null && credits != null && (
         <span className="text-sm font-medium text-foreground">
-          {`~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+          {`~$${(credits * usdPerCredit).toLocaleString(undefined, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}`}
@@ -275,12 +300,12 @@ export function ArNSCostBreakdown({
       )}
       <span
         className={
-          usdPerCredit != null && creditsPrice != null
+          usdPerCredit != null && credits != null
             ? 'text-xs text-foreground/50'
             : 'text-sm font-medium text-foreground'
         }
       >
-        {`${fmtSol(tokenForName.amount)} ${tokenForName.label}`}
+        {`${fmtSol(token.amount)} ${token.label}`}
       </span>
     </span>
   ) : cardUsdPrice != null ? (
@@ -291,7 +316,7 @@ export function ArNSCostBreakdown({
       })}`}
     </span>
   ) : priceUnit === 'credits' ? (
-    creditsPrice != null ? (
+    credits != null ? (
       // Casing convention across ArNS priced surfaces: "Turbo Credits" is the
       // product proper noun (payment-selector title, "Buy Turbo Credits" CTAs);
       // lowercase "credits" is the unit that follows an amount. Keep it lowercase
@@ -299,7 +324,7 @@ export function ArNSCostBreakdown({
       <span className="flex flex-col items-end">
         {usdPerCredit != null && (
           <span className="text-sm font-medium text-foreground">
-            {`~$${(creditsPrice * usdPerCredit).toLocaleString(undefined, {
+            {`~$${(credits * usdPerCredit).toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`}
@@ -312,7 +337,7 @@ export function ArNSCostBreakdown({
               : 'text-sm font-medium text-foreground'
           }
         >
-          {`${fmtNum(creditsPrice)} credits`}
+          {`${fmtNum(credits)} credits`}
         </span>
       </span>
     ) : (
@@ -327,7 +352,10 @@ export function ArNSCostBreakdown({
     />
   ) : (
     <span className="text-sm text-foreground/50">—</span>
-  );
+    );
+
+  const priceNode = amountNode(nameOnlyCredits, nameOnlyToken);
+  const totalNode = amountNode(creditsPrice, tokenForName);
 
   return (
     <>
@@ -353,68 +381,77 @@ export function ArNSCostBreakdown({
         >
           {priceNode}
         </Row>
-        {insufficientFunds && !priceLoading && (
-          <p className="flex items-center justify-end gap-1 text-xs text-error">
-            <AlertTriangle className="h-3 w-3" />
-            {priceUnit === 'credits'
-              ? 'Not enough Turbo Credits'
-              : 'Not enough ARIO in this source'}
-            {priceUnit !== 'credits' && (
-              <a
-                href={GET_ARIO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
-              >
-                Swap for ARIO
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </p>
-        )}
-
         <div className="my-2 border-t border-border/10" />
 
-        {/* Solana network cost — always required */}
-        {gasLoading ? (
+        {/*
+          Turbo pays the Solana costs, so there is no deposit to hold and no
+          balance to be short of. What remains is the one-time setup charge —
+          the rent Turbo fronts to register the name — and the total.
+        */}
+        {sponsored ? (
+          <>
+            {setupCredits != null && setupCredits > 0 && (
+              <Row
+                label={
+                  <span className="inline-flex items-center gap-1.5">
+                    One-time setup
+                    <InfoTip text="Registers your name on Solana. This charge covers the network deposit, so you don't need SOL of your own for it. Charged once, when you buy." />
+                  </span>
+                }
+              >
+                {/*
+                  Priced in whatever the other two rows use.
+
+                  It read "2 credits" while the name and total read SOL, so the
+                  panel showed 0.0375 SOL + 2 credits = 0.1074 SOL — three rows
+                  a reader cannot reconcile because the middle one is in another
+                  unit. The token share scales by the same ratio as the name's,
+                  both being linear in winc.
+                */}
+                <span className="flex flex-col items-end">
+                  {setupToken ? (
+                    <>
+                      <span className="text-sm text-foreground/80">
+                        {`${fmtSol(setupToken.amount)} ${setupToken.label}`}
+                      </span>
+                      <span className="text-[11px] text-foreground/50">
+                        {`${fmtNum(setupCredits)} credits`}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-foreground/80">
+                      {`${fmtNum(setupCredits)} credits`}
+                    </span>
+                  )}
+                </span>
+              </Row>
+            )}
+            <div className="my-2 border-t border-border/10" />
+            {/*
+              `totalNode`, not `priceNode` — the latter is now the name WITHOUT
+              the one-time setup, so reusing it here would under-state the total
+              by exactly the charge itemised above it.
+
+              No caption underneath either. It read "Turbo pays the Solana fees
+              — you don't need SOL": extra text answering a question nobody asks
+              while paying, and plainly false on the token route, where the
+              figure above IS the SOL leaving their wallet. The setup row's own
+              tooltip already says who covers the network deposit, at the line
+              where that actually matters.
+            */}
+            <Row label="Total" strong>
+              <span
+                className={`text-lg font-bold ${insufficientFunds ? 'text-error' : 'text-foreground'}`}
+              >
+                {totalNode}
+              </span>
+            </Row>
+          </>
+        ) : gasLoading ? (
           <div className="flex items-center gap-2 py-1 text-sm text-foreground/70">
             <Loader2 className="h-4 w-4 animate-spin" /> Estimating network
             cost…
           </div>
-        ) : networkCostCovered ? (
-          <>
-            {/* Paying by card custodially: the service does the on-chain write
-                from its own keypair, so there is no SOL for the buyer to hold
-                or be short of. */}
-            <Row label="Network costs">
-              <span className="text-sm text-foreground/80">Included</span>
-            </Row>
-            {/*
-              This branch skips the SOL rows, so it would otherwise have no
-              prominent figure at all once the name price was demoted. Here the
-              name price IS the total — network costs are covered — so it gets
-              the same weight every other route's total gets.
-            */}
-            {cardUsdPrice != null && (
-              <>
-                <div className="my-2 border-t border-border/10" />
-                <Row label="Total" strong>
-                  <span className="text-lg font-bold text-foreground">
-                    {`$${cardUsdPrice.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`}
-                  </span>
-                </Row>
-              </>
-            )}
-            {custodialAnt && (
-              <p className="pt-1 text-[11px] leading-snug text-foreground/60">
-                Turbo holds this name&apos;s ANT so you don&apos;t need SOL. You
-                can transfer it to your own wallet any time.
-              </p>
-            )}
-          </>
         ) : gasError ? (
           <div className="flex items-center gap-2 py-1 text-sm text-error">
             <AlertTriangle className="h-4 w-4" /> Network cost unavailable — try
@@ -471,18 +508,11 @@ export function ArNSCostBreakdown({
               </span>
             </Row>
             {/*
-              Why a card purchase still asks for SOL.
-
-              This is the one genuinely surprising thing in the flow: "pay by
-              card" implies no crypto, and then a Solana wallet prompt appears.
-              The custodial branch above explains its side ("Turbo holds the
-              ANT so you don't need SOL"); without the matching sentence here,
-              the self-custody side just looks broken.
-
-              Framed as the trade it is, rather than as an apology — the fee
-              buys self-ownership, and that is the reason the ladder works this
-              hard to reach this branch at all. Card-only: a SOL or ARIO payer
-              is not surprised to need SOL.
+              Only the ARIO route reaches here now — a card or credits purchase
+              takes the sponsored branch above, where Turbo pays the Solana
+              costs. Paying in ARIO is the buyer's own transaction, so their
+              wallet covers the rent, and saying why beats letting them meet it
+              at the wallet prompt.
             */}
             {isCardRoute && (
               <p className="pb-1 text-[11px] leading-snug text-foreground/60">
@@ -491,6 +521,7 @@ export function ArNSCostBreakdown({
                 is what puts the name in your wallet rather than ours.
               </p>
             )}
+
             <p
               className={`flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs ${insufficientSol ? 'text-error' : 'text-foreground/50'}`}
             >
@@ -539,6 +570,39 @@ export function ArNSCostBreakdown({
               )}
             </p>
           </>
+        )}
+
+        {/*
+          After the ternary, not inside an arm.
+
+          This landed in the wrong arm twice: first the sponsored one,
+          which stripped ARIO of its warning and swap link, then the ARIO
+          one, which stripped the credits/card/SOL routes of theirs — the
+          very warning a user had just reported seeing. Placed after the
+          branch it renders under whichever total was drawn, which is the
+          only version true for every route.
+
+          Measured against the TOTAL, which is why it sits below it rather
+          than under the name row where it used to be.
+        */}
+        {insufficientFunds && !priceLoading && (
+          <p className="flex items-center justify-end gap-1 text-xs text-error">
+            <AlertTriangle className="h-3 w-3" />
+            {priceUnit === 'credits'
+              ? 'Not enough Turbo Credits'
+              : 'Not enough ARIO in this source'}
+            {priceUnit !== 'credits' && (
+              <a
+                href={GET_ARIO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+              >
+                Swap for ARIO
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </p>
         )}
       </div>
       {/*

@@ -2,28 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MAX_TTL_SECONDS, MIN_TTL_SECONDS, mapRecordWriteError,
-  validateRecordInput, writerKindForWrite,
+  validateRecordInput,
 } from './recordWriter';
-import { actionAvailability } from './nameCustody';
 
 const VALID_TX = 'a'.repeat(43);
 const valid = { undername: 'blog', transactionId: VALID_TX, ttlSeconds: 3600 };
-
-describe('writerKindForWrite', () => {
-  it('routes each resolved custody to its writer', () => {
-    expect(writerKindForWrite('user-owned')).toBe('ant');
-    expect(writerKindForWrite('turbo-custodial')).toBe('turbo');
-  });
-
-  it('BLOCKS on unknown custody, unlike the render-time rule', () => {
-    // The divergence is deliberate. Rendering a control on an unknown name is
-    // cheap to get wrong; dispatching a write is not — asking the user's wallet
-    // to sign for an asset Turbo owns fails at the wallet layer, where the
-    // error means nothing to them.
-    expect(writerKindForWrite('unknown')).toBe('blocked');
-    expect(actionAvailability('set-record', 'unknown')).toEqual({ kind: 'signer' });
-  });
-});
 
 describe('validateRecordInput', () => {
   it('accepts a well-formed record', () => {
@@ -79,8 +62,6 @@ describe('mapRecordWriteError', () => {
     const msg = mapRecordWriteError({ status: 404 });
     expect(msg).toMatch(/wallet/i);
     expect(msg).not.toMatch(/not found|does not exist|missing/i);
-    expect(mapRecordWriteError(new Error('ANT not found in your Turbo custody')))
-      .toMatch(/wallet/i);
   });
 
   it('explains a replayed nonce as an expired approval, not an auth failure', () => {

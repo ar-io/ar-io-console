@@ -21,12 +21,13 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. 37 suites in three clusters: `src/utils/` (7 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry), `src/features/pages/` (19 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/features/arns/` (11 — ANT roles, price tables, record fields, returned-name pricing, image compression, plus hook-level logic tests). Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~67 suites, the bulk in three clusters: `src/features/arns/` (32 — ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (16 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore). One stray outside them: `src/components/modals/bodyScrollLock.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: '/'` — absolute asset paths, required so nested routes (`/domains/:name`) resolve assets on direct navigation. This trades away Arweave *subpath* compatibility (the old `'./'` value): the build assumes it is served from a domain root (`console.ar.io`, or an ArNS name root), not from `gateway/<txid>/`. Don't flip it back without re-checking nested-route deep links.
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
 - Route pages are lazy-loaded (`React.lazy`); Layout wraps `<Outlet>` in `<Suspense>` so the header/nav stay mounted while page chunks load. **Exception:** `LandingPage` is eagerly imported — it's the primary entry point, so lazy-loading it just produces a spinner flash on every first visit
-- `patch-package` runs on postinstall — active patches live in `patches/` (SDK fixes for Base ETH and Solana RPC)
+- `vite-plugin-fix-modules.ts` (repo root) is a local Vite plugin that aliases `pino` → `pino/browser.js` and `@walletconnect/environment` to its ESM build. Wallet-SDK transitive deps that ship Node-only entry points go here, not in the polyfill list
+- `scripts/arns-buy-smoke.mjs` is a **devnet-only** smoke script (not shipped, not in CI) that drives the same turbo-sdk calls `TurboArNSClient` makes against a local bundler: `PAYMENT_URL`/`UPLOAD_URL` env vars, `node scripts/arns-buy-smoke.mjs`
 - `vite-plugin-pwa` (`VitePWA` in `vite.config.ts`) is configured in `injectManifest` mode purely to compile the Browse service worker (`src/features/browse/service-worker/service-worker.ts`) — `manifest: false`, no offline app caching. It is the build mechanism for the Browse verification SW, not a general PWA setup.
 
 ## Critical Gotchas
@@ -87,6 +88,9 @@ src/
 ├── providers/            # WalletProviders.tsx (Wagmi, Solana, Privy, Stripe, React Query)
 ├── utils/                # Helpers (addressValidation, token utilities, jitPayment)
 ├── lib/                  # API clients (turboCaptureClient.ts)
+├── workers/              # hashWorker.ts — Smart Deploy content hashing (via utils/fileHash.ts)
+├── config/               # banner.ts — site-wide announcement banner
+├── types/                # global.d.ts (window.arweaveWallet etc.) + shared types
 └── constants.ts          # App config, token definitions, X402_CONFIG
 ```
 
@@ -121,9 +125,11 @@ what it did. Don't reintroduce a second verification entry point.
 |--------|--------|-------|
 | Arweave (Wander) | `ArconnectSigner` via `window.arweaveWallet` | Uploads and payments only |
 | Ethereum (all) | `InjectedEthereumSigner` from `@ar.io/sdk/web` | Supports MetaMask, RainbowKit, WalletConnect, Coinbase |
-| Solana (Phantom/Solflare) | Wallet adapter via `useWallet()` | Required for ArNS updates; auto-detected via Standard Wallet API |
+| Solana (Phantom/Solflare/Privy) | Wallet adapter via `useWallet()` | Required for ArNS updates; auto-detected via Standard Wallet API |
 
-**Email Auth (Privy):** Creates embedded Ethereum wallet via `@privy-io/react-auth`
+**`WalletProvider` is passed `wallets={[]}` on purpose** (`solanaWallets: never[]` in `WalletProviders.tsx`). Every Solana wallet arrives through the Wallet Standard registry, never through a hardcoded adapter list — so adding a wallet means it registering itself, not editing that array.
+
+**Email Auth (Privy):** Creates an embedded **Ethereum *and* Solana** wallet via `@privy-io/react-auth`. Privy builds a real Wallet Standard Solana wallet but never calls `registerWallet`, so the adapter cannot see it; `providers/PrivySolanaBridge.tsx` registers it (idempotently, unregistering on unmount) **only while `authenticated`** — registering unconditionally would offer a Privy wallet to Wander/Phantom users who cannot connect it. Net effect: Phantom, Solflare and Privy all come through one `useWallet()`, so `useArNSTurboSigner` and the linked-wallet flow need no Privy branch, and an email user can sign ArNS writes without installing anything. The Solana wallet was **added, not swapped** — Turbo credits belong to an address, so changing an existing email user's identity would strand their balance.
 
 **Ethereum Signer Caching:** The `useEthereumTurboClient` hook caches signers globally so users only sign once per session. Call `clearEthereumTurboClientCache()` when switching wallets.
 
@@ -162,42 +168,164 @@ Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit p
 
 ### ArNS Feature (`src/features/arns/`)
 
-The largest feature in the repo (~75 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
+The largest feature in the repo (~127 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
 
-**ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet. That's why the capability matrix says Solana-only for ArNS updates.
+**ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet — but since Turbo sponsors the fees, that wallet needs **no SOL balance**. Email sign-in creates one (see `PrivySolanaBridge`), so a user who has never held cryptocurrency can own and run a name.
 
-**Custody models** (`services/custodyStrategy.ts`):
-- **Model B (user-owned)** — the *client* spawns the ANT with a Solana signer (`services/antSpawn.ts`), so the user self-owns it from the first block; the bundler only settles (debits credits, writes the record). **Preferred — the ladder below tries hard to reach it.**
-- **Model A (custodial)** — the bundler spawns and custodies the ANT, and performs the three operations it exposes on the user's behalf (`/v1/arns/transfer/:antId`, `/v1/arns/manage/:antId/set-record`, `.../remove-record`). **Built, then retired before launch — see the switch below.** The code stays reachable; nothing sells it.
+**Turbo sponsors the Solana fees** (`actions/`). Twelve actions are gas-sponsored (nine at launch; `set-record-metadata`, `remove-record-metadata` and `transfer-record` arrived in turbo-sdk `1.42.0-alpha.11`):
+Turbo is fee payer, the user pays in Turbo Credits, and the ANT is minted
+straight to the buyer. **Turbo takes custody of nothing** — there is no claim
+step, no transfer-out, and no "Turbo-held name". Don't build one, and don't
+imply one in copy. The custody tree that predated this (`custodyStrategy`,
+`nameCustody`, `mergeCustodialNames`, `ClaimToContinueModal`,
+`CustodialNamePanel`) is **deleted**, not disabled.
 
-`purchase/cardPlan.ts` picks between them, and `custodialPurchaseEnabled()` in
-that file is the single switch. **It returns `false` everywhere — not an
-environment gate.** Custody removed the need to hold SOL but never the need for
-a wallet to sign with (`needsLinking` always meant "no *Solana* wallet"; a
-session identity is required to reach checkout at all), and every sub-flow was
-broken as written. With it off the ladder is `self-custody → reconnect → link`;
-a buyer short on SOL falls through to self-custody so the existing balance
-gating stops them and names the shortfall.
+turbo-sdk owns the protocol — the two response shapes, the nonce discipline and
+the `x-owner-*` proof — via `buyArNSName`, `setArNSRecord` and friends. **Never
+hand-roll the HTTP.** What console owns is the half the SDK cannot: the browser
+wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
+`ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
+is sponsored (`actions/sponsorship.ts`).
 
-The intended replacement is **fee sponsorship**, and the SDK already supports
-it: `buildCreateAntInstruction` takes `authority` and `payer` as separate
-addresses, and `buildSpawnAntInstructions` returns the ordered instructions
-without sending. So Turbo can pay rent on an ANT the user owns from the first
-block. That needs a bundler endpoint (Turbo's keypair signs as fee payer) and
-the `ario_ant::initialize` instruction, which is not exported in the SDK types.
+**Pin turbo-sdk EXACTLY.** Stable `1.42.0` sorts *above* the `1.42.0-alpha.x` line in
+semver and contains **no ArNS surface at all**, so a caret range or a routine
+`npm update` silently deletes this feature and nothing fails until someone tries
+to buy a name.
 
-`custody/nameCustody.ts` is the authority on what a custodial name can do. Registry operations (extend, upgrade, add undernames) are payments and work regardless of who holds the ANT; ANT operations (records, controllers, transfer, release) need the owner's signature, so under custody all but set-record/remove-record/transfer are **genuinely impossible**, not merely unimplemented — which is why they render as disabled controls with a reason rather than buttons that fail. `GET /v1/arns/my-names/:address` returns a per-name `custodial` flag; `custody/mergeCustodialNames.ts` folds it into "your names".
-- There is no hybrid *via the high-level API*: a transfer wipes controllers, and `ANT.spawn` takes one signer documented as "pays rent + receives the NFT". The low-level builders do separate the two roles — see the sponsorship note above before assuming this is a protocol limit.
+**Every action costs credits, and the SDK says otherwise.** The eight
+non-purchase actions were free at launch and now carry a small margin
+(ar-io-bundler#303). The published SDK's doc comments still call them "free" —
+stale, and believing them puts a promise of no charge in front of a real one.
+
+Prices come from `GET /v1/arns/actions/:action/price` (`useArNSActionPrice`),
+NOT from `/v1/arns/price/:intent/:name`, which serves only the four purchase
+intents. **Fetch, never hardcode:** the figures differ per environment — a
+record write is 0.1699 credits on testnet and 0.1714 on production, and
+removing a record is 0 on testnet but 0.05 on production. A baked-in number is
+right in development and wrong in front of users. An unloaded price must
+degrade to "a small amount", never to "free".
+
+Use the SDK's `getArNSActionPrice(action)` (alpha.13+), which is
+unauthenticated and creates nothing — it is a preview, not a quote.
+
+**Buying already grants Turbo as controller**, in the same transaction the user
+signs (`ARNS_CONTROLLER_GRANT_ENABLED` defaults on). Never follow a purchase
+with `add-controller`: it is redundant and would charge a second time.
+
+**Sponsorship is not universal, and the exceptions are the whole UX problem.**
+Not sponsored, each still costing the user SOL:
+- **Returned-name auctions** (`useBuyReturnedName`) — ARIO-funded, needs a
+  client-spawned ANT (`services/antSpawn.ts`, which survives for this path
+  alone, ~0.02 SOL) and is the only flow with **two** wallet approvals.
+- **Paying with ARIO** — not a page but an option in the payment picker,
+  wearing a "Best price" badge. It is the user's own `buyRecord`, not a Turbo
+  action, so their wallet pays the rent. `paymentOptions.ts` applies the SOL
+  block to the ARIO option *alone*; applying it broadly blocks exactly the
+  zero-SOL buyers sponsorship exists for.
+- Primary name, release, reassign, and **ANT-level** metadata
+  (`EditDetailsModal`). Record-level metadata IS a Turbo action
+  (`set-record-metadata`) and the two sit next to each other in the program.
+  The difference is WHICH ASSET pays, not whether anything does: a record's
+  display name costs credits, the name's own costs SOL. **Neither is free** —
+  saying so here is what put the same claim in the code. Label them distinctly
+  or users meet the difference at a wallet prompt.
+
+**Two rails, and the choice is by funds** (`records/writerChoice.ts`). Every
+write Turbo lists in `arNSActions` can go either way: Turbo as fee payer,
+billed in credits, or the wallet signing the Solana transaction and paying the
+network. `chooseWriter` prefers **credits** — that price can be quoted exactly
+before the click, and the route is one message signature with no transaction to
+confirm or fail — and falls back to the wallet only on a **known** shortfall.
+Unknown balances never reroute: both figures load asynchronously, and treating
+"not yet" as "can't afford it" would swap the route, and the cost sentence with
+it, under someone already reading it.
+
+`chooseOwnerActionWriter` is the same ladder for transfer and controller
+changes, minus the controller branch — a controller may edit records but cannot
+transfer a name or change who controls it, so a non-owner blocks rather than
+falling through to a transaction the program rejects. Anything self-signed must
+set `paysNetworkDirectly` so the surface stops quoting credits; both mistakes
+have been made here, in both directions.
+
+**The payment menu derives from the SESSION wallet**, not from ArNS being
+Solana-only. A token top-up credits *whoever sent the tokens*, and the purchase
+spends the session identity's credits, so `availableTokensForWallet(session)` is
+what makes those the same account — by construction rather than by guard. Send
+non-SOL top-ups through `useCustodyOwnerClient.getClient(token)`, never the
+linked Solana adapter. `creditPurchasesUnavailable` withdraws card, balance and
+token routes when `isPaymentServiceAvailable()` is false (x402-only mode); ARIO
+survives it, because it pays the registry directly and never touches that
+service.
+
+**A record save can cost TWO approvals.** `setArNSRecord` (target + TTL) and
+`setArNSRecordMetadata` (display name, logo, description, keywords) are
+separate actions, so changing both prompts twice. `toRecordChange` diffs
+against the loaded record precisely so metadata is sent only when it actually
+changed — a snapshot would make every save a two-prompt save. The
+controller path has the opposite shape: the ANT program bundles record and
+metadata into one transaction, so a self-signed save is always one signature.
+
+**Turbo cannot change a name on its own.** Buying grants Turbo controller
+rights in the same transaction that mints the name, but `setArNSRecord` takes
+an `ArNSOwnerSigner` **unconditionally** and the service verifies that proof
+against the **current on-chain owner**. So every record write carries the
+owner's own action-bound, single-use signature. The grant only decides what the
+owner approves: a cheap offline message while it stands, a full transaction once
+revoked. Copy must say what the grant is *for* (Turbo paying the fee), never
+what it lets Turbo do — which is nothing alone.
+
+**A controller is not sponsored** (`records/writerChoice.ts`). Because the proof
+must come from the owner, a controller's signature is rejected. They keep the
+capability and pay their own fee, so record writes fork by role: owner →
+`records/sponsoredWriter.ts`, controller → `records/antWriter.ts`. `unknown`
+**blocks** rather than guessing — guessing sponsored for a controller burns a
+wallet prompt on a request that 401s, guessing self-signed for an owner charges
+a fee they don't owe. This matters far beyond the records table: "your names" is
+Owned ∪ Controlled, so controlled names flow into Deploy Site, Capture, Assign
+Domain and Pages publish through `useOwnedArNSNames.updateArNSRecord`.
+
+**Metadata fields are tri-state** (`recordFields.ts`). Omitted leaves a field
+unchanged, `null` clears it, a value sets it — and they are bound *distinctly*
+in the owner proof, so "clear" and "set to empty string" are different
+authorizations. **Never normalise `null` to `''`.** `toRecordChange` therefore
+diffs against the record as loaded rather than sending a snapshot;
+`withoutClears` drops the nulls for the ANT-direct path, which has no way to
+express a clear, and is what gets deleted when those actions land.
+
+**PAYER vs OWNER — get this right before touching checkout.** Two wallets, two
+roles, and they are the same wallet only on a Solana session:
+
+- The **owner** is the Solana wallet that receives the ANT and signs writes. It
+  is `signer.address` from `useArNSTurboSigner`, and on an Arweave/Ethereum
+  session it is the *linked* wallet.
+- The **payer** is the **session identity**, always. Every credits-settled
+  action passes `client: await getOwnerClient()` (`useCustodyOwnerClient`, built
+  from the store's `address`/`walletType`), and `purchaseWithCredits` documents
+  that parameter as "already authenticated as the PAYER". `owner` is a separate
+  parameter precisely because the roles differ.
+
+So **credits are debited from the session wallet, not the name's owner.**
+`useArNSPaymentBalances` agrees — its credits come from
+`useStore(s => s.creditBalance)`; its `address` argument only feeds the ARIO and
+SOL queries. The checkout reading a Solana address for balances does *not* mean
+the Solana address pays.
+
+Two consequences worth stating, because both have been implemented backwards:
+a top-up must credit the **session** wallet (pointing it at the owner funds an
+account the purchase never reads), and a *token* top-up credits **whoever sent
+the tokens** — so sending from the linked Solana wallet on a non-Solana session
+strands the credits, which is why `creditTopUpsUnavailable` withdraws that
+option there.
 
 **Linked Solana wallet** (`hooks/useLinkedSolanaWallet.ts`): Arweave/Ethereum users link a **secondary** Solana wallet for ArNS without changing their primary session identity. `linkedSolanaAddress` + `linkedSolanaWalletName` persist in the store, and `getArNSAddress()` returns the primary address for Solana sessions or the linked address otherwise. Read-only lookups work from the persisted address alone; **writes need a live signer**, so the hook auto-reconnects the named adapter on page load (the Solana `WalletProvider` runs `autoConnect=false`). `hooks/useArNSTurboSigner.ts` turns that into the two things writes need: a `walletAdapter` for `TurboFactory.authenticated` and a `@solana/kit` `SolanaSigner` for `ANT.spawn`.
 
-**Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): an ANT spawn costs real SOL (~0.02) and a submitted purchase has already debited credits. Both `processId` (spawned ANT) and `nonce` (server idempotency + status key) are persisted the instant they exist. On retry, **reuse the persisted `processId` instead of spawning again** — otherwise every failed attempt bleeds SOL and orphans an ANT. Resuming by `nonce` is a pure read (`GET /v1/arns/purchase/:nonce`), so it can never double-debit.
+**Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): **credits are debited when the action is CREATED**, not when it is signed, so an abandoned wallet prompt has already been charged (Turbo refunds it on TTL expiry). The nonce is persisted via the SDK's `onNonce`, which fires *before* the wallet opens — that is the only route back to a paid-for purchase if the page reloads mid-approval. Resuming by nonce is a pure read (`GET /v1/arns/actions/:nonce`) and can never double-debit; **re-creating an action always can.** `processId` persistence now serves the auction path only, where a client spawn still happens and a retry must reuse it rather than bleed another ~0.02 SOL.
 
 **Owner vs. controller gating** (`antRole.ts`): `getArNSRecordsForAddress` returns `Owned ∪ Controlled`, so a name in "your names" may be one the wallet only *controls*. Controllers can edit records/metadata/undernames; **transfer, reassign, release, and controller changes are owner-only**. Use `deriveAntRole` (optimistic — `unknown` treated leniently) only on owned-name surfaces where every row is in the ACL; use `deriveAntRoleStrict` (`none` is a real answer) anywhere a name isn't guaranteed to be the wallet's, such as the public Name Detail page. `isOwnerOnlyAllowed` denies both `unknown` and `controller` so destructive actions never flash before ownership is confirmed.
 
 **ACL drift** (`services/aclDrift.ts`): the on-chain ANT ACL is an eventually-consistent index powering "your names". A **raw Metaplex Core transfer** (direct send or NFT-marketplace sale) moves the asset but does *not* update the ACL, so a newly-owned name goes missing until `syncAcl` is called. Drift is detected by scanning MPL Core assets by owner and diffing against the ACL owner set.
 
-**Service layer** (`services/TurboArNSClient.ts`): framework-agnostic (plain `fetch` + turbo-sdk), holds no React state, and takes **signers injected per call** rather than reading `window.solana`. Intents: `Buy-Name`, `Extend-Lease`, `Increase-Undername-Limit`, `Upgrade-Name`.
+**Service layer** (`services/TurboArNSClient.ts`): framework-agnostic (plain `fetch` + turbo-sdk), holds no React state, and takes **signers injected per call** rather than reading `window.solana`. Intents: `Buy-Name`, `Extend-Lease`, `Increase-Undername-Limit`, `Upgrade-Name`. `purchaseWithCredits` dispatches to the SDK's per-action methods; `Buy-Name` is the only one needing an `owner` signer, and the only one that opens a wallet.
 
 `features/arns/index.ts` is the public surface — import from there, not via deep relative paths.
 
@@ -358,9 +486,11 @@ Network-specific settings in `constants.ts`:
 | Buy Credits (Crypto) | ✅ AR/ARIO | ✅ ETH/Base-ETH/Base-ARIO/POL/USDC | ✅ SOL |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ❌ | ❌ | ✅ |
+| Update ArNS Records | ❌ | ❌ | ✅ (no SOL needed) |
 | JIT Payments | ❌ | ✅ Base-ETH, Base-USDC | ✅ SOL |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
+
+The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet — in both cases the primary identity is unchanged. That wallet signs but never pays: Turbo is fee payer, so its SOL balance can stay at zero for the life of the name. The exceptions are listed under the ArNS feature above.
 
 ## Environment Variables
 
@@ -406,6 +536,10 @@ Service URLs managed by store's configuration system, overridable via Developer 
 **The flow is `feature → develop → main`.** `main` is protected: PR required, CI must pass, 0 approvals (a solo maintainer cannot approve their own PR), admin bypass on.
 
 **`.github/workflows/deploy.yml`** — permaweb deploy, on **push to `main`** and via `workflow_dispatch`: builds the production bundle, publishes it to Arweave via Turbo, then repoints the `console` ArNS name's ANT record at the new manifest. A push carries no inputs, so `TARGET_UNDERNAME`/`TARGET_REF` resolve to `@` and the pushed SHA — merging to `main` publishes live `console.ar.io` with no approval step. Manual runs keep their own defaults (`staging` → `staging_console.ar.io`). TTL is 300s. **`.github/workflows/deploy-wallet-address.yml`** prints the deploy wallet's public address, since the secrets are write-only once set. A live `@` deploy hard-fails if `secrets.VITE_SOLANA_RPC` is empty, because the public mainnet-beta fallback fails *silently* at build time and would ship a broken console that looks fine in CI. One Solana wallet fills both roles (`DEPLOY_KEY` pays the upload, `ARNS_KEY` controls the name).
+
+**Both deploy paths need `404.html`, for the same reason.** An `arweave/paths` manifest serves only the paths it lists, and `ario-deploy` derives the manifest's `fallback` from a `404.html` in the deploy folder — so `deploy.yml` runs `cp dist/index.html dist/404.html` before publishing. Without it every deep link (`/try`, `/upload`, `/arns`) 404s on direct arrival while the root loads fine and in-app navigation works — the 4.6.0 bug. The GitHub Pages workflow copies the same file for the same reason; if you add a third publish target, carry the step across.
+
+**`.coderabbit.yaml`** makes CodeRabbit auto-review PRs targeting **`develop`**. It reviews only the default branch (`main`) out of the box, which under `feature → develop → main` is the one branch PRs never target first.
 
 **`.npmrc` sets `legacy-peer-deps=true`.** Its comment says it exists because `@ar.io/sdk` was pinned to a prerelease that `@ar.io/wayfinder-core`'s `peerOptional ">=4.0.0"` rejected. That is now **stale** — the repo is on `@ar.io/sdk` 4.1.1 stable, which satisfies the peer range, so the flag (and the matching CI comment) can likely be dropped. Verify with a clean `npm ci` before removing.
 
@@ -538,10 +672,12 @@ if (privyWallet) {
 
 - `@ardrive/turbo-sdk`: Turbo services, multi-chain signing, USDC support
 - `@ar.io/sdk`: ArNS resolution, InjectedEthereumSigner
+- `@ar.io/solana-contracts` + `@solana/kit`: ANT spawn/instruction builders for the Solana ArNS paths
 - `@ar.io/wayfinder-core` + `@ar.io/wayfinder-react`: Browse content verification
 - `@privy-io/react-auth`: Email auth with embedded wallets
 - `wagmi` + `ethers`: Ethereum wallets
 - `@solana/wallet-adapter-*`: Solana wallets
+- `@wallet-standard/app`: `getWallets().register()` — how `PrivySolanaBridge` makes the embedded wallet visible
 - `arbundles`: Data item creation for X402
 - `x402-fetch`: X402 payment protocol
 - `zustand`: State management

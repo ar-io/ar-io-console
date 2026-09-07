@@ -26,6 +26,7 @@ const ReturnedNamesPage = lazy(() => import('./pages/ReturnedNamesPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const BalanceCheckerPage = lazy(() => import('./pages/BalanceCheckerPage'));
 const GatewayInfoPage = lazy(() => import('./pages/GatewayInfoPage'));
+const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 const DeploySitePage = lazy(() => import('./pages/DeploySitePage'));
 const RecentDeploymentsPage = lazy(() => import('./pages/RecentDeploymentsPage'));
 const AccountPage = lazy(() => import('./pages/AccountPage'));
@@ -127,6 +128,7 @@ function AppRoutes() {
           <Route path="account" element={<AccountPage />} />
           <Route path="my-domains" element={<MyDomainsPage />} />
           <Route path="settings" element={<GatewayInfoPage />} />
+          <Route path="changelog" element={<ChangelogPage />} />
           <Route path="try" element={<TryItNowPage />} />
           <Route path="browse" element={
             <Suspense fallback={<BrowsePageLoader />}>

@@ -111,6 +111,14 @@ describe('submittingMessage', () => {
   it('distinguishes permabuy from lease', () => {
     expect(submittingMessage('abc', 'permabuy')).toContain('permanently');
     expect(submittingMessage('abc', 'lease')).not.toContain('permanently');
-    expect(submittingMessage('abc', 'lease')).toContain("'abc'");
+    expect(submittingMessage('abc', 'lease')).toContain('abc');
+  });
+
+  it('never mentions the ANT, which the buyer no longer creates', () => {
+    // Turbo mints the name now, so "creating its ANT" was both jargon and
+    // wrong about who was doing what.
+    for (const type of ['permabuy', 'lease'] as const) {
+      expect(submittingMessage('abc', type)).not.toMatch(/ANT/i);
+    }
   });
 });

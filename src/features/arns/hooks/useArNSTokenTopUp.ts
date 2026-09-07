@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
 
 import { useArNSTurboSigner } from './useArNSTurboSigner';
+import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import type { SupportedTokenType } from '../../../constants';
 import { isMoneyAtRisk, type TopUpStep } from '../purchase/topUpSteps';
@@ -37,6 +38,10 @@ export function useArNSTokenTopUp() {
   const [step, setStep] = useState<TopUpStep>({ phase: 'idle' });
   const fundedRef = useRef(false);
   const solanaConfig = useTurboConfig('solana');
+  // The SESSION wallet's client. A top-up credits whoever sent the tokens, and
+  // the purchase spends the session identity's credits, so anything that is not
+  // SOL has to be sent from here to land where it will be spent.
+  const { getClient: getSessionClient } = useCustodyOwnerClient();
 
   /*
     Warn before the tab closes while a purchase is mid-flight.
@@ -88,18 +93,33 @@ export function useArNSTokenTopUp() {
       /** Reads the live credit balance; injected so this stays testable. */
       readCredits: () => Promise<number>;
     }): Promise<void> => {
-      if (!signer.isReady || !signer.walletAdapter) {
+      // Only the SOL path signs with this wallet. The name still needs it to
+      // spawn the ANT, but that is the purchase's gate, not the top-up's.
+      if (token === 'solana' && (!signer.isReady || !signer.walletAdapter)) {
         throw new Error('Connect a Solana wallet with a live signer to pay.');
       }
       fundedRef.current = false;
       setStep({ phase: 'funding' });
 
       try {
-        const turbo = TurboFactory.authenticated({
-          token: token as never,
-          walletAdapter: signer.walletAdapter,
-          ...solanaConfig,
-        });
+        /*
+          SOL keeps the original path exactly. It is sent by the Solana wallet,
+          which on a Solana session IS the session identity, so the credits land
+          on the payer and nothing needs to change.
+
+          Every other token belongs to the session wallet's own chain — an
+          Ethereum session paying in base-usdc, say — and must be sent by that
+          wallet for the same reason. Sending those from the linked Solana
+          wallet is what stranded the credits and cost buyers real SOL.
+        */
+        const turbo =
+          token === 'solana'
+            ? TurboFactory.authenticated({
+                token: token as never,
+                walletAdapter: signer.walletAdapter,
+                ...solanaConfig,
+              })
+            : await getSessionClient(token);
         await turbo.topUpWithTokens({ tokenAmount: tokenAmount.toString() });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -139,7 +159,7 @@ export function useArNSTokenTopUp() {
       setStep({ phase: 'registering' });
       window.dispatchEvent(new CustomEvent('refresh-balance'));
     },
-    [signer, solanaConfig],
+    [signer, solanaConfig, getSessionClient],
   );
 
   /**

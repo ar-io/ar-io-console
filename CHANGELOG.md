@@ -2,6 +2,103 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.7.0] - 2026-09-02
+
+### Added
+- **Transferring a name and changing controllers can be paid in credits.** Both
+  used to require SOL in your wallet, because they were signed and paid for
+  directly. They now take the same route records do: credits by default, with
+  the exact price shown before you confirm, and your wallet signing and paying
+  the Solana fee when credits are short. Only the owner can perform them either
+  way.
+- **A "What's new" page**, listing every release. The version number in the
+  footer links to it — "which version am I on" and "did that get fixed" are
+  usually the same question.
+
+### Changed
+- **Renewing a name now tells you what changed**, not just that it worked —
+  the new expiry date, or that the name is permanent.
+- **Every completed change links its transaction**, so you can check it on
+  chain. Some screens showed a raw identifier you could do nothing with, and
+  others showed nothing at all.
+- **Payment options no longer get cut off.** Card, ARIO, SOL and Balance were
+  laid out side-on and the last one could be clipped out of view; they now
+  stack, so every way to pay stays visible.
+- **Costs are shown where the change is made** rather than in a note above the
+  list, and the actions that still need SOL say so inside the window that
+  performs them.
+- **Pressing Escape during a change no longer looks like cancelling it.**
+  Closing the window never stopped the action — it only hid it — so a transfer
+  or release could land after you thought you had backed out. Windows now stay
+  put until the change finishes.
+- **Removing a record now asks first**, and says what it costs. The trash icon
+  sits beside the edit pencil at icon size, so it was easy to hit by accident —
+  and removing is a charged action that gave no warning.
+- **Buying and running an ArNS name no longer needs SOL.** Turbo pays the
+  Solana fees and rent; you pay in Turbo Credits and the name is minted
+  straight to your wallet. Turbo holds nothing, so there is no claim step and
+  nothing to transfer out later. Signing in with an email address already
+  creates a Solana wallet, so someone who has never held cryptocurrency can buy
+  a name and keep it.
+- **Prices now show the total.** A registration carries a one-time setup charge
+  covering the Solana deposit Turbo fronts, and it is shown as its own line.
+  Quoting the name price alone understated a purchase by more than half.
+- **Renewing, upgrading and adding undername slots need no wallet approval at
+  all** — they settle from credits with nothing to sign.
+- **Every change now shows what it costs before you make it**, including the
+  cases where one save is billed twice — changing a record and its details
+  together is two charges and two approvals, and the editor says so up front.
+  If your credits won't cover a change, the button explains that rather than
+  failing when you press it.
+- **A record's display name, logo, description and keywords can now be edited
+  and cleared**, and the cost of each change is shown before you make it.
+  Editing records, changing controllers and transferring all cost a small
+  amount of credits — the exact figure is shown where you make the change,
+  because it differs by network.
+- **Turbo-custodied names are gone**, along with the claim flow that existed to
+  get out of them. Paying the Solana fees in credits removes the reason they
+  existed.
+
+### Fixed
+- **Paying with your wallet's own token shows the balance and blocks a
+  shortfall**, the way paying in SOL always did. Ethereum and Arweave sessions
+  could pick a token with nothing behind it and only find out at the wallet.
+- **Renewing a name says which wallet pays and which holds it**, matching the
+  purchase screen, when those are two different wallets.
+- **In x402-only mode, name purchases only offer the option that can work.**
+  Card, balance and token top-ups all settle through the payment service, which
+  that mode turns off, so all three failed at the last step. ARIO pays the
+  registry directly and still works, and is now what you're offered.
+- **You can pay for a name with your own wallet's tokens.** Signed in with
+  Ethereum, you can now pay in Base USDC, ETH, POL or USDC; with Arweave, in AR.
+  Previously the only crypto option was SOL, which was sent by the linked Solana
+  wallet while the purchase spent the credits of the wallet you signed in with —
+  so the SOL left and the name was never bought. Payment now comes from the same
+  wallet the purchase draws on. Solana sessions are unchanged.
+- **Running out of credits no longer blocks a record change you can sign
+  yourself.** An owner short on credits is offered the direct route — their
+  wallet signs and pays the Solana fee — instead of being sent to buy a $5
+  minimum of credits for an action costing a fraction of a cent. Credits stay
+  the default, because that price can be quoted exactly before you click.
+- **Removing an undername quotes the cost you will actually pay.** Controllers
+  sign and pay the Solana fee themselves — Turbo's paid route accepts the
+  owner's signature only — but the confirmation quoted credits to everyone.
+- **The payment options read as one set.** Large balances were cut off
+  mid-number, each card was a different height, and the four described
+  themselves three different ways. Holdings are now shortened rather than
+  truncated, and every card carries the same amount-and-unit line.
+- **The cost breakdown now adds up.** The name price line was showing the full
+  total with the one-time setup already inside it, and the setup was then
+  listed again — so the three lines never reconciled and the total looked
+  wrong. The name line now shows the name alone.
+- **"Not enough credits" now sits against the total**, the figure it is
+  actually measured against.
+- **Paying with SOL now shows SOL.** Renewing a name quoted the cost in
+  credits even when SOL was the chosen payment, leaving you to convert it
+  yourself; and on registration the setup line was priced in credits while the
+  rows above and below it were in SOL, so the three could not be checked
+  against each other.
+
 ## [4.6.0] - 2026-08-28
 
 ### Fixed
@@ -54,7 +151,8 @@ All notable changes to the ar.io Console are documented in this file.
 ### Changed
 - **Turbo-custodied purchases are retired.** They removed the need to hold SOL
   but never the need for a wallet to sign with, and every sub-flow was broken as
-  written. Sponsored gas removes the SOL requirement without handing Turbo the
+  written. Paying the network fees in credits removes the SOL requirement
+  without handing Turbo the
   asset, a surcharge, a reduced action set and a claim flow, so custody waits for
   that rather than being repaired. Card buyers now need a Solana wallet holding
   the network deposit.

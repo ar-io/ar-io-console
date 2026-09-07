@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getANT, getWritableANT } from '../../../utils';
 import { useRecordWriter } from './useRecordWriter';
-import { mapRecordWriteError } from '../custody/recordWriter';
+import { mapRecordWriteError } from '../records/recordWriter';
 import { useArNSConfigKey } from './useArNSConfigKey';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 
@@ -115,15 +115,11 @@ export type UndernameWritePhase = 'idle' | 'submitting' | 'success' | 'error';
  * adding an undername beyond the name's undername limit fails on-chain — surface
  * the error and point the user at "Add undernames" (increase the limit).
  */
-export function useUndernameWrites(name?: string, processIdForCustody?: string) {
+export function useUndernameWrites(_name?: string, processId?: string) {
   const signer = useArNSTurboSigner();
-  // Resolves to the ANT writer for a name the user owns, or to Turbo's
-  // custodial route for one it holds. Callers pass the same processId they
-  // already pass per-op; the extra arg only seeds custody lookup.
-  const { getWriter, isCustodial, isResolving } = useRecordWriter(
-    name,
-    processIdForCustody,
-  );
+  // One writer now: Turbo performs every record write and pays the Solana fee,
+  // and the owner approves it. Nothing to resolve first, so nothing to block on.
+  const { getWriter, costNote, paysNetworkDirectly } = useRecordWriter(processId);
   const [phase, setPhase] = useState<UndernameWritePhase>('idle');
   /** The undername currently being written (for per-row busy state). */
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -152,7 +148,14 @@ export function useUndernameWrites(name?: string, processIdForCustody?: string) 
       setBusyKey(undername);
       try {
         const writer = await getWriter(processId);
+        /*
+          Forward the WHOLE change. This used to pass three fields, so every
+          metadata edit on an undername was silently discarded — the apex was
+          fine because it takes a different route entirely, which is why the
+          gap went unnoticed.
+        */
         await writer.setRecord({
+          ...record,
           undername,
           transactionId: record.transactionId ?? '',
           ttlSeconds: record.ttlSeconds ?? 0,
@@ -241,10 +244,10 @@ export function useUndernameWrites(name?: string, processIdForCustody?: string) 
     saveUndername,
     removeUndername,
     transferUndernameOwnership,
-    /** Turbo holds this ANT — record-owner transfer has no custodial route. */
-    isCustodial,
-    /** Custody unresolved; writes must wait rather than guess a writer. */
-    isResolving,
+    /** One line on what this wallet's edits cost. */
+    costNote,
+    /** True for a controller: they pay the Solana network, not credits. */
+    paysNetworkDirectly,
     reset,
     phase,
     busyKey,

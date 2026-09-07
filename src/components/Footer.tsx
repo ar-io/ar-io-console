@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Github, Linkedin } from 'lucide-react';
 
 export default function Footer() {
@@ -16,15 +17,19 @@ export default function Footer() {
                 © {currentYear} ar.io
               </span>
               <span className="text-foreground/30">•</span>
-              <a
-                href="https://github.com/ar-io/ar-io-console"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-foreground/60 hover:text-foreground transition-colors"
-                title="View source code on GitHub"
+              {/*
+                The version links to what changed in it, not to the repository.
+                "Which version am I on" and "did that get fixed" are the same
+                question, and the answer to the second is a page we now have —
+                source is a click away from there for anyone who wants it.
+              */}
+              <Link
+                to="/changelog"
+                className="text-sm text-foreground/60 transition-colors hover:text-foreground"
+                title="See what's new in this release"
               >
                 v{version}
-              </a>
+              </Link>
             </div>
 
             {/* Right side: Social Icons */}

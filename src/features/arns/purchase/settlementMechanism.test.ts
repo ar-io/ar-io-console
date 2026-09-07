@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  needsClientSpawn,
   settlementMechanismFor,
 } from './settlementMechanism';
 import type { SettlementRoute } from './settlementRoute';
@@ -43,7 +42,6 @@ describe('settlementMechanismFor', () => {
     // Self-custody card buys credits, so it lands on the credits mechanism.
     expect(settlementMechanismFor(card, false)).toEqual({ kind: 'turbo-credits' });
     // Custodial card is settled by Turbo against the fiat charge.
-    expect(settlementMechanismFor(card, true)).toEqual({ kind: 'turbo-fiat' });
   });
 
   it('never emits a fundFrom outside what the ARIO SDK acts on', () => {
@@ -64,24 +62,4 @@ describe('settlementMechanismFor', () => {
   });
 });
 
-describe('needsClientSpawn', () => {
-  it('requires a spawned ANT for a credits PURCHASE', () => {
-    // turbo-sdk provisions a TURBO-OWNED ANT when no processId is supplied.
-    // Correct for a custodial card, wrong for credits — where the buyer is
-    // meant to own the name outright.
-    expect(needsClientSpawn({ kind: 'turbo-credits' }, 'Buy-Name')).toBe(true);
-    expect(needsClientSpawn({ kind: 'turbo-credits' }, 'Buy-Record')).toBe(true);
-  });
 
-  it('does not spawn for actions on a name that already exists', () => {
-    for (const intent of ['Extend-Lease', 'Upgrade-Name', 'Increase-Undername-Limit']) {
-      expect(needsClientSpawn({ kind: 'turbo-credits' }, intent)).toBe(false);
-    }
-  });
-
-  it('never spawns for ARIO or fiat', () => {
-    // ARIO's buyRecord mints atomically; the custodial card is Turbo's to spawn.
-    expect(needsClientSpawn({ kind: 'ario-direct', fundFrom: 'balance' }, 'Buy-Name')).toBe(false);
-    expect(needsClientSpawn({ kind: 'turbo-fiat' }, 'Buy-Name')).toBe(false);
-  });
-});

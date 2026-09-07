@@ -101,15 +101,11 @@ function CardCheckout({
               {displayName} is registered.
             </span>{' '}
             {/*
-              "is yours" alone set up a surprise. Turbo holds the ANT on this
-              route — the cost panel says so before the charge, but this is the
-              screen people actually read, and it dropped the caveat. Naming it
-              here, with the way out, beats discovering it later as a greyed
-              control.
+              No caveat left to state. The name is minted straight to the
+              buyer's wallet, so there is nothing held on their behalf and
+              nothing to claim later.
             */}
-            Turbo holds its ANT for now — that&apos;s why you didn&apos;t need
-            SOL. Transfer it to your own wallet any time from the name&apos;s
-            page; that doesn&apos;t need SOL either.
+            It&apos;s in your wallet, and Turbo paid the Solana fees.
           </span>
         </div>
       )}

@@ -128,7 +128,7 @@ export function routeBuyError({
    * settlement can run out of credits; on the ARIO path a shortfall is an ARIO
    * shortfall, and offering a credits top-up would not resolve it.
    */
-  mechanism: 'ario-direct' | 'turbo-credits' | 'turbo-fiat';
+  mechanism: 'ario-direct' | 'turbo-credits';
   isInsufficientCredits: boolean;
 }): BuyErrorRoute {
   if (mechanism === 'turbo-credits' && isInsufficientCredits) {
@@ -139,7 +139,12 @@ export function routeBuyError({
 
 /** Status copy while the purchase is in flight. */
 export function submittingMessage(name: string, type: BuyRegistrationType): string {
+  /*
+    "creating its ANT" was both jargon and, now, wrong: Turbo mints the name,
+    the buyer does not. What they are waiting on is the registration, so say
+    that and nothing else.
+  */
   return type === 'permabuy'
-    ? `Registering '${name}' permanently and creating its ANT…`
-    : `Registering '${name}' and creating its ANT…`;
+    ? `Registering ${name} permanently…`
+    : `Registering ${name}…`;
 }

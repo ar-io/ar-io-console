@@ -1,13 +1,20 @@
 # CodeRabbit review configuration.
 #
-# By default CodeRabbit only auto-reviews pull requests targeting the DEFAULT
-# branch — here that is `main`. Under the feature -> develop -> main flow, PRs
-# land on `develop` first and `main` only ever receives an already-merged
-# release, so nothing was being reviewed at the point where review is useful.
+# `base_branches` is ADDITIVE to the repository's default branch — CodeRabbit
+# always auto-reviews PRs targeting the default, plus anything listed here.
 #
-# Listing `develop` restores that: every PR gets reviewed on the way in, and
-# the release PR to `main` still gets one on the way out.
+# That made the list load-bearing in a way that quietly depended on which
+# branch was default. When `main` was the default, listing `develop` covered
+# both. The default is now `develop` (so that `gh pr create` and the GitHub UI
+# stop steering PRs straight at production), and that single change silently
+# dropped review coverage on `main` — the branch whose merges publish live
+# console.ar.io.
+#
+# Both are listed explicitly now. Coverage no longer moves when the default
+# does, which is the property worth having: under feature -> develop -> main,
+# a PR gets reviewed on the way in AND the release PR gets one on the way out.
 reviews:
   auto_review:
     base_branches:
       - "develop"
+      - "main"

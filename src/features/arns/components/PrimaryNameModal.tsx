@@ -16,6 +16,8 @@ import BaseModal from '../../../components/modals/BaseModal';
 import { usePrimaryNameActions } from '../hooks/usePrimaryNameActions';
 import { parsePrimaryName } from '../utils';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import NeedsSolNote from './NeedsSolNote';
+import TransactionReceipt from './TransactionReceipt';
 
 export type PrimaryNameModalMode = 'set' | 'change' | 'approve';
 
@@ -69,6 +71,7 @@ export default function PrimaryNameModal({
     error,
     insufficientCredits,
     isBusy,
+    txId,
   } = usePrimaryNameActions();
 
   // --- set / change: pick an owned name ---
@@ -140,7 +143,7 @@ export default function PrimaryNameModal({
   }, [pendingRequest, ownedNames]);
 
   return (
-    <BaseModal onClose={onClose} showCloseButton>
+    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
       <div className="w-[92vw] max-w-lg p-4 sm:p-5">
         <ModalHeader
           icon={Star}
@@ -148,10 +151,25 @@ export default function PrimaryNameModal({
           description="The one name that stands for your wallet across ar.io apps."
         />
 
+        {/* The label follows `mode` — in approve mode the user is approving
+            someone else's request, not setting their own, and a fee notice
+            that describes the wrong action is worse than none. */}
+        <NeedsSolNote
+          action={
+            mode === 'approve'
+              ? 'Approving a primary-name request'
+              : mode === 'change'
+                ? 'Changing your primary name'
+                : 'Setting a primary name'
+          }
+          className="mb-4"
+        />
+
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
             <p className="font-semibold text-foreground">{statusMessage}</p>
+            <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
               className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"

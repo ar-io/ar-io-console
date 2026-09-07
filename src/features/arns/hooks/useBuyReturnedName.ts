@@ -160,7 +160,7 @@ export function useBuyReturnedName() {
         }
 
         if (!processId) {
-          setProgress({ done: 0, total: 2, label: 'Creating your ANT' });
+          setProgress({ done: 0, total: 2, label: 'Preparing your name' });
           const config = getCurrentConfig();
           const spawn = await spawnArNSAnt({
             signer: signer.getSolanaSigner(),

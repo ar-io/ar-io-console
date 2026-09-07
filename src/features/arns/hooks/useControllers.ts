@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
 
-import { getANT, getWritableANT } from '@/utils';
+import { getANT } from '@/utils';
 import { useArNSConfigKey } from './useArNSConfigKey';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
+import { useOwnerOpWriter } from './useOwnerOpWriter';
 
 /** The current controller set plus the owner, read for the Controllers editor. */
 export interface ControllersState {
@@ -16,12 +18,6 @@ export interface ControllersState {
 /** Structural view of the read-only ANT client's state getter. */
 type ANTControllersReadable = {
   getState(): Promise<{ Owner?: string; Controllers?: string[] }>;
-};
-
-/** Structural view of the ANT writeable's controller mutators. */
-type ANTControllerWriteable = {
-  addController(p: { controller: string }): Promise<{ id: string }>;
-  removeController(p: { controller: string }): Promise<{ id: string }>;
 };
 
 /**
@@ -59,8 +55,14 @@ export type ControllerWritePhase = 'idle' | 'submitting' | 'success' | 'error';
  * ANT owner can add/remove controllers — a non-owner write is rejected on-chain
  * and surfaced via `error`.
  */
-export function useControllerWrites() {
+export function useControllerWrites(processId?: string) {
   const signer = useArNSTurboSigner();
+  /*
+    Both rails, same as records: Turbo as fee payer billing credits, or the
+    wallet signing and paying SOL. Priced on `add-controller`, which is the
+    action the note leads with; production charges the same for removal.
+  */
+  const writer = useOwnerOpWriter(processId, 'add-controller');
   const [phase, setPhase] = useState<ControllerWritePhase>('idle');
   /** The controller address currently being written (for per-row busy state). */
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -84,11 +86,7 @@ export function useControllerWrites() {
       setPhase('submitting');
       setBusyKey(controller);
       try {
-        const ant = (await getWritableANT(
-          processId,
-          signer.getSolanaSigner(),
-        )) as unknown as ANTControllerWriteable;
-        await ant.addController({ controller });
+        await (await writer.getWriter(processId)).addController({ controller });
         setPhase('success');
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
@@ -101,7 +99,7 @@ export function useControllerWrites() {
         setBusyKey(null);
       }
     },
-    [ensureSigner, signer],
+    [ensureSigner, writer],
   );
 
   const removeController = useCallback(
@@ -111,11 +109,7 @@ export function useControllerWrites() {
       setPhase('submitting');
       setBusyKey(controller);
       try {
-        const ant = (await getWritableANT(
-          processId,
-          signer.getSolanaSigner(),
-        )) as unknown as ANTControllerWriteable;
-        await ant.removeController({ controller });
+        await (await writer.getWriter(processId)).removeController({ controller });
         setPhase('success');
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
@@ -128,7 +122,7 @@ export function useControllerWrites() {
         setBusyKey(null);
       }
     },
-    [ensureSigner, signer],
+    [ensureSigner, writer],
   );
 
   const reset = useCallback(() => {
@@ -144,6 +138,8 @@ export function useControllerWrites() {
     phase,
     busyKey,
     error,
+    /** True when the wallet signs and pays SOL — the modal must not quote credits. */
+    paysNetworkDirectly: writer.paysNetworkDirectly,
     isBusy: phase === 'submitting',
   };
 }

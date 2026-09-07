@@ -154,9 +154,10 @@ export function useManageArNSName(): UseManageArNSNameResult {
 
         if (mechanism.kind === 'turbo-credits') {
           /*
-            Credits are debited only by turbo-sdk. These intents act on a name
-            that already exists, so unlike a Buy there is no ANT to spawn — the
-            purchase settles in one call.
+            Credits are debited only by turbo-sdk. These three act on a name
+            that already exists, so they mint nothing, carry no setup cost, and
+            — unlike a Buy — need no signature from the owner at all. Turbo
+            pays the Solana fee, so they complete with no wallet prompt.
           */
           if (!client) throw new Error('Payment service is unavailable.');
           const purchase = await client.purchaseWithCredits({
@@ -167,7 +168,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
             years,
             increaseQty,
           });
-          res = { id: purchase.arioWriteResult?.id ?? '' };
+          res = { id: purchase.messageId };
         } else {
           const ario = getWritableARIO(
             signer.getSolanaSigner(),
