@@ -2,7 +2,7 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [Unreleased]
+## [4.7.1] - 2026-09-08
 
 ### Fixed
 - **The Account page no longer goes blank when your payment history contains a
