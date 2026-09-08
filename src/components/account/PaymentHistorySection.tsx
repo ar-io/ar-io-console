@@ -12,6 +12,12 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePaymentHistory, type PaymentHistoryItem } from '@/hooks/usePaymentHistory';
+import {
+  isCryptoPayment,
+  isFiatPayment,
+  paymentReference,
+  shortReference,
+} from './paymentRow';
 import { wincPerCredit, tokenLabels, type SupportedTokenType } from '@/constants';
 import { formatSmallestUnit } from '@/utils/jitPayment';
 import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
@@ -123,9 +129,20 @@ function downloadTopupCsv(payments: PaymentHistoryItem[]): void {
 // ---- row ---------------------------------------------------------------------
 
 function PaymentRow({ item }: { item: PaymentHistoryItem }) {
-  const isCrypto = item.type === 'crypto';
+  /*
+    `kind` may be 'unknown', and that is the point — see `paymentRow.ts`. The
+    reference is read from the payload rather than inferred from the type, so a
+    row this build does not recognise renders without its reference instead of
+    throwing during render and unmounting the whole Account route.
+  */
+  const isCrypto = isCryptoPayment(item);
+  const isFiat = isFiatPayment(item);
   const credits = formatCredits(item.wincCredited);
-  const explorerUrl = isCrypto ? getExplorerTxUrl(item.transactionId, item.tokenType) : null;
+  const reference = paymentReference(item);
+  const explorerUrl =
+    isCrypto && reference?.kind === 'tx'
+      ? getExplorerTxUrl(reference.value, item.tokenType)
+      : null;
 
   return (
     <div className="flex items-start justify-between gap-4 border-t border-border/20 py-3">
@@ -140,21 +157,23 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
             )}
             {isCrypto ? 'Crypto' : 'Card'}
           </span>
-          <span className="font-medium text-foreground tabular-nums">
-            {isCrypto
-              ? formatCryptoAmount(item.tokenQuantity, item.tokenType)
-              : formatFiat(item.paymentAmount, item.currencyType)}
-          </span>
-          {isCrypto ? (
-            formatUsdEquiv(item.usdEquivalent) && (
-              <span className="text-xs text-foreground/60">{formatUsdEquiv(item.usdEquivalent)}</span>
-            )
-          ) : (
-            <span className="text-xs text-foreground/60">via {item.paymentProvider || 'card'}</span>
+          {(isCrypto || isFiat) && (
+            <span className="font-medium text-foreground tabular-nums">
+              {isCrypto
+                ? formatCryptoAmount(item.tokenQuantity, item.tokenType)
+                : formatFiat(item.paymentAmount, item.currencyType)}
+            </span>
           )}
+          {isCrypto
+            ? formatUsdEquiv(item.usdEquivalent) && (
+                <span className="text-xs text-foreground/60">{formatUsdEquiv(item.usdEquivalent)}</span>
+              )
+            : isFiat && (
+                <span className="text-xs text-foreground/60">via {item.paymentProvider || 'card'}</span>
+              )}
         </div>
 
-        {!isCrypto && item.giftMessage && (
+        {isFiat && item.giftMessage && (
           <div className="mb-1 flex items-center gap-1.5 text-xs italic text-foreground/80">
             <Gift className="h-3 w-3 flex-shrink-0 not-italic text-primary" />
             <span className="truncate">“{item.giftMessage}”</span>
@@ -173,29 +192,25 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
         </div>
 
         <div className="mt-0.5 text-xs">
-          {isCrypto ? (
-            explorerUrl ? (
-              <a
-                href={explorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-primary hover:underline"
-                title={item.transactionId}
-              >
-                {item.transactionId.slice(0, 6)}…{item.transactionId.slice(-4)}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            ) : (
-              <span className="font-mono text-foreground/60" title={item.transactionId}>
-                {item.transactionId.slice(0, 6)}…{item.transactionId.slice(-4)}
-              </span>
-            )
+          {reference === null ? null : explorerUrl ? (
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-mono text-primary hover:underline"
+              title={reference.value}
+            >
+              {shortReference(reference.value)}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          ) : reference.kind === 'tx' ? (
+            <span className="font-mono text-foreground/60" title={reference.value}>
+              {shortReference(reference.value)}
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1 font-mono text-foreground/60">
-              <span title={item.receiptId}>
-                {item.receiptId.slice(0, 8)}…
-              </span>
-              <CopyButton textToCopy={item.receiptId} />
+              <span title={reference.value}>{shortReference(reference.value)}</span>
+              <CopyButton textToCopy={reference.value} />
             </span>
           )}
         </div>
