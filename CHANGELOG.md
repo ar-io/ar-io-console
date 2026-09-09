@@ -2,6 +2,14 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.7.1] - 2026-09-08
+
+### Fixed
+- **The Account page no longer goes blank when your payment history contains a
+  row the app doesn't recognise.** One unrecognised payment took down the whole
+  page — it was read as a card payment, and then a missing receipt id crashed
+  the render. Unknown rows now show what is known about them and nothing else.
+
 ## [4.7.0] - 2026-09-02
 
 ### Added
