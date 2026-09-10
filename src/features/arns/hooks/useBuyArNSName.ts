@@ -40,6 +40,20 @@ export interface BuyArNSNameInput {
    * credits" silently charged the wrong asset.
    */
   mechanism: SettlementMechanism;
+  /**
+   * Arweave TX id for the name's `@` record, set at mint.
+   *
+   * Only the ARIO path can honour this: it writes to Solana from the browser
+   * via `@ar.io/sdk`, so it controls the mint and can pass `antState`. The
+   * sponsored credits/card purchase goes through Turbo's API, whose Buy-Name
+   * payload has no field for the new ANT's opening record — pointing a name
+   * bought that way needs a follow-up `set-record`, which is a separate
+   * (sponsored, credit-costing) action rather than part of the mint.
+   *
+   * Blank or absent keeps `DEFAULT_ARNS_TARGET_TX`, so this changes nothing for
+   * a buyer who skips the control. Already validated by `resolveBuyTarget`.
+   */
+  targetId?: string;
 }
 
 export interface UseBuyArNSNameResult {
@@ -127,6 +141,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       type,
       years,
       mechanism,
+      targetId,
     }: BuyArNSNameInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
@@ -161,6 +176,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               years,
               fundFrom: mechanism.fundFrom,
               referrer: APP_NAME,
+              targetId,
             }),
           );
           settlement = toSettlement(res);

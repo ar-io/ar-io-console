@@ -34,6 +34,13 @@ import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import { BuyTargetControl } from './BuyTargetControl';
+import {
+  BLANK_BUY_TARGET,
+  buildTargetOptions,
+  resolveBuyTarget,
+  type BuyTargetState,
+} from '../purchase/buyTarget';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
 import {
@@ -264,6 +271,42 @@ export function ArNSPurchaseCard({
     to say out loud rather than leave to be discovered at the wallet prompt.
   */
   const sponsored = priceUnit === 'credits';
+
+  /*
+    Where the name points on its first block.
+
+    Offered on the ARIO route only, and that is a capability line rather than a
+    preference: paying in ARIO writes to Solana from the browser via
+    `@ar.io/sdk`, so the mint is ours to shape and `antState` rides along free.
+    A sponsored purchase is performed by Turbo's bundler, whose Buy-Name payload
+    has no field for the new ANT's opening record — pointing one bought that way
+    needs a follow-up `set-record`, which is its own sponsored action with its
+    own credit cost and message signature. Until that is built, showing the
+    control on a sponsored route would take a choice we then silently drop.
+  */
+  const [buyTarget, setBuyTarget] = useState<BuyTargetState>(BLANK_BUY_TARGET);
+  const [targetOpen, setTargetOpen] = useState(false);
+  const deployHistory = useStore((st) => st.deployHistory);
+  const uploadHistory = useStore((st) => st.uploadHistory);
+  const pages = useStore((st) => st.pages);
+  const targetOptions = useMemo(
+    () =>
+      buildTargetOptions({
+        deploys: deployHistory,
+        pages,
+        uploads: uploadHistory,
+      }),
+    [deployHistory, pages, uploadHistory],
+  );
+  const resolvedTarget = useMemo(() => resolveBuyTarget(buyTarget), [buyTarget]);
+  /*
+    Gated on the route, not just on the control being hidden. Choosing a target
+    under ARIO and then switching to Card leaves the state behind it, and
+    forwarding that to a path which ignores it is the silent drop this exists to
+    avoid.
+  */
+  const targetForBuy = sponsored ? undefined : resolvedTarget.txId;
+  const targetBlocks = !sponsored && !resolvedTarget.valid;
   /**
    * ARIO-only: the source the cost/gas estimate prices against. Anything not
    * paying in ARIO estimates against 'balance', which is what the SDK's
@@ -488,6 +531,9 @@ export function ArNSPurchaseCard({
     !insufficientSol &&
     !insufficientToken &&
     !insufficientFunds &&
+    // A malformed target would fail the on-chain id check AFTER the money
+    // moved, so it blocks here rather than there.
+    !targetBlocks &&
     !isBusy;
 
   // What a card / token payment has to cover: the whole price when there is no
@@ -601,6 +647,7 @@ export function ArNSPurchaseCard({
         // The token became credits, so this settles through Turbo — NOT through
         // the ARIO SDK, which would charge the wallet's ARIO on top.
         mechanism: { kind: 'turbo-credits' },
+        targetId: targetForBuy,
       });
       if (settled === undefined) {
         tokenTopUp.failAfterFunding(
@@ -727,6 +774,14 @@ export function ArNSPurchaseCard({
    */
   const blockedReason = useMemo((): { text: string; canSwitchToCredits?: boolean } | null => {
     if (!address || isBusy) return null;
+    /*
+      Before the pricing checks: this one is neither about money nor the
+      network, and the control can be COLLAPSED over a bad id, which hides the
+      inline error and leaves a dead button with nothing beside it.
+    */
+    if (targetBlocks) {
+      return { text: 'Check the transaction ID this name points at.' };
+    }
     if (!priceReady) return null;
     /*
       Turbo pays the Solana costs on every credits-settled route, so neither a
@@ -893,6 +948,19 @@ export function ArNSPurchaseCard({
         </div>
       )}
 
+      {/* Where the name points, before how it's paid for — it is part of what
+          you are buying. ARIO only; see the note on `targetForBuy`. */}
+      {!sponsored && (
+        <BuyTargetControl
+          value={buyTarget}
+          onChange={setBuyTarget}
+          options={targetOptions}
+          open={targetOpen}
+          onOpenChange={setTargetOpen}
+          disabled={isBusy}
+        />
+      )}
+
       {/* Payment method + source */}
       <div className="mb-4">
         {walletSplit && (
@@ -1049,6 +1117,7 @@ export function ArNSPurchaseCard({
                   type,
                   years: type === 'lease' ? years : undefined,
                   mechanism,
+                  targetId: targetForBuy,
                 })
           }
           disabled={

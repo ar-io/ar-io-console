@@ -24,6 +24,13 @@ interface ArNSPurchaseStatusProps {
    * second payment, where a bare failure implies a refund that isn't coming.
    */
   alreadyFunded?: boolean;
+  /**
+   * The `@` target the buyer chose, if they chose one.
+   *
+   * Undefined means the standard default, which the copy above already covers
+   * — repeating an id nobody picked would read as a setting they'd made.
+   */
+  targetId?: string;
   name: string;
   /** Reset the whole flow (clears the selected name). Used by "Register another". */
   onDone: () => void;
@@ -42,6 +49,7 @@ export function ArNSPurchaseStatus({
   error,
   insufficientCredits,
   alreadyFunded = false,
+  targetId,
   name,
   onDone,
   onRetry,
@@ -71,6 +79,17 @@ export function ArNSPurchaseStatus({
             <p className="text-sm text-foreground/70 mt-1">
               The name is now yours and resolves across the ar.io network.
             </p>
+            {/*
+              Confirm the destination only when the buyer actually chose one.
+              "Visit" below is the real proof it worked; this names what they
+              should expect to see when they click it.
+            */}
+            {targetId && (
+              <p className="mt-1 text-sm text-foreground/70">
+                It points at{' '}
+                <span className="break-all font-mono text-xs">{targetId}</span>.
+              </p>
+            )}
             <TransactionReceipt txId={result.messageId} className="mt-2" />
 
             <p className="mt-4 text-sm font-medium text-foreground">

@@ -28,8 +28,17 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
    * 'idle', which is exactly when this matters.
    */
   const [tokenFunded, setTokenFunded] = useState(false);
+  /**
+   * Where the bought name was pointed, kept for the receipt.
+   *
+   * Same reason as `tokenFunded`: the purchase card owns the control but is
+   * unmounted the moment the purchase lands, so the one surface that should
+   * confirm the choice would otherwise have no idea it was made.
+   */
+  const [boughtTarget, setBoughtTarget] = useState<string | undefined>();
 
   const handleBuy = (input: BuyArNSNameInput) => {
+    setBoughtTarget(input.targetId);
     /*
       Returns the promise rather than swallowing it. The status card still owns
       the terminal UI, but the token path ALSO needs to know: it has already
@@ -42,6 +51,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
 
   const handleDone = () => {
     setTokenFunded(false);
+    setBoughtTarget(undefined);
     buyState.reset();
     setSelectedName(undefined);
     setSearch('');
@@ -198,6 +208,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           error={buyState.error}
           insufficientCredits={buyState.insufficientCredits}
           alreadyFunded={tokenFunded}
+          targetId={boughtTarget}
           name={selectedName}
           onDone={handleDone}
           onRetry={handleRetry}
