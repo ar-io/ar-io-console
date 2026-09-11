@@ -110,13 +110,23 @@ export function BuyTargetControl({
   };
 
   return (
-    <div className="mb-4">
+    /*
+      One card, not four elements stacked on the page.
+
+      The open panel used to sit directly on the checkout's gradient: the
+      scrolling list clipped its rows against the background with no boundary,
+      which reads as broken rather than scrollable, and the helper line below it
+      ran straight into the payment section's own note with nothing to say which
+      belonged to what. Containing the whole control answers both — and matches
+      how every other grouped surface in the console is built.
+    */
+    <div className="mb-4 overflow-hidden rounded-2xl border border-border/20 bg-card">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => onOpenChange(!open)}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border/20 bg-card px-4 py-3 text-left transition-colors hover:border-primary/40"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5"
       >
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium text-foreground">
@@ -135,7 +145,7 @@ export function BuyTargetControl({
       </button>
 
       {open && (
-        <div id={panelId} className="mt-2">
+        <div id={panelId} className="border-t border-border/20 p-3">
           {/*
             `aria-pressed` buttons, not a tablist. Tab semantics promise a
             tabpanel per tab and the Default segment has no panel at all, so
@@ -145,7 +155,7 @@ export function BuyTargetControl({
           <div
             role="group"
             aria-label="Where the name points"
-            className="flex w-full rounded-full border border-border/20 bg-card p-1"
+            className="flex w-full rounded-full border border-border/20 bg-background p-1"
           >
             {segments.map(({ mode, label }) => (
               <button
@@ -168,7 +178,10 @@ export function BuyTargetControl({
           {value.mode === 'deployment' && (
             /* Capped so a long history can't bury the payment step. The partial
                row at the cut is the scroll affordance. */
-            <div className="mt-2 flex max-h-64 flex-col gap-2 overflow-y-auto pr-1">
+            /* Bounded so a long history cannot bury the payment step, and
+               bordered so the rows clip against an edge that is obviously a
+               scroll area rather than against the page. */
+            <div className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto rounded-xl border border-border/20 p-2">
               {options.map((opt) => {
                 const Icon = KIND_ICON[opt.kind];
                 const selected = value.txId === opt.txId;

@@ -954,11 +954,9 @@ export function ArNSPurchaseCard({
 
       {/* Payment method + source */}
       <div className="mb-4">
-        {walletSplit && (
-          <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
-        )}
 
         <ArNSPaymentSelector
+          note={walletSplit}
           options={paymentOptions}
           selectedId={selectedOption?.id ?? ''}
           fundingSource={fundingSource}
