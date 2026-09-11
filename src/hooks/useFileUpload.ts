@@ -10,6 +10,10 @@ import { useWallets } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { supportsJitPayment } from '../utils/jitPayment';
+import {
+  awaitCreditSettlement,
+  SETTLEMENT_TIMEOUT_MESSAGE,
+} from '../utils/awaitCreditSettlement';
 import { formatUploadError } from '../utils/errorMessages';
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
@@ -73,7 +77,6 @@ const mergeTags = (
  * devnet for base-usdc, so the window is generous — the alternative is failing
  * an upload the user has already paid for.
  */
-const TOPUP_SETTLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function useFileUpload() {
   const { address, walletType } = useStore();
@@ -611,27 +614,18 @@ export function useFileUpload() {
           because getBalance() on the walletAdapter-backed payment client
           derives its address from a public key the adapter need not carry.
         */
-        if (creditedBefore !== undefined) {
-          const settleDeadline = Date.now() + TOPUP_SETTLE_TIMEOUT_MS;
-          let settled = false;
-          while (Date.now() < settleDeadline) {
-            if (controller.signal.aborted) break;
-            await new Promise((r) => setTimeout(r, 3000));
-            const current = await readCreditBalance();
-            if (current !== undefined && current > creditedBefore) {
-              settled = true;
-              window.dispatchEvent(new CustomEvent('refresh-balance'));
-              break;
-            }
-          }
-          if (!settled && !controller.signal.aborted) {
-            releaseUi();
-            throw new Error(
-              'Your payment went through but the credits have not landed yet. Nothing ' +
-              'was uploaded and you will not be charged again — the credits will appear ' +
-              'in your balance shortly, and uploading again will spend them.'
-            );
-          }
+        const settlement = await awaitCreditSettlement({
+          creditedBefore,
+          readBalance: readCreditBalance,
+          now: () => Date.now(),
+          sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+          isAborted: () => controller.signal.aborted,
+        });
+        if (settlement.kind === 'settled') {
+          window.dispatchEvent(new CustomEvent('refresh-balance'));
+        } else if (settlement.kind === 'timeout') {
+          releaseUi();
+          throw new Error(SETTLEMENT_TIMEOUT_MESSAGE);
         }
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
