@@ -180,8 +180,13 @@ export function BuyTargetControl({
                row at the cut is the scroll affordance. */
             /* Bounded so a long history cannot bury the payment step, and
                bordered so the rows clip against an edge that is obviously a
-               scroll area rather than against the page. */
-            <div className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto rounded-xl border border-border/20 p-2">
+               scroll area rather than against the page.
+
+               56 (224px) shows three rows and a sliver of the fourth: enough to
+               read as scrollable, while keeping Pay with on screen. This is an
+               optional field, so four full rows claimed more of the checkout
+               than it earns. */
+            <div className="mt-3 flex max-h-56 flex-col gap-2 overflow-y-auto rounded-xl border border-border/20 p-2">
               {options.map((opt) => {
                 const Icon = KIND_ICON[opt.kind];
                 const selected = value.txId === opt.txId;
