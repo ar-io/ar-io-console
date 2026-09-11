@@ -183,7 +183,11 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               years,
               fundFrom: mechanism.fundFrom,
               referrer: APP_NAME,
-              targetId,
+              // The resolved value, not the raw input. `buildBuyRecordArgs`
+              // applies the same fallback itself, so passing `targetId` here
+              // worked — but it meant the two paths derived the target
+              // separately and would diverge the moment either fallback moved.
+              targetId: desiredTarget,
             }),
           );
           settlement = toSettlement(res);
