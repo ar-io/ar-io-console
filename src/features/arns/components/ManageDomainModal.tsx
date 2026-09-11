@@ -49,6 +49,15 @@ interface ManageDomainModalProps {
   onClose: () => void;
   /** Called after a settled change so the caller can refresh its data. */
   onSuccess?: () => void;
+  /**
+   * Action to open on, for callers that already know what the user came to do
+   * — the expiry banner's Renew being the reason this exists.
+   *
+   * Ignored when the name cannot perform it: a permabuy has no lease to
+   * extend, so asking for `Extend-Lease` there falls back to the first action
+   * it genuinely offers rather than rendering a form that cannot run.
+   */
+  initialAction?: ManageIntent;
 }
 
 const ACTION_META: Record<
@@ -78,6 +87,7 @@ export default function ManageDomainModal({
   domain,
   onClose,
   onSuccess,
+  initialAction,
 }: ManageDomainModalProps) {
   const isLease = domain.type !== 'permabuy';
   const signer = useArNSTurboSigner();
@@ -116,7 +126,10 @@ export default function ManageDomainModal({
     ? ['Extend-Lease', 'Upgrade-Name', 'Increase-Undername-Limit']
     : ['Increase-Undername-Limit'];
 
-  const [action, setAction] = useState<ManageIntent>(actions[0]);
+  const [action, setAction] = useState<ManageIntent>(
+    // Honour the caller's intent only if this name can actually do it.
+    initialAction && actions.includes(initialAction) ? initialAction : actions[0],
+  );
   const [years, setYears] = useState(1);
   const [qty, setQty] = useState(1);
   const [selectedId, setSelectedId] = useState<string | undefined>();
