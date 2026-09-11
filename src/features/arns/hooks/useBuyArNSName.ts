@@ -7,6 +7,7 @@ import { getWritableARIO } from '../../../utils';
 import { ArNSSettlementResult } from '../services/TurboArNSClient';
 import {
   buildBuyRecordArgs,
+  DEFAULT_ARNS_TARGET_TX,
   routeBuyError,
   submittingMessage,
   toSettlement,
@@ -43,12 +44,11 @@ export interface BuyArNSNameInput {
   /**
    * Arweave TX id for the name's `@` record, set at mint.
    *
-   * Only the ARIO path can honour this: it writes to Solana from the browser
-   * via `@ar.io/sdk`, so it controls the mint and can pass `antState`. The
-   * sponsored credits/card purchase goes through Turbo's API, whose Buy-Name
-   * payload has no field for the new ANT's opening record — pointing a name
-   * bought that way needs a follow-up `set-record`, which is a separate
-   * (sponsored, credit-costing) action rather than part of the mint.
+   * Honoured on every payment route. The ARIO path passes it as `antState` to
+   * `buyRecord`; the sponsored credits/card path passes the same thing to
+   * turbo-sdk's `buyArNSName`, which folds it into the `ario_ant::initialize`
+   * the buyer already signs (turbo-sdk >= 1.43.0-alpha.5, bundler #329). Either
+   * way it costs no extra action, signature or debit.
    *
    * Blank or absent keeps `DEFAULT_ARNS_TARGET_TX`, so this changes nothing for
    * a buyer who skips the control. Already validated by `resolveBuyTarget`.
@@ -144,6 +144,13 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       targetId,
     }: BuyArNSNameInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
+      /*
+        Resolved once, so the two settlement paths cannot disagree about where
+        a name points. `buildBuyRecordArgs` applies the same fallback on the
+        ARIO side; the credits side has no such helper, so it is applied here
+        and both are handed the identical value.
+      */
+      const desiredTarget = targetId?.trim() || DEFAULT_ARNS_TARGET_TX;
       setError(undefined);
       setInsufficientCredits(false);
       setResult(undefined);
@@ -200,6 +207,12 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
           }
 
           settlement = await client.purchaseWithCredits({
+            /*
+              Same target as the ARIO path above, so a name points at the same
+              place whichever way it was paid for. Only the mechanism differs:
+              there it rides `buyRecord`'s `antState`, here turbo-sdk's.
+            */
+            antState: { transactionId: desiredTarget, targetProtocol: 0 },
             /*
               Signed by the SESSION identity, whose credits these are.
 

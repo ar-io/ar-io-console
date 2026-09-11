@@ -273,16 +273,14 @@ export function ArNSPurchaseCard({
   const sponsored = priceUnit === 'credits';
 
   /*
-    Where the name points on its first block.
+    Where the name points on its first block. Offered on every payment route.
 
-    Offered on the ARIO route only, and that is a capability line rather than a
-    preference: paying in ARIO writes to Solana from the browser via
-    `@ar.io/sdk`, so the mint is ours to shape and `antState` rides along free.
-    A sponsored purchase is performed by Turbo's bundler, whose Buy-Name payload
-    has no field for the new ANT's opening record — pointing one bought that way
-    needs a follow-up `set-record`, which is its own sponsored action with its
-    own credit cost and message signature. Until that is built, showing the
-    control on a sponsored route would take a choice we then silently drop.
+    It was ARIO-only at first, because only that path writes to Solana from the
+    browser and could shape the mint. turbo-sdk 1.43.0-alpha.5 closed the gap:
+    the sponsored Buy-Name payload now carries `antState` and the bundler folds
+    it into the `ario_ant::initialize` the buyer already signs, so a name bought
+    with credits or a card arrives pointing at the same place for the same
+    nothing — no second action, no second signature, no second debit.
   */
   const [buyTarget, setBuyTarget] = useState<BuyTargetState>(BLANK_BUY_TARGET);
   const [targetOpen, setTargetOpen] = useState(false);
@@ -299,14 +297,9 @@ export function ArNSPurchaseCard({
     [deployHistory, pages, uploadHistory],
   );
   const resolvedTarget = useMemo(() => resolveBuyTarget(buyTarget), [buyTarget]);
-  /*
-    Gated on the route, not just on the control being hidden. Choosing a target
-    under ARIO and then switching to Card leaves the state behind it, and
-    forwarding that to a path which ignores it is the silent drop this exists to
-    avoid.
-  */
-  const targetForBuy = sponsored ? undefined : resolvedTarget.txId;
-  const targetBlocks = !sponsored && !resolvedTarget.valid;
+  // Every route honours the target now, so neither of these is route-gated.
+  const targetForBuy = resolvedTarget.txId;
+  const targetBlocks = !resolvedTarget.valid;
   /**
    * ARIO-only: the source the cost/gas estimate prices against. Anything not
    * paying in ARIO estimates against 'balance', which is what the SDK's
@@ -661,7 +654,7 @@ export function ArNSPurchaseCard({
         err instanceof Error ? err.message : String(err),
       );
     }
-  }, [onBuy, name, type, years, onTokenFunded, tokenTopUp]);
+  }, [onBuy, name, type, years, onTokenFunded, tokenTopUp, targetForBuy]);
 
   /**
    * A card payment settled. Finish the purchase instead of just closing:
@@ -832,7 +825,7 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route, sponsored, insufficientToken,
+    insufficientFunds, route, sponsored, insufficientToken, targetBlocks,
     balances.sol, balances.loading,
     tokenSmallestUnitForName,
   ]);
@@ -949,17 +942,15 @@ export function ArNSPurchaseCard({
       )}
 
       {/* Where the name points, before how it's paid for — it is part of what
-          you are buying. ARIO only; see the note on `targetForBuy`. */}
-      {!sponsored && (
-        <BuyTargetControl
-          value={buyTarget}
-          onChange={setBuyTarget}
-          options={targetOptions}
-          open={targetOpen}
-          onOpenChange={setTargetOpen}
-          disabled={isBusy}
-        />
-      )}
+          you are buying, not a property of how you pay. */}
+      <BuyTargetControl
+        value={buyTarget}
+        onChange={setBuyTarget}
+        options={targetOptions}
+        open={targetOpen}
+        onOpenChange={setTargetOpen}
+        disabled={isBusy}
+      />
 
       {/* Payment method + source */}
       <div className="mb-4">
