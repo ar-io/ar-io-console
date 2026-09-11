@@ -29,6 +29,8 @@ interface Props {
    * wallet's ARIO at the premium price — see ReturnedNameBuyModal).
    */
   arioOnly?: boolean;
+  /** Optional line explaining the choice, rendered under the heading. */
+  note?: React.ReactNode;
 }
 
 /**
@@ -227,6 +229,7 @@ export function ArNSPaymentSelector({
   onSourceChange,
   disabled,
   arioOnly = false,
+  note,
 }: Props) {
   const showSources =
     arioOnly || options.find((o) => o.id === selectedId)?.token === 'ario';
@@ -235,7 +238,13 @@ export function ArNSPaymentSelector({
     <div>
       {!arioOnly && (
         <>
-          <label className="mb-2 block text-sm font-medium">Pay with</label>
+          <label className="mb-1 block text-sm font-medium">Pay with</label>
+          {/*
+            Under the heading, not above it. This explains the choice being
+            offered, so floating it above "Pay with" read as a loose sentence
+            belonging to whatever happened to sit above.
+          */}
+          {note && <p className="mb-2 text-xs text-foreground/70">{note}</p>}
           {/*
             One row on desktop whatever the count. A fixed 3-column grid wrapped
             to two rows the moment a Balance option appeared, which made the set

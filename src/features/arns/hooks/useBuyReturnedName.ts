@@ -4,6 +4,7 @@ import type { SolanaARIOWriteable } from '@ar.io/sdk/solana';
 import { APP_NAME } from '../../../constants';
 import { useStore } from '../../../store/useStore';
 import { getWritableARIO } from '../../../utils';
+import { DEFAULT_ARNS_TARGET_TX } from '../purchase/buyDecisions';
 import { spawnArNSAnt } from '../services/antSpawn';
 import {
   clearPendingArNSPurchase,
@@ -167,6 +168,14 @@ export function useBuyReturnedName() {
             name: lowered,
             rpcUrl: config.tokenMap.solana,
             antProgramId: config.antProgramId,
+            /*
+              Match the other two buy paths. Omitting this fell through to the
+              SDK's `DEFAULT_ANT_TRANSACTION_ID`, which is the AR.IO *logo*
+              image — a validation placeholder picked because an empty string
+              fails `is_valid_arweave_id`, not a destination. An auction winner
+              paid a premium and got a name resolving to a picture of a logo.
+            */
+            targetId: DEFAULT_ARNS_TARGET_TX,
           });
           processId = spawn.processId;
           spawnedProcessId.current = processId;

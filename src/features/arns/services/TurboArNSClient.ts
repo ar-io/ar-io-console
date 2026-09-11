@@ -9,6 +9,7 @@ import {
   TurboAuthenticatedClient,
   ArNSOwnerSigner,
   ArNSAction,
+  ArNSBuyAntState,
 } from '@ardrive/turbo-sdk/web';
 
 import { lowerCaseDomain } from '../utils';
@@ -291,6 +292,7 @@ export class TurboArNSClient {
     owner,
     paidBy,
     onNonce,
+    antState,
   }: {
     /**
      * A client already authenticated as the PAYER.
@@ -314,6 +316,15 @@ export class TurboArNSClient {
      * route back to a paid-for purchase if the page reloads mid-approval.
      */
     onNonce?: (nonce: string) => void;
+    /**
+     * Initial ANT state for a Buy-Name, applied during the mint the buyer
+     * already signs — so the name resolves to their content from the first
+     * block, at no extra action, signature or debit.
+     *
+     * Ignored by every other intent, and rejected outright by the service, so
+     * callers must only set it on a buy.
+     */
+    antState?: ArNSBuyAntState;
   }): Promise<ArNSSettlementResult> {
     const lowered = lowerCaseDomain(name);
     const settled = await (async () => {
@@ -337,6 +348,12 @@ export class TurboArNSClient {
             ...(years ? { years } : {}),
             ...(paidBy ? { paidBy } : {}),
             ...(onNonce ? { onNonce } : {}),
+            /*
+              The `@` record the new ANT is minted with. Buy-Name only — the
+              service rejects `antState` on every other action, which is why it
+              is spread here rather than alongside the shared params above.
+            */
+            ...(antState ? { antState } : {}),
           });
         }
         case 'Extend-Lease':
