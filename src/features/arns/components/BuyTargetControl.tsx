@@ -192,10 +192,22 @@ export function BuyTargetControl({
                     aria-pressed={selected}
                     disabled={disabled}
                     onClick={() => onChange({ mode: 'deployment', txId: opt.txId })}
-                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 ${
+                    /*
+                      Border marks SELECTION only. Giving every row a grey one
+                      put a third `border-border/20` inside the card's and the
+                      scroll box's, which reads as noise — the white fill
+                      already separates a row from the box behind it. Kept
+                      transparent rather than absent so selecting one does not
+                      resize it.
+
+                      `rounded-xl`, not `rounded-2xl`: at 20px inside a 12px
+                      container the rows were rounder than the thing holding
+                      them.
+                    */
+                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors disabled:opacity-50 ${
                       selected
                         ? 'border-primary bg-primary/10'
-                        : 'border-border/20 bg-background hover:border-primary/40'
+                        : 'border-transparent bg-background hover:border-primary/40'
                     }`}
                   >
                     <Icon className="h-4 w-4 shrink-0 text-foreground/60" />

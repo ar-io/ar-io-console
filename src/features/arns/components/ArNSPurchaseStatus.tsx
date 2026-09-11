@@ -100,14 +100,23 @@ export function ArNSPurchaseStatus({
                 */}
                 It points at{' '}
                 {targetLabel ? (
-                  <>
-                    <span className="font-medium text-foreground">
-                      {targetLabel}
-                    </span>
-                    <br />
-                  </>
-                ) : null}
-                <span className="break-all font-mono text-xs">{targetId}</span>
+                  <span className="font-medium text-foreground">
+                    {targetLabel}
+                  </span>
+                ) : (
+                  <span className="break-all font-mono text-xs">{targetId}</span>
+                )}
+                .
+              </p>
+            )}
+            {/*
+              The id sits under the name rather than inside the sentence. A
+              <br> mid-paragraph put a 43-character hash in the middle of a
+              line of prose; it is corroboration, so it reads as a caption.
+            */}
+            {targetId && targetLabel && (
+              <p className="mt-0.5 break-all font-mono text-xs text-foreground/50">
+                {targetId}
               </p>
             )}
             <TransactionReceipt txId={result.messageId} className="mt-2" />
