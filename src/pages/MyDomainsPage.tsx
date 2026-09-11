@@ -9,6 +9,7 @@ import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import DomainsTable from '@/components/account/DomainsTable';
 import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
 import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
+import ManageDomainModal from '@/features/arns/components/ManageDomainModal';
 
 const DOMAINS_SHOWN = 10;
 
@@ -36,6 +37,16 @@ export default function MyDomainsPage() {
   } = useOwnedArNSNames();
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showAllDomains, setShowAllDomains] = useState(false);
+  /*
+    Renew happens HERE, not behind a navigation.
+
+    The button used to push to `/domains/<name>`, where the user still had to
+    find "Renew / upgrade" — a button labelled Renew that did not renew. It
+    opens the manage modal in place instead, already on the Renew action, so
+    clearing the warning is one click and several expiring names can be dealt
+    with in a row without leaving the banner that listed them.
+  */
+  const [renewing, setRenewing] = useState<string | undefined>();
 
   // Redirect to home if not logged in (declarative — never navigate during render)
   if (!address) {
@@ -49,6 +60,9 @@ export default function MyDomainsPage() {
   // punycode names are findable by what the user sees.
   const needle = nameFilter.trim().toLowerCase();
   const expiringDomains = getExpiringDomains(ownedNames, now);
+  const renewingDomain = renewing
+    ? ownedNames.find((n) => n.name === renewing)
+    : undefined;
   // Soonest-expiring first across ALL leases; permabuy (never expires) last.
   const sortedDomains = [...ownedNames].sort((a, b) => {
     const ka =
@@ -137,28 +151,43 @@ export default function MyDomainsPage() {
                     Renew before the lease ends to keep {expiringDomains.length === 1 ? 'it' : 'them'} — an expired domain can be registered by someone else.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    {/*
+                      Each name is its own way in. The single button below can
+                      only act on one of them, so listing six as plain text next
+                      to it left five with nothing to click.
+                    */}
                     {expiringDomains.slice(0, 6).map((d) => (
-                      <span key={d.name} className="text-xs text-foreground/80">
+                      <button
+                        key={d.name}
+                        type="button"
+                        onClick={() => setRenewing(d.name)}
+                        className="rounded text-xs text-foreground/80 underline-offset-2 hover:underline"
+                      >
                         <span className="font-medium text-foreground">{d.displayName}</span>{' '}
                         <span className={d.daysRemaining < 0 ? 'text-error' : 'text-warning'}>
                           ({expiryLabel(d.daysRemaining)})
                         </span>
-                      </span>
+                      </button>
                     ))}
                     {expiringDomains.length > 6 && (
                       <span className="text-xs text-foreground/60">+{expiringDomains.length - 6} more</span>
                     )}
                   </div>
                 </div>
+                {/*
+                  Names its target. `expiringDomains` is sorted soonest-first,
+                  so [0] is the most urgent — but an unlabelled "Renew" beside a
+                  list of six looked like it would address all of them, and
+                  silently acted on one.
+                */}
                 <button
-                  onClick={() =>
-                    navigate(`/domains/${expiringDomains[0].name}`, {
-                      state: { from: '/my-domains' },
-                    })
-                  }
+                  type="button"
+                  onClick={() => setRenewing(expiringDomains[0].name)}
                   className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 >
-                  Renew
+                  {expiringDomains.length === 1
+                    ? `Renew ${expiringDomains[0].displayName}`
+                    : `Renew ${expiringDomains[0].displayName} (soonest)`}
                 </button>
               </div>
             </div>
@@ -269,6 +298,20 @@ export default function MyDomainsPage() {
 
       {showLinkModal && (
         <LinkSolanaWalletModal onClose={() => setShowLinkModal(false)} />
+      )}
+
+      {/*
+        Opens on Renew because that is what the user pressed. Refreshing on
+        success is what makes the banner honest: the renewed name drops out of
+        the warning, so the list they came to clear visibly shrinks.
+      */}
+      {renewingDomain && (
+        <ManageDomainModal
+          domain={renewingDomain}
+          initialAction="Extend-Lease"
+          onClose={() => setRenewing(undefined)}
+          onSuccess={() => fetchOwnedNames(true)}
+        />
       )}
     </div>
   );
