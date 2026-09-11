@@ -97,15 +97,19 @@ export default function ActionCostNote({
 
   if (!secondaryAction) {
     return (
-      <p className={`text-xs text-foreground/60 ${className}`}>
-        This costs {amountText(primary.credits)}. {solLine}
+      <div className={className}>
+        <p className="text-xs text-foreground/60">
+          This costs {amountText(primary.credits)}. {solLine}
+        </p>
         {/*
-          Names the alternative and what it needs. Without this an owner who
-          holds SOL sees a credits charge, no option and no reason — which is
-          how someone ends up asking why the app will not take their SOL.
-        */}{' '}
-        {solRailRequirementNote(action)}
-      </p>
+          Its own line, and dimmer. Run together with the sentence above it was
+          nearly 200 characters of 12px grey — and the alternative is secondary
+          information, not part of the price.
+        */}
+        <p className="mt-1 text-xs text-foreground/50">
+          {solRailRequirementNote(action)}
+        </p>
+      </div>
     );
   }
 
@@ -116,11 +120,16 @@ export default function ActionCostNote({
   const same = primary.credits === secondary.credits;
 
   return (
-    <p className={`text-xs text-foreground/60 ${className}`}>
-      {same
-        ? `${primaryVerb ?? 'This'} or ${secondaryVerb ?? 'undoing it'} costs ${amountText(primary.credits)}.`
-        : `${primaryVerb ?? 'This'} costs ${amountText(primary.credits)}; ${secondaryVerb ?? 'undoing it'} costs ${amountText(secondary.credits)}.`}{' '}
-      {solLine}
-    </p>
+    <div className={className}>
+      <p className="text-xs text-foreground/60">
+        {same
+          ? `${primaryVerb ?? 'This'} or ${secondaryVerb ?? 'undoing it'} costs ${amountText(primary.credits)}.`
+          : `${primaryVerb ?? 'This'} costs ${amountText(primary.credits)}; ${secondaryVerb ?? 'undoing it'} costs ${amountText(secondary.credits)}.`}{' '}
+        {solLine}
+      </p>
+      <p className="mt-1 text-xs text-foreground/50">
+        {solRailRequirementNote(action)}
+      </p>
+    </div>
   );
 }

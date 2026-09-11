@@ -115,9 +115,15 @@ export function selfSignedCostNote(action: string): string {
  * exactly how someone ends up asking why the app will not take their SOL.
  */
 export function solRailRequirementNote(action: string): string {
+  /*
+    Phrased as the alternative, not as a second opinion on SOL. Following "you
+    don't need SOL" with "paying in SOL needs SOL" read as the line arguing
+    with itself; "to sign it yourself instead" makes it the other option.
+  */
+  const base = `To sign it yourself instead, the owning wallet needs about ${MIN_SOL_FOR_RECORD_WRITE} SOL`;
   return createsAccounts(action)
-    ? `Paying in SOL instead needs about ${MIN_SOL_FOR_RECORD_WRITE} SOL in the owning wallet, because this can create accounts on chain.`
-    : `Paying in SOL instead needs about ${MIN_SOL_FOR_RECORD_WRITE} SOL in the owning wallet.`;
+    ? `${base} — this can create accounts on chain, which owe rent.`
+    : `${base}.`;
 }
 
 /**
