@@ -128,7 +128,7 @@ export default function ActionCostNote({
         {solLine}
       </p>
       <p className="mt-1 text-xs text-foreground/50">
-        {solRailRequirementNote(action)}
+        {solRailRequirementNote(action, secondaryAction)}
       </p>
     </div>
   );

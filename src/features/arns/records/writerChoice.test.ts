@@ -254,7 +254,30 @@ describe('what the SOL rail actually costs', () => {
     expect(solRailRequirementNote('transfer')).toContain(
       String(MIN_SOL),
     );
-    expect(solRailRequirementNote('transfer')).toMatch(/create accounts on chain/);
+    expect(solRailRequirementNote('transfer')).toMatch(/creates accounts on chain/);
     expect(solRailRequirementNote('remove-controller')).not.toMatch(/create accounts/);
+  });
+});
+
+describe('the SOL note across a two-action screen', () => {
+  it('names which action owes rent when only one of the pair does', () => {
+    // The controllers modal prices add and remove together. Adding bootstraps
+    // the controller's ACL accounts; removing creates nothing, and must not
+    // inherit the warning.
+    const note = solRailRequirementNote('add-controller', 'remove-controller');
+    expect(note).toMatch(/adding a controller creates accounts on chain/);
+    expect(note).not.toMatch(/this creates accounts/);
+  });
+
+  it('says nothing about rent when neither action creates anything', () => {
+    expect(
+      solRailRequirementNote('remove-controller', 'remove-record'),
+    ).not.toMatch(/creates accounts/);
+  });
+
+  it('stays generic for a single action that does create accounts', () => {
+    expect(solRailRequirementNote('transfer')).toMatch(
+      /this creates accounts on chain/,
+    );
   });
 });

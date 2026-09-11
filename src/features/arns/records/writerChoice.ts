@@ -114,16 +114,45 @@ export function selfSignedCostNote(action: string): string {
  * holding SOL sees a credits charge, no option, and no reason — which is
  * exactly how someone ends up asking why the app will not take their SOL.
  */
-export function solRailRequirementNote(action: string): string {
+/** How to name an action mid-sentence, so the caveat says which one it is. */
+const ACTION_GERUND: Record<string, string> = {
+  transfer: 'transferring',
+  'add-controller': 'adding a controller',
+  'remove-controller': 'removing a controller',
+};
+
+export function solRailRequirementNote(
+  action: string,
+  /**
+   * A second action priced on the same screen — the controllers modal offers
+   * add and remove together.
+   *
+   * Taken into account because the two differ: adding bootstraps the
+   * controller's ACL accounts, removing creates nothing. Deriving the caveat
+   * from `action` alone made the remove flow inherit a rent warning it does
+   * not owe.
+   */
+  secondaryAction?: string,
+): string {
   /*
     Phrased as the alternative, not as a second opinion on SOL. Following "you
     don't need SOL" with "paying in SOL needs SOL" read as the line arguing
     with itself; "to sign it yourself instead" makes it the other option.
   */
   const base = `To sign it yourself instead, the owning wallet needs about ${MIN_SOL_FOR_RECORD_WRITE} SOL`;
-  return createsAccounts(action)
-    ? `${base} — this can create accounts on chain, which owe rent.`
-    : `${base}.`;
+
+  const creating = [action, secondaryAction].filter(
+    (a): a is string => !!a && createsAccounts(a),
+  );
+  if (creating.length === 0) return `${base}.`;
+
+  // Name the culprit when only one of the two creates anything, so the other
+  // is not tarred with a cost it never incurs.
+  const which =
+    creating.length === 1 && secondaryAction
+      ? (ACTION_GERUND[creating[0]] ?? 'that')
+      : 'this';
+  return `${base} — ${which} creates accounts on chain, which owe rent.`;
 }
 
 /**
