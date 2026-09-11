@@ -175,19 +175,23 @@ export default function MyDomainsPage() {
                   </div>
                 </div>
                 {/*
-                  Names its target. `expiringDomains` is sorted soonest-first,
-                  so [0] is the most urgent — but an unlabelled "Renew" beside a
-                  list of six looked like it would address all of them, and
-                  silently acted on one.
+                  "soonest" rather than the name itself. `expiringDomains` is
+                  sorted soonest-first so [0] is the most urgent, but a bare
+                  "Renew" beside a list of six read as though it would address
+                  all of them and then acted on one.
+
+                  The name is deliberately NOT in the label. It is already in
+                  the list above — where every entry is now its own button — so
+                  repeating it duplicates what is on screen, and a 51-character
+                  ArNS name inside a `flex-shrink-0` pill would push the banner
+                  wider than the page on a phone.
                 */}
                 <button
                   type="button"
                   onClick={() => setRenewing(expiringDomains[0].name)}
-                  className="flex-shrink-0 self-center rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  className="flex-shrink-0 self-center whitespace-nowrap rounded-full bg-warning px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 >
-                  {expiringDomains.length === 1
-                    ? `Renew ${expiringDomains[0].displayName}`
-                    : `Renew ${expiringDomains[0].displayName} (soonest)`}
+                  {expiringDomains.length === 1 ? 'Renew' : 'Renew soonest'}
                 </button>
               </div>
             </div>
