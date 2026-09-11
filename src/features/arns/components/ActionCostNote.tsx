@@ -1,6 +1,10 @@
 import type { ArNSAction } from '@ardrive/turbo-sdk/web';
 
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
+import {
+  selfSignedCostNote,
+  solRailRequirementNote,
+} from '../records/writerChoice';
 
 /**
  * One line naming what an action costs, above the button that performs it.
@@ -70,10 +74,14 @@ export default function ActionCostNote({
   );
 
   if (paysNetworkDirectly) {
+    /*
+      "Pays the Solana network fee" was true and useless — it reads as a
+      rounding error, while a transfer can owe rent on up to four accounts.
+      `selfSignedCostNote` says which of the two this actually is.
+    */
     return (
       <p className={`text-xs text-foreground/60 ${className}`}>
-        Your wallet signs this and pays the Solana network fee. It doesn&apos;t
-        use credits.
+        {selfSignedCostNote(action)}
       </p>
     );
   }
@@ -91,6 +99,12 @@ export default function ActionCostNote({
     return (
       <p className={`text-xs text-foreground/60 ${className}`}>
         This costs {amountText(primary.credits)}. {solLine}
+        {/*
+          Names the alternative and what it needs. Without this an owner who
+          holds SOL sees a credits charge, no option and no reason — which is
+          how someone ends up asking why the app will not take their SOL.
+        */}{' '}
+        {solRailRequirementNote(action)}
       </p>
     );
   }
