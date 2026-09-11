@@ -649,6 +649,12 @@ export default function UploadPanel() {
         cryptoPayment: shouldEnableJit,
         tokenAmount: jitMaxTokenAmountSmallest,
         selectedToken: selectedJitToken,
+        /*
+          Offered, not forced. `chooseUploadFunding` takes it only when the
+          wallet can sign for x402 and the token is the one the protocol
+          settles in; everything else falls back to the top-up path unchanged.
+        */
+        x402Enabled: x402OnlyMode,
       });
       
       if (results.length > 0) {

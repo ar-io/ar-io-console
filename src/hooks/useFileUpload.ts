@@ -4,12 +4,17 @@ import {
   TurboAuthenticatedClient,
   ArconnectSigner,
   OnDemandFunding,
+  X402Funding,
 } from '@ardrive/turbo-sdk/web';
 import { useStore } from '../store/useStore';
 import { useWallets } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { supportsJitPayment } from '../utils/jitPayment';
+import {
+  chooseUploadFunding,
+  paysPerRequest,
+} from '../utils/uploadFunding';
 import { formatUploadError } from '../utils/errorMessages';
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
@@ -281,6 +286,15 @@ export function useFileUpload() {
       jitEnabled?: boolean;
       jitMaxTokenAmount?: number; // In smallest unit
       jitBufferMultiplier?: number;
+      /**
+       * Pay for this upload request over x402 instead of spending credits.
+       *
+       * Mutually exclusive with the JIT options above — see the note where the
+       * funding mode is built. The caller decides via `chooseUploadFunding`.
+       */
+      x402Funding?: boolean;
+      /** Cap in mUSDC, mirroring `jitMaxTokenAmount`'s role for JIT. */
+      x402MaxMUSDCAmount?: string;
       customTags?: Array<{ name: string; value: string }>;
       selectedJitToken?: SupportedTokenType; // Selected JIT payment token
       /** Byte-transfer progress (0-100). Reaches 100 while the bundler finalizes. */
@@ -338,9 +352,19 @@ export function useFileUpload() {
       jitTokenType = 'solana';
     }
 
-    // Create funding mode if JIT enabled and supported
-    let fundingMode: OnDemandFunding | undefined = undefined;
-    if (options?.jitEnabled && jitTokenType && supportsJitPayment(jitTokenType)) {
+    /*
+      x402 pays for the upload REQUEST, so it replaces the JIT top-up rather
+      than joining it. Checked first: the two are alternatives, and building
+      both would pay twice for one upload.
+    */
+    let fundingMode: OnDemandFunding | X402Funding | undefined = undefined;
+    if (options?.x402Funding) {
+      fundingMode = new X402Funding(
+        options.x402MaxMUSDCAmount
+          ? { maxMUSDCAmount: options.x402MaxMUSDCAmount }
+          : {},
+      );
+    } else if (options?.jitEnabled && jitTokenType && supportsJitPayment(jitTokenType)) {
       fundingMode = new OnDemandFunding({
         maxTokenAmount: options.jitMaxTokenAmount || 0,
         topUpBufferMultiplier: options.jitBufferMultiplier || 1.1,
@@ -513,6 +537,13 @@ export function useFileUpload() {
       cryptoPayment?: boolean; // If true, top up with crypto first (one payment for all files)
       tokenAmount?: number; // Amount to top up in smallest unit (e.g., mARIO)
       selectedToken?: SupportedTokenType; // Token to use for crypto payment
+      /**
+       * x402 is available for this upload. With an Ethereum wallet paying in
+       * base-usdc it replaces the top-up entirely — see `chooseUploadFunding`.
+       */
+      x402Enabled?: boolean;
+      /** Cap in mUSDC for the x402 path. */
+      x402MaxMUSDCAmount?: string;
       customTags?: Array<{ name: string; value: string }>;
       // Legacy JIT options (deprecated - use cryptoPayment instead)
       jitEnabled?: boolean;
@@ -564,6 +595,22 @@ export function useFileUpload() {
     let toppedUp = false;
     const selectedToken = options?.selectedToken || options?.selectedJitToken;
 
+    /*
+      Decided once, before anything is paid.
+
+      An x402 batch makes NO up-front payment: each upload pays for itself, so
+      there is no top-up to settle and no window where the money has moved and
+      the user has nothing. That is the whole reason to prefer it — the
+      alternative below has to poll for credits to become spendable.
+    */
+    const fundingPlan = chooseUploadFunding({
+      cryptoPayment: options?.cryptoPayment,
+      token: selectedToken,
+      walletType,
+      x402Enabled: options?.x402Enabled,
+    });
+    const perRequest = paysPerRequest(fundingPlan);
+
     /** Credit balance by address, or undefined if it cannot be read. */
     const readCreditBalance = async (): Promise<number | undefined> => {
       if (!address) return undefined;
@@ -581,10 +628,10 @@ export function useFileUpload() {
         return undefined;
       }
     };
-    const creditedBefore = (options?.cryptoPayment && selectedToken && options?.tokenAmount)
+    const creditedBefore = (!perRequest && options?.cryptoPayment && selectedToken && options?.tokenAmount)
       ? await readCreditBalance()
       : undefined;
-    if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
+    if (!perRequest && options?.cryptoPayment && selectedToken && options?.tokenAmount) {
       try {
         const turbo = await createTurboClient(selectedToken);
         console.log('[DEBUG] topUpWithTokens starting:', { selectedToken, tokenAmount: options.tokenAmount });
@@ -707,9 +754,24 @@ export function useFileUpload() {
 
         // If we did a crypto pre-topup, don't pass JIT options to avoid per-file JIT.
         // Always thread this batch's abort signal so Cancel stops the in-flight upload.
-        const uploadOptions = (options?.cryptoPayment && selectedToken)
-          ? { customTags: options?.customTags, signal: controller.signal }
-          : { ...options, signal: controller.signal };
+        /*
+          On the top-up path JIT is stripped, because the batch already paid
+          and per-file JIT would pay twice. x402 is the opposite: there was no
+          up-front payment, so every file must carry it or it uploads against a
+          balance nobody funded.
+        */
+        const uploadOptions = perRequest
+          ? {
+              customTags: options?.customTags,
+              signal: controller.signal,
+              x402Funding: true,
+              ...(options?.x402MaxMUSDCAmount
+                ? { x402MaxMUSDCAmount: options.x402MaxMUSDCAmount }
+                : {}),
+            }
+          : (options?.cryptoPayment && selectedToken)
+            ? { customTags: options?.customTags, signal: controller.signal }
+            : { ...options, signal: controller.signal };
         const result = await uploadFile(file, uploadOptions);
 
         setActiveUploads(prev => prev.filter(u => u.name !== file.name));
@@ -780,7 +842,7 @@ export function useFileUpload() {
 
     releaseUi();
     return { results, failedFiles: failedFileNames, paidWithoutUpload: toppedUp && results.length === 0 };
-  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig, address]);
+  }, [uploadFile, validateWalletState, createTurboClient, getCurrentConfig, address, walletType]);
 
   const reset = useCallback(() => {
     setUploadProgress({});
