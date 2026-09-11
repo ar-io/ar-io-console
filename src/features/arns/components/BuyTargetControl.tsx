@@ -222,6 +222,9 @@ export function BuyTargetControl({
                 autoCapitalize="none"
                 autoCorrect="off"
                 placeholder="43-character transaction ID"
+                onChange={(e) =>
+                  onChange({ mode: 'custom', txId: e.target.value })
+                }
               />
               {!resolved.valid && (
                 <p className="mt-1 text-xs text-error">{resolved.error}</p>

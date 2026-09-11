@@ -1079,6 +1079,14 @@ export function ArNSPurchaseCard({
               gates would only block buyers who correctly hold nothing.
             */
             insufficientToken ||
+            /*
+              A bad target blocks FUNDING, not just the final buy. This button
+              takes money first and registers after, so letting it through on a
+              malformed id charges the customer and then quietly drops what they
+              typed — `resolveBuyTarget` yields undefined for an invalid id, so
+              the name would land on the default they never chose.
+            */
+            targetBlocks ||
             (!sponsored && (gasUnavailable || insufficientSol || balances.sol === undefined))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
@@ -1114,7 +1122,10 @@ export function ArNSPurchaseCard({
           disabled={
             route.kind === 'topup'
               ? !priceReady || gasUnavailable || insufficientSol || isBusy ||
-                !tokenSmallestUnitForName || tokenStepLabel !== undefined
+                !tokenSmallestUnitForName || tokenStepLabel !== undefined ||
+                // Same reason as the card button: the token is spent before the
+                // name is registered. `canPay` covers this on the other branch.
+                targetBlocks
               : !canPay
           }
           busy={isBusy || tokenStepLabel !== undefined}
