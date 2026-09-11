@@ -31,6 +31,11 @@ interface ArNSPurchaseStatusProps {
    * — repeating an id nobody picked would read as a setting they'd made.
    */
   targetId?: string;
+  /**
+   * What the picker called that target, when it came from the buyer's own
+   * recent work. Absent for a hand-pasted id, which has no name to show.
+   */
+  targetLabel?: string;
   name: string;
   /** Reset the whole flow (clears the selected name). Used by "Register another". */
   onDone: () => void;
@@ -50,6 +55,7 @@ export function ArNSPurchaseStatus({
   insufficientCredits,
   alreadyFunded = false,
   targetId,
+  targetLabel,
   name,
   onDone,
   onRetry,
@@ -86,8 +92,22 @@ export function ArNSPurchaseStatus({
             */}
             {targetId && (
               <p className="mt-1 text-sm text-foreground/70">
+                {/*
+                  Lead with the name they picked; reciting 43 characters back at
+                  someone who chose "My Site" from a list is not a confirmation,
+                  it is a puzzle. The id still follows, because a receipt has to
+                  stay checkable — and for a pasted id it is all there is.
+                */}
                 It points at{' '}
-                <span className="break-all font-mono text-xs">{targetId}</span>.
+                {targetLabel ? (
+                  <>
+                    <span className="font-medium text-foreground">
+                      {targetLabel}
+                    </span>
+                    <br />
+                  </>
+                ) : null}
+                <span className="break-all font-mono text-xs">{targetId}</span>
               </p>
             )}
             <TransactionReceipt txId={result.messageId} className="mt-2" />

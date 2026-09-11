@@ -5,6 +5,7 @@ import {
   buildTargetOptions,
   describeBuyTarget,
   describeOptionMeta,
+  labelForTxId,
   relativeTime,
   resolveBuyTarget,
   shortTxId,
@@ -224,5 +225,22 @@ describe('describeOptionMeta', () => {
       uploads: [{ id: TX_C, fileName: 'x.png' }],
     });
     expect(describeOptionMeta(opt, NOW)).toBe(`File · ${shortTxId(TX_C)}`);
+  });
+});
+
+describe('labelForTxId', () => {
+  it('names an id the buyer picked from their own work', () => {
+    const options = buildTargetOptions({
+      deploys: [{ type: 'manifest', manifestId: TX_A, timestamp: 1, appName: 'My Site' }],
+    });
+    expect(labelForTxId(TX_A, options)).toBe('My Site');
+  });
+
+  it('has no name for a hand-pasted id, and does not invent one', () => {
+    expect(labelForTxId(TX_B, [])).toBeUndefined();
+  });
+
+  it('is undefined when nothing was chosen', () => {
+    expect(labelForTxId(undefined, [])).toBeUndefined();
   });
 });

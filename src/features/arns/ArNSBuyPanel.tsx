@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Globe, ExternalLink, Flame, Tag, Settings2 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
 import { ArNSPurchaseStatus } from './components/ArNSPurchaseStatus';
 import { useBuyArNSName } from './hooks/useBuyArNSName';
+import { buildTargetOptions, labelForTxId } from './purchase/buyTarget';
 import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
 
 /**
@@ -36,6 +37,28 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
    * confirm the choice would otherwise have no idea it was made.
    */
   const [boughtTarget, setBoughtTarget] = useState<string | undefined>();
+  /*
+    The name the picker showed for that target, so the receipt can say "points
+    at My Site" rather than reciting 43 characters back at someone who chose it
+    from a list. Rebuilt here rather than reported up from the purchase card,
+    which unmounts the moment the purchase lands; `buildTargetOptions` is pure
+    and reads the same persisted arrays, so both see the same list.
+  */
+  const deployHistory = useStore((s) => s.deployHistory);
+  const uploadHistory = useStore((s) => s.uploadHistory);
+  const pages = useStore((s) => s.pages);
+  const boughtTargetLabel = useMemo(
+    () =>
+      labelForTxId(
+        boughtTarget,
+        buildTargetOptions({
+          deploys: deployHistory,
+          pages,
+          uploads: uploadHistory,
+        }),
+      ),
+    [boughtTarget, deployHistory, pages, uploadHistory],
+  );
 
   const handleBuy = (input: BuyArNSNameInput) => {
     setBoughtTarget(input.targetId);
@@ -209,6 +232,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           insufficientCredits={buyState.insufficientCredits}
           alreadyFunded={tokenFunded}
           targetId={boughtTarget}
+          targetLabel={boughtTargetLabel}
           name={selectedName}
           onDone={handleDone}
           onRetry={handleRetry}

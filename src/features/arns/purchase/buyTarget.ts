@@ -271,6 +271,21 @@ const KIND_META_LABEL: Record<TargetOptionKind, string> = {
   file: 'File',
 };
 
+/**
+ * What the picker called this id, if it came from the buyer's own work.
+ *
+ * Undefined for a hand-pasted id: there is no name to show, and inventing one
+ * would be worse than showing the id. Used by the receipt, which leads with the
+ * name and keeps the id beneath it for checking.
+ */
+export function labelForTxId(
+  txId: string | undefined,
+  options: TargetOption[],
+): string | undefined {
+  if (!txId) return undefined;
+  return options.find((o) => o.txId === txId)?.label;
+}
+
 /** `abcd1234…wxyz` — enough to recognise an id without wrapping the row. */
 export function shortTxId(txId: string): string {
   const t = txId.trim();
