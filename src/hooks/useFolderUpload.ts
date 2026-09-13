@@ -15,6 +15,10 @@ import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
 import { useFreeUploadLimit, useFreeStatus, isFileFree } from './useFreeUploadLimit';
 import { hashFilesAsync } from '../utils/fileHash';
+import {
+  awaitCreditSettlement,
+  SETTLEMENT_TIMEOUT_MESSAGE,
+} from '../utils/awaitCreditSettlement';
 
 // Deduplication stats for Smart Deploy
 export interface DeduplicationStats {
@@ -589,7 +593,34 @@ export function useFolderUpload() {
     // Use selectedToken if provided for crypto payment
     const selectedToken = manifestOptions?.selectedToken;
 
+    /*
+      Credit balance by address, or undefined if it cannot be read. Read
+      through an unauthenticated client because getBalance() on the
+      walletAdapter-backed payment client derives its address from a public key
+      the adapter need not carry.
+    */
+    const readCreditBalance = async (): Promise<number | undefined> => {
+      if (!address) return undefined;
+      try {
+        const cfg = getCurrentConfig();
+        const unauth = TurboFactory.unauthenticated({
+          paymentServiceConfig: { url: cfg.paymentServiceUrl },
+          uploadServiceConfig: { url: cfg.uploadServiceUrl },
+          ...(selectedToken ? { token: selectedToken as any } : {}),
+        });
+        const bal = await unauth.getBalance(address);
+        return Number(bal?.effectiveBalance ?? 0);
+      } catch (e) {
+        console.warn('[useFolderUpload] could not read credit balance:', e);
+        return undefined;
+      }
+    };
+
     // Handle crypto payment: top up once for all files before uploading
+    const creditedBefore =
+      manifestOptions?.cryptoPayment && selectedToken && manifestOptions?.tokenAmount
+        ? await readCreditBalance()
+        : undefined;
     if (manifestOptions?.cryptoPayment && selectedToken && manifestOptions?.tokenAmount) {
       try {
         const turbo = await createTurboClient(selectedToken);
@@ -598,6 +629,7 @@ export function useFolderUpload() {
         });
         // Dispatch balance refresh event
         window.dispatchEvent(new CustomEvent('refresh-balance'));
+
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
 
@@ -644,6 +676,36 @@ export function useFolderUpload() {
           setDeploying(false);
           throw new Error(`Crypto payment failed: ${errorMessage}`);
         }
+      }
+
+      /*
+        Deliberately OUTSIDE the catch above.
+
+        Wait for the credits to be SPENDABLE, not merely paid for: a base-usdc
+        top-up returns `pending` and the balance does not move for ~67 seconds,
+        so deploying the moment topUpWithTokens resolved — which is what this
+        did — walks into an insufficient-balance rejection with the payment
+        already settled. `useFileUpload` was fixed for this and the fix was
+        never carried across, so site deploys kept the bug.
+
+        Inside the catch, this error would be caught by the top-up handler,
+        fail to match a transaction id, and be rethrown as "Crypto payment
+        failed: your payment went through…" — a sentence that contradicts
+        itself and is wrong about the only thing that matters, which is that
+        the money arrived.
+      */
+      const settlement = await awaitCreditSettlement({
+        creditedBefore,
+        readBalance: readCreditBalance,
+        now: () => Date.now(),
+        sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+        isAborted: () => controller.signal.aborted,
+      });
+      if (settlement.kind === 'settled') {
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
+      } else if (settlement.kind === 'timeout') {
+        setDeploying(false);
+        throw new Error(SETTLEMENT_TIMEOUT_MESSAGE);
       }
     }
 
@@ -1070,7 +1132,7 @@ export function useFolderUpload() {
       // cancelled deploy unwinding after a newer one started would blank its UI.
       if (isActiveDeploy()) setDeploying(false);
     }
-  }, [createTurboClient, validateWalletState, uploadFileWithRetry, walletType, getContentType, fileHashes, getFileHashEntry, updateFileHashCache, getCurrentConfig]);
+  }, [address, createTurboClient, validateWalletState, uploadFileWithRetry, walletType, getContentType, fileHashes, getFileHashEntry, updateFileHashCache, getCurrentConfig]);
 
   const reset = useCallback(() => {
     setDeployProgress(0);
