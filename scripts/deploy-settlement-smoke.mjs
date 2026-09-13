@@ -110,9 +110,22 @@ const readBalance = async () => {
 const before = await readBalance();
 note(`balance before: ${before.toFixed(6)} credits`);
 
+/*
+  `gatewayUrl` is REQUIRED, not optional — the same trap crypto-topup-smoke.mjs
+  documents. The SDK picks the USDC contract by substring-matching this URL for
+  'sepolia'/'amoy'; absent, it silently defaults to the Base MAINNET contract,
+  which holds no code on Sepolia. The transfer then succeeds as a bare call
+  that moves nothing: ~22k gas, status 1, zero tokens sent, no error anywhere —
+  and every downstream symptom looks exactly like a settlement delay. Omitting
+  it cost a run here before the receipt was decoded.
+
+  The console gets this right: useEthereumTurboClient always passes
+  `gatewayUrl: config.tokenMap[tokenType]`.
+*/
 const funder = TurboFactory.authenticated({
   token: 'base-usdc',
   walletAdapter: { getSigner: () => wallet },
+  gatewayUrl: BASE_SEPOLIA_RPC,
   paymentServiceConfig,
   uploadServiceConfig,
 });
