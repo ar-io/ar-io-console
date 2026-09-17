@@ -3,8 +3,9 @@
  *
  * Turbo's `/v1/price/*` endpoints answer "how much winc do I RECEIVE", so a
  * fiat quote comes back with the infrastructure fee already taken out
- * (`operator: "multiply", operatorMagnitude: 0.65` — you get 65%). Token quotes
- * come back with `fees: []`, fee-free.
+ * (`operator: "multiply", operatorMagnitude: 0.65` — you get 65%). Most token
+ * quotes carry the same fee (AR and SOL do); ARIO quotes come back with
+ * `fees: []`, fee-free. Never assume which — read `fees` on each response.
  *
  * That asymmetry is a trap for any rate built by dividing one leg by the other:
  * the fee survives in the ratio instead of cancelling. Returns 1 when there is
