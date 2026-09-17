@@ -10,6 +10,11 @@ import { useWallets } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { supportsJitPayment } from '../utils/jitPayment';
+import {
+  awaitCreditSettlement,
+  BALANCE_UNREADABLE_MESSAGE,
+  SETTLEMENT_TIMEOUT_MESSAGE,
+} from '../utils/awaitCreditSettlement';
 import { formatUploadError } from '../utils/errorMessages';
 import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
@@ -67,13 +72,6 @@ const mergeTags = (
   // Custom tags first, then non-overridden defaults
   return [...customTags, ...nonOverriddenDefaults];
 };
-
-/**
- * How long to wait for a crypto top-up to become spendable. Measured at ~67s on
- * devnet for base-usdc, so the window is generous — the alternative is failing
- * an upload the user has already paid for.
- */
-const TOPUP_SETTLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function useFileUpload() {
   const { address, walletType } = useStore();
@@ -585,8 +583,20 @@ export function useFileUpload() {
       ? await readCreditBalance()
       : undefined;
     if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
+      // No baseline means no way to tell when the credits land, so don't pay.
+      if (creditedBefore === undefined) {
+        releaseUi();
+        throw new Error(BALANCE_UNREADABLE_MESSAGE);
+      }
       try {
         const turbo = await createTurboClient(selectedToken);
+        // The balance read and the client setup both wait on the network or a
+        // wallet prompt. A cancel during either must stop us before paying,
+        // because once the top-up starts it cannot be called back.
+        if (controller.signal.aborted) {
+          releaseUi();
+          return { results, failedFiles: failedFileNames, paidWithoutUpload: false };
+        }
         console.log('[DEBUG] topUpWithTokens starting:', { selectedToken, tokenAmount: options.tokenAmount });
         const topUpResult = await turbo.topUpWithTokens({
           tokenAmount: BigInt(options.tokenAmount),
@@ -594,45 +604,6 @@ export function useFileUpload() {
         console.log('[DEBUG] topUpWithTokens result:', JSON.stringify(topUpResult, (_, v) => typeof v === 'bigint' ? v.toString() : v));
         toppedUp = true;
         window.dispatchEvent(new CustomEvent('refresh-balance'));
-
-        /*
-          Settling is NOT instant, and 'confirmed' is not the common case.
-
-          Measured against the devnet bundler on Base Sepolia: a base-usdc
-          top-up returns status 'pending' and the balance does not reflect it
-          for ~67 seconds. Uploading the moment topUpWithTokens resolves —
-          which is what this code used to do — walks into an
-          insufficient-balance rejection with the payment already settled. That
-          is the same "paid, got nothing" outcome a correctly-sized payment was
-          supposed to eliminate.
-
-          So wait for the credits to actually appear rather than trusting the
-          status. Balance is read by address through an unauthenticated client
-          because getBalance() on the walletAdapter-backed payment client
-          derives its address from a public key the adapter need not carry.
-        */
-        if (creditedBefore !== undefined) {
-          const settleDeadline = Date.now() + TOPUP_SETTLE_TIMEOUT_MS;
-          let settled = false;
-          while (Date.now() < settleDeadline) {
-            if (controller.signal.aborted) break;
-            await new Promise((r) => setTimeout(r, 3000));
-            const current = await readCreditBalance();
-            if (current !== undefined && current > creditedBefore) {
-              settled = true;
-              window.dispatchEvent(new CustomEvent('refresh-balance'));
-              break;
-            }
-          }
-          if (!settled && !controller.signal.aborted) {
-            releaseUi();
-            throw new Error(
-              'Your payment went through but the credits have not landed yet. Nothing ' +
-              'was uploaded and you will not be charged again — the credits will appear ' +
-              'in your balance shortly, and uploading again will spend them.'
-            );
-          }
-        }
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
 
@@ -681,6 +652,40 @@ export function useFileUpload() {
           releaseUi();
           throw new Error(`Crypto payment failed: ${errorMessage}`);
         }
+      }
+
+      /*
+        Settling is NOT instant, and 'confirmed' is not the common case.
+
+        Measured against the devnet bundler on Base Sepolia: a base-usdc
+        top-up returns status 'pending' and the balance does not reflect it
+        for ~67 seconds. Uploading the moment topUpWithTokens resolves —
+        which is what this code used to do — walks into an
+        insufficient-balance rejection with the payment already settled. That
+        is the same "paid, got nothing" outcome a correctly-sized payment was
+        supposed to eliminate.
+
+        So wait for the credits to actually appear rather than trusting the
+        status. Balance is read by address through an unauthenticated client
+        because getBalance() on the walletAdapter-backed payment client
+        derives its address from a public key the adapter need not carry.
+
+        Deliberately OUTSIDE the catch above, as in useFolderUpload: inside it,
+        a settlement timeout would be rethrown as "Crypto payment failed: your
+        payment went through…", which contradicts itself.
+      */
+      const settlement = await awaitCreditSettlement({
+        creditedBefore,
+        readBalance: readCreditBalance,
+        now: () => Date.now(),
+        sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+        isAborted: () => controller.signal.aborted,
+      });
+      if (settlement.kind === 'settled') {
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
+      } else if (settlement.kind === 'timeout') {
+        releaseUi();
+        throw new Error(SETTLEMENT_TIMEOUT_MESSAGE);
       }
     }
 
