@@ -53,6 +53,40 @@ describe('awaitCreditSettlement', () => {
     expect(outcome).toEqual({ kind: 'aborted' });
   });
 
+  it('gives up on a hung read at the deadline', async () => {
+    // getBalance is a bare fetch with no timeout. A read that never answers
+    // must not hold the wait open past its deadline. If it did, this test
+    // would hang rather than fail.
+    const clock = fakeClock();
+    const outcome = await awaitCreditSettlement(
+      base({
+        ...clock,
+        readBalance: () => new Promise(() => {}),
+        timeoutMs: 10_000,
+      }),
+    );
+    expect(outcome).toEqual({ kind: 'timeout' });
+    expect(clock.now()).toBe(10_000);
+  });
+
+  it('stops on abort while a read is hung', async () => {
+    const clock = fakeClock();
+    let aborted = false;
+    const outcome = await awaitCreditSettlement(
+      base({
+        ...clock,
+        isAborted: () => aborted,
+        readBalance: () => {
+          aborted = true; // the user cancels mid-read
+          return new Promise(() => {});
+        },
+      }),
+    );
+    expect(outcome).toEqual({ kind: 'aborted' });
+    // Exited on the cancel, not by running out the five-minute deadline.
+    expect(clock.now()).toBeLessThan(10_000);
+  });
+
   it('does NOT treat an unreadable balance as a shortfall', async () => {
     // A flaky gateway or a rate limit is not evidence the credits are missing.
     // Reading undefined forever must time out, never claim settled — but one

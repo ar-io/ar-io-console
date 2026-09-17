@@ -34,6 +34,40 @@ export const TOPUP_SETTLE_TIMEOUT_MS = 5 * 60 * 1000;
 /** How often to re-read the balance while waiting. */
 export const TOPUP_SETTLE_POLL_MS = 3000;
 
+/** How often a pending balance read checks for the deadline or a cancel. */
+const READ_GUARD_MS = 250;
+
+/**
+ * `readBalance()`, or undefined once the deadline passes or the caller
+ * cancels, whichever comes first.
+ *
+ * The production readers are turbo-sdk's `getBalance`, a bare fetch with no
+ * timeout and no signal, so a hung connection would otherwise hold the loop
+ * past its deadline and ignore a cancel. The read itself cannot be stopped;
+ * a late result is simply not looked at.
+ */
+async function readWithin(
+  readBalance: () => Promise<number | undefined>,
+  deadline: number,
+  now: () => number,
+  sleep: (ms: number) => Promise<void>,
+  isAborted: () => boolean,
+): Promise<number | undefined> {
+  let finished = false;
+  const read = readBalance().finally(() => {
+    finished = true;
+  });
+  const gaveUp = (async () => {
+    for (;;) {
+      await sleep(Math.max(0, Math.min(READ_GUARD_MS, deadline - now())));
+      // The read answered first: stay out of the race so it wins.
+      if (finished) return new Promise<never>(() => {});
+      if (isAborted() || now() >= deadline) return undefined;
+    }
+  })();
+  return Promise.race([read, gaveUp]);
+}
+
 export async function awaitCreditSettlement({
   creditedBefore,
   readBalance,
@@ -65,7 +99,7 @@ export async function awaitCreditSettlement({
     if (isAborted()) return { kind: 'aborted' };
     await sleep(pollMs);
     if (isAborted()) return { kind: 'aborted' };
-    const current = await readBalance();
+    const current = await readWithin(readBalance, deadline, now, sleep, isAborted);
     /*
       A failed read is not a shortfall. The balance lookup can fail for its own
       reasons — a flaky gateway, a rate limit — and treating that as "not

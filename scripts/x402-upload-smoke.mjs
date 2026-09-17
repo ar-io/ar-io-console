@@ -155,24 +155,29 @@ try {
   });
   const ms = Date.now() - started;
   /*
-    The property is REFUSED BEFORE PAYMENT, not a particular status code.
+    The property is REFUSED BEFORE PAYMENT, for a reason that is about the body.
 
     This asserted 400 'too large' specifically, and started failing when the
     service began answering 411 — "x402 uploads require a Content-Length header.
     Chunked/streamed bodies cannot be priced up front" — which refuses the same
-    request, for free, at the same point, with a better reason. Pinning the code
-    turned an improvement into a red build.
+    request, for free, at the same point, with a better reason. Both are
+    accepted.
 
-    402 is the only real failure: being asked to pay for a request that cannot
-    succeed is the incident this script exists for.
+    Any other 4xx is not: a 404 from a moved route or a 429 from a rate limit
+    is also unpaid, but says nothing about whether this request would have been
+    quoted, so passing on it would make the check vacuous.
   */
+  const refusedUnpaid =
+    (res.status === 400 && /too large/i.test(text)) ||
+    (res.status === 411 && /content-length/i.test(text));
   if (res.status === 402) {
     bad(`${raw.length}B streamed item was QUOTED FOR PAYMENT (402) — the exact ` +
         `production incident: pay first, rejected as too large after the body lands`);
-  } else if (res.status >= 400 && res.status < 500) {
+  } else if (refusedUnpaid) {
     ok(`${raw.length}B streamed item -> ${res.status}, unpaid (${ms}ms): ${text.slice(0, 90)}`);
   } else {
-    bad(`expected an unpaid 4xx refusal, got ${res.status}: ${text.slice(0, 160)}`);
+    bad(`expected a free 400 'too large' or 411 'Content-Length required', ` +
+        `got ${res.status}: ${text.slice(0, 160)}`);
   }
 } catch (e) { bad(`streamed probe failed: ${e.message}`); }
 

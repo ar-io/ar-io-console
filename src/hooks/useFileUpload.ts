@@ -72,12 +72,6 @@ const mergeTags = (
   return [...customTags, ...nonOverriddenDefaults];
 };
 
-/**
- * How long to wait for a crypto top-up to become spendable. Measured at ~67s on
- * devnet for base-usdc, so the window is generous — the alternative is failing
- * an upload the user has already paid for.
- */
-
 export function useFileUpload() {
   const { address, walletType } = useStore();
   const { wallets } = useWallets(); // Get Privy wallets
@@ -597,36 +591,6 @@ export function useFileUpload() {
         console.log('[DEBUG] topUpWithTokens result:', JSON.stringify(topUpResult, (_, v) => typeof v === 'bigint' ? v.toString() : v));
         toppedUp = true;
         window.dispatchEvent(new CustomEvent('refresh-balance'));
-
-        /*
-          Settling is NOT instant, and 'confirmed' is not the common case.
-
-          Measured against the devnet bundler on Base Sepolia: a base-usdc
-          top-up returns status 'pending' and the balance does not reflect it
-          for ~67 seconds. Uploading the moment topUpWithTokens resolves —
-          which is what this code used to do — walks into an
-          insufficient-balance rejection with the payment already settled. That
-          is the same "paid, got nothing" outcome a correctly-sized payment was
-          supposed to eliminate.
-
-          So wait for the credits to actually appear rather than trusting the
-          status. Balance is read by address through an unauthenticated client
-          because getBalance() on the walletAdapter-backed payment client
-          derives its address from a public key the adapter need not carry.
-        */
-        const settlement = await awaitCreditSettlement({
-          creditedBefore,
-          readBalance: readCreditBalance,
-          now: () => Date.now(),
-          sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
-          isAborted: () => controller.signal.aborted,
-        });
-        if (settlement.kind === 'settled') {
-          window.dispatchEvent(new CustomEvent('refresh-balance'));
-        } else if (settlement.kind === 'timeout') {
-          releaseUi();
-          throw new Error(SETTLEMENT_TIMEOUT_MESSAGE);
-        }
       } catch (topUpError) {
         const errorMessage = topUpError instanceof Error ? topUpError.message : 'Unknown error';
 
@@ -675,6 +639,40 @@ export function useFileUpload() {
           releaseUi();
           throw new Error(`Crypto payment failed: ${errorMessage}`);
         }
+      }
+
+      /*
+        Settling is NOT instant, and 'confirmed' is not the common case.
+
+        Measured against the devnet bundler on Base Sepolia: a base-usdc
+        top-up returns status 'pending' and the balance does not reflect it
+        for ~67 seconds. Uploading the moment topUpWithTokens resolves —
+        which is what this code used to do — walks into an
+        insufficient-balance rejection with the payment already settled. That
+        is the same "paid, got nothing" outcome a correctly-sized payment was
+        supposed to eliminate.
+
+        So wait for the credits to actually appear rather than trusting the
+        status. Balance is read by address through an unauthenticated client
+        because getBalance() on the walletAdapter-backed payment client
+        derives its address from a public key the adapter need not carry.
+
+        Deliberately OUTSIDE the catch above, as in useFolderUpload: inside it,
+        a settlement timeout would be rethrown as "Crypto payment failed: your
+        payment went through…", which contradicts itself.
+      */
+      const settlement = await awaitCreditSettlement({
+        creditedBefore,
+        readBalance: readCreditBalance,
+        now: () => Date.now(),
+        sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+        isAborted: () => controller.signal.aborted,
+      });
+      if (settlement.kind === 'settled') {
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
+      } else if (settlement.kind === 'timeout') {
+        releaseUi();
+        throw new Error(SETTLEMENT_TIMEOUT_MESSAGE);
       }
     }
 
