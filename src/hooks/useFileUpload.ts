@@ -12,6 +12,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { supportsJitPayment } from '../utils/jitPayment';
 import {
   awaitCreditSettlement,
+  BALANCE_UNREADABLE_MESSAGE,
   SETTLEMENT_TIMEOUT_MESSAGE,
 } from '../utils/awaitCreditSettlement';
 import { formatUploadError } from '../utils/errorMessages';
@@ -582,6 +583,11 @@ export function useFileUpload() {
       ? await readCreditBalance()
       : undefined;
     if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
+      // No baseline means no way to tell when the credits land, so don't pay.
+      if (creditedBefore === undefined) {
+        releaseUi();
+        throw new Error(BALANCE_UNREADABLE_MESSAGE);
+      }
       try {
         const turbo = await createTurboClient(selectedToken);
         // The balance read and the client setup both wait on the network or a

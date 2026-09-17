@@ -80,9 +80,10 @@ export async function awaitCreditSettlement({
   /**
    * Balance read BEFORE the top-up.
    *
-   * Undefined means it could not be read, in which case there is no baseline
-   * to compare against and waiting proves nothing — the caller should skip
-   * this rather than block for five minutes on a comparison it cannot make.
+   * Undefined means it could not be read, so there is nothing to compare
+   * against and nothing can prove the credits arrived. That is reported as a
+   * timeout, never as settled. Callers should not get here: without a
+   * baseline they refuse to pay at all (BALANCE_UNREADABLE_MESSAGE).
    */
   creditedBefore: number | undefined;
   readBalance: () => Promise<number | undefined>;
@@ -92,7 +93,7 @@ export async function awaitCreditSettlement({
   timeoutMs?: number;
   pollMs?: number;
 }): Promise<SettlementOutcome> {
-  if (creditedBefore === undefined) return { kind: 'settled' };
+  if (creditedBefore === undefined) return { kind: 'timeout' };
 
   const deadline = now() + timeoutMs;
   while (now() < deadline) {
@@ -122,3 +123,17 @@ export const SETTLEMENT_TIMEOUT_MESSAGE =
   'Your payment went through but the credits have not landed yet. Nothing ' +
   'was uploaded and you will not be charged again — the credits will appear ' +
   'in your balance shortly, and uploading again will spend them.';
+
+/**
+ * What to tell someone whose balance could not be read before paying.
+ *
+ * Without that reading there is no way to tell when a payment's credits
+ * arrive, so the upload would either run against credits that are not there
+ * yet or stop after taking the money. Not paying is the only outcome that
+ * needs no follow-up. The read goes to the same payment service that would
+ * credit the top-up, so if it is unreachable, sending tokens now is the riskier
+ * move anyway.
+ */
+export const BALANCE_UNREADABLE_MESSAGE =
+  'We could not check your credit balance, so no payment was made and ' +
+  'nothing was uploaded. Please try again in a moment.';

@@ -17,6 +17,7 @@ import { useFreeUploadLimit, useFreeStatus, isFileFree } from './useFreeUploadLi
 import { hashFilesAsync } from '../utils/fileHash';
 import {
   awaitCreditSettlement,
+  BALANCE_UNREADABLE_MESSAGE,
   SETTLEMENT_TIMEOUT_MESSAGE,
 } from '../utils/awaitCreditSettlement';
 
@@ -622,6 +623,11 @@ export function useFolderUpload() {
         ? await readCreditBalance()
         : undefined;
     if (manifestOptions?.cryptoPayment && selectedToken && manifestOptions?.tokenAmount) {
+      // No baseline means no way to tell when the credits land, so don't pay.
+      if (creditedBefore === undefined) {
+        setDeploying(false);
+        throw new Error(BALANCE_UNREADABLE_MESSAGE);
+      }
       try {
         const turbo = await createTurboClient(selectedToken);
         // The balance read and the client setup both wait on the network or a

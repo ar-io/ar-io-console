@@ -100,13 +100,14 @@ describe('awaitCreditSettlement', () => {
     });
   });
 
-  it('skips the wait entirely when there was no baseline to compare', async () => {
-    // Nothing to compare against, so waiting proves nothing — blocking for
-    // five minutes on a comparison that cannot be made helps no one.
+  it('never reports settled without a baseline to compare', async () => {
+    // Nothing to compare against means nothing can prove the credits arrived,
+    // so it must not let an upload run. Waiting proves nothing either, so it
+    // answers at once rather than blocking for five minutes.
     const readBalance = vi.fn();
     expect(
       await awaitCreditSettlement(base({ creditedBefore: undefined, readBalance })),
-    ).toEqual({ kind: 'settled' });
+    ).toEqual({ kind: 'timeout' });
     expect(readBalance).not.toHaveBeenCalled();
   });
 
