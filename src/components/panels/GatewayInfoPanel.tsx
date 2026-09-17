@@ -20,6 +20,7 @@ import {
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { formatWalletAddress } from '../../utils';
+import { formatFeePercent } from '../../utils/infraFee';
 import { useStore } from '../../store/useStore';
 
 export default function GatewayInfoPanel() {
@@ -532,47 +533,40 @@ export default function GatewayInfoPanel() {
           {pricingInfo && (
             <div className="mb-6">
               <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+              {/* Two across on phones with the fee card full width beneath, so no
+                  card is orphaned and the long "Infrastructure Fee" label never
+                  squeezes into a half column. */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
-                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Free Tier</div>
+                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Free Uploads</div>
                   <div className="text-lg font-bold text-success">
-                    {uploadServiceInfo
+                    {uploadServiceInfo && Number.isFinite(uploadServiceInfo.freeUploadLimitBytes)
                       ? `${Math.round(uploadServiceInfo.freeUploadLimitBytes / 1024)} KiB`
-                      : '105 KiB'}
+                      : '—'}
                   </div>
                   <div className="text-xs text-foreground/80 mt-1">
                     {uploadServiceInfo?.freeTier?.lifetimeBytes
-                      ? `${Math.round(uploadServiceInfo.freeTier.lifetimeBytes / (1024 * 1024))} MiB lifetime limit`
-                      : 'Per-item max for free uploads'}
+                      ? `Per file · ${Math.round(uploadServiceInfo.freeTier.lifetimeBytes / (1024 * 1024))} MiB lifetime`
+                      : 'Per file'}
                   </div>
                 </div>
 
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Rate</div>
-                  <div className="text-lg font-bold text-primary">${pricingInfo.usdPerGiB.toFixed(4)}</div>
-                  <div className="text-xs text-foreground/80 mt-1">Per GiB via ar.io</div>
-                </div>
-
-                <div className="bg-background rounded-2xl p-4">
-                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Arweave Rate</div>
-                  <div className="text-lg font-bold text-foreground">
-                    {pricingInfo.baseGatewayPrice !== undefined
-                      ? pricingInfo.baseGatewayPrice === 0
-                        ? 'FREE'
-                        : `$${pricingInfo.baseGatewayPrice.toFixed(4)}`
-                      : 'Unavailable'}
-                  </div>
-                  <div className="text-xs text-foreground/80 mt-1">Per GiB raw network cost</div>
-                </div>
-
-                <div className="bg-background rounded-2xl p-4">
-                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Premium</div>
                   <div className="text-lg font-bold text-primary">
-                    {pricingInfo.turboFeePercentage !== undefined
-                      ? `+${pricingInfo.turboFeePercentage.toFixed(1)}%`
-                      : 'Unavailable'}
+                    {pricingInfo.usdPerGiB > 0 ? `$${pricingInfo.usdPerGiB.toFixed(2)}` : '—'}
                   </div>
-                  <div className="text-xs text-foreground/80 mt-1">vs raw Arweave network</div>
+                  <div className="text-xs text-foreground/80 mt-1">Per GiB</div>
+                </div>
+
+                {/* The fee is inclusive — a share OF the rate beside it, never a
+                    markup on top of some other price. */}
+                <div className="bg-background rounded-2xl p-4 col-span-2 md:col-span-1">
+                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Infrastructure Fee</div>
+                  <div className="text-lg font-bold text-foreground">
+                    {formatFeePercent(pricingInfo.infraFeePercent)}
+                  </div>
+                  <div className="text-xs text-foreground/80 mt-1">Of the ar.io rate</div>
                 </div>
               </div>
             </div>
