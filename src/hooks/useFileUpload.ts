@@ -584,6 +584,13 @@ export function useFileUpload() {
     if (options?.cryptoPayment && selectedToken && options?.tokenAmount) {
       try {
         const turbo = await createTurboClient(selectedToken);
+        // The balance read and the client setup both wait on the network or a
+        // wallet prompt. A cancel during either must stop us before paying,
+        // because once the top-up starts it cannot be called back.
+        if (controller.signal.aborted) {
+          releaseUi();
+          return { results, failedFiles: failedFileNames, paidWithoutUpload: false };
+        }
         console.log('[DEBUG] topUpWithTokens starting:', { selectedToken, tokenAmount: options.tokenAmount });
         const topUpResult = await turbo.topUpWithTokens({
           tokenAmount: BigInt(options.tokenAmount),

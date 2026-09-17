@@ -624,6 +624,16 @@ export function useFolderUpload() {
     if (manifestOptions?.cryptoPayment && selectedToken && manifestOptions?.tokenAmount) {
       try {
         const turbo = await createTurboClient(selectedToken);
+        // The balance read and the client setup both wait on the network or a
+        // wallet prompt. A cancel during either must stop us before paying,
+        // because once the top-up starts it cannot be called back.
+        if (controller.signal.aborted) {
+          if (isActiveDeploy()) {
+            setDeploying(false);
+            setActiveUploads([]);
+          }
+          return { results: [], failedFileNames: [] };
+        }
         await turbo.topUpWithTokens({
           tokenAmount: BigInt(manifestOptions.tokenAmount),
         });
