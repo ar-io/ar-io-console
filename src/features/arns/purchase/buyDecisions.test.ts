@@ -18,6 +18,39 @@ describe('buildBuyRecordArgs', () => {
     ).toEqual({ transactionId: DEFAULT_ARNS_TARGET_TX });
   });
 
+  it('points the new name at a target the buyer chose', () => {
+    const tx = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    expect(
+      buildBuyRecordArgs({ name: 'abc', type: 'permabuy', referrer: 'r', targetId: tx })
+        .antState,
+    ).toEqual({ transactionId: tx });
+  });
+
+  it('trims a target before it reaches the chain', () => {
+    const tx = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    expect(
+      buildBuyRecordArgs({
+        name: 'abc', type: 'permabuy', referrer: 'r', targetId: `  ${tx}  `,
+      }).antState,
+    ).toEqual({ transactionId: tx });
+  });
+
+  it('falls back to the landing page when the target is blank', () => {
+    // A whitespace-only value must not reach `is_valid_arweave_id` — it fails
+    // there, after the money has moved.
+    expect(
+      buildBuyRecordArgs({ name: 'abc', type: 'permabuy', referrer: 'r', targetId: '   ' })
+        .antState,
+    ).toEqual({ transactionId: DEFAULT_ARNS_TARGET_TX });
+  });
+
+  it('never leaks the input-only targetId onto the SDK args', () => {
+    const args = buildBuyRecordArgs({
+      name: 'abc', type: 'permabuy', referrer: 'r', targetId: 'x',
+    });
+    expect('targetId' in args).toBe(false);
+  });
+
   it('includes years for a lease', () => {
     expect(
       buildBuyRecordArgs({ name: 'abc', type: 'lease', years: 3, fundFrom: 'balance', referrer: 'R' }),

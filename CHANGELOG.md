@@ -2,6 +2,56 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.8.0] - 2026-09-17
+
+### Added
+- **A name can point at your content the moment you buy it.** A name registered
+  here always landed on the same placeholder until its owner went and edited the
+  record. The purchase screen now offers a target: pick one of your recent
+  deploys, Pages or uploads, or paste a transaction id. It is set as the name is
+  minted, whichever way you pay, so it costs no extra charge, approval or wait —
+  and leaving it alone lands the name exactly where it did before. The receipt
+  names what you picked rather than reciting 43 characters back at you. Arweave
+  content only: a name can hold an IPFS address, but no ar.io gateway resolves
+  one yet, so offering it would sell a name pointing at nothing.
+
+### Changed
+- **The Renew button on an expiry notice now renews.** It used to carry you to
+  the name's own page, where you still had to find "Renew / upgrade" and click
+  it. It opens the renewal window in place, on the name expiring soonest, so
+  several expiring names can be dealt with one after another without leaving the
+  list that named them.
+- **The actions that still need SOL say what they cost.** "Your wallet pays the
+  Solana network fee" reads as a rounding error, and for a transfer it can be
+  rent on up to four accounts — sending a name to a wallet that has never held
+  one sets up accounts that owe rent. Those now say to budget around 0.002 SOL.
+  Removing a controller creates nothing and no longer inherits that warning. The
+  credits route also mentions that signing it yourself is an option, which an
+  owner holding SOL had no way to learn before.
+- **Settings shows what the ar.io fee actually is.** Upload Pricing said "+35%
+  vs raw Arweave network". That 35% was the share of the price the fee makes up,
+  not how much more you pay: against the raw network cost the difference was
+  nearer 54%. It now reads "Infrastructure Fee — 35% of the ar.io rate", taken
+  from Turbo's own price quote instead of reconstructed from a third-party AR
+  price that drifted and sometimes went missing entirely. The raw-network card
+  went with it, since 35% of the rate gives you the same figure, and prices show
+  cents rather than four decimal places.
+
+### Fixed
+- **Deploying a site straight after paying with crypto no longer fails for
+  insufficient balance.** Credits are not spendable the moment a payment
+  returns — a USDC top-up measured over a minute — and the deploy began
+  immediately, so a deploy you had already paid for could be rejected for having
+  no credits. It now waits for the credits to land, as single-file uploads
+  already did, and tells you where your money is if they take too long.
+- **Cancelling during a crypto payment no longer charges you.** Cancelling while
+  the balance check or the wallet prompt was still open went on to pay anyway,
+  and a payment cannot be called back once it starts.
+- **Nothing is charged when your credit balance can't be read.** Without that
+  reading there is no way to tell when a payment's credits arrive, so the upload
+  would have run against credits that might not be there. It now stops before
+  paying and says so; trying again is safe.
+
 ## [4.7.1] - 2026-09-08
 
 ### Fixed

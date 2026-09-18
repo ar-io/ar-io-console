@@ -1,6 +1,10 @@
 import type { ArNSAction } from '@ardrive/turbo-sdk/web';
 
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
+import {
+  selfSignedCostNote,
+  solRailRequirementNote,
+} from '../records/writerChoice';
 
 /**
  * One line naming what an action costs, above the button that performs it.
@@ -70,10 +74,14 @@ export default function ActionCostNote({
   );
 
   if (paysNetworkDirectly) {
+    /*
+      "Pays the Solana network fee" was true and useless — it reads as a
+      rounding error, while a transfer can owe rent on up to four accounts.
+      `selfSignedCostNote` says which of the two this actually is.
+    */
     return (
       <p className={`text-xs text-foreground/60 ${className}`}>
-        Your wallet signs this and pays the Solana network fee. It doesn&apos;t
-        use credits.
+        {selfSignedCostNote(action)}
       </p>
     );
   }
@@ -89,9 +97,19 @@ export default function ActionCostNote({
 
   if (!secondaryAction) {
     return (
-      <p className={`text-xs text-foreground/60 ${className}`}>
-        This costs {amountText(primary.credits)}. {solLine}
-      </p>
+      <div className={className}>
+        <p className="text-xs text-foreground/60">
+          This costs {amountText(primary.credits)}. {solLine}
+        </p>
+        {/*
+          Its own line, and dimmer. Run together with the sentence above it was
+          nearly 200 characters of 12px grey — and the alternative is secondary
+          information, not part of the price.
+        */}
+        <p className="mt-1 text-xs text-foreground/50">
+          {solRailRequirementNote(action)}
+        </p>
+      </div>
     );
   }
 
@@ -102,11 +120,16 @@ export default function ActionCostNote({
   const same = primary.credits === secondary.credits;
 
   return (
-    <p className={`text-xs text-foreground/60 ${className}`}>
-      {same
-        ? `${primaryVerb ?? 'This'} or ${secondaryVerb ?? 'undoing it'} costs ${amountText(primary.credits)}.`
-        : `${primaryVerb ?? 'This'} costs ${amountText(primary.credits)}; ${secondaryVerb ?? 'undoing it'} costs ${amountText(secondary.credits)}.`}{' '}
-      {solLine}
-    </p>
+    <div className={className}>
+      <p className="text-xs text-foreground/60">
+        {same
+          ? `${primaryVerb ?? 'This'} or ${secondaryVerb ?? 'undoing it'} costs ${amountText(primary.credits)}.`
+          : `${primaryVerb ?? 'This'} costs ${amountText(primary.credits)}; ${secondaryVerb ?? 'undoing it'} costs ${amountText(secondary.credits)}.`}{' '}
+        {solLine}
+      </p>
+      <p className="mt-1 text-xs text-foreground/50">
+        {solRailRequirementNote(action, secondaryAction)}
+      </p>
+    </div>
   );
 }
