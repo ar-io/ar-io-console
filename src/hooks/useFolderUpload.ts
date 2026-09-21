@@ -722,6 +722,19 @@ export function useFolderUpload() {
       } else if (settlement.kind === 'timeout') {
         setDeploying(false);
         throw new Error(SETTLEMENT_TIMEOUT_MESSAGE);
+      } else {
+        /*
+          Cancelled while waiting. Stop here rather than at the upload loop's
+          own check further down: between the two sits `createTurboClient`,
+          which for an Ethereum wallet opens a signature prompt — a wallet
+          popup for a deploy the user has already called off. The payment
+          stands and its credits will land; nothing was uploaded.
+        */
+        if (isActiveDeploy()) {
+          setDeploying(false);
+          setActiveUploads([]);
+        }
+        return { results: [], failedFileNames: [] };
       }
     }
 

@@ -8,6 +8,7 @@ import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
 import { ArNSPurchaseStatus } from './components/ArNSPurchaseStatus';
 import { useBuyArNSName } from './hooks/useBuyArNSName';
 import { buildTargetOptions, labelForTxId } from './purchase/buyTarget';
+import type { BuyTargetState } from './purchase/buyTarget';
 import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
 
 /**
@@ -47,18 +48,41 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
   const deployHistory = useStore((s) => s.deployHistory);
   const uploadHistory = useStore((s) => s.uploadHistory);
   const pages = useStore((s) => s.pages);
-  const boughtTargetLabel = useMemo(
+  const targetOptions = useMemo(
     () =>
-      labelForTxId(
-        boughtTarget,
-        buildTargetOptions({
-          deploys: deployHistory,
-          pages,
-          uploads: uploadHistory,
-        }),
-      ),
-    [boughtTarget, deployHistory, pages, uploadHistory],
+      buildTargetOptions({
+        deploys: deployHistory,
+        pages,
+        uploads: uploadHistory,
+      }),
+    [deployHistory, pages, uploadHistory],
   );
+  const boughtTargetLabel = useMemo(
+    () => labelForTxId(boughtTarget, targetOptions),
+    [boughtTarget, targetOptions],
+  );
+  /*
+    What the target control should open on when the card comes back.
+
+    The card is unmounted for anything but 'idle' and 'submitting', so a failed
+    purchase takes it away and a retry mounts a fresh one — which used to start
+    on the default. Someone who chose "point it at My Site", hit a failure and
+    pressed Retry would have silently bought a name pointing at the placeholder
+    instead. Seeded from the last attempt, in the mode it came from, so the
+    control reads the same on the second attempt as on the first.
+
+    Cleared when the flow ends or the user picks a different name, so a target
+    chosen for one name never carries into another.
+  */
+  const retryTarget = useMemo<BuyTargetState | undefined>(() => {
+    if (!boughtTarget) return undefined;
+    return {
+      mode: targetOptions.some((o) => o.txId === boughtTarget)
+        ? 'deployment'
+        : 'custom',
+      txId: boughtTarget,
+    };
+  }, [boughtTarget, targetOptions]);
 
   const handleBuy = (input: BuyArNSNameInput) => {
     setBoughtTarget(input.targetId);
@@ -195,6 +219,8 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           onClick={() => {
             setSelectedName(undefined);
             setTokenFunded(false);
+            // A target chosen for this name must not seed the next one.
+            setBoughtTarget(undefined);
             buyState.reset();
           }}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
@@ -220,6 +246,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
           onTokenFunded={() => setTokenFunded(true)}
+          initialTarget={retryTarget}
         />
       )}
 
