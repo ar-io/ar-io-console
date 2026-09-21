@@ -69,7 +69,13 @@ interface PricingInfo {
    * "AR" would quote a price nobody is charged.
    */
   creditsPerGiB?: number;
-  /** Share of every payment Turbo keeps as its infrastructure fee, e.g. 35. */
+  /**
+   * The flat per-item fee, in credits, charged once per uploaded file on top
+   * of the byte cost. Every cost estimate in the app adds it, so the pricing
+   * panel has to name it too.
+   */
+  creditsPerItem?: number;
+  /** Share of every top-up Turbo keeps as its infrastructure fee, e.g. 35. */
   infraFeePercent?: number;
 }
 
@@ -96,10 +102,16 @@ async function fetchPricingInfo(
     }),
   ]);
   const wincPerGiB = Number(fiatRates.winc);
+  // Same shape `usePerDataItemFee` reads: the rates response carries it, the
+  // SDK's type does not declare it.
+  const wincPerItem = Number((fiatRates as any)?.perDataItemFeeWinc);
   return {
     usdPerGiB: fiatRates.fiat?.usd || 0,
     creditsPerGiB: Number.isFinite(wincPerGiB) && wincPerGiB > 0
       ? wincPerGiB / wincPerCredit
+      : undefined,
+    creditsPerItem: Number.isFinite(wincPerItem) && wincPerItem > 0
+      ? wincPerItem / wincPerCredit
       : undefined,
     infraFeePercent: infraFeePercent(quote?.fees),
   };
