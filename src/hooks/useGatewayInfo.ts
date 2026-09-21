@@ -4,6 +4,7 @@ import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
 import { infraFeePercent } from '../utils/infraFee';
+import { wincPerCredit } from '../constants';
 
 interface UploadServiceInfo {
   version: string;
@@ -58,6 +59,16 @@ type ArIOGatewayInfo = Gateway;
 interface PricingInfo {
   /** Turbo's card rate for 1 GiB, in USD. The infrastructure fee is inside it. */
   usdPerGiB: number;
+  /**
+   * What an upload actually deducts: credits per GiB, from the same rates
+   * response as `usdPerGiB`.
+   *
+   * Deliberately NOT called AR per GiB, though credits are AR-denominated.
+   * Funding a GiB with AR costs this divided by 0.65, because AR top-ups carry
+   * the fee — so the two numbers differ by half again and labelling this one
+   * "AR" would quote a price nobody is charged.
+   */
+  creditsPerGiB?: number;
   /** Share of every payment Turbo keeps as its infrastructure fee, e.g. 35. */
   infraFeePercent?: number;
 }
@@ -84,8 +95,12 @@ async function fetchPricingInfo(
       return undefined;
     }),
   ]);
+  const wincPerGiB = Number(fiatRates.winc);
   return {
     usdPerGiB: fiatRates.fiat?.usd || 0,
+    creditsPerGiB: Number.isFinite(wincPerGiB) && wincPerGiB > 0
+      ? wincPerGiB / wincPerCredit
+      : undefined,
     infraFeePercent: infraFeePercent(quote?.fees),
   };
 }
@@ -107,10 +122,10 @@ interface PeersInfo {
   arweaveNodeCount: number;
 }
 
-// v2: pricingInfo dropped the raw-Arweave fields for `infraFeePercent`. A
-// versioned key keeps an old entry from rendering the fee as "—" until it
-// expires.
-const CACHE_KEY_PREFIX = 'turbo-gateway-info-v2';
+// v2: pricingInfo dropped the raw-Arweave fields for `infraFeePercent`. v3
+// added `creditsPerGiB`. A versioned key keeps an old entry from rendering a
+// new field as "—" until it expires.
+const CACHE_KEY_PREFIX = 'turbo-gateway-info-v3';
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 interface CachedGatewayInfo {

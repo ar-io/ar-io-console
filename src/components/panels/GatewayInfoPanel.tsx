@@ -533,10 +533,10 @@ export default function GatewayInfoPanel() {
           {pricingInfo && (
             <div className="mb-6">
               <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</div>
-              {/* Two across on phones with the fee card full width beneath, so no
-                  card is orphaned and the long "Infrastructure Fee" label never
-                  squeezes into a half column. */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+              {/* Two across on phones, four from md — an even grid at both
+                  widths, so no card is orphaned and the long "Infrastructure
+                  Fee" label never squeezes into a half column. */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Free Uploads</div>
                   <div className="text-lg font-bold text-success">
@@ -559,9 +559,22 @@ export default function GatewayInfoPanel() {
                   <div className="text-xs text-foreground/80 mt-1">Per GiB</div>
                 </div>
 
+                {/* The price in the unit the balance is kept in. Against the
+                    rate beside it this also answers "what is a credit worth":
+                    $/GiB ÷ credits/GiB. */}
+                <div className="bg-background rounded-2xl p-4">
+                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Credits per GiB</div>
+                  <div className="text-lg font-bold text-foreground">
+                    {pricingInfo.creditsPerGiB !== undefined
+                      ? pricingInfo.creditsPerGiB.toFixed(2)
+                      : '—'}
+                  </div>
+                  <div className="text-xs text-foreground/80 mt-1">What an upload deducts</div>
+                </div>
+
                 {/* The fee is inclusive — a share OF the rate beside it, never a
                     markup on top of some other price. */}
-                <div className="bg-background rounded-2xl p-4 col-span-2 md:col-span-1">
+                <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Infrastructure Fee</div>
                   <div className="text-lg font-bold text-foreground">
                     {formatFeePercent(pricingInfo.infraFeePercent)}
