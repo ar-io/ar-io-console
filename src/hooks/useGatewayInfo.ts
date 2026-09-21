@@ -79,6 +79,29 @@ interface PricingInfo {
   infraFeePercent?: number;
 }
 
+/** How long a pricing lookup may hang before the panel gives up on it. */
+const PRICING_TIMEOUT_MS = 15000;
+
+/**
+ * Reject rather than hang forever.
+ *
+ * These are turbo-sdk calls, which are plain `fetch` with no timeout and no
+ * signal, so a stalled connection would otherwise hold the panel's pricing
+ * section on its loading state for as long as the tab stays open — and hold
+ * the refresh that would have replaced it.
+ */
+function withTimeout<T>(promise: Promise<T>, what: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${what} timed out after ${PRICING_TIMEOUT_MS}ms`)),
+        PRICING_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
+
 /**
  * The ar.io rate, and the infrastructure fee included in it.
  *
@@ -94,12 +117,14 @@ async function fetchPricingInfo(
 ): Promise<PricingInfo> {
   const turbo = TurboFactory.unauthenticated(turboConfig);
   const [fiatRates, quote] = await Promise.all([
-    turbo.getFiatRates(),
+    withTimeout(turbo.getFiatRates(), 'Rate lookup'),
     // Any amount carries the same fee; the fee is all this is read for.
-    turbo.getWincForFiat({ amount: USD(10) }).catch((err) => {
-      console.warn('[GatewayInfo] Infrastructure fee lookup failed:', err);
-      return undefined;
-    }),
+    withTimeout(turbo.getWincForFiat({ amount: USD(10) }), 'Fee lookup').catch(
+      (err) => {
+        console.warn('[GatewayInfo] Infrastructure fee lookup failed:', err);
+        return undefined;
+      },
+    ),
   ]);
   const wincPerGiB = Number(fiatRates.winc);
   // Same shape `usePerDataItemFee` reads: the rates response carries it, the
