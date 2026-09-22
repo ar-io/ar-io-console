@@ -931,7 +931,15 @@ export default function TopUpPanel({
           </div>
           <div>
             <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Buy Credits</h3>
-            <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
+            {/* Names Turbo once, where the money moves and where "what am I
+                actually buying" gets asked. The payment surfaces deliberately
+                don't: the ArNS selector calls this option "Balance" because
+                Turbo is how we settle, not a thing to choose. */}
+            <p className="text-sm text-foreground/80">
+              Purchase credits for permanent storage and domains on Arweave.
+              Credits are issued by Turbo, the upload and payment service behind
+              this console.
+            </p>
           </div>
         </div>
       )}

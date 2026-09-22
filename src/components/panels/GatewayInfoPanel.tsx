@@ -532,7 +532,18 @@ export default function GatewayInfoPanel() {
           {/* Pricing */}
           {pricingInfo && (
             <div className="mb-6">
-              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</div>
+              <div className="text-sm font-medium text-foreground/80 mb-1 uppercase tracking-wider">Upload Pricing</div>
+              {/* The one place the console says what Turbo is. Every charge
+                  below is Turbo's, and the word turns up in the app (credits,
+                  sponsored ArNS actions) without ever being introduced. By
+                  function, not category: "gateway" already means the read side
+                  here — Browse and the gateway status above both use real
+                  ar.io gateways — and Turbo is the write side. */}
+              <p className="text-sm text-foreground/80 mb-3 max-w-prose">
+                Set by Turbo, the upload and payment service behind this console:
+                it bundles your files onto Arweave and issues the credits you
+                spend here. Built by the team behind ar.io and ArDrive.
+              </p>
               {/* Two across on phones, four from md — an even grid at both
                   widths, so no card is orphaned and the long "Infrastructure
                   Fee" label never squeezes into a half column. */}
