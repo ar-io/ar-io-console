@@ -62,6 +62,7 @@ export const supportedCryptoTokens = [
   'usdc',
   'base-usdc',
   'polygon-usdc',
+  'solana-usdc',
 ] as const;
 export type SupportedTokenType = (typeof supportedCryptoTokens)[number];
 
@@ -84,6 +85,10 @@ export const unavailableCryptoTokens: readonly SupportedTokenType[] = [
   // the type stays so existing history renders, and PendingTxRecoveryBanner
   // deliberately ignores this list so anyone mid-transfer can still recover.
   'base-ario',
+  // Same story for KYVE: turbo-sdk 2.0.0 removed the `kyve` TokenType outright
+  // (it dropped the @cosmjs dependencies with it), so the SDK cannot settle a
+  // KYVE payment at all. Kept in the union for history and recovery.
+  'kyve',
 ];
 
 /**
@@ -94,10 +99,10 @@ export const unavailableCryptoTokens: readonly SupportedTokenType[] = [
  * crossing into the SDK must narrow through here — widening the SDK's own type
  * with a cast would just move the failure to runtime.
  */
-export type SdkTokenType = Exclude<SupportedTokenType, 'base-ario'>;
+export type SdkTokenType = Exclude<SupportedTokenType, 'base-ario' | 'kyve'>;
 
 export function isSdkToken(token: SupportedTokenType): token is SdkTokenType {
-  return token !== 'base-ario';
+  return token !== 'base-ario' && token !== 'kyve';
 }
 
 /** True when a token may be offered as a payment option in the UI. */
@@ -118,6 +123,7 @@ export const tokenLabels: Record<SupportedTokenType, string> = {
   usdc: 'USDC (ETH)',
   'base-usdc': 'USDC (Base)',
   'polygon-usdc': 'USDC (Polygon)',
+  'solana-usdc': 'USDC (Solana)',
 } as const;
 
 // Detailed network labels for UI contexts
@@ -133,6 +139,7 @@ export const tokenNetworkLabels: Record<SupportedTokenType, string> = {
   usdc: 'Ethereum Mainnet',
   'base-usdc': 'the Base Network',
   'polygon-usdc': 'Polygon Network',
+  'solana-usdc': 'Solana Network',
 } as const;
 
 // Network descriptions for user clarity
@@ -148,6 +155,7 @@ export const tokenNetworkDescriptions: Record<SupportedTokenType, string> = {
   usdc: 'USDC stablecoin on Ethereum mainnet',
   'base-usdc': 'USDC stablecoin on Base Layer 2',
   'polygon-usdc': 'USDC stablecoin on Polygon network',
+  'solana-usdc': 'USDC stablecoin on the Solana network',
 } as const;
 
 // Token processing time expectations for user communication
@@ -214,6 +222,11 @@ export const tokenProcessingTimes: Record<
     speed: 'fast',
     description: 'USDC on Polygon network is optimized for speed',
   },
+  'solana-usdc': {
+    time: '1-2 minutes',
+    speed: 'fast',
+    description: 'USDC transfers on Solana confirm quickly',
+  },
 } as const;
 
 // x402 payment protocol configuration
@@ -232,6 +245,18 @@ export const X402_CONFIG = {
     production: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base Mainnet USDC
     development: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Base Sepolia USDC
   },
+} as const;
+
+// USDC on Solana. Unlike the EVM networks above this is an SPL mint, not an
+// ERC-20 contract: the payer's balance lives in an associated token account
+// derived from their wallet, which is why a Solana wallet needs no extra setup
+// to pay in USDC — just USDC plus a little SOL for the transaction fee.
+export const SOLANA_USDC_CONFIG = {
+  mints: {
+    production: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Circle, mainnet-beta
+    development: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', // Circle, devnet
+  },
+  decimals: 6,
 } as const;
 
 // Ethereum network configuration

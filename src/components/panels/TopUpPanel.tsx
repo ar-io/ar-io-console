@@ -388,6 +388,7 @@ export default function TopUpPanel({
       case 'usdc': return [10, 25, 50, 100];
       case 'base-usdc': return [10, 25, 50, 100];
       case 'polygon-usdc': return [10, 25, 50, 100];
+      case 'solana-usdc': return [10, 25, 50, 100];
       default: return [0.01, 0.05, 0.1, 0.25];
     }
   };
@@ -658,6 +659,8 @@ export default function TopUpPanel({
         return 'Connect an Ethereum wallet (like MetaMask) to pay with USDC on Polygon network';
       case 'solana':
         return 'Connect a Solana wallet (like Phantom) to pay with SOL tokens';
+      case 'solana-usdc':
+        return 'Connect a Solana wallet (like Phantom) to pay with USDC on Solana';
       default:
         return 'Connect a compatible wallet to use this token';
     }
@@ -1325,12 +1328,15 @@ export default function TopUpPanel({
                   const tokenName = tokenType === 'ario' ? 'ARIO'
                     : tokenType === 'arweave' ? 'AR'
                     : tokenType === 'solana' ? 'SOL'
+                    : tokenType === 'solana-usdc' ? 'USDC'
                     : tokenLabels[tokenType];
                   const networkName = tokenType === 'ario' ? 'AO Network'
                     : tokenType === 'arweave' ? 'Arweave'
                     : tokenType === 'solana' ? 'Solana'
+                    : tokenType === 'solana-usdc' ? 'Solana'
                     : '';
-                  const isFast = tokenType === 'ario' || tokenType === 'solana';
+                  const isFast = tokenType === 'ario' || tokenType === 'solana'
+                    || tokenType === 'solana-usdc';
                   // No "No Fee" badge: ARIO now carries a 25% fee, and a
                   // hardcoded fee claim is exactly what goes stale when the
                   // service's fee changes. Fees belong to the live quote.

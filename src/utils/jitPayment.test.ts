@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { tokenPricePerCredit, WINC_PER_CREDIT } from './jitPayment';
+import {
+  supportsJitPayment,
+  tokenPricePerCredit,
+  WINC_PER_CREDIT,
+} from './jitPayment';
 
 /*
   Regression cover for the base-usdc under-funding bug.
@@ -87,5 +91,30 @@ describe('a crypto payment covers the upload it pays for', () => {
     }
     // Worst case: a 1 KB file bought barely half of what it cost.
     expect(wincCredited(rawByteQuote(1024)) / wincBilled(1024, 1)).toBeLessThan(0.6);
+  });
+});
+
+describe('supportsJitPayment', () => {
+  /*
+    JIT buys credits at the moment of upload, so the gate is confirmation
+    speed: a token that takes minutes to finalise makes the user wait on their
+    own upload. That is why the list is Solana and Base, not Arweave or
+    Ethereum L1.
+  */
+  it('allows both Solana tokens — same chain, same confirmation speed', () => {
+    expect(supportsJitPayment('solana')).toBe(true);
+    expect(supportsJitPayment('solana-usdc')).toBe(true);
+  });
+
+  it('allows the Base pair', () => {
+    expect(supportsJitPayment('base-eth')).toBe(true);
+    expect(supportsJitPayment('base-usdc')).toBe(true);
+  });
+
+  it('refuses the slow-finality tokens, which is the point of the gate', () => {
+    expect(supportsJitPayment('arweave')).toBe(false);
+    expect(supportsJitPayment('ethereum')).toBe(false);
+    expect(supportsJitPayment('usdc')).toBe(false); // USDC, but on L1
+    expect(supportsJitPayment(null)).toBe(false);
   });
 });

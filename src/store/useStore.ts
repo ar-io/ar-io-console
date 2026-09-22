@@ -534,6 +534,7 @@ export const useStore = create<StoreState>()(
         solana: 0.15, // 0.15 SOL ≈ $22.50
         'base-eth': 0.01, // 0.01 ETH ≈ $25
         'base-usdc': 25, // 25 USDC = $25 (stablecoin)
+        'solana-usdc': 25, // 25 USDC = $25 (stablecoin)
         arweave: 0,
         ethereum: 0,
         kyve: 0,
