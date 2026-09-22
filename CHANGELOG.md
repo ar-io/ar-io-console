@@ -28,14 +28,17 @@ All notable changes to the ar.io Console are documented in this file.
   Removing a controller creates nothing and no longer inherits that warning. The
   credits route also mentions that signing it yourself is an option, which an
   owner holding SOL had no way to learn before.
-- **Settings shows what the ar.io fee actually is.** Upload Pricing said "+35%
-  vs raw Arweave network". That 35% was the share of the price the fee makes up,
-  not how much more you pay: against the raw network cost the difference was
-  nearer 54%. It now reads "Infrastructure Fee — 35% of the ar.io rate", taken
-  from Turbo's own price quote instead of reconstructed from a third-party AR
-  price that drifted and sometimes went missing entirely. The raw-network card
-  went with it, since 35% of the rate gives you the same figure, and prices show
-  cents rather than four decimal places.
+- **Settings now shows what an upload costs, in full.** Upload Pricing said
+  "+35% vs raw Arweave network". That 35% is the share of your payment the fee
+  makes up, not how much more you pay — against the raw network cost the
+  difference was nearer 54%. The panel now names the three charges and nothing
+  else: the storage rate per GiB, in dollars and in credits; the per-item fee
+  charged for each file; and the infrastructure fee, 35%, taken out of each
+  top-up. The per-item fee was missing entirely, which understated a
+  thousand-file deploy by a fee per file. Every figure comes from Turbo's own
+  price quote rather than being reconstructed from a third-party AR price that
+  drifted and sometimes went missing, and the same three names are now used in
+  the [docs](https://docs.ar.io/build/upload/turbo-credits/#pricing--fees).
 
 ### Fixed
 - **Deploying a site straight after paying with crypto no longer fails for
@@ -51,6 +54,18 @@ All notable changes to the ar.io Console are documented in this file.
   reading there is no way to tell when a payment's credits arrive, so the upload
   would have run against credits that might not be there. It now stops before
   paying and says so; trying again is safe.
+- **Retrying a failed name purchase keeps the content you chose to point it
+  at.** The retry started over on the default, so a name could end up on the
+  placeholder after you had already picked something else. Choosing a different
+  name still clears it, so a target picked for one name never carries into
+  another.
+- **Cancelling a site deploy no longer asks your wallet to sign afterwards.** A
+  cancel while the deploy waited for its credits fell through to creating a
+  signer, which prompted for a deploy that had already been called off.
+- **A stalled price lookup no longer leaves Settings loading forever.** Those
+  requests had no time limit, so one that never answered held the pricing
+  section — and the refresh that would have replaced it — for as long as the tab
+  stayed open.
 
 ## [4.7.1] - 2026-09-08
 
