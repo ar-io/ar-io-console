@@ -4,6 +4,7 @@ import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
 import { infraFeePercent } from '../utils/infraFee';
+import { wincPerCredit } from '../constants';
 
 interface UploadServiceInfo {
   version: string;
@@ -58,8 +59,47 @@ type ArIOGatewayInfo = Gateway;
 interface PricingInfo {
   /** Turbo's card rate for 1 GiB, in USD. The infrastructure fee is inside it. */
   usdPerGiB: number;
-  /** Share of every payment Turbo keeps as its infrastructure fee, e.g. 35. */
+  /**
+   * What an upload actually deducts: credits per GiB, from the same rates
+   * response as `usdPerGiB`.
+   *
+   * Deliberately NOT called AR per GiB, though credits are AR-denominated.
+   * Funding a GiB with AR costs this divided by 0.65, because AR top-ups carry
+   * the fee — so the two numbers differ by half again and labelling this one
+   * "AR" would quote a price nobody is charged.
+   */
+  creditsPerGiB?: number;
+  /**
+   * The flat per-item fee, in credits, charged once per uploaded file on top
+   * of the byte cost. Every cost estimate in the app adds it, so the pricing
+   * panel has to name it too.
+   */
+  creditsPerItem?: number;
+  /** Share of every top-up Turbo keeps as its infrastructure fee, e.g. 35. */
   infraFeePercent?: number;
+}
+
+/** How long a pricing lookup may hang before the panel gives up on it. */
+const PRICING_TIMEOUT_MS = 15000;
+
+/**
+ * Reject rather than hang forever.
+ *
+ * These are turbo-sdk calls, which are plain `fetch` with no timeout and no
+ * signal, so a stalled connection would otherwise hold the panel's pricing
+ * section on its loading state for as long as the tab stays open — and hold
+ * the refresh that would have replaced it.
+ */
+function withTimeout<T>(promise: Promise<T>, what: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${what} timed out after ${PRICING_TIMEOUT_MS}ms`)),
+        PRICING_TIMEOUT_MS,
+      ),
+    ),
+  ]);
 }
 
 /**
@@ -77,15 +117,27 @@ async function fetchPricingInfo(
 ): Promise<PricingInfo> {
   const turbo = TurboFactory.unauthenticated(turboConfig);
   const [fiatRates, quote] = await Promise.all([
-    turbo.getFiatRates(),
+    withTimeout(turbo.getFiatRates(), 'Rate lookup'),
     // Any amount carries the same fee; the fee is all this is read for.
-    turbo.getWincForFiat({ amount: USD(10) }).catch((err) => {
-      console.warn('[GatewayInfo] Infrastructure fee lookup failed:', err);
-      return undefined;
-    }),
+    withTimeout(turbo.getWincForFiat({ amount: USD(10) }), 'Fee lookup').catch(
+      (err) => {
+        console.warn('[GatewayInfo] Infrastructure fee lookup failed:', err);
+        return undefined;
+      },
+    ),
   ]);
+  const wincPerGiB = Number(fiatRates.winc);
+  // Same shape `usePerDataItemFee` reads: the rates response carries it, the
+  // SDK's type does not declare it.
+  const wincPerItem = Number((fiatRates as any)?.perDataItemFeeWinc);
   return {
     usdPerGiB: fiatRates.fiat?.usd || 0,
+    creditsPerGiB: Number.isFinite(wincPerGiB) && wincPerGiB > 0
+      ? wincPerGiB / wincPerCredit
+      : undefined,
+    creditsPerItem: Number.isFinite(wincPerItem) && wincPerItem > 0
+      ? wincPerItem / wincPerCredit
+      : undefined,
     infraFeePercent: infraFeePercent(quote?.fees),
   };
 }
@@ -107,10 +159,10 @@ interface PeersInfo {
   arweaveNodeCount: number;
 }
 
-// v2: pricingInfo dropped the raw-Arweave fields for `infraFeePercent`. A
-// versioned key keeps an old entry from rendering the fee as "—" until it
-// expires.
-const CACHE_KEY_PREFIX = 'turbo-gateway-info-v2';
+// v2: pricingInfo dropped the raw-Arweave fields for `infraFeePercent`. v3
+// added `creditsPerGiB`. A versioned key keeps an old entry from rendering a
+// new field as "—" until it expires.
+const CACHE_KEY_PREFIX = 'turbo-gateway-info-v3';
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 interface CachedGatewayInfo {
