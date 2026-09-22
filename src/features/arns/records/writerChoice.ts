@@ -68,6 +68,94 @@ export interface WriterFunds {
 export const MIN_SOL_FOR_RECORD_WRITE = 0.002;
 
 /**
+ * Owner-only actions that CREATE on-chain accounts, not merely pay a fee.
+ *
+ * `@ar.io/sdk`'s Solana `transfer` resolves the new owner's ACL accounts and
+ * emits `register_acl_config` / `add_acl_page` when they are missing — so
+ * sending a name to a wallet that has never held one bootstraps two rent-exempt
+ * PDAs. It can also HEAL the old owner's entry (an ANT acquired by marketplace
+ * transfer, or from before the ACL system), for up to four in one transaction.
+ * `add-controller` bootstraps the same pair for a first-time controller.
+ *
+ * `remove-controller` creates nothing, which is why it is absent here.
+ *
+ * This is the whole reason {@link MIN_SOL_FOR_RECORD_WRITE} is as large as it
+ * is, and the reason "pays the Solana network fee" was the wrong sentence to
+ * show for these: a signature is ~0.000005 SOL, and rent-exemption is hundreds
+ * of times that.
+ */
+export const ACCOUNT_CREATING_ACTIONS = ['transfer', 'add-controller'] as const;
+
+export function createsAccounts(action: string): boolean {
+  return (ACCOUNT_CREATING_ACTIONS as readonly string[]).includes(action);
+}
+
+/**
+ * What paying in SOL actually costs, said before the user picks that rail.
+ *
+ * "Your wallet pays the Solana network fee" reads as a rounding error. For a
+ * transfer it can be rent on up to four accounts, and someone holding a
+ * fraction of a SOL has no way to know that from the sentence.
+ */
+export function selfSignedCostNote(action: string): string {
+  const base = 'Your wallet signs this and pays the Solana costs directly, not credits.';
+  if (!createsAccounts(action)) return base;
+  return (
+    `${base} Budget around ${MIN_SOL_FOR_RECORD_WRITE} SOL rather than a bare ` +
+    'signature fee: sending to a wallet that has never held an ArNS name also ' +
+    'creates accounts on chain, and those owe rent.'
+  );
+}
+
+/**
+ * Why the SOL rail is not on offer, for a wallet that would rather use it.
+ *
+ * The credits route says nothing about the alternative existing, so an owner
+ * holding SOL sees a credits charge, no option, and no reason — which is
+ * exactly how someone ends up asking why the app will not take their SOL.
+ */
+/** How to name an action mid-sentence, so the caveat says which one it is. */
+const ACTION_GERUND: Record<string, string> = {
+  transfer: 'transferring',
+  'add-controller': 'adding a controller',
+  'remove-controller': 'removing a controller',
+};
+
+export function solRailRequirementNote(
+  action: string,
+  /**
+   * A second action priced on the same screen — the controllers modal offers
+   * add and remove together.
+   *
+   * Taken into account because the two differ: adding bootstraps the
+   * controller's ACL accounts, removing creates nothing. Deriving the caveat
+   * from `action` alone made the remove flow inherit a rent warning it does
+   * not owe.
+   */
+  secondaryAction?: string,
+): string {
+  /*
+    Phrased as the alternative, not as a second opinion on SOL. Following "you
+    don't need SOL" with "paying in SOL needs SOL" read as the line arguing
+    with itself; "to sign it yourself instead" makes it the other option.
+  */
+  const base = `To sign it yourself instead, the owning wallet needs about ${MIN_SOL_FOR_RECORD_WRITE} SOL`;
+
+  const creating = [action, secondaryAction].filter(
+    (a): a is string => !!a && createsAccounts(a),
+  );
+  if (creating.length === 0) return `${base}.`;
+
+  // Name the culprit when only one of the two creates anything, so the other
+  // is not tarred with a cost it never incurs.
+  const which =
+    creating.length === 1 && secondaryAction
+      ? (ACTION_GERUND[creating[0]] ?? 'that')
+      : 'this';
+  return `${base} — ${which} creates accounts on chain, which owe rent.`;
+}
+
+/**
  * The writer for a record change, given the wallet's role and what it holds.
  *
  * Credits stay the DEFAULT for an owner rather than "SOL first if you have

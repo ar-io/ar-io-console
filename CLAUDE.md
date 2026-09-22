@@ -21,7 +21,7 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~67 suites, the bulk in three clusters: `src/features/arns/` (32 — ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (16 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore). One stray outside them: `src/components/modals/bodyScrollLock.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~72 suites, the bulk in three clusters: `src/features/arns/` (34 — ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`, `buyTarget`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (18 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore, credit settlement, infra fee). Two strays outside them: `src/components/modals/bodyScrollLock.test.ts` and `src/components/account/paymentRow.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: '/'` — absolute asset paths, required so nested routes (`/domains/:name`) resolve assets on direct navigation. This trades away Arweave *subpath* compatibility (the old `'./'` value): the build assumes it is served from a domain root (`console.ar.io`, or an ArNS name root), not from `gateway/<txid>/`. Don't flip it back without re-checking nested-route deep links.
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
@@ -124,7 +124,7 @@ what it did. Don't reintroduce a second verification entry point.
 | Wallet | Signer | Notes |
 |--------|--------|-------|
 | Arweave (Wander) | `ArconnectSigner` via `window.arweaveWallet` | Uploads and payments only |
-| Ethereum (all) | `InjectedEthereumSigner` from `@ar.io/sdk/web` | Supports MetaMask, RainbowKit, WalletConnect, Coinbase |
+| Ethereum (all) | `InjectedEthereumSigner` from `@dha-team/arbundles` | Supports MetaMask, RainbowKit, WalletConnect, Coinbase |
 | Solana (Phantom/Solflare/Privy) | Wallet adapter via `useWallet()` | Required for ArNS updates; auto-detected via Standard Wallet API |
 
 **`WalletProvider` is passed `wallets={[]}` on purpose** (`solanaWallets: never[]` in `WalletProviders.tsx`). Every Solana wallet arrives through the Wallet Standard registry, never through a hardcoded adapter list — so adding a wallet means it registering itself, not editing that array.
@@ -168,7 +168,7 @@ Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit p
 
 ### ArNS Feature (`src/features/arns/`)
 
-The largest feature in the repo (~127 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
+The largest feature in the repo (~131 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
 
 **ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet — but since Turbo sponsors the fees, that wallet needs **no SOL balance**. Email sign-in creates one (see `PrivySolanaBridge`), so a user who has never held cryptocurrency can own and run a name.
 
@@ -187,10 +187,10 @@ wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
 `ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
 is sponsored (`actions/sponsorship.ts`).
 
-**Pin turbo-sdk EXACTLY.** Stable `1.42.0` sorts *above* the `1.42.0-alpha.x` line in
-semver and contains **no ArNS surface at all**, so a caret range or a routine
-`npm update` silently deletes this feature and nothing fails until someone tries
-to buy a name.
+**Pin turbo-sdk EXACTLY** (currently `1.43.0-alpha.5`). A stable release sorts
+*above* the `alpha.x` line it precedes in semver, and the stable line carries
+**no ArNS surface at all**, so a caret range or a routine `npm update` silently
+deletes this feature and nothing fails until someone tries to buy a name.
 
 **Every action costs credits, and the SDK says otherwise.** The eight
 non-purchase actions were free at launch and now carry a small margin
@@ -317,7 +317,28 @@ the tokens** — so sending from the linked Solana wallet on a non-Solana sessio
 strands the credits, which is why `creditTopUpsUnavailable` withdraws that
 option there.
 
-**Linked Solana wallet** (`hooks/useLinkedSolanaWallet.ts`): Arweave/Ethereum users link a **secondary** Solana wallet for ArNS without changing their primary session identity. `linkedSolanaAddress` + `linkedSolanaWalletName` persist in the store, and `getArNSAddress()` returns the primary address for Solana sessions or the linked address otherwise. Read-only lookups work from the persisted address alone; **writes need a live signer**, so the hook auto-reconnects the named adapter on page load (the Solana `WalletProvider` runs `autoConnect=false`). `hooks/useArNSTurboSigner.ts` turns that into the two things writes need: a `walletAdapter` for `TurboFactory.authenticated` and a `@solana/kit` `SolanaSigner` for `ANT.spawn`.
+**Linked Solana wallet** (`src/hooks/useLinkedSolanaWallet.ts` — app-level, not under `features/arns/`): Arweave/Ethereum users link a **secondary** Solana wallet for ArNS without changing their primary session identity. `linkedSolanaAddress` + `linkedSolanaWalletName` persist in the store, and `getArNSAddress()` returns the primary address for Solana sessions or the linked address otherwise. Read-only lookups work from the persisted address alone; **writes need a live signer**, so the hook auto-reconnects the named adapter on page load (the Solana `WalletProvider` runs `autoConnect=false`). `hooks/useArNSTurboSigner.ts` turns that into the two things writes need: a `walletAdapter` for `TurboFactory.authenticated` and a `@solana/kit` `SolanaSigner` for `ANT.spawn`.
+
+**A name can point at content from the moment it is bought, on every payment
+route** (`purchase/buyTarget.ts`, `components/BuyTargetControl.tsx`, rendered by
+`ArNSPurchaseCard`). The `@` record is set at mint, so there is no second write:
+the ARIO path passes the id as `buyRecord`'s `antState.transactionId`, and the
+sponsored credits/card path hands the same value to turbo-sdk's `buyArNSName`,
+which folds it into the `ario_ant::initialize` the buyer already signs
+(>= 1.43.0-alpha.5). No extra action, signature or debit either way. The control
+shipped ARIO-only because the sponsored payload had nowhere to put it; that gate
+is **gone**, so don't reintroduce a route check — and never "support" it with a
+follow-up `set-record`, which would be a second charge and a second prompt.
+
+`useBuyArNSName.buy()` resolves the target **once**, at the top, and hands the
+identical value to both settlement paths. Each used to apply its own fallback
+and the credits side had none, so a blank control left a credits-bought name on
+the SDK's `DEFAULT_ANT_TRANSACTION_ID` (the AR.IO logo) while an ARIO buy of the
+same name pointed at the landing page. Blank or absent means
+`DEFAULT_ARNS_TARGET_TX`, on every path including auctions. Arweave targets
+only — both `ANT.spawn` and `buyRecord` accept `targetProtocol: 1` (IPFS), but
+no ar.io gateway resolves one, so offering it would sell a name pointing at
+nothing.
 
 **Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): **credits are debited when the action is CREATED**, not when it is signed, so an abandoned wallet prompt has already been charged (Turbo refunds it on TTL expiry). The nonce is persisted via the SDK's `onNonce`, which fires *before* the wallet opens — that is the only route back to a paid-for purchase if the page reloads mid-approval. Resuming by nonce is a pure read (`GET /v1/arns/actions/:nonce`) and can never double-debit; **re-creating an action always can.** `processId` persistence now serves the auction path only, where a client spawn still happens and a retry must reuse it rather than bleed another ~0.02 SOL.
 
@@ -385,7 +406,7 @@ const turbo = TurboFactory.authenticated({
 });
 
 // Manual Ethereum client (for non-hook contexts - prefer the hook above)
-import { InjectedEthereumSigner } from '@ar.io/sdk/web';
+import { InjectedEthereumSigner } from '@dha-team/arbundles'; // transitive via turbo-sdk, not in package.json
 import { getConnectorClient } from 'wagmi/actions';
 const connectorClient = await getConnectorClient(wagmiConfig, { connector: ethAccount.connector });
 const ethersProvider = new ethers.BrowserProvider(connectorClient.transport, 'any');
@@ -430,7 +451,7 @@ The app supports three upload modes with different payment strategies:
 **2. JIT (Just-In-Time) Payments**
 - No pre-purchase required; crypto sent at upload time
 - Uses `fundAndUpload()` from Turbo SDK
-- Supported tokens: `ario`, `base-ario`, `solana`, `base-eth`, `base-usdc`
+- Supported tokens: `solana`, `base-eth`, `base-usdc` (per `supportsJitPayment()`; Arweave wallets have no JIT option)
 - Configurable via store: `jitPaymentEnabled`, `jitMaxTokenAmount`, `jitBufferMultiplier`
 
 **3. X402 Protocol (Base USDC)**
@@ -450,6 +471,31 @@ The app supports three upload modes with different payment strategies:
    → Has sufficient credits: Use standard upload
    → None: Prompt user to buy credits
 ```
+
+**A crypto top-up is not spendable when it resolves** (`utils/awaitCreditSettlement.ts`,
+used by `useFileUpload` and `useFolderUpload`). `topUpWithTokens` returns
+`pending`, and on devnet a base-usdc top-up takes **~67 seconds** to reach the
+balance. Uploading on that return walks into an insufficient-balance rejection
+with the payment already settled — paid, got nothing. So both hooks read the
+balance **before** paying and then poll until it rises above that baseline.
+Three rules the helper exists to hold:
+
+- **No baseline, no payment.** If the pre-payment balance can't be read there is
+  no way to tell when the credits land, so the hooks refuse to pay at all
+  (`BALANCE_UNREADABLE_MESSAGE`) rather than upload against credits that may not
+  be there. Treating an unreadable balance as settled is the bug this replaced.
+- **A failed read mid-wait is not a shortfall** — a flaky gateway must not strand
+  a user whose credits did arrive. Unreadable means keep waiting; only the
+  deadline ends it.
+- **Wait for settlement OUTSIDE the top-up try/catch.** Inside it, a timeout is
+  rethrown as "Crypto payment failed: your payment went through…", which
+  contradicts itself.
+
+Recheck `controller.signal` immediately before `topUpWithTokens`: the balance
+read and the client setup both await, and the top-up cannot be called back once
+it starts. **Known gap:** after the five-minute timeout, a retry can still pay a
+second time, because the confirm modal reopens on the crypto tab while the
+balance still looks short (`UploadPanel.tsx`).
 
 ## X402 Protocol (x402-only mode)
 
@@ -483,7 +529,7 @@ Network-specific settings in `constants.ts`:
 | Feature | Arweave | Ethereum/Base/Polygon | Solana |
 |---------|---------|----------------------|--------|
 | Buy Credits (Fiat) | ✅ | ✅ | ✅ |
-| Buy Credits (Crypto) | ✅ AR/ARIO | ✅ ETH/Base-ETH/Base-ARIO/POL/USDC | ✅ SOL |
+| Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
 | Update ArNS Records | ❌ | ❌ | ✅ (no SOL needed) |
@@ -585,10 +631,35 @@ easier", no "revolutionary", no claim about how the user will feel. The
 specific fact is always stronger: *"ARIO pays the registry directly and skips
 the infrastructure fee"* beats *"the best way to buy a name"*.
 
-**Never claim away a real requirement.** Buying a name needs a Solana wallet
-holding ~0.0156 SOL on every route, so "no crypto needed" and "just a credit
-card" are false — and they are exactly the lines a user quotes back the moment
-a wallet prompt appears. State the constraint plainly and explain what it buys.
+**The infrastructure fee is INCLUSIVE — taken out of a top-up, never added on
+top of a price.** Turbo's quotes carry it as `operator: "multiply",
+operatorMagnitude: 0.65` ("Turbo Infrastructure Fee"): the payer receives 65% of
+what they pay as credits, so the fee is 35% **of each top-up**. Stating that
+same 35% as "+35% vs raw Arweave" is false — measured against the raw network
+cost the storage rate is ~+54% — and it is the kind of error a reader catches by
+dividing the two figures on screen. `/settings` reads the live percentage from
+the quote (`utils/infraFee.ts`); never reconstruct it by setting the rate
+against a third-party AR spot price, which drifts and mislabels a margin as a
+markup.
+
+**The rate differs by currency and is config, not code.** ARIO top-ups carry
+25%, the rest 35%, and ARIO was fee-free until recently — the bundler can
+change any of this without a release (`TOKENS_WITHOUT_FEES` plus the dated
+`payment_adjustment_catalog`). So never hardcode a fee or a "No Fee" badge,
+and never assume a leg is fee-free: any rate built from two quotes must scale
+**each** leg by its own `fees` (`usdPerArioFromLegs`), or it is off by exactly
+the multiplier it forgot. Distinct from that: buying a *name* with ARIO is the
+user's own `buyRecord` against the registry and never touches Turbo, so no
+infrastructure fee applies there at any rate.
+
+**Never claim away a real requirement.** A sponsored name purchase needs no
+SOL, but it still needs a Solana wallet to sign (email sign-in creates one) and
+it still costs credits — so "free" and "no wallet needed" are false. The
+exceptions listed under the ArNS feature (paying with ARIO, returned-name
+auctions, primary name, release, reassign, ANT-level metadata) do cost SOL.
+Those false lines are exactly what a user quotes back the moment a wallet
+prompt or a charge appears. State the constraint plainly and explain what it
+buys.
 
 **One statement per screen.** If a host modal already names the purchase, the
 panel inside it doesn't repeat the title, the terms, or the amount. Duplicated
@@ -599,7 +670,10 @@ copy reads as a bug, and it usually is one — see the modal contract below.
 **Headers come from `components/modals/ModalHeader.tsx`** — 40px `rounded-xl
 bg-primary/20` tile, `text-lg font-extrabold` title, `text-xs` description,
 top-aligned (`items-start`, so a wrapping title doesn't leave the icon floating
-mid-block). All twelve modals use it; don't hand-roll another.
+mid-block). Use it for every new modal; don't hand-roll another. Six older
+BaseModal consumers still predate it (`BlockingMessageModal`,
+`WalletSelectionModal`, `CapturePanel`, Browse `VerificationBlockedModal`, Pages
+`ImportPageModal` and `PublishModal`).
 
 **A modal is already a card.** `BaseModal` is `bg-card border border-border/20
 rounded-2xl` and pads its own content, so a panel embedded in one must not add
@@ -607,7 +681,7 @@ its own surface or horizontal padding — that's a frame inside a frame and
 double inset. Panels written for a standalone page (the `/topup` fiat and
 crypto steps) carry both and gate them on being embedded.
 
-All modal chrome lives in `components/modals/BaseModal.tsx` (~20 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
+All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
 
 - `showCloseButton` defaults to **true**. A dismiss affordance is opt-out, not opt-in.
 - Modals **nest** (`WalletSelectionModal` renders `BlockingMessageModal` inside its own `BaseModal`), so BaseModal keeps a module-level stack: only the topmost instance answers Escape and traps Tab, and the scroll lock lifts only when the last one closes. Preserve that if you touch it.
@@ -671,15 +745,15 @@ if (privyWallet) {
 ## Key Dependencies
 
 - `@ardrive/turbo-sdk`: Turbo services, multi-chain signing, USDC support
-- `@ar.io/sdk`: ArNS resolution, InjectedEthereumSigner
+- `@ar.io/sdk`: ArNS resolution and registry reads
+- `@dha-team/arbundles`: `InjectedEthereumSigner` (`useEthereumTurboClient`) — arrives transitively through turbo-sdk and is **not** declared in `package.json`
 - `@ar.io/solana-contracts` + `@solana/kit`: ANT spawn/instruction builders for the Solana ArNS paths
 - `@ar.io/wayfinder-core` + `@ar.io/wayfinder-react`: Browse content verification
 - `@privy-io/react-auth`: Email auth with embedded wallets
 - `wagmi` + `ethers`: Ethereum wallets
 - `@solana/wallet-adapter-*`: Solana wallets
 - `@wallet-standard/app`: `getWallets().register()` — how `PrivySolanaBridge` makes the embedded wallet visible
-- `arbundles`: Data item creation for X402
-- `x402-fetch`: X402 payment protocol
+- `arbundles`, `x402-fetch`: still declared in `package.json` but imported nowhere in `src/` since the x402 upload hook was removed — candidates for removal, not something to build on
 - `zustand`: State management
 - `@tanstack/react-query`: Server state
 - `@stripe/react-stripe-js`: Fiat payments
@@ -691,7 +765,7 @@ if (privyWallet) {
 
 ```typescript
 '/', '/login', '/topup', '/upload', '/capture', '/deploy', '/deployments', '/share',
-'/account', '/pages', '/balances', '/settings', '/try', '/browse',
+'/account', '/pages', '/balances', '/settings', '/changelog', '/try', '/browse',
 // ArNS / domains — flat, one purpose per route (no tabs):
 '/domains',        // Browse & search all registered names (BrowseDomainsPanel)
 '/domains/:name',  // Deep-linkable public Name Detail page (NameDetailPage)
@@ -701,7 +775,7 @@ if (privyWallet) {
 '/pricing'         // Unified pricing: Storage + Domain Names (?type=domains seeds the tab)
 ```
 
-Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. Unknown routes redirect to home.
+Note: `/settings` renders `GatewayInfoPage`. `/login` renders `LandingPage`. `/changelog` is the "What's new" page (linked from the footer version number). Unknown routes render `LandingPage` in place — the URL is not rewritten, despite the `redirect to home` comment in `App.tsx`.
 
 **ArNS/domains IA (flat, no tabs):** `/domains` is the Browse page, `/arns` is Register, `/returned-names` is Auctions — each its own route. There is NO tabbed DomainsPage; don't reintroduce in-page tabs for these (the app convention is one page per route). Browse cross-links to `/arns` ("Register a name").
 
@@ -740,7 +814,7 @@ URL params: `?payment=success`, `?payment=cancelled` (handled by PaymentCallback
 - `useCreditsForCrypto(tokenType, amount, address)` - Crypto → credits conversion
 - `useX402Pricing(bytes)` - Calculate USDC cost for X402
 - `useTokenBalance(tokenType)` - User's token balance for crypto payments
-- `useCryptoPrice(tokenType)` - Current USD price for a token
+- `hooks/useCryptoPrice.ts` - `useCryptoPriceForWinc(winc, tokenType)`, `useWincForCrypto`, `useSmallestUnitForWinc`, `useArioUsdRate()` (there is no bare `useCryptoPrice` export)
 - `useArNSPricing()` - ArNS domain pricing
 
 **ArNS Hooks:**

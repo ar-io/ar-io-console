@@ -74,7 +74,20 @@ export function buildBuyRecordArgs({
   years,
   fundFrom,
   referrer,
-}: BuyRecordArgs & { years?: number }): BuyRecordArgs {
+  targetId,
+}: BuyRecordArgs & {
+  years?: number;
+  /**
+   * Where the buyer chose to point the name, if anywhere. Blank or absent keeps
+   * `DEFAULT_ARNS_TARGET_TX` — `purchase/buyTarget.ts` owns the control that
+   * produces it and validates the id before it can reach here.
+   *
+   * An input, not part of the result: it is folded into `antState` below, and
+   * declaring it on `BuyRecordArgs` would put a field on the SDK arg type that
+   * the returned object never carries.
+   */
+  targetId?: string;
+}): BuyRecordArgs {
   return {
     name,
     type,
@@ -83,7 +96,7 @@ export function buildBuyRecordArgs({
     referrer,
     // Only meaningful on the atomic path (no `processId`), which is the one
     // this app uses — a supplied ANT keeps whatever target it already has.
-    antState: { transactionId: DEFAULT_ARNS_TARGET_TX },
+    antState: { transactionId: targetId?.trim() || DEFAULT_ARNS_TARGET_TX },
   };
 }
 

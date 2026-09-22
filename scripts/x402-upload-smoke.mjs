@@ -7,11 +7,18 @@
  * from regressing silently:
  *
  *   1. SIZE CEILING — the single-request x402 endpoint rejects data items over
- *      10485760 bytes with HTTP 400 "Data item is too large". The chunked
- *      uploader, which exists precisely for items above that, is disabled
- *      whenever funding is x402 (turbo-sdk upload.js: `shouldUseChunkUploader &&
- *      !(fundingMode instanceof X402Funding)`). So x402 above 10 MiB has no
- *      path to succeed.
+ *      10485760 bytes with HTTP 400 "Data item is too large".
+ *
+ *      This used to mean x402 above 10 MiB had NO path to succeed: the chunked
+ *      uploader was disabled whenever funding was x402, because the bundler
+ *      could not charge for a multipart upload. That is no longer true — the
+ *      bundler settles at create as of turbo-sdk 1.43.0-alpha.5, so chunking IS
+ *      the path above the ceiling. The ceiling itself still stands and still
+ *      applies to this single-request endpoint, which is what this checks.
+ *
+ *      Note the service's own words on the streamed case below: chunked or
+ *      streamed bodies "cannot be priced up front". Chunked x402 works through
+ *      the multipart create/settle route, not by streaming one request.
  *   2. PAY-THEN-REJECT ORDER — the incident cost real money because the size
  *      check ran AFTER the 402 challenge, so the client paid for an upload that
  *      could never be accepted. This asserts an oversized item is refused for
@@ -147,13 +154,30 @@ try {
     }),
   });
   const ms = Date.now() - started;
+  /*
+    The property is REFUSED BEFORE PAYMENT, for a reason that is about the body.
+
+    This asserted 400 'too large' specifically, and started failing when the
+    service began answering 411 — "x402 uploads require a Content-Length header.
+    Chunked/streamed bodies cannot be priced up front" — which refuses the same
+    request, for free, at the same point, with a better reason. Both are
+    accepted.
+
+    Any other 4xx is not: a 404 from a moved route or a 429 from a rate limit
+    is also unpaid, but says nothing about whether this request would have been
+    quoted, so passing on it would make the check vacuous.
+  */
+  const refusedUnpaid =
+    (res.status === 400 && /too large/i.test(text)) ||
+    (res.status === 411 && /content-length/i.test(text));
   if (res.status === 402) {
     bad(`${raw.length}B streamed item was QUOTED FOR PAYMENT (402) — the exact ` +
         `production incident: pay first, rejected as too large after the body lands`);
-  } else if (res.status === 400 && /too large/i.test(text)) {
-    ok(`${raw.length}B streamed item -> 400 too-large, unpaid (${ms}ms)`);
+  } else if (refusedUnpaid) {
+    ok(`${raw.length}B streamed item -> ${res.status}, unpaid (${ms}ms): ${text.slice(0, 90)}`);
   } else {
-    bad(`expected a free 400 'too large', got ${res.status}: ${text.slice(0, 160)}`);
+    bad(`expected a free 400 'too large' or 411 'Content-Length required', ` +
+        `got ${res.status}: ${text.slice(0, 160)}`);
   }
 } catch (e) { bad(`streamed probe failed: ${e.message}`); }
 

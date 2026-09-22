@@ -66,6 +66,26 @@ describe('usdPerArioFromLegs', () => {
     ).toBeCloseTo(naive, 12);
   });
 
+  it('divides out a fee on the ARIO leg too, once ARIO carries one', () => {
+    // ARIO top-ups moved from fee-free to a 25% inclusive fee. The token quote
+    // then comes back net of it, and correcting only the USD leg understates
+    // ARIO by exactly that 0.75 — every "~$" beside an ARIO price reads a
+    // quarter low.
+    const arioFees = [{ operator: 'multiply', operatorMagnitude: 0.75 }];
+    const feeFree = usdPerArioFromLegs({
+      wincPerArio: WINC_PER_ARIO,
+      wincPerUsd: WINC_PER_USD,
+      usdFees: USD_FEES,
+    })!;
+    const withArioFee = usdPerArioFromLegs({
+      wincPerArio: WINC_PER_ARIO * 0.75, // what the service quotes net of 25%
+      wincPerUsd: WINC_PER_USD,
+      usdFees: USD_FEES,
+      arioFees,
+    })!;
+    expect(withArioFee).toBeCloseTo(feeFree, 12);
+  });
+
   it('returns undefined rather than a bogus rate on bad input', () => {
     for (const legs of [
       { wincPerArio: 0, wincPerUsd: WINC_PER_USD },

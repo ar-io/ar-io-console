@@ -20,6 +20,7 @@ import {
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { formatWalletAddress } from '../../utils';
+import { formatFeePercent } from '../../utils/infraFee';
 import { useStore } from '../../store/useStore';
 
 export default function GatewayInfoPanel() {
@@ -532,47 +533,69 @@ export default function GatewayInfoPanel() {
           {pricingInfo && (
             <div className="mb-6">
               <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</div>
+              {/* Two across on phones, four from md — an even grid at both
+                  widths, so no card is orphaned and the long "Infrastructure
+                  Fee" label never squeezes into a half column. */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-background rounded-2xl p-4">
                   <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Free Tier</div>
                   <div className="text-lg font-bold text-success">
-                    {uploadServiceInfo
+                    {uploadServiceInfo && Number.isFinite(uploadServiceInfo.freeUploadLimitBytes)
                       ? `${Math.round(uploadServiceInfo.freeUploadLimitBytes / 1024)} KiB`
-                      : '105 KiB'}
+                      : '—'}
                   </div>
                   <div className="text-xs text-foreground/80 mt-1">
+                    {/* Two caps, not one: the per-file size above, and a lifetime
+                        allowance counted per wallet AND per subnet. Naming only
+                        the first is how "free up to 105 KiB" gets read as
+                        unlimited. */}
                     {uploadServiceInfo?.freeTier?.lifetimeBytes
-                      ? `${Math.round(uploadServiceInfo.freeTier.lifetimeBytes / (1024 * 1024))} MiB lifetime limit`
-                      : 'Per-item max for free uploads'}
+                      ? `Per file · ${Math.round(uploadServiceInfo.freeTier.lifetimeBytes / (1024 * 1024))} MiB lifetime, per wallet and subnet`
+                      : 'Per file'}
                   </div>
                 </div>
 
+                {/* One price, both units. They are the same fact — dollars is
+                    what a card is charged, credits is what the balance is kept
+                    in — so two cards would read as two prices. Divide one by
+                    the other and you get what a credit costs. */}
                 <div className="bg-background rounded-2xl p-4">
-                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Rate</div>
-                  <div className="text-lg font-bold text-primary">${pricingInfo.usdPerGiB.toFixed(4)}</div>
-                  <div className="text-xs text-foreground/80 mt-1">Per GiB via ar.io</div>
-                </div>
-
-                <div className="bg-background rounded-2xl p-4">
-                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Arweave Rate</div>
-                  <div className="text-lg font-bold text-foreground">
-                    {pricingInfo.baseGatewayPrice !== undefined
-                      ? pricingInfo.baseGatewayPrice === 0
-                        ? 'FREE'
-                        : `$${pricingInfo.baseGatewayPrice.toFixed(4)}`
-                      : 'Unavailable'}
-                  </div>
-                  <div className="text-xs text-foreground/80 mt-1">Per GiB raw network cost</div>
-                </div>
-
-                <div className="bg-background rounded-2xl p-4">
-                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">ar.io Premium</div>
+                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Storage Rate</div>
                   <div className="text-lg font-bold text-primary">
-                    {pricingInfo.turboFeePercentage !== undefined
-                      ? `+${pricingInfo.turboFeePercentage.toFixed(1)}%`
-                      : 'Unavailable'}
+                    {pricingInfo.usdPerGiB > 0 ? `$${pricingInfo.usdPerGiB.toFixed(2)}` : '—'}
                   </div>
-                  <div className="text-xs text-foreground/80 mt-1">vs raw Arweave network</div>
+                  <div className="text-xs text-foreground/80 mt-1">
+                    {pricingInfo.creditsPerGiB !== undefined
+                      ? `Per GiB · ${pricingInfo.creditsPerGiB.toFixed(2)} credits`
+                      : 'Per GiB'}
+                  </div>
+                </div>
+
+                {/* Charged once per file on top of the bytes. Every cost
+                    estimate in the app already adds it, so leaving it off the
+                    pricing panel understated a folder deploy by a fee per file.
+                    Quoted per 1,000 because the per-file figure is six decimal
+                    places of zeroes. */}
+                <div className="bg-background rounded-2xl p-4">
+                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Per-item Fee</div>
+                  <div className="text-lg font-bold text-foreground">
+                    {pricingInfo.creditsPerItem !== undefined
+                      ? `${(pricingInfo.creditsPerItem * 1000).toFixed(4)} credits`
+                      : '—'}
+                  </div>
+                  <div className="text-xs text-foreground/80 mt-1">Per 1,000 files</div>
+                </div>
+
+                {/* The fee is inclusive — taken OUT of a top-up, never added on
+                    top of a price. Said as a share of the payment because that
+                    is the base it is charged on, and the base is the half that
+                    goes missing. */}
+                <div className="bg-background rounded-2xl p-4">
+                  <div className="text-xs text-foreground/80 uppercase tracking-wider mb-1">Infrastructure Fee</div>
+                  <div className="text-lg font-bold text-foreground">
+                    {formatFeePercent(pricingInfo.infraFeePercent)}
+                  </div>
+                  <div className="text-xs text-foreground/80 mt-1">Taken from each top-up</div>
                 </div>
               </div>
             </div>

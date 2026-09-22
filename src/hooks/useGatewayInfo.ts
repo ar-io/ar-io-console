@@ -1,84 +1,10 @@
 import { useState, useEffect } from 'react';
 import { type Gateway } from '@ar.io/sdk';
-import { TurboFactory } from '@ardrive/turbo-sdk/web';
+import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { useTurboConfig } from './useTurboConfig';
 import { useStore } from '../store/useStore';
-
-/**
- * Fetch with retry and exponential backoff for rate-limited APIs.
- * Retries on 429 (rate limit) and 5xx errors.
- */
-async function fetchWithRetry(
-  url: string,
-  options: { maxRetries?: number; initialDelayMs?: number; timeoutMs?: number } = {}
-): Promise<Response> {
-  const { maxRetries = 3, initialDelayMs = 1000, timeoutMs = 10000 } = options;
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      // Retry on rate limit or server errors
-      if (response.status === 429 || response.status >= 500) {
-        const retryAfter = response.headers.get('Retry-After');
-        const delayMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : initialDelayMs * Math.pow(2, attempt);
-
-        if (attempt < maxRetries - 1) {
-          console.warn(
-            `[GatewayInfo] ${url} returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
-          );
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-          continue;
-        }
-      }
-
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      if (attempt < maxRetries - 1) {
-        const delayMs = initialDelayMs * Math.pow(2, attempt);
-        console.warn(
-          `[GatewayInfo] ${url} failed, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries}):`,
-          error
-        );
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-    }
-  }
-
-  throw lastError || new Error(`Failed to fetch ${url} after ${maxRetries} attempts`);
-}
-
-/**
- * Fetch Arweave L1 price via turbo-gateway.com.
- */
-async function fetchArweavePriceWithFallback(bytes: number): Promise<number> {
-  const endpoints = ['https://turbo-gateway.com'];
-
-  for (const endpoint of endpoints) {
-    try {
-      const response = await fetchWithRetry(`${endpoint}/price/${bytes}`, {
-        maxRetries: 2,
-        initialDelayMs: 500,
-      });
-      if (response.ok) {
-        const price = Number(await response.text());
-        if (!isNaN(price) && price > 0) {
-          return price;
-        }
-      }
-    } catch (err) {
-      console.warn(`[GatewayInfo] Failed to fetch price from ${endpoint}:`, err);
-    }
-  }
-
-  throw new Error('Failed to fetch Arweave price from all endpoints');
-}
+import { infraFeePercent } from '../utils/infraFee';
+import { wincPerCredit } from '../constants';
 
 interface UploadServiceInfo {
   version: string;
@@ -131,10 +57,89 @@ interface GatewayInfo {
 type ArIOGatewayInfo = Gateway;
 
 interface PricingInfo {
-  wincPerGiB: string;
+  /** Turbo's card rate for 1 GiB, in USD. The infrastructure fee is inside it. */
   usdPerGiB: number;
-  baseGatewayPrice?: number;
-  turboFeePercentage?: number;
+  /**
+   * What an upload actually deducts: credits per GiB, from the same rates
+   * response as `usdPerGiB`.
+   *
+   * Deliberately NOT called AR per GiB, though credits are AR-denominated.
+   * Funding a GiB with AR costs this divided by 0.65, because AR top-ups carry
+   * the fee — so the two numbers differ by half again and labelling this one
+   * "AR" would quote a price nobody is charged.
+   */
+  creditsPerGiB?: number;
+  /**
+   * The flat per-item fee, in credits, charged once per uploaded file on top
+   * of the byte cost. Every cost estimate in the app adds it, so the pricing
+   * panel has to name it too.
+   */
+  creditsPerItem?: number;
+  /** Share of every top-up Turbo keeps as its infrastructure fee, e.g. 35. */
+  infraFeePercent?: number;
+}
+
+/** How long a pricing lookup may hang before the panel gives up on it. */
+const PRICING_TIMEOUT_MS = 15000;
+
+/**
+ * Reject rather than hang forever.
+ *
+ * These are turbo-sdk calls, which are plain `fetch` with no timeout and no
+ * signal, so a stalled connection would otherwise hold the panel's pricing
+ * section on its loading state for as long as the tab stays open — and hold
+ * the refresh that would have replaced it.
+ */
+function withTimeout<T>(promise: Promise<T>, what: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${what} timed out after ${PRICING_TIMEOUT_MS}ms`)),
+        PRICING_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
+
+/**
+ * The ar.io rate, and the infrastructure fee included in it.
+ *
+ * The fee is read from Turbo's own fiat quote rather than reconstructed by
+ * setting the rate against a raw Arweave price converted at a CoinGecko spot
+ * rate. That reconstruction drifted with a third-party price, failed whenever
+ * CoinGecko rate-limited, and was labelled "+X% vs raw Arweave" — a markup —
+ * while computing X as a share of the rate — a margin. The true markup at the
+ * time was +53.8%, not +35%.
+ */
+async function fetchPricingInfo(
+  turboConfig: Parameters<typeof TurboFactory.unauthenticated>[0],
+): Promise<PricingInfo> {
+  const turbo = TurboFactory.unauthenticated(turboConfig);
+  const [fiatRates, quote] = await Promise.all([
+    withTimeout(turbo.getFiatRates(), 'Rate lookup'),
+    // Any amount carries the same fee; the fee is all this is read for.
+    withTimeout(turbo.getWincForFiat({ amount: USD(10) }), 'Fee lookup').catch(
+      (err) => {
+        console.warn('[GatewayInfo] Infrastructure fee lookup failed:', err);
+        return undefined;
+      },
+    ),
+  ]);
+  const wincPerGiB = Number(fiatRates.winc);
+  // Same shape `usePerDataItemFee` reads: the rates response carries it, the
+  // SDK's type does not declare it.
+  const wincPerItem = Number((fiatRates as any)?.perDataItemFeeWinc);
+  return {
+    usdPerGiB: fiatRates.fiat?.usd || 0,
+    creditsPerGiB: Number.isFinite(wincPerGiB) && wincPerGiB > 0
+      ? wincPerGiB / wincPerCredit
+      : undefined,
+    creditsPerItem: Number.isFinite(wincPerItem) && wincPerItem > 0
+      ? wincPerItem / wincPerCredit
+      : undefined,
+    infraFeePercent: infraFeePercent(quote?.fees),
+  };
 }
 
 interface ArweaveNodeInfo {
@@ -154,7 +159,10 @@ interface PeersInfo {
   arweaveNodeCount: number;
 }
 
-const CACHE_KEY_PREFIX = 'turbo-gateway-info';
+// v2: pricingInfo dropped the raw-Arweave fields for `infraFeePercent`. v3
+// added `creditsPerGiB`. A versioned key keeps an old entry from rendering a
+// new field as "—" until it expires.
+const CACHE_KEY_PREFIX = 'turbo-gateway-info-v3';
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 interface CachedGatewayInfo {
@@ -284,56 +292,9 @@ export function useGatewayInfo() {
           }
         }
 
-        // Compare Turbo's rate vs raw Arweave network cost
+        // ar.io rate and the infrastructure fee inside it
         try {
-          const turbo = TurboFactory.unauthenticated(turboConfig);
-          const gigabyteInBytes = 1073741824; // 1 GiB in bytes
-
-          // Get Turbo's USD rate for 1 GiB
-          const fiatRates = await turbo.getFiatRates();
-          const turboUSDPerGiB = fiatRates.fiat?.usd || 0;
-
-          // Get raw Arweave network cost (winston) and AR/USD price
-          let arweaveUSDPerGiB = undefined;
-          let arweaveWinstonPerGiB = undefined;
-
-          try {
-            // Fetch raw Arweave L1 network price (returns winston - 1 AR = 10^12 winston).
-            // Fetches from turbo-gateway.com
-            arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
-
-            // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
-            // Uses retry with backoff to handle 429 responses.
-            const cgResponse = await fetchWithRetry(
-              'https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd',
-              { maxRetries: 3, initialDelayMs: 1000 }
-            );
-            const cgData = await cgResponse.json();
-            const arUSDPrice = cgData.arweave?.usd;
-
-            if (arweaveWinstonPerGiB && arUSDPrice) {
-              // Convert winston to AR, then to USD
-              const arPerGiB = arweaveWinstonPerGiB / 1e12;
-              arweaveUSDPerGiB = arPerGiB * arUSDPrice;
-            }
-          } catch (err) {
-            console.warn('[GatewayInfo] Arweave network pricing fetch failed:', err);
-          }
-
-          // Calculate the premium (Turbo vs raw Arweave)
-          let turboFeePercentage = undefined;
-
-          if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
-            turboFeePercentage = (1 - arweaveUSDPerGiB / turboUSDPerGiB) * 100;
-          }
-
-          pricingData = {
-            wincPerGiB: arweaveWinstonPerGiB?.toString() || '0',
-            usdPerGiB: turboUSDPerGiB || 0,
-            baseGatewayPrice: arweaveUSDPerGiB,
-            turboFeePercentage: turboFeePercentage,
-          };
-
+          pricingData = await fetchPricingInfo(turboConfig);
           setPricingInfo(pricingData);
         } catch (err) {
           console.warn('Pricing calculation failed:', err);
@@ -439,54 +400,9 @@ export function useGatewayInfo() {
         }
       }
 
-      // Fetch pricing information - compare Turbo vs raw Arweave network cost
+      // ar.io rate and the infrastructure fee inside it
       try {
-        const turbo = TurboFactory.unauthenticated(turboConfig);
-        const gigabyteInBytes = 1073741824; // 1 GiB in bytes
-
-        // Step 1: Get Turbo's USD rate for 1 GiB
-        const fiatRates = await turbo.getFiatRates();
-        const turboUSDPerGiB = fiatRates.fiat?.usd || 0;
-
-        // Step 2: Get raw Arweave network cost (winston) and AR/USD price
-        let arweaveUSDPerGiB = undefined;
-        let arweaveWinstonPerGiB = undefined;
-
-        try {
-          // Fetch raw Arweave L1 network price (returns winston).
-          // Fetches from turbo-gateway.com
-          arweaveWinstonPerGiB = await fetchArweavePriceWithFallback(gigabyteInBytes);
-
-          // Fetch AR/USD price from CoinGecko (free tier, may rate limit).
-          // Uses retry with backoff to handle 429 responses.
-          const cgResponse = await fetchWithRetry(
-            'https://api.coingecko.com/api/v3/simple/price?ids=arweave&vs_currencies=usd',
-            { maxRetries: 3, initialDelayMs: 1000 }
-          );
-          const cgData = await cgResponse.json();
-          const arUSDPrice = cgData.arweave?.usd;
-
-          if (arweaveWinstonPerGiB && arUSDPrice) {
-            const arPerGiB = arweaveWinstonPerGiB / 1e12;
-            arweaveUSDPerGiB = arPerGiB * arUSDPrice;
-          }
-        } catch (err) {
-          console.warn('[GatewayInfo] Arweave network pricing fetch failed:', err);
-        }
-
-        // Step 3: Calculate the premium
-        let turboFeePercentage = undefined;
-
-        if (turboUSDPerGiB > 0 && arweaveUSDPerGiB && arweaveUSDPerGiB > 0) {
-          turboFeePercentage = (1 - arweaveUSDPerGiB / turboUSDPerGiB) * 100;
-        }
-
-        pricingDataRefresh = {
-          wincPerGiB: arweaveWinstonPerGiB?.toString() || '0',
-          usdPerGiB: turboUSDPerGiB || 0,
-          baseGatewayPrice: arweaveUSDPerGiB,
-          turboFeePercentage: turboFeePercentage,
-        };
+        pricingDataRefresh = await fetchPricingInfo(turboConfig);
         setPricingInfo(pricingDataRefresh);
       } catch (err) {
         console.warn('Failed to fetch pricing info:', err);

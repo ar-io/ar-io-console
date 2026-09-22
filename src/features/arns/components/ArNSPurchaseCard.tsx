@@ -34,6 +34,13 @@ import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import { BuyTargetControl } from './BuyTargetControl';
+import {
+  BLANK_BUY_TARGET,
+  buildTargetOptions,
+  resolveBuyTarget,
+  type BuyTargetState,
+} from '../purchase/buyTarget';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
 import {
@@ -64,6 +71,14 @@ interface ArNSPurchaseCardProps {
    * guidance set here would never render. The host outlives it.
    */
   onTokenFunded: () => void;
+  /**
+   * What the target control opens on, for a card that is being mounted a second
+   * time. This card is unmounted the moment a purchase leaves 'idle', so a
+   * failure and a retry mean a fresh one: without this it would quietly start
+   * back on the default, and the retry would buy a name pointing somewhere the
+   * buyer had already said they didn't want. Absent means the default.
+   */
+  initialTarget?: BuyTargetState;
 }
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -138,6 +153,7 @@ export function ArNSPurchaseCard({
   isBusy,
   onBuy,
   onTokenFunded,
+  initialTarget,
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
@@ -264,6 +280,37 @@ export function ArNSPurchaseCard({
     to say out loud rather than leave to be discovered at the wallet prompt.
   */
   const sponsored = priceUnit === 'credits';
+
+  /*
+    Where the name points on its first block. Offered on every payment route.
+
+    It was ARIO-only at first, because only that path writes to Solana from the
+    browser and could shape the mint. turbo-sdk 1.43.0-alpha.5 closed the gap:
+    the sponsored Buy-Name payload now carries `antState` and the bundler folds
+    it into the `ario_ant::initialize` the buyer already signs, so a name bought
+    with credits or a card arrives pointing at the same place for the same
+    nothing — no second action, no second signature, no second debit.
+  */
+  const [buyTarget, setBuyTarget] = useState<BuyTargetState>(
+    initialTarget ?? BLANK_BUY_TARGET,
+  );
+  const [targetOpen, setTargetOpen] = useState(false);
+  const deployHistory = useStore((st) => st.deployHistory);
+  const uploadHistory = useStore((st) => st.uploadHistory);
+  const pages = useStore((st) => st.pages);
+  const targetOptions = useMemo(
+    () =>
+      buildTargetOptions({
+        deploys: deployHistory,
+        pages,
+        uploads: uploadHistory,
+      }),
+    [deployHistory, pages, uploadHistory],
+  );
+  const resolvedTarget = useMemo(() => resolveBuyTarget(buyTarget), [buyTarget]);
+  // Every route honours the target now, so neither of these is route-gated.
+  const targetForBuy = resolvedTarget.txId;
+  const targetBlocks = !resolvedTarget.valid;
   /**
    * ARIO-only: the source the cost/gas estimate prices against. Anything not
    * paying in ARIO estimates against 'balance', which is what the SDK's
@@ -488,6 +535,9 @@ export function ArNSPurchaseCard({
     !insufficientSol &&
     !insufficientToken &&
     !insufficientFunds &&
+    // A malformed target would fail the on-chain id check AFTER the money
+    // moved, so it blocks here rather than there.
+    !targetBlocks &&
     !isBusy;
 
   // What a card / token payment has to cover: the whole price when there is no
@@ -601,6 +651,7 @@ export function ArNSPurchaseCard({
         // The token became credits, so this settles through Turbo — NOT through
         // the ARIO SDK, which would charge the wallet's ARIO on top.
         mechanism: { kind: 'turbo-credits' },
+        targetId: targetForBuy,
       });
       if (settled === undefined) {
         tokenTopUp.failAfterFunding(
@@ -614,7 +665,7 @@ export function ArNSPurchaseCard({
         err instanceof Error ? err.message : String(err),
       );
     }
-  }, [onBuy, name, type, years, onTokenFunded, tokenTopUp]);
+  }, [onBuy, name, type, years, onTokenFunded, tokenTopUp, targetForBuy]);
 
   /**
    * A card payment settled. Finish the purchase instead of just closing:
@@ -727,6 +778,14 @@ export function ArNSPurchaseCard({
    */
   const blockedReason = useMemo((): { text: string; canSwitchToCredits?: boolean } | null => {
     if (!address || isBusy) return null;
+    /*
+      Before the pricing checks: this one is neither about money nor the
+      network, and the control can be COLLAPSED over a bad id, which hides the
+      inline error and leaves a dead button with nothing beside it.
+    */
+    if (targetBlocks) {
+      return { text: 'Check the transaction ID this name points at.' };
+    }
     if (!priceReady) return null;
     /*
       Turbo pays the Solana costs on every credits-settled route, so neither a
@@ -777,7 +836,7 @@ export function ArNSPurchaseCard({
     return null;
   }, [
     address, isBusy, priceReady, gasUnavailable, insufficientSol,
-    insufficientFunds, route, sponsored, insufficientToken,
+    insufficientFunds, route, sponsored, insufficientToken, targetBlocks,
     balances.sol, balances.loading,
     tokenSmallestUnitForName,
   ]);
@@ -893,13 +952,22 @@ export function ArNSPurchaseCard({
         </div>
       )}
 
+      {/* Where the name points, before how it's paid for — it is part of what
+          you are buying, not a property of how you pay. */}
+      <BuyTargetControl
+        value={buyTarget}
+        onChange={setBuyTarget}
+        options={targetOptions}
+        open={targetOpen}
+        onOpenChange={setTargetOpen}
+        disabled={isBusy}
+      />
+
       {/* Payment method + source */}
       <div className="mb-4">
-        {walletSplit && (
-          <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
-        )}
 
         <ArNSPaymentSelector
+          note={walletSplit}
           options={paymentOptions}
           selectedId={selectedOption?.id ?? ''}
           fundingSource={fundingSource}
@@ -1020,6 +1088,14 @@ export function ArNSPurchaseCard({
               gates would only block buyers who correctly hold nothing.
             */
             insufficientToken ||
+            /*
+              A bad target blocks FUNDING, not just the final buy. This button
+              takes money first and registers after, so letting it through on a
+              malformed id charges the customer and then quietly drops what they
+              typed — `resolveBuyTarget` yields undefined for an invalid id, so
+              the name would land on the default they never chose.
+            */
+            targetBlocks ||
             (!sponsored && (gasUnavailable || insufficientSol || balances.sol === undefined))
           }
           className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
@@ -1049,12 +1125,16 @@ export function ArNSPurchaseCard({
                   type,
                   years: type === 'lease' ? years : undefined,
                   mechanism,
+                  targetId: targetForBuy,
                 })
           }
           disabled={
             route.kind === 'topup'
               ? !priceReady || gasUnavailable || insufficientSol || isBusy ||
-                !tokenSmallestUnitForName || tokenStepLabel !== undefined
+                !tokenSmallestUnitForName || tokenStepLabel !== undefined ||
+                // Same reason as the card button: the token is spent before the
+                // name is registered. `canPay` covers this on the other branch.
+                targetBlocks
               : !canPay
           }
           busy={isBusy || tokenStepLabel !== undefined}

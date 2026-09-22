@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Globe, ExternalLink, Flame, Tag, Settings2 } from 'lucide-react';
@@ -7,6 +7,8 @@ import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
 import { ArNSPurchaseStatus } from './components/ArNSPurchaseStatus';
 import { useBuyArNSName } from './hooks/useBuyArNSName';
+import { buildTargetOptions, labelForTxId } from './purchase/buyTarget';
+import type { BuyTargetState } from './purchase/buyTarget';
 import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
 
 /**
@@ -28,8 +30,62 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
    * 'idle', which is exactly when this matters.
    */
   const [tokenFunded, setTokenFunded] = useState(false);
+  /**
+   * Where the bought name was pointed, kept for the receipt.
+   *
+   * Same reason as `tokenFunded`: the purchase card owns the control but is
+   * unmounted the moment the purchase lands, so the one surface that should
+   * confirm the choice would otherwise have no idea it was made.
+   */
+  const [boughtTarget, setBoughtTarget] = useState<string | undefined>();
+  /*
+    The name the picker showed for that target, so the receipt can say "points
+    at My Site" rather than reciting 43 characters back at someone who chose it
+    from a list. Rebuilt here rather than reported up from the purchase card,
+    which unmounts the moment the purchase lands; `buildTargetOptions` is pure
+    and reads the same persisted arrays, so both see the same list.
+  */
+  const deployHistory = useStore((s) => s.deployHistory);
+  const uploadHistory = useStore((s) => s.uploadHistory);
+  const pages = useStore((s) => s.pages);
+  const targetOptions = useMemo(
+    () =>
+      buildTargetOptions({
+        deploys: deployHistory,
+        pages,
+        uploads: uploadHistory,
+      }),
+    [deployHistory, pages, uploadHistory],
+  );
+  const boughtTargetLabel = useMemo(
+    () => labelForTxId(boughtTarget, targetOptions),
+    [boughtTarget, targetOptions],
+  );
+  /*
+    What the target control should open on when the card comes back.
+
+    The card is unmounted for anything but 'idle' and 'submitting', so a failed
+    purchase takes it away and a retry mounts a fresh one — which used to start
+    on the default. Someone who chose "point it at My Site", hit a failure and
+    pressed Retry would have silently bought a name pointing at the placeholder
+    instead. Seeded from the last attempt, in the mode it came from, so the
+    control reads the same on the second attempt as on the first.
+
+    Cleared when the flow ends or the user picks a different name, so a target
+    chosen for one name never carries into another.
+  */
+  const retryTarget = useMemo<BuyTargetState | undefined>(() => {
+    if (!boughtTarget) return undefined;
+    return {
+      mode: targetOptions.some((o) => o.txId === boughtTarget)
+        ? 'deployment'
+        : 'custom',
+      txId: boughtTarget,
+    };
+  }, [boughtTarget, targetOptions]);
 
   const handleBuy = (input: BuyArNSNameInput) => {
+    setBoughtTarget(input.targetId);
     /*
       Returns the promise rather than swallowing it. The status card still owns
       the terminal UI, but the token path ALSO needs to know: it has already
@@ -42,6 +98,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
 
   const handleDone = () => {
     setTokenFunded(false);
+    setBoughtTarget(undefined);
     buyState.reset();
     setSelectedName(undefined);
     setSearch('');
@@ -162,6 +219,8 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           onClick={() => {
             setSelectedName(undefined);
             setTokenFunded(false);
+            // A target chosen for this name must not seed the next one.
+            setBoughtTarget(undefined);
             buyState.reset();
           }}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
@@ -187,6 +246,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           isBusy={buyState.isBusy}
           onBuy={handleBuy}
           onTokenFunded={() => setTokenFunded(true)}
+          initialTarget={retryTarget}
         />
       )}
 
@@ -198,6 +258,8 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           error={buyState.error}
           insufficientCredits={buyState.insufficientCredits}
           alreadyFunded={tokenFunded}
+          targetId={boughtTarget}
+          targetLabel={boughtTargetLabel}
           name={selectedName}
           onDone={handleDone}
           onRetry={handleRetry}

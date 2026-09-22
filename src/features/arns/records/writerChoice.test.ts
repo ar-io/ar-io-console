@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MIN_SOL_FOR_RECORD_WRITE as MIN_SOL,
   chooseWriter,
+  createsAccounts,
+  selfSignedCostNote,
+  solRailRequirementNote,
   writerCostNote,
   writerForRole,
-  MIN_SOL_FOR_RECORD_WRITE as MIN_SOL,
 } from './writerChoice';
 
 describe('writerForRole', () => {
@@ -222,5 +225,59 @@ describe('writerCostNote — the two people who self-sign', () => {
         '0.1685',
       );
     }
+  });
+});
+
+describe('what the SOL rail actually costs', () => {
+  it('warns about rent for actions that create accounts', () => {
+    // `transfer` bootstraps the new owner's ACL PDAs and can heal the old
+    // owner's — up to four rent-exempt accounts, not a signature fee.
+    for (const action of ['transfer', 'add-controller']) {
+      expect(createsAccounts(action)).toBe(true);
+      expect(selfSignedCostNote(action)).toMatch(/creates accounts on chain/);
+      expect(selfSignedCostNote(action)).toContain(String(MIN_SOL));
+    }
+  });
+
+  it('does not invent a rent cost for actions that create nothing', () => {
+    expect(createsAccounts('remove-controller')).toBe(false);
+    expect(selfSignedCostNote('remove-controller')).not.toMatch(/creates accounts/);
+  });
+
+  it('always says the rail is SOL, not credits', () => {
+    for (const action of ['transfer', 'remove-controller']) {
+      expect(selfSignedCostNote(action)).toMatch(/pays the Solana costs directly, not credits/);
+    }
+  });
+
+  it('names what the SOL rail would need, so its absence has a reason', () => {
+    expect(solRailRequirementNote('transfer')).toContain(
+      String(MIN_SOL),
+    );
+    expect(solRailRequirementNote('transfer')).toMatch(/creates accounts on chain/);
+    expect(solRailRequirementNote('remove-controller')).not.toMatch(/create accounts/);
+  });
+});
+
+describe('the SOL note across a two-action screen', () => {
+  it('names which action owes rent when only one of the pair does', () => {
+    // The controllers modal prices add and remove together. Adding bootstraps
+    // the controller's ACL accounts; removing creates nothing, and must not
+    // inherit the warning.
+    const note = solRailRequirementNote('add-controller', 'remove-controller');
+    expect(note).toMatch(/adding a controller creates accounts on chain/);
+    expect(note).not.toMatch(/this creates accounts/);
+  });
+
+  it('says nothing about rent when neither action creates anything', () => {
+    expect(
+      solRailRequirementNote('remove-controller', 'remove-record'),
+    ).not.toMatch(/creates accounts/);
+  });
+
+  it('stays generic for a single action that does create accounts', () => {
+    expect(solRailRequirementNote('transfer')).toMatch(
+      /this creates accounts on chain/,
+    );
   });
 });
