@@ -221,27 +221,26 @@ export function useArioUsdRate(): number | undefined {
 
       // 1 ARIO = 1,000,000 mARIO (smallest unit).
       const oneArio = BigInt(10 ** 6);
-      const [{ winc: wincForOneArio }, usdQuote] = await Promise.all([
+      const [arioQuote, usdQuote] = await Promise.all([
         turbo.getWincForToken({ tokenAmount: oneArio }),
         turbo.getWincForFiat({ amount: USD(1), promoCodes: [] }),
       ]);
-      const wincForOneUsd = usdQuote.winc;
 
-      const wincPerArio = Number(wincForOneArio);
-      const wincPerUsd = Number(wincForOneUsd);
+      const wincPerArio = Number(arioQuote.winc);
+      const wincPerUsd = Number(usdQuote.winc);
       /*
-        The two legs are NOT quoted on the same footing: the token leg comes
-        back fee-free (`fees: []`) while the fiat leg is net of the ~35%
-        infrastructure fee, so a raw ratio keeps the fee instead of cancelling
-        it and overstates ARIO by ~1.54x. Measured live, that rendered a
-        1,734-ARIO name as $2.09 — the fee-inclusive CARD price — when the
-        tokens are worth $1.36, making ARIO look no cheaper than a card and
-        hiding the discount that is the point of holding it.
+        The two legs are NOT quoted on the same footing: each comes back net of
+        its own currency's infrastructure fee — 35% on USD, 25% on ARIO — so a
+        raw ratio keeps the difference instead of cancelling it. Each leg's own
+        `fees` are passed so both are scaled back to fee-free. Passing only the
+        USD fees was correct while ARIO was fee-free, and read a quarter low
+        once it was not.
       */
       const rate = usdPerArioFromLegs({
         wincPerArio,
         wincPerUsd,
         usdFees: usdQuote.fees,
+        arioFees: arioQuote.fees,
       });
       // TanStack Query v5 forbids a queryFn resolving `undefined`.
       return rate ?? null;

@@ -1331,7 +1331,9 @@ export default function TopUpPanel({
                     : tokenType === 'solana' ? 'Solana'
                     : '';
                   const isFast = tokenType === 'ario' || tokenType === 'solana';
-                  const isNoFee = tokenType === 'ario';
+                  // No "No Fee" badge: ARIO now carries a 25% fee, and a
+                  // hardcoded fee claim is exactly what goes stale when the
+                  // service's fee changes. Fees belong to the live quote.
 
                   return (
                     <button
@@ -1355,14 +1357,9 @@ export default function TopUpPanel({
                           <Check className="w-4 h-4 flex-shrink-0" />
                         )}
                       </div>
-                      {(isFast || isNoFee) && (
+                      {isFast && (
                         <div className="flex gap-2 mt-1.5">
-                          {isFast && (
-                            <span className="text-[10px] text-success font-medium">Fast</span>
-                          )}
-                          {isNoFee && (
-                            <span className="text-[10px] text-info font-medium">No Fee</span>
-                          )}
+                          <span className="text-[10px] text-success font-medium">Fast</span>
                         </div>
                       )}
                     </button>
