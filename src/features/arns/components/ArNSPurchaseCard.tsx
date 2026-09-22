@@ -71,6 +71,14 @@ interface ArNSPurchaseCardProps {
    * guidance set here would never render. The host outlives it.
    */
   onTokenFunded: () => void;
+  /**
+   * What the target control opens on, for a card that is being mounted a second
+   * time. This card is unmounted the moment a purchase leaves 'idle', so a
+   * failure and a retry mean a fresh one: without this it would quietly start
+   * back on the default, and the retry would buy a name pointing somewhere the
+   * buyer had already said they didn't want. Absent means the default.
+   */
+  initialTarget?: BuyTargetState;
 }
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -145,6 +153,7 @@ export function ArNSPurchaseCard({
   isBusy,
   onBuy,
   onTokenFunded,
+  initialTarget,
 }: ArNSPurchaseCardProps) {
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
@@ -282,7 +291,9 @@ export function ArNSPurchaseCard({
     with credits or a card arrives pointing at the same place for the same
     nothing — no second action, no second signature, no second debit.
   */
-  const [buyTarget, setBuyTarget] = useState<BuyTargetState>(BLANK_BUY_TARGET);
+  const [buyTarget, setBuyTarget] = useState<BuyTargetState>(
+    initialTarget ?? BLANK_BUY_TARGET,
+  );
   const [targetOpen, setTargetOpen] = useState(false);
   const deployHistory = useStore((st) => st.deployHistory);
   const uploadHistory = useStore((st) => st.uploadHistory);
