@@ -631,16 +631,26 @@ easier", no "revolutionary", no claim about how the user will feel. The
 specific fact is always stronger: *"ARIO pays the registry directly and skips
 the infrastructure fee"* beats *"the best way to buy a name"*.
 
-**The infrastructure fee is INCLUSIVE — a share of the price, never a markup on
-top of one.** Turbo's quotes carry it as `operator: "multiply",
+**The infrastructure fee is INCLUSIVE — taken out of a top-up, never added on
+top of a price.** Turbo's quotes carry it as `operator: "multiply",
 operatorMagnitude: 0.65` ("Turbo Infrastructure Fee"): the payer receives 65% of
-what they pay as credits, so the fee is 35% **of the ar.io rate**. Stating that
+what they pay as credits, so the fee is 35% **of each top-up**. Stating that
 same 35% as "+35% vs raw Arweave" is false — measured against the raw network
-cost the ar.io rate is ~+54% — and it is the kind of error a reader catches by
+cost the storage rate is ~+54% — and it is the kind of error a reader catches by
 dividing the two figures on screen. `/settings` reads the live percentage from
 the quote (`utils/infraFee.ts`); never reconstruct it by setting the rate
 against a third-party AR spot price, which drifts and mislabels a margin as a
 markup.
+
+**The rate differs by currency and is config, not code.** ARIO top-ups carry
+25%, the rest 35%, and ARIO was fee-free until recently — the bundler can
+change any of this without a release (`TOKENS_WITHOUT_FEES` plus the dated
+`payment_adjustment_catalog`). So never hardcode a fee or a "No Fee" badge,
+and never assume a leg is fee-free: any rate built from two quotes must scale
+**each** leg by its own `fees` (`usdPerArioFromLegs`), or it is off by exactly
+the multiplier it forgot. Distinct from that: buying a *name* with ARIO is the
+user's own `buyRecord` against the registry and never touches Turbo, so no
+infrastructure fee applies there at any rate.
 
 **Never claim away a real requirement.** A sponsored name purchase needs no
 SOL, but it still needs a Solana wallet to sign (email sign-in creates one) and

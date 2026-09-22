@@ -95,9 +95,6 @@ export function JitTokenSelector({
                     <span className="text-[10px] text-foreground/80">({getNetworkLabel(token)})</span>
                   )}
                 </div>
-                {(token === 'base-ario' || token === 'ario') && (
-                  <span className="text-[9px] text-info font-medium">No Fees</span>
-                )}
               </div>
               {selectedToken === token && (
                 <Check className="w-3.5 h-3.5 text-foreground flex-shrink-0" />
