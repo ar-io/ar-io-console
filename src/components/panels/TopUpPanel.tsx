@@ -938,7 +938,7 @@ export default function TopUpPanel({
             <p className="text-sm text-foreground/80">
               Purchase credits for permanent storage and domains on Arweave.
               Credits are issued by Turbo, the upload and payment service behind
-              this console.
+              ar.io and ArDrive.
             </p>
           </div>
         </div>
