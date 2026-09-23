@@ -3,6 +3,26 @@ import { ethers } from 'ethers';
 import { address as toSolanaAddress } from '@solana/kit';
 
 import { getSolanaReadRpc } from '../utils/arIOConfig';
+import { solanaUsdcMintForGenesis } from '../utils/solanaToken';
+
+/**
+ * The genesis hash of the cluster an RPC client is on, fetched once per client.
+ *
+ * The read client is a singleton per config, so this is one call per session
+ * rather than one per balance refresh. A failed lookup is dropped from the
+ * cache instead of kept, or a single network blip would pin the error for the
+ * life of the tab.
+ */
+const genesisHashes = new WeakMap<object, Promise<string>>();
+function genesisHashFor(rpc: ReturnType<typeof getSolanaReadRpc>): Promise<string> {
+  let hash = genesisHashes.get(rpc);
+  if (!hash) {
+    hash = rpc.getGenesisHash().send().then(String);
+    hash.catch(() => genesisHashes.delete(rpc));
+    genesisHashes.set(rpc, hash);
+  }
+  return hash;
+}
 
 /** Lamports per SOL — previously from the deprecated @solana/web3.js. */
 const LAMPORTS_PER_SOL = 1_000_000_000;
@@ -469,13 +489,24 @@ export function useTokenBalance(
    */
   const fetchSolanaUsdcBalance = useCallback(
     async (solanaAddress: string): Promise<{ readable: number; smallest: number }> => {
+      // The mint follows the cluster this RPC is actually on, not configMode:
+      // custom mode can point anywhere, and the mainnet mint read off devnet
+      // finds no accounts and shows a funded wallet as empty.
+      const rpc = getSolanaReadRpc();
+      let mint: string | undefined;
       try {
-        const mint =
-          configMode === 'development'
-            ? SOLANA_USDC_CONFIG.mints.development
-            : SOLANA_USDC_CONFIG.mints.production;
+        mint = solanaUsdcMintForGenesis(await genesisHashFor(rpc));
+      } catch (err) {
+        console.error('Failed to identify the Solana cluster:', err);
+        throw new Error('Unable to fetch USDC balance on Solana. Please try again.');
+      }
+      // Outside the try below so it is not rewritten as "please try again": no
+      // retry helps on a cluster with no known USDC mint.
+      if (!mint) {
+        throw new Error('USDC is not available on the connected Solana network.');
+      }
 
-        const rpc = getSolanaReadRpc();
+      try {
         const { value: accounts } = await rpc
           .getTokenAccountsByOwner(
             toSolanaAddress(solanaAddress),
@@ -500,7 +531,7 @@ export function useTokenBalance(
         throw new Error('Unable to fetch USDC balance on Solana. Please try again.');
       }
     },
-    [configMode],
+    [],
   );
 
   /**

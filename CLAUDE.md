@@ -386,9 +386,13 @@ by adding it there, not by deleting it.
 
 **`solana-usdc`** is USDC as an SPL token on the same chain as SOL, signed by
 the same key: no second wallet and no bridging, just USDC plus a little SOL for
-the fee. Mints are pinned per environment in `SOLANA_USDC_CONFIG`; balances sum
-**every** token account for the mint, because a wallet can legitimately hold
-more than one and showing part of a balance reads as funds missing.
+the fee. The mint is chosen by the **genesis hash** of the cluster the read RPC
+is actually on (`SOLANA_USDC_CONFIG.mintsByGenesisHash`), never by `configMode`:
+custom mode can point at any RPC, and the mainnet mint read off devnet finds no
+accounts and shows a funded wallet as empty. An unknown cluster says USDC is
+unavailable rather than guessing. Balances sum **every** token account for the
+mint, because a wallet can legitimately hold more than one and showing part of a
+balance reads as funds missing.
 
 **Network detection:** `getTokenTypeFromChainId()` in `utils/index.ts`
 
@@ -578,6 +582,13 @@ Both `tokenMap` presets end in `satisfies Record<SupportedTokenType, string>`,
 an endpoint because of it: `useTurboConfig(token)` then returns no `gatewayUrl`
 and the SDK quietly falls back to its own default. Keep `satisfies` so the next
 token is a compile error instead.
+
+**A token on another token's chain has no endpoint of its own.** `solana-usdc`
+is derived from `solana` (`utils/tokenEndpoints.ts`), applied in
+`getCurrentConfig()` rather than in the editor, because editing is not the only
+way a map arrives: custom mode merged `tokenMap` shallowly, so a config saved
+before the token existed had no key for it at all. The Settings editor shows a
+derived key read-only, since an input there would accept a value and ignore it.
 
 The three EVM vars are optional and each falls back to the public endpoint it
 replaced. They exist because those defaults are free public RPCs that rate-limit

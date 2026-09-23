@@ -1,4 +1,4 @@
-import { SupportedTokenType } from '../constants';
+import { SupportedTokenType, SOLANA_USDC_CONFIG } from '../constants';
 
 /**
  * The tokens one Solana wallet can pay with.
@@ -33,4 +33,19 @@ export function solanaClientToken(
   requested?: SupportedTokenType | string | null,
 ): SolanaChainToken {
   return isSolanaChainToken(requested) ? requested : 'solana';
+}
+
+/**
+ * The USDC mint on the cluster with this genesis hash, or undefined for a
+ * cluster with no known USDC mint (a localnet, say).
+ *
+ * Undefined rather than a fallback on purpose: guessing the mainnet mint on an
+ * unknown cluster reads zero, and a funded wallet that shows zero reads as
+ * money missing. A caller should say the token is unavailable instead.
+ */
+export function solanaUsdcMintForGenesis(
+  genesisHash: string | null | undefined,
+): string | undefined {
+  if (!genesisHash) return undefined;
+  return SOLANA_USDC_CONFIG.mintsByGenesisHash[genesisHash];
 }

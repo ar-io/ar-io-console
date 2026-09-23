@@ -256,6 +256,19 @@ export const SOLANA_USDC_CONFIG = {
     production: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Circle, mainnet-beta
     development: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', // Circle, devnet
   },
+  /**
+   * The mint to use, keyed by the genesis hash of the cluster an RPC is on.
+   *
+   * Picking the mint by `configMode` guessed the cluster from a setting that
+   * does not determine it: custom mode can point at any RPC, and read the
+   * mainnet mint off devnet, where it does not exist, so a funded wallet showed
+   * zero. The genesis hash is what the cluster actually is. Both values checked
+   * against api.mainnet-beta and api.devnet with `getGenesisHash`, 2026-09-23.
+   */
+  mintsByGenesisHash: {
+    '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+  } as Record<string, string>,
   decimals: 6,
 } as const;
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isSolanaChainToken, solanaClientToken } from './solanaToken';
+import {
+  isSolanaChainToken,
+  solanaClientToken,
+  solanaUsdcMintForGenesis,
+} from './solanaToken';
 
 describe('solanaClientToken', () => {
   it('honours a Solana-chain token', () => {
@@ -31,5 +35,28 @@ describe('isSolanaChainToken', () => {
     expect(isSolanaChainToken('solana-usdc')).toBe(true);
     expect(isSolanaChainToken('base-usdc')).toBe(false);
     expect(isSolanaChainToken(undefined)).toBe(false);
+  });
+});
+
+describe('solanaUsdcMintForGenesis', () => {
+  // Genesis hashes as reported by getGenesisHash on each public cluster.
+  const MAINNET = '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d';
+  const DEVNET = 'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG';
+
+  it('picks the mint for the cluster the RPC is actually on', () => {
+    expect(solanaUsdcMintForGenesis(MAINNET)).toBe(
+      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    );
+    // The case that motivated this: a custom config on a devnet RPC must read
+    // the devnet mint, whatever configMode says.
+    expect(solanaUsdcMintForGenesis(DEVNET)).toBe(
+      '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
+    );
+  });
+
+  it('returns nothing for a cluster with no known mint, rather than guessing', () => {
+    expect(solanaUsdcMintForGenesis('someLocalnetGenesisHash')).toBeUndefined();
+    expect(solanaUsdcMintForGenesis(undefined)).toBeUndefined();
+    expect(solanaUsdcMintForGenesis('')).toBeUndefined();
   });
 });

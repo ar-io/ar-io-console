@@ -696,13 +696,11 @@ export default function TopUpPanel({
     fetchTargetBalance();
   }, [paymentTargetAddress, paymentTargetType]);
 
-  // Auto-select token based on wallet type
-  useEffect(() => {
-    const availableTokens = getAvailableTokens();
-    if (availableTokens.length > 0) {
-      setSelectedTokenType(availableTokens[0]);
-    }
-  }, [walletType, getAvailableTokens]);
+  // No unconditional "pick the first token" effect here. The one above already
+  // snaps to the wallet's first choice whenever the current pick is not
+  // something it can sign; this one reset even a valid pick, so choosing USDC
+  // on Solana was undone by any wallet change, including to another Solana
+  // wallet that can pay in it just as well.
 
 
   // Set the initial credit destination. A deep-link destinationAddress (e.g.

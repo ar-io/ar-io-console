@@ -11,6 +11,7 @@ import {
   DEVNET_PROGRAM_IDS,
 } from '@ar.io/sdk/solana';
 import { SupportedTokenType } from '../constants';
+import { withDerivedEndpoints } from '../utils/tokenEndpoints';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
 
@@ -916,7 +917,17 @@ export const useStore = create<StoreState>()(
         if (configMode === 'custom') {
           // Merge over production defaults so stale localStorage entries
           // never leave fields undefined after a schema migration.
-          return { ...PRESET_CONFIGS.production, ...customConfig };
+          const merged = { ...PRESET_CONFIGS.production, ...customConfig };
+          return {
+            ...merged,
+            // The top-level spread replaces tokenMap wholesale, so a config
+            // saved before a token existed would have no key for it. Merge
+            // per key, then derive the tokens that share another's chain.
+            tokenMap: withDerivedEndpoints({
+              ...PRESET_CONFIGS.production.tokenMap,
+              ...merged.tokenMap,
+            }),
+          };
         }
         return PRESET_CONFIGS[configMode];
       },
