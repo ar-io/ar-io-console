@@ -357,7 +357,7 @@ const LandingPage = () => {
               <h3 className="font-heading font-extrabold text-xl text-foreground">Fund</h3>
             </div>
             <p className="text-sm text-foreground/80">
-              Buy Credits instantly with a card or crypto like ETH, SOL, ARIO, Stablecoins (via x402), and more — ready to upload in seconds.
+              Buy Credits instantly with a card or crypto like ETH, SOL, ARIO and USDC on Base or Solana, ready to upload in seconds.
             </p>
           </div>
 

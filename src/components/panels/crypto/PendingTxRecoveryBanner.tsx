@@ -18,6 +18,7 @@ const recoverableTokens: { value: string; label: string }[] = [
   { value: 'polygon-usdc', label: 'USDC (Polygon)' },
   { value: 'pol', label: 'POL (Polygon)' },
   { value: 'solana', label: 'SOL' },
+  { value: 'solana-usdc', label: 'USDC (Solana)' },
   { value: 'arweave', label: 'AR' },
 ];
 
