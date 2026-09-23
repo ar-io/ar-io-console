@@ -13,6 +13,7 @@ export function getExplorerTxUrl(txId: string, tokenType: string): string | null
   if (!txId) return null;
   switch (tokenType.toLowerCase()) {
     case 'solana':
+    case 'solana-usdc': // USDC on Solana is an SPL transfer on the same chain
     case 'ario': // ARIO top-ups settle on Solana post-migration
       return `https://solscan.io/tx/${txId}`;
     case 'ethereum':

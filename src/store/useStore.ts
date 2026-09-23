@@ -72,7 +72,13 @@ const PRESET_CONFIGS = {
       usdc: RPC_ENDPOINTS.ethereum,
       'base-usdc': RPC_ENDPOINTS.base,
       'polygon-usdc': RPC_ENDPOINTS.polygon,
-    } as Record<SupportedTokenType, string>,
+      // USDC on Solana is an SPL token on the same chain as SOL, so it reads
+      // and writes through the same endpoint.
+      'solana-usdc': RPC_ENDPOINTS.solana,
+      // No cast. `satisfies` makes a missing token a compile error instead of
+      // an `undefined` gatewayUrl at runtime: `as` silenced exactly that, and
+      // solana-usdc shipped without an entry because of it.
+    } satisfies Record<SupportedTokenType, string>,
   },
   development: {
     paymentServiceUrl: 'https://payment.services.ar-io.dev',
@@ -98,7 +104,9 @@ const PRESET_CONFIGS = {
       usdc: 'https://eth-sepolia.public.blastapi.io',
       'base-usdc': 'https://sepolia.base.org',
       'polygon-usdc': 'https://rpc-amoy.polygon.technology',
-    } as Record<SupportedTokenType, string>,
+      // Devnet, matching the devnet USDC mint in SOLANA_USDC_CONFIG.
+      'solana-usdc': 'https://api.devnet.solana.com',
+    } satisfies Record<SupportedTokenType, string>,
   },
 } as const;
 
