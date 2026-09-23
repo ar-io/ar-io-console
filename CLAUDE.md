@@ -187,13 +187,17 @@ wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
 `ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
 is sponsored (`actions/sponsorship.ts`).
 
-**Pin turbo-sdk EXACTLY** (currently `2.1.0-alpha.1`). The ArNS surface and
-`solana-usdc` both live on the alpha line, and `latest` is 2.0.0, which sorts
-*below* it and carries neither. A caret range or a routine `npm update`
-therefore resolves to a release missing both, and nothing fails until someone
-tries to buy a name or pay in USDC. Check `npm view @ardrive/turbo-sdk
-dist-tags` before moving the pin, and re-read this note once a stable release
-carries the ArNS surface: the reason changes, not just the number.
+**Pin turbo-sdk EXACTLY** (currently `2.1.0`, `latest` since 2026-09-23). The
+long-standing reason for this rule has now expired: the ArNS surface and
+`solana-usdc` used to exist only on the `alpha` line, so a caret range silently
+resolved to a stable release carrying neither, and nothing failed until someone
+tried to buy a name. 2.1.0 carries both, with a type surface identical to the
+`2.1.0-alpha.1` this app was built against.
+
+The pin stays exact anyway, for a smaller reason: this app narrows the SDK's
+`TokenType` itself (`SdkTokenType`), so a minor release that adds or removes a
+token changes what compiles here. Check `npm view @ardrive/turbo-sdk dist-tags`
+and the `tokenTypes` array before moving it.
 
 **Every action costs credits, and the SDK says otherwise.** The eight
 non-purchase actions were free at launch and now carry a small margin
