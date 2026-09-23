@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  getTokenDecimals,
   supportsJitPayment,
   tokenPricePerCredit,
   WINC_PER_CREDIT,
@@ -116,5 +117,22 @@ describe('supportsJitPayment', () => {
     expect(supportsJitPayment('ethereum')).toBe(false);
     expect(supportsJitPayment('usdc')).toBe(false); // USDC, but on L1
     expect(supportsJitPayment(null)).toBe(false);
+  });
+});
+
+describe('getTokenDecimals', () => {
+  it('reads every USDC as six decimals, on every chain', () => {
+    // The pricing calculator kept its own copy of this table with no USDC case
+    // at all, so each fell to 12 and a USDC budget read a million times large.
+    for (const token of ['usdc', 'base-usdc', 'polygon-usdc', 'solana-usdc'] as const) {
+      expect(getTokenDecimals(token)).toBe(6);
+    }
+  });
+
+  it('keeps the native units the rest of the app relies on', () => {
+    expect(getTokenDecimals('arweave')).toBe(12); // winston
+    expect(getTokenDecimals('solana')).toBe(9); // lamports
+    expect(getTokenDecimals('ethereum')).toBe(18); // wei
+    expect(getTokenDecimals('ario')).toBe(6); // mARIO
   });
 });

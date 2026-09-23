@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TurboFactory } from '@ardrive/turbo-sdk/web';
+import { getExplorerTxUrl } from '../../../utils/getExplorerTxUrl';
 import { AlertTriangle, RefreshCw, X, ExternalLink, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { getPendingTopUpTxs, removePendingTopUpTx, savePendingTopUpTx, PendingTopUpTx } from '../../../utils/pendingTopUp';
 import { tokenLabels, SupportedTokenType } from '../../../constants';
@@ -142,27 +143,15 @@ export default function PendingTxRecoveryBanner() {
     });
   };
 
-  const getExplorerUrl = (tx: PendingTopUpTx): string | null => {
-    switch (tx.tokenType) {
-      case 'ethereum':
-      case 'usdc':
-        return `https://etherscan.io/tx/${tx.txId}`;
-      case 'base-eth':
-      case 'base-usdc':
-      case 'base-ario':
-        return `https://basescan.org/tx/${tx.txId}`;
-      case 'pol':
-      case 'polygon-usdc':
-        return `https://polygonscan.com/tx/${tx.txId}`;
-      case 'solana':
-        return `https://solscan.io/tx/${tx.txId}`;
-      case 'arweave':
-      case 'ario':
-        return `https://viewblock.io/arweave/tx/${tx.txId}`;
-      default:
-        return null;
-    }
-  };
+  /*
+    The shared map, not a private copy. This one was the divergence
+    `getExplorerTxUrl` names in its own header: it linked ARIO top-ups to
+    Viewblock when they settle on Solana, and had no entry for USDC on Solana,
+    so a stuck USDC transfer showed no link on the one screen built to recover
+    it.
+  */
+  const getExplorerUrl = (tx: PendingTopUpTx): string | null =>
+    getExplorerTxUrl(tx.txId, tx.tokenType);
 
   const formatAge = (timestamp: number): string => {
     const minutes = Math.floor((Date.now() - timestamp) / 60000);

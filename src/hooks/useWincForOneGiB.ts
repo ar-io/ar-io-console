@@ -65,9 +65,14 @@ const getAmountByTokenType = (amount: number, token: string) => {
       return ARIOToTokenAmount(amount); // Proper ARIO token conversion (6 decimals for both AO and Base)
     case 'pol':
       return POLToTokenAmount(amount); // Proper POL token conversion
+    // Every USDC, including Solana's. Without its case, solana-usdc fell to the
+    // `default` below, which returns the amount unconverted: typing 10 USDC
+    // quoted 10 micro-USDC, so Top Up and the confirmation screen showed about a
+    // millionth of the credits the payment would actually buy.
     case 'usdc':
     case 'base-usdc':
     case 'polygon-usdc':
+    case 'solana-usdc':
       return amount * 1e6; // USDC uses 6 decimals
     // For now, these tokens use base amounts - may need specific converters later
     case 'kyve':
