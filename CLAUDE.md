@@ -777,7 +777,8 @@ if (privyWallet) {
 - `wagmi` + `ethers`: Ethereum wallets
 - `@solana/wallet-adapter-*`: Solana wallets
 - `@wallet-standard/app`: `getWallets().register()` — how `PrivySolanaBridge` makes the embedded wallet visible
-- `arbundles`, `x402-fetch`: still declared in `package.json` but imported nowhere in `src/` since the x402 upload hook was removed — candidates for removal, not something to build on
+- `x402-fetch`: **keep it.** Nothing in `src/` imports it, which reads like dead weight, but it is turbo-sdk's `optional: true` peer for x402 payments (`peerDependencies: { "x402-fetch": "^1.0.0" }`, matching what we declare). As of 2.1.0 the SDK loads it through a dynamic `import()` rather than at module top level, precisely because it drags in wagmi, WalletConnect and AppKit that a credit-paying user never touches: a missing install then fails only on an actual x402 payment, with a message naming the package. Removing it would silently disable that path and leave the build with an import it cannot resolve.
+- `arbundles`: declared but imported nowhere in `src/`. The Ethereum signer comes from `@dha-team/arbundles` (see above), which is a different package, so this one is a genuine removal candidate
 - `zustand`: State management
 - `@tanstack/react-query`: Server state
 - `@stripe/react-stripe-js`: Fiat payments
