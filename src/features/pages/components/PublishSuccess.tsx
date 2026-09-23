@@ -29,7 +29,7 @@ export default function PublishSuccess({
   const shortTx = txId ? `${txId.slice(0, 8)}…${txId.slice(-6)}` : '';
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div>
       <div className="flex flex-col items-center py-4 text-center">
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success/15">
           <CheckCircle2 className="h-7 w-7 text-success" />

@@ -637,7 +637,7 @@ const LandingPage = () => {
         <div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <h2 className="font-heading font-extrabold text-2xl text-foreground mb-2">Transparent Pricing</h2>
-          <p className="text-foreground/80">Pay-as-you-go storage with no subscriptions, now with x402</p>
+          <p className="text-foreground/80">Pay as you go, with no subscriptions.</p>
         </div>
 
         {/*
@@ -663,7 +663,7 @@ const LandingPage = () => {
             </div>
             <button
               onClick={() => navigate('/try')}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-success transition-opacity hover:opacity-80 justify-self-start sm:justify-self-end"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-primary transition-opacity hover:opacity-80 justify-self-start sm:justify-self-end"
             >
               <Upload className="h-3.5 w-3.5" />
               <span>Try it now</span>
@@ -679,7 +679,7 @@ const LandingPage = () => {
             </div>
             <button
               onClick={() => navigate('/pricing')}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-foreground/80 transition-colors hover:text-foreground justify-self-start sm:justify-self-end"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-primary transition-opacity hover:opacity-80 justify-self-start sm:justify-self-end"
             >
               <Calculator className="h-3.5 w-3.5" />
               <span>Calculate your costs</span>
@@ -693,7 +693,15 @@ const LandingPage = () => {
             </div>
             <div>
               <div className="font-semibold text-foreground">Domain name</div>
-              <div className="text-sm text-foreground/70">8-character name, no renewals</div>
+              {/* The figure above is the registry price in ARIO at ARIO's market
+                  price: the cheapest way to buy. By card or credits the same
+                  name costs about 1.7x once the infrastructure fee and the
+                  Solana setup charge are added ($49.51 against $29.44 on
+                  2026-09-23), so the line has to say which price this is or a
+                  card buyer meets a different number at checkout. */}
+              <div className="text-sm text-foreground/70">
+                8-character name, owned permanently. Price when paying in ARIO.
+              </div>
             </div>
             <button
               onClick={() => navigate('/pricing?type=domains')}
