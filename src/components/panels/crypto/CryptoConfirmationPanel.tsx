@@ -113,7 +113,8 @@ export default function CryptoConfirmationPanel({
         tokenType === 'usdc' ||
         tokenType === 'base-usdc' ||
         tokenType === 'polygon-usdc')) ||
-    (walletType === 'solana' && tokenType === 'solana');
+    (walletType === 'solana' &&
+      (tokenType === 'solana' || tokenType === 'solana-usdc'));
 
   const handlePayment = async () => {
     if (!address || !quote) return;
@@ -467,18 +468,35 @@ export default function CryptoConfirmationPanel({
             tokenType,
             transactionId: result.id,
           });
-        } else if (walletType === 'solana' && solanaPublicKey && solanaSignMessage && tokenType === 'solana') {
+        } else if (
+          walletType === 'solana' &&
+          solanaPublicKey &&
+          solanaSignMessage &&
+          (tokenType === 'solana' || tokenType === 'solana-usdc')
+        ) {
           const turboAuthenticated = TurboFactory.authenticated({
-            token: 'solana',
+            token: tokenType,
             paymentServiceConfig: {
               url: turboConfig.paymentServiceUrl || 'https://payment.ardrive.io',
             },
             walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
+            // Same RPC for both: USDC on Solana is an SPL token on the very
+            // same chain, so there is no second endpoint to configure.
             gatewayUrl: turboConfig.tokenMap.solana,
           });
 
           const result = await turboAuthenticated.topUpWithTokens({
-            tokenAmount: SOLToTokenAmount(cryptoAmount), // Convert to lamports
+            // The units differ even though the chain does not: SOL is 9
+            // decimals (lamports), USDC is 6. Converted the same way the EVM
+            // USDC branch above does — rounded to a whole smallest-unit,
+            // because raw float math yields values like 10.1 * 1e6 =
+            // 10100000.000000002 that the on-chain call mis-rounds or rejects.
+            // (turbo-sdk's USDCToTokenAmount is not re-exported from the
+            // package entry, so this file already does it by hand for USDC.)
+            tokenAmount:
+              tokenType === 'solana-usdc'
+                ? Math.round(cryptoAmount * 1e6).toString()
+                : SOLToTokenAmount(cryptoAmount),
             turboCreditDestinationAddress,
           });
 
@@ -708,7 +726,7 @@ export default function CryptoConfirmationPanel({
                         ? 4
                         : tokenType === 'pol'
                           ? 2
-                          : tokenType === 'usdc' || tokenType === 'base-usdc' || tokenType === 'polygon-usdc'
+                          : tokenType === 'usdc' || tokenType === 'base-usdc' || tokenType === 'polygon-usdc' || tokenType === 'solana-usdc'
                             ? 2
                             : 8
                   )}{' '}

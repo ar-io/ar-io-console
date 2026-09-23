@@ -21,6 +21,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { formatWalletAddress } from '../../utils';
 import { formatFeePercent } from '../../utils/infraFee';
+import { endpointSourceFor } from '../../utils/tokenEndpoints';
 import { useStore } from '../../store/useStore';
 
 export default function GatewayInfoPanel() {
@@ -448,7 +449,7 @@ export default function GatewayInfoPanel() {
                     {Object.entries(currentConfig.tokenMap).map(([token, url]) => (
                       <div key={token}>
                         <label htmlFor={`cfg-token-${token}`} className="block text-xs font-medium text-foreground/80 mb-1 uppercase">{token}</label>
-                        {configMode === 'custom' ? (
+                        {configMode === 'custom' && !endpointSourceFor(token) ? (
                           <input
                             id={`cfg-token-${token}`}
                             type="text"
@@ -463,6 +464,15 @@ export default function GatewayInfoPanel() {
                             </code>
                             <CopyButton textToCopy={url} />
                           </div>
+                        )}
+                        {/* Shown read-only even in custom mode: the store sets it
+                            from its source on every read, so an input here would
+                            accept a value and then silently ignore it. */}
+                        {endpointSourceFor(token) && (
+                          <p className="mt-1 text-xs text-foreground/60">
+                            Same chain as {endpointSourceFor(token)?.toUpperCase()}, so it
+                            uses that endpoint.
+                          </p>
                         )}
                       </div>
                     ))}

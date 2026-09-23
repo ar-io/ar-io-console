@@ -51,6 +51,7 @@ const TOKEN_LABEL: Partial<Record<SupportedTokenType, string>> = {
   ethereum: 'ETH',
   'base-usdc': 'USDC',
   usdc: 'USDC',
+  'solana-usdc': 'USDC',
   pol: 'POL',
 };
 
@@ -59,6 +60,7 @@ const TOKEN_NETWORK: Partial<Record<SupportedTokenType, string>> = {
   'base-usdc': 'Base',
   ethereum: 'Ethereum',
   usdc: 'Ethereum',
+  'solana-usdc': 'Solana',
   pol: 'Polygon',
 };
 

@@ -34,7 +34,11 @@ export function JitTokenSelector({
     } else if (walletType === 'arweave') {
       return []; // Arweave wallets don't support JIT payments
     } else if (walletType === 'solana') {
-      return ['solana'];
+      // USDC is an SPL token held by the same wallet, so a Solana user pays in
+      // it with no extra setup — they just need a little SOL for the fee. Two
+      // options here also means the selector actually renders for Solana
+      // wallets for the first time (it hides itself at one).
+      return ['solana', 'solana-usdc'];
     }
     return [];
   };
@@ -54,6 +58,7 @@ export function JitTokenSelector({
       case 'base-eth': return 'ETH';
       case 'ario': return 'ARIO';
       case 'solana': return 'SOL';
+      case 'solana-usdc': return 'USDC';
       default: return tokenLabels[token];
     }
   };
@@ -65,6 +70,10 @@ export function JitTokenSelector({
       case 'base-ario': return 'Base';
       case 'base-eth': return 'Base';
       case 'ario': return 'AO';
+      // USDC exists on several chains, so its chip has to say which one. SOL
+      // does not, and labelling it would change how an existing chip renders
+      // for no information gained.
+      case 'solana-usdc': return 'Solana';
       default: return '';
     }
   };

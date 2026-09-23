@@ -2,6 +2,29 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Pay with USDC on Solana.** A Solana wallet could only ever pay with SOL.
+  USDC is an SPL token the same wallet already holds, signed by the same key,
+  so it is now offered alongside SOL for credits, name purchases and
+  pay-at-upload. You need USDC plus a little SOL for the network fee, and
+  nothing else: no second wallet, no bridging.
+
+### Changed
+- **KYVE is no longer offered as a payment token.** The upload service can no
+  longer settle a KYVE payment, so offering it would start something that
+  cannot finish. Existing KYVE history still displays, and a transfer already
+  in flight can still be recovered.
+
+### Fixed
+- **Paying in USDC on Solana at upload time now spends USDC.** Choosing it for
+  a pay-as-you-go upload would have spent SOL instead, at an amount read in the
+  wrong units. Nothing could have been charged before this release, because the
+  option ships with it.
+- **A USDC-on-Solana payment links to its transaction** from the payment
+  history and the success screen, as every other crypto payment does.
+
 ## [4.8.0] - 2026-09-17
 
 ### Added

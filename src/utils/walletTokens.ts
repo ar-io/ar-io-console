@@ -21,7 +21,11 @@ export function availableTokensForWallet(
         ['base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum'] as SupportedTokenType[]
       ).filter(isTokenSelectable);
     case 'solana':
-      return ['solana'];
+      // USDC on Solana is an SPL token held by the same wallet — no second
+      // wallet, no bridging, just USDC plus a little SOL for the fee.
+      return (['solana', 'solana-usdc'] as SupportedTokenType[]).filter(
+        isTokenSelectable,
+      );
     default:
       return [];
   }

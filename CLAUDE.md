@@ -187,10 +187,17 @@ wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
 `ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
 is sponsored (`actions/sponsorship.ts`).
 
-**Pin turbo-sdk EXACTLY** (currently `1.43.0-alpha.5`). A stable release sorts
-*above* the `alpha.x` line it precedes in semver, and the stable line carries
-**no ArNS surface at all**, so a caret range or a routine `npm update` silently
-deletes this feature and nothing fails until someone tries to buy a name.
+**Pin turbo-sdk EXACTLY** (currently `2.1.0`, `latest` since 2026-09-23). The
+long-standing reason for this rule has now expired: the ArNS surface and
+`solana-usdc` used to exist only on the `alpha` line, so a caret range silently
+resolved to a stable release carrying neither, and nothing failed until someone
+tried to buy a name. 2.1.0 carries both, with a type surface identical to the
+`2.1.0-alpha.1` this app was built against.
+
+The pin stays exact anyway, for a smaller reason: this app narrows the SDK's
+`TokenType` itself (`SdkTokenType`), so a minor release that adds or removes a
+token changes what compiles here. Check `npm view @ardrive/turbo-sdk dist-tags`
+and the `tokenTypes` array before moving it.
 
 **Every action costs credits, and the SDK says otherwise.** The eight
 non-purchase actions were free at launch and now carry a small margin
@@ -364,19 +371,34 @@ Access via `useTurboConfig(tokenType)` hook or `getCurrentConfig()` from store.
 ## Token Support
 
 **Supported tokens** (from `constants.ts`):
-`arweave`, `ario`, `ethereum`, `base-eth`, `solana`, `kyve`, `pol`, `usdc`, `base-usdc`
+`arweave`, `ario`, `ethereum`, `base-eth`, `solana`, `solana-usdc`, `kyve`, `pol`, `usdc`, `base-usdc`
 
-**Withdrawn from selection** (`unavailableCryptoTokens` in `constants.ts`):
-`base-ario` — turbo-sdk drops it as of 1.42.0-alpha.8, so a payment could be
-started that the SDK cannot settle — and `polygon-usdc`. Both keep their types
-and formatting tables so existing history still renders, and
-`PendingTxRecoveryBanner` deliberately ignores the list so a user mid-transfer
-on a retired network can still recover their funds. Retire a token by adding it
-there, not by deleting it.
+**Withdrawn from selection** (`unavailableCryptoTokens` in `constants.ts`), three of them, each because turbo-sdk can no longer settle the payment:
+
+- `kyve` — turbo-sdk 2.0.0 removed the TokenType outright, dropping the `@cosmjs` dependencies with it.
+- `base-ario` — dropped as of 1.42.0-alpha.8.
+- `polygon-usdc` — the payment service answers `The currency type 'polygon-usdc' is currently not supported by this API!` (HTTP 400).
+
+All three keep their types and formatting tables so existing history still
+renders, and `PendingTxRecoveryBanner` deliberately ignores the list so a user
+mid-transfer on a retired network can still recover their funds. Retire a token
+by adding it there, not by deleting it.
+
+**`solana-usdc`** is USDC as an SPL token on the same chain as SOL, signed by
+the same key: no second wallet and no bridging, just USDC plus a little SOL for
+the fee. The mint is chosen by the **genesis hash** of the cluster the read RPC
+is actually on (`SOLANA_USDC_CONFIG.mintsByGenesisHash`), never by `configMode`:
+custom mode can point at any RPC, and the mainnet mint read off devnet finds no
+accounts and shows a funded wallet as empty. An unknown cluster says USDC is
+unavailable rather than guessing. Balances sum **every** token account for the
+mint, because a wallet can legitimately hold more than one and showing part of a
+balance reads as funds missing.
 
 **Network detection:** `getTokenTypeFromChainId()` in `utils/index.ts`
 
-**JIT payments supported:** `solana`, `base-eth`, `base-usdc` — the authority is `supportsJitPayment()` in `utils/jitPayment.ts`, which has never included `ario` or `base-ario` despite earlier docs saying so
+**JIT payments supported:** `solana`, `solana-usdc`, `base-eth`, `base-usdc` — the authority is `supportsJitPayment()` in `utils/jitPayment.ts`, which has never included `ario` or `base-ario` despite earlier docs saying so. The bar is confirmation speed, which is why the list is Solana and Base.
+
+**A Turbo client is bound to one token at construction and spends that token.** Every upload path takes a token override for this reason, and the Solana branches ignored it: selecting USDC built a `token: 'solana'` client that then received an amount converted with USDC's six decimals, so a 25 USDC cap became 25,000,000 lamports (0.025 SOL). Wrong asset, wrong amount, nothing thrown. `utils/solanaToken.ts` (`solanaClientToken`) is now the one place that decision is made — use it rather than a literal in any new Solana client.
 
 **EVM token transfer types** (require network switching): `base-ario`, `base-eth`, `base-usdc`, `polygon-usdc`, `pol`, `usdc`
 
@@ -529,7 +551,7 @@ Network-specific settings in `constants.ts`:
 | Feature | Arweave | Ethereum/Base/Polygon | Solana |
 |---------|---------|----------------------|--------|
 | Buy Credits (Fiat) | ✅ | ✅ | ✅ |
-| Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL |
+| Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL/USDC |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
 | Update ArNS Records | ❌ | ❌ | ✅ (no SOL needed) |
@@ -554,6 +576,19 @@ VITE_POLYGON_RPC=...            # Optional — defaults to polygon-bor-rpc.publi
 both the `tokenMap` and wagmi's transports read, so balance reads and wallet
 operations always hit the same provider per chain. Add a new chain there, not in
 two places.
+
+Both `tokenMap` presets end in `satisfies Record<SupportedTokenType, string>`,
+**not** `as`. The cast silenced a missing key, and `solana-usdc` shipped without
+an endpoint because of it: `useTurboConfig(token)` then returns no `gatewayUrl`
+and the SDK quietly falls back to its own default. Keep `satisfies` so the next
+token is a compile error instead.
+
+**A token on another token's chain has no endpoint of its own.** `solana-usdc`
+is derived from `solana` (`utils/tokenEndpoints.ts`), applied in
+`getCurrentConfig()` rather than in the editor, because editing is not the only
+way a map arrives: custom mode merged `tokenMap` shallowly, so a config saved
+before the token existed had no key for it at all. The Settings editor shows a
+derived key read-only, since an input there would accept a value and ignore it.
 
 The three EVM vars are optional and each falls back to the public endpoint it
 replaced. They exist because those defaults are free public RPCs that rate-limit
@@ -753,7 +788,8 @@ if (privyWallet) {
 - `wagmi` + `ethers`: Ethereum wallets
 - `@solana/wallet-adapter-*`: Solana wallets
 - `@wallet-standard/app`: `getWallets().register()` — how `PrivySolanaBridge` makes the embedded wallet visible
-- `arbundles`, `x402-fetch`: still declared in `package.json` but imported nowhere in `src/` since the x402 upload hook was removed — candidates for removal, not something to build on
+- `x402-fetch`: **keep it.** Nothing in `src/` imports it, which reads like dead weight, but it is turbo-sdk's `optional: true` peer for x402 payments (`peerDependencies: { "x402-fetch": "^1.0.0" }`, matching what we declare). As of 2.1.0 the SDK loads it through a dynamic `import()` rather than at module top level, precisely because it drags in wagmi, WalletConnect and AppKit that a credit-paying user never touches: a missing install then fails only on an actual x402 payment, with a message naming the package. Removing it would silently disable that path and leave the build with an import it cannot resolve.
+- `arbundles`: declared but imported nowhere in `src/`. The Ethereum signer comes from `@dha-team/arbundles` (see above), which is a different package, so this one is a genuine removal candidate
 - `zustand`: State management
 - `@tanstack/react-query`: Server state
 - `@stripe/react-stripe-js`: Fiat payments

@@ -28,7 +28,8 @@ export const getTokenSmallestUnit = (tokenType: SupportedTokenType): bigint => {
     case 'usdc':
     case 'base-usdc':
     case 'polygon-usdc':
-      return BigInt(10 ** 6); // USDC uses 6 decimals on all chains
+    case 'solana-usdc':
+      return BigInt(10 ** 6); // USDC uses 6 decimals on every chain it is issued on
     default:
       return BigInt(10 ** 12); // default
   }

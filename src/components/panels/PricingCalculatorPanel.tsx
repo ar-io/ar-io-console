@@ -40,6 +40,7 @@ export default function PricingCalculatorPanel() {
     { value: 'solana', label: tokenLabels.solana, symbol: 'SOL' },
     { value: 'pol', label: tokenLabels.pol, symbol: 'POL' },
     { value: 'base-usdc', label: 'USDC (Base)', symbol: 'USDC' },
+    { value: 'solana-usdc', label: 'USDC (Solana)', symbol: 'USDC' },
   ];
   // In x402-only mode, ONLY show USDC (x402)
   const currencies = x402OnlyMode
