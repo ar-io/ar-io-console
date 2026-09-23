@@ -2,28 +2,33 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [Unreleased]
+## [4.9.0] - 2026-09-23
 
 ### Added
 - **Pay with USDC on Solana.** A Solana wallet could only ever pay with SOL.
   USDC is an SPL token the same wallet already holds, signed by the same key,
   so it is now offered alongside SOL for credits, name purchases and
-  pay-at-upload. You need USDC plus a little SOL for the network fee, and
-  nothing else: no second wallet, no bridging.
+  pay-at-upload, and the pricing calculator quotes in it. You need USDC plus a
+  little SOL for the network fee, and nothing else: no second wallet, no
+  bridging.
 
 ### Changed
+- **Settings and Buy Credits say what Turbo is.** The name appeared across the
+  console, on credits, name actions and the pricing panel, without ever being
+  introduced. Each page now says it once: the upload and payment service behind
+  ar.io and ArDrive, which issues the credits you spend here.
 - **KYVE is no longer offered as a payment token.** The upload service can no
   longer settle a KYVE payment, so offering it would start something that
   cannot finish. Existing KYVE history still displays, and a transfer already
   in flight can still be recovered.
 
 ### Fixed
-- **Paying in USDC on Solana at upload time now spends USDC.** Choosing it for
-  a pay-as-you-go upload would have spent SOL instead, at an amount read in the
-  wrong units. Nothing could have been charged before this release, because the
-  option ships with it.
-- **A USDC-on-Solana payment links to its transaction** from the payment
-  history and the success screen, as every other crypto payment does.
+- **The payment success screen links every crypto payment to its
+  transaction.** It kept its own list of block explorers that knew fewer tokens
+  than the rest of the app, so a USDC or POL payment showed no link there while
+  your payment history linked the same payment correctly.
+- **Reconnecting a wallet on Buy Credits keeps the token you picked**, when the
+  new wallet can still pay in it. It used to snap back to the wallet's default.
 
 ## [4.8.0] - 2026-09-17
 
