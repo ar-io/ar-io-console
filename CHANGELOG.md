@@ -29,6 +29,11 @@ All notable changes to the ar.io Console are documented in this file.
   your payment history linked the same payment correctly.
 - **Reconnecting a wallet on Buy Credits keeps the token you picked**, when the
   new wallet can still pay in it. It used to snap back to the wallet's default.
+- **The pricing calculator reads USDC budgets correctly.** It converted every
+  USDC amount with twelve decimal places instead of six, so a budget entered in
+  USDC on Base was treated as a million times larger than it was.
+- **A stuck payment's recovery link goes to the right explorer.** ARIO top-ups
+  linked to an Arweave explorer, though they settle on Solana.
 
 ## [4.8.0] - 2026-09-17
 
