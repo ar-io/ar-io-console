@@ -852,6 +852,19 @@ export default function CryptoConfirmationPanel({
                       You'll be guided through the manual payment process
                     </p>
                   )}
+                  {/* Said here, the last screen before the wallet opens, because
+                      the wallet will not say it clearly: with USDC and no SOL the
+                      transfer fails simulation with an error about debiting an
+                      account that has no prior credit. The fee is small (Turbo's
+                      USDC account already exists, so there is no rent to pay),
+                      but it has to be SOL, and someone who withdrew USDC from an
+                      exchange straight to Phantom may hold none. */}
+                  {tokenType === 'solana-usdc' && (
+                    <p className="text-xs text-foreground/80 mt-1">
+                      Your wallet also needs a little SOL to pay the Solana network
+                      fee. A fraction of a cent covers it.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

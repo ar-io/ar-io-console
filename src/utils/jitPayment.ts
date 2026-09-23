@@ -18,6 +18,19 @@ const TOKEN_DECIMALS: Record<SupportedTokenType, number> = {
 };
 
 /**
+ * Decimal places of a token's smallest unit.
+ *
+ * Exported so a component never keeps its own copy of this table again. The
+ * pricing calculator did, with no case for any USDC, so every USDC fell to a
+ * default of 12 and a Base USDC budget was read a million times too large.
+ * This table is a `Record<SupportedTokenType, number>`, so a new token without
+ * an entry fails to compile instead of falling through to a guess.
+ */
+export function getTokenDecimals(tokenType: SupportedTokenType): number {
+  return TOKEN_DECIMALS[tokenType];
+}
+
+/**
  * Check if a wallet type supports just-in-time (on-demand) payments
  * Currently supported: SOL, USDC on Solana, Base-ETH, Base-USDC
  *
