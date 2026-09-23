@@ -36,14 +36,22 @@ interface Props {
 /**
  * Brand coins for the tokens people recognise by their mark.
  *
- * Both are drawn on the same dark disc at the same size, so ARIO and SOL read
- * as a matched set rather than two logos that happen to share a row. Anything
- * without its own mark (a card, a credit balance) keeps a line icon — those are
- * categories, not brands, and inventing a logo for them would be noise.
+ * ARIO and SOL are drawn on the same dark disc at the same size, so they read
+ * as a matched set rather than two logos that happen to share a row. USDC is
+ * the exception: its blue disc is part of the mark itself, and Circle asks that
+ * its colours not be altered, so it is used as published. Every USDC shares the
+ * one coin, since the chain is already named in the option's detail line.
+ * Anything without its own mark (a card, a credit balance) keeps a line icon:
+ * those are categories, not brands, and inventing a logo for them would be
+ * noise.
  */
 const TOKEN_COIN: Partial<Record<SupportedTokenType, string>> = {
   ario: 'brand/ario-token-logo.svg',
   solana: 'brand/solana-token-logo.svg',
+  'solana-usdc': 'brand/usdc-token-logo.svg',
+  'base-usdc': 'brand/usdc-token-logo.svg',
+  usdc: 'brand/usdc-token-logo.svg',
+  'polygon-usdc': 'brand/usdc-token-logo.svg',
 };
 
 function OptionIcon({ option, active }: { option: PaymentOption; active: boolean }) {

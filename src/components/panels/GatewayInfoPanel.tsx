@@ -547,18 +547,18 @@ export default function GatewayInfoPanel() {
                   below is Turbo's, and the word turns up in the app (credits,
                   sponsored ArNS actions) without ever being introduced.
 
-                  By function, not category: "gateway" already means the read
-                  side here — Browse and the gateway status above both use real
-                  ar.io gateways — and Turbo is the write side.
-
-                  Named in recognition order: ar.io and ArDrive are the brands a
-                  user arrives with, Arweave is where the data ends up, and the
-                  sentence ends there. Opening on "the service for Arweave"
-                  leads with the name fewest people know. */}
+                  Turbo IS an ar.io gateway: in production it is the gateway this
+                  page reports on, at turbo-gateway.com, which serves and
+                  resolves like any other. What sets it apart is that it also
+                  takes paid uploads. So it is "an ar.io gateway run by the
+                  ArDrive team": "an" because it is one of many, and ArDrive
+                  because that is the brand its endpoints carry. Two earlier
+                  framings were wrong: "the service behind ar.io" read as Turbo
+                  powering the network, and "the write side, not a gateway"
+                  was simply false. See knowledge-base naming.md. */}
               <p className="text-sm text-foreground/80 mb-3 max-w-prose">
-                Set by Turbo, the upload and payment service behind ar.io and
-                ArDrive: it issues the credits you spend here and bundles your
-                files for permanent storage on Arweave.
+                Set by Turbo, an ar.io gateway run by the ArDrive team. It issues
+                the credits you spend here and bundles your uploads onto Arweave.
               </p>
               {/* Two across on phones, four from md — an even grid at both
                   widths, so no card is orphaned and the long "Infrastructure

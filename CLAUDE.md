@@ -732,6 +732,8 @@ All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It 
 
 `rounded-2xl` is redefined to **20px** (brand cards are 20–24px), plus `rounded-3xl` (24px), `rounded-panel` (2rem), `rounded-hero` (2.5rem). Page containers use the `max-w-site` token (**1400px**) — not `max-w-7xl` (1280px) and not a hard-coded `max-w-[1400px]`.
 
+**Every routed screen has the same body width, on every device.** `Layout` wraps the outlet in `max-w-site`, and each screen's outermost element is `px-4 sm:px-6`, which also gives phones the same side gutter everywhere. **A screen must not add its own `mx-auto max-w-*` cap.** Name Detail (`max-w-5xl`), Pages (`max-w-6xl`) and two views inside Pages (`max-w-3xl`, `max-w-xl`) each had one, so they read as narrower than Upload or Deploy for no reason. Narrow measures are still right *inside* a screen: a centred empty-state sentence (`max-w-md`), prose (`max-w-prose`), modals, and the Pages live preview, which is a phone-sized frame on purpose. Browse is the one deliberate exception: it reclaims the layout padding to give its viewer more room.
+
 ### Key Files
 
 - `src/styles/globals.css` - CSS custom properties
