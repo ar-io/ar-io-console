@@ -80,6 +80,8 @@ export default function ContractWalletGuard() {
       } catch {
         // Continue: the app session is cleared either way.
       }
+      // The session may have changed while disconnecting; never clear a new one.
+      if (cancelled) return;
       clearEthereumTurboClientCache();
       clearX402SignerCache();
       clearAllPaymentState();
