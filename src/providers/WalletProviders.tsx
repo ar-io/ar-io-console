@@ -5,19 +5,36 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
+import { RainbowKitProvider, getDefaultConfig, getDefaultWallets, darkTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { RPC_ENDPOINTS } from '../store/useStore';
+import { OFFERED_WALLET_IDS } from '../utils/walletConnectors';
 
 // WalletConnect Project ID - get one from https://cloud.walletconnect.com/
 const WALLETCONNECT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '9f180997f87a0c8e1ddd5bcd92ae5363';
+
+// RainbowKit's default list, kept to the wallets in OFFERED_WALLET_IDS. That
+// drops Base Account and Safe, smart-contract wallets that cannot give the plain
+// signature Turbo's Ethereum signer needs: they could pay but never upload or
+// spend. Filtered by id rather than imported from '@rainbow-me/rainbowkit/wallets',
+// whose barrel pulls in connectors the installed wagmi does not export and
+// breaks the build.
+const WALLET_GROUPS = getDefaultWallets().wallets.map((group) => ({
+  ...group,
+  wallets: group.wallets.filter((wallet) =>
+    OFFERED_WALLET_IDS.has(
+      wallet({ projectId: WALLETCONNECT_PROJECT_ID, appName: 'ar.io' }).id,
+    ),
+  ),
+}));
 
 // Configure Wagmi with RainbowKit - supports MetaMask, WalletConnect, Coinbase, and many more
 // RainbowKit's getDefaultConfig handles session persistence automatically via wagmi's reconnect
 const wagmiConfig = getDefaultConfig({
   appName: 'ar.io',
   projectId: WALLETCONNECT_PROJECT_ID,
+  wallets: WALLET_GROUPS,
   chains: [mainnet, base, polygon, polygonAmoy],
   transports: {
     // Same endpoints the tokenMap uses (RPC_ENDPOINTS) — balance reads and wallet
