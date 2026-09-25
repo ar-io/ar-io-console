@@ -57,8 +57,8 @@ const arioRainbowTheme = darkTheme({
   fontStack: 'system',
 });
 
-// Empty array: modern wallets (Phantom, Solflare, Backpack) self-register via
-// the Wallet Standard protocol. Importing explicit adapters (e.g. SolflareWalletAdapter)
+// Empty array: modern wallets (Phantom, Solflare, Backpack, MetaMask) self-register
+// via the Wallet Standard protocol. Importing explicit adapters (e.g. SolflareWalletAdapter)
 // triggers MetaMask Snap detection side-effects that corrupt the wallet registry.
 // This matches the approach used in ar-io-network-portal.
 const solanaWallets: never[] = [];

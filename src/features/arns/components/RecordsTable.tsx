@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Globe,
@@ -69,6 +69,12 @@ interface RecordsTableProps {
   /** Undernames allowed by the current limit (excludes `@`). */
   undernameLimit?: number | null;
   onSuccess: () => void;
+  /**
+   * Bumped by the page's "Edit target" shortcut: opens the `@` row's editor
+   * and scrolls it into view. Waits for the record to load, so the editor is
+   * never seeded with an empty target that a save would then write.
+   */
+  editApexRequest?: number;
 }
 
 type RowKind = 'apex' | 'undername';
@@ -99,6 +105,7 @@ export default function RecordsTable({
   canManage,
   undernameLimit,
   onSuccess,
+  editApexRequest = 0,
 }: RecordsTableProps) {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
@@ -126,7 +133,7 @@ export default function RecordsTable({
   const undernameWrites = useUndernameWrites(name, processId);
   const metadata = useSetArNSMetadata();
 
-  const rows = useMemo<Row[]>(() => {
+  const allRows = useMemo<Row[]>(() => {
     const apex: Row = {
       key: APEX,
       label: APEX,
@@ -161,15 +168,17 @@ export default function RecordsTable({
         keywordsRaw: (u.keywords ?? []).join(', '),
       }),
     }));
-    const all = [apex, ...rest];
+    return [apex, ...rest];
+  }, [ant, undernames]);
+  const rows = useMemo<Row[]>(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return all;
-    return all.filter(
+    if (!needle) return allRows;
+    return allRows.filter(
       (r) =>
         r.label.toLowerCase().includes(needle) ||
         (r.target ?? '').toLowerCase().includes(needle),
     );
-  }, [ant, undernames, q]);
+  }, [allRows, q]);
 
   const used = undernames?.length ?? 0;
   const atLimit = undernameLimit != null && used >= undernameLimit;
@@ -234,6 +243,41 @@ export default function RecordsTable({
     setOriginal(undefined);
     setEditKey('__new__');
   };
+  /*
+    The page's "Edit target" shortcut. Seeded with the current request so a
+    remount never replays an old click. It waits while a save is in flight (a
+    row pencil is disabled then too) and until the record loads, so the editor
+    is never seeded with an empty target. An editor already open on `@` keeps
+    what the user typed: the shortcut then only brings it back into view.
+  */
+  const handledApexRequest = useRef(editApexRequest);
+  const [focusApexTarget, setFocusApexTarget] = useState(0);
+  useEffect(() => {
+    if (editApexRequest === handledApexRequest.current) return;
+    if (!canManage || !ant || busy) return;
+    const apex = allRows.find((r) => r.kind === 'apex');
+    if (!apex) return;
+    handledApexRequest.current = editApexRequest;
+    setQ('');
+    setPage(0);
+    if (editKey !== APEX) openEdit(apex);
+    setFocusApexTarget(editApexRequest);
+    // openEdit only sets state, and editKey is read, not reacted to.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editApexRequest, canManage, ant, busy, allRows]);
+  // Runs after the editor has rendered, so the target field exists. Focus
+  // moves with the view, so keyboard and screen-reader users land in the field
+  // rather than on a button far below it.
+  useEffect(() => {
+    if (!focusApexTarget || editKey !== APEX) return;
+    setFocusApexTarget(0);
+    const field = document.getElementById(`rec-${APEX}-target`);
+    if (!field) return;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    field.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    field.focus({ preventScroll: true });
+  }, [focusApexTarget, editKey]);
+
   const close = () => {
     setEditKey(null);
     setRowError(null);
