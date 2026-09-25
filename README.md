@@ -35,7 +35,7 @@ npm run dev       # Start dev server at http://localhost:3000
 - **React 18.3** with TypeScript 5.5, Vite 5.4
 - **State**: Zustand (persistent + ephemeral), TanStack React Query v5
 - **Wallets**: Arweave (Wander), Ethereum (Wagmi/RainbowKit/Privy), Solana (wallet-adapter)
-- **Payments**: Stripe (fiat), native crypto, X402 protocol (Base USDC)
+- **Payments**: Stripe (fiat), native crypto and stablecoins (including USDC on Solana), X402 protocol (Base USDC)
 - **Styling**: Tailwind CSS, Besley + Plus Jakarta Sans fonts
 - **Key SDKs**: `@ardrive/turbo-sdk` (pinned exactly — see note below), `@ar.io/sdk` 4.1.1
 

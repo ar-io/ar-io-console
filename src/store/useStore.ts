@@ -11,6 +11,7 @@ import {
   DEVNET_PROGRAM_IDS,
 } from '@ar.io/sdk/solana';
 import { SupportedTokenType } from '../constants';
+import { withDerivedEndpoints } from '../utils/tokenEndpoints';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
 
@@ -72,7 +73,13 @@ const PRESET_CONFIGS = {
       usdc: RPC_ENDPOINTS.ethereum,
       'base-usdc': RPC_ENDPOINTS.base,
       'polygon-usdc': RPC_ENDPOINTS.polygon,
-    } as Record<SupportedTokenType, string>,
+      // USDC on Solana is an SPL token on the same chain as SOL, so it reads
+      // and writes through the same endpoint.
+      'solana-usdc': RPC_ENDPOINTS.solana,
+      // No cast. `satisfies` makes a missing token a compile error instead of
+      // an `undefined` gatewayUrl at runtime: `as` silenced exactly that, and
+      // solana-usdc shipped without an entry because of it.
+    } satisfies Record<SupportedTokenType, string>,
   },
   development: {
     paymentServiceUrl: 'https://payment.services.ar-io.dev',
@@ -98,7 +105,9 @@ const PRESET_CONFIGS = {
       usdc: 'https://eth-sepolia.public.blastapi.io',
       'base-usdc': 'https://sepolia.base.org',
       'polygon-usdc': 'https://rpc-amoy.polygon.technology',
-    } as Record<SupportedTokenType, string>,
+      // Devnet, matching the devnet USDC mint in SOLANA_USDC_CONFIG.
+      'solana-usdc': 'https://api.devnet.solana.com',
+    } satisfies Record<SupportedTokenType, string>,
   },
 } as const;
 
@@ -534,6 +543,7 @@ export const useStore = create<StoreState>()(
         solana: 0.15, // 0.15 SOL ≈ $22.50
         'base-eth': 0.01, // 0.01 ETH ≈ $25
         'base-usdc': 25, // 25 USDC = $25 (stablecoin)
+        'solana-usdc': 25, // 25 USDC = $25 (stablecoin)
         arweave: 0,
         ethereum: 0,
         kyve: 0,
@@ -907,7 +917,17 @@ export const useStore = create<StoreState>()(
         if (configMode === 'custom') {
           // Merge over production defaults so stale localStorage entries
           // never leave fields undefined after a schema migration.
-          return { ...PRESET_CONFIGS.production, ...customConfig };
+          const merged = { ...PRESET_CONFIGS.production, ...customConfig };
+          return {
+            ...merged,
+            // The top-level spread replaces tokenMap wholesale, so a config
+            // saved before a token existed would have no key for it. Merge
+            // per key, then derive the tokens that share another's chain.
+            tokenMap: withDerivedEndpoints({
+              ...PRESET_CONFIGS.production.tokenMap,
+              ...merged.tokenMap,
+            }),
+          };
         }
         return PRESET_CONFIGS[configMode];
       },

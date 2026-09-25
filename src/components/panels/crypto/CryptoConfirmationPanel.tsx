@@ -26,6 +26,11 @@ import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { formatTokenAmount } from '../../../utils/jitPayment';
 import { savePendingTopUpTx, removePendingTopUpTx } from '../../../utils/pendingTopUp';
 import { useWallet } from '@solana/wallet-adapter-react';
+import {
+  CONTRACT_WALLET_DESTINATION_ERROR,
+  CONTRACT_WALLET_PAYMENT_ERROR,
+  isContractWalletCode,
+} from '../../../utils/contractWallet';
 
 interface CryptoConfirmationPanelProps {
   cryptoAmount: number;
@@ -113,7 +118,8 @@ export default function CryptoConfirmationPanel({
         tokenType === 'usdc' ||
         tokenType === 'base-usdc' ||
         tokenType === 'polygon-usdc')) ||
-    (walletType === 'solana' && tokenType === 'solana');
+    (walletType === 'solana' &&
+      (tokenType === 'solana' || tokenType === 'solana-usdc'));
 
   const handlePayment = async () => {
     if (!address || !quote) return;
@@ -437,6 +443,29 @@ export default function CryptoConfirmationPanel({
             );
           }
 
+          // A smart-contract wallet cannot give the plain signature Turbo's
+          // signer needs, so credits it buys can never be spent, and Turbo does
+          // not read a destination memo from its transactions, so a Buying For
+          // payment credits the sender. The connect-time guard signs these
+          // wallets out; this is the last check before money moves, for one it
+          // missed (a testnet chain, or code deployed after connecting).
+          // Checked on the post-switch provider, because a smart wallet is
+          // deployed per chain. A failed lookup lets the payment through:
+          // blocking every Ethereum payment on a flaky RPC is the worse failure.
+          let code: string | undefined;
+          try {
+            code = await provider.getCode(signerAddress);
+          } catch (codeError) {
+            console.warn('Could not check whether the wallet is a contract wallet:', codeError);
+          }
+          if (isContractWalletCode(code)) {
+            throw new Error(
+              turboCreditDestinationAddress
+                ? CONTRACT_WALLET_DESTINATION_ERROR
+                : CONTRACT_WALLET_PAYMENT_ERROR,
+            );
+          }
+
           const turbo = TurboFactory.authenticated(turboConfig_forSDK);
 
           // Convert to smallest unit (wei for ETH/Base, POL for Polygon, 6 decimals for USDC/ARIO)
@@ -467,18 +496,35 @@ export default function CryptoConfirmationPanel({
             tokenType,
             transactionId: result.id,
           });
-        } else if (walletType === 'solana' && solanaPublicKey && solanaSignMessage && tokenType === 'solana') {
+        } else if (
+          walletType === 'solana' &&
+          solanaPublicKey &&
+          solanaSignMessage &&
+          (tokenType === 'solana' || tokenType === 'solana-usdc')
+        ) {
           const turboAuthenticated = TurboFactory.authenticated({
-            token: 'solana',
+            token: tokenType,
             paymentServiceConfig: {
               url: turboConfig.paymentServiceUrl || 'https://payment.ardrive.io',
             },
             walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
+            // Same RPC for both: USDC on Solana is an SPL token on the very
+            // same chain, so there is no second endpoint to configure.
             gatewayUrl: turboConfig.tokenMap.solana,
           });
 
           const result = await turboAuthenticated.topUpWithTokens({
-            tokenAmount: SOLToTokenAmount(cryptoAmount), // Convert to lamports
+            // The units differ even though the chain does not: SOL is 9
+            // decimals (lamports), USDC is 6. Converted the same way the EVM
+            // USDC branch above does — rounded to a whole smallest-unit,
+            // because raw float math yields values like 10.1 * 1e6 =
+            // 10100000.000000002 that the on-chain call mis-rounds or rejects.
+            // (turbo-sdk's USDCToTokenAmount is not re-exported from the
+            // package entry, so this file already does it by hand for USDC.)
+            tokenAmount:
+              tokenType === 'solana-usdc'
+                ? Math.round(cryptoAmount * 1e6).toString()
+                : SOLToTokenAmount(cryptoAmount),
             turboCreditDestinationAddress,
           });
 
@@ -537,7 +583,13 @@ export default function CryptoConfirmationPanel({
           });
         }
 
-        if (error.message.includes('insufficient funds') || (error as any).code === 'INSUFFICIENT_FUNDS') {
+        if (
+          error.message === CONTRACT_WALLET_DESTINATION_ERROR ||
+          error.message === CONTRACT_WALLET_PAYMENT_ERROR
+        ) {
+          // Matched exactly, before the keyword branches below could claim it.
+          setPaymentError(error.message);
+        } else if (error.message.includes('insufficient funds') || (error as any).code === 'INSUFFICIENT_FUNDS') {
           setPaymentError(
             `Insufficient ${tokenLabels[tokenType]} balance. You need enough to cover both the payment amount and gas fees. Current transaction requires approximately ${cryptoAmount} ${tokenLabels[tokenType]} + gas fees.`
           );
@@ -708,7 +760,7 @@ export default function CryptoConfirmationPanel({
                         ? 4
                         : tokenType === 'pol'
                           ? 2
-                          : tokenType === 'usdc' || tokenType === 'base-usdc' || tokenType === 'polygon-usdc'
+                          : tokenType === 'usdc' || tokenType === 'base-usdc' || tokenType === 'polygon-usdc' || tokenType === 'solana-usdc'
                             ? 2
                             : 8
                   )}{' '}
@@ -832,6 +884,19 @@ export default function CryptoConfirmationPanel({
                   {!canPayDirectly && (
                     <p className="text-xs text-foreground/80 mt-1">
                       You'll be guided through the manual payment process
+                    </p>
+                  )}
+                  {/* Said here, the last screen before the wallet opens, because
+                      the wallet will not say it clearly: with USDC and no SOL the
+                      transfer fails simulation with an error about debiting an
+                      account that has no prior credit. The fee is small (Turbo's
+                      USDC account already exists, so there is no rent to pay),
+                      but it has to be SOL, and someone who withdrew USDC from an
+                      exchange straight to Phantom may hold none. */}
+                  {tokenType === 'solana-usdc' && (
+                    <p className="text-xs text-foreground/80 mt-1">
+                      Your wallet also needs a little SOL to pay the Solana network
+                      fee. A fraction of a cent covers it.
                     </p>
                   )}
                 </div>

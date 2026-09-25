@@ -111,9 +111,13 @@ The ar.io Console is accessible through any modern web browser at the deployment
 - Direct wallet payments via MetaMask, Phantom, Solflare
 - Automatic network switching for correct blockchain
 - Real-time cryptocurrency to credits conversion with live rates
-- Support for 11 token types:
-  - **Native Tokens**: AR, ARIO, ETH, Base-ETH, SOL, KYVE, POL
-  - **Stablecoins**: USDC on Ethereum, USDC on Base, USDC on Polygon
+- Support for 8 selectable token types:
+  - **Native Tokens**: AR, ARIO, ETH, Base-ETH, SOL, POL
+  - **Stablecoins**: USDC on Ethereum, USDC on Base, USDC on Solana
+  - Withdrawn from selection, kept so existing history renders and a transfer
+    already in flight can still be recovered: KYVE and ARIO-on-Base (turbo-sdk
+    no longer settles either) and USDC on Polygon (the payment service refuses
+    it)
 - Transaction retry mechanism for failed payments
 - Network-specific processing times (instant to 30 minutes)
 
@@ -126,6 +130,7 @@ The ar.io Console is accessible through any modern web browser at the deployment
   - SOL: 0.15 tokens (~$22.50)
   - Base-ETH: 0.01 tokens (~$25)
   - Base-USDC: 25 tokens (~$25)
+  - USDC on Solana: 25 tokens (~$25)
 - Buffer multiplier (1.1x default) to prevent failed uploads
 - Opt-in system with persistent preferences
 - Seamless user experience without manual top-up interruptions

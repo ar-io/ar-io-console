@@ -388,6 +388,7 @@ export default function TopUpPanel({
       case 'usdc': return [10, 25, 50, 100];
       case 'base-usdc': return [10, 25, 50, 100];
       case 'polygon-usdc': return [10, 25, 50, 100];
+      case 'solana-usdc': return [10, 25, 50, 100];
       default: return [0.01, 0.05, 0.1, 0.25];
     }
   };
@@ -658,6 +659,8 @@ export default function TopUpPanel({
         return 'Connect an Ethereum wallet (like MetaMask) to pay with USDC on Polygon network';
       case 'solana':
         return 'Connect a Solana wallet (like Phantom) to pay with SOL tokens';
+      case 'solana-usdc':
+        return 'Connect a Solana wallet (like Phantom) to pay with USDC on Solana';
       default:
         return 'Connect a compatible wallet to use this token';
     }
@@ -693,13 +696,11 @@ export default function TopUpPanel({
     fetchTargetBalance();
   }, [paymentTargetAddress, paymentTargetType]);
 
-  // Auto-select token based on wallet type
-  useEffect(() => {
-    const availableTokens = getAvailableTokens();
-    if (availableTokens.length > 0) {
-      setSelectedTokenType(availableTokens[0]);
-    }
-  }, [walletType, getAvailableTokens]);
+  // No unconditional "pick the first token" effect here. The one above already
+  // snaps to the wallet's first choice whenever the current pick is not
+  // something it can sign; this one reset even a valid pick, so choosing USDC
+  // on Solana was undone by any wallet change, including to another Solana
+  // wallet that can pay in it just as well.
 
 
   // Set the initial credit destination. A deep-link destinationAddress (e.g.
@@ -931,7 +932,15 @@ export default function TopUpPanel({
           </div>
           <div>
             <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Buy Credits</h3>
-            <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
+            {/* Names Turbo once, where the money moves and where "what am I
+                actually buying" gets asked. The payment surfaces deliberately
+                don't: the ArNS selector calls this option "Balance" because
+                Turbo is how we settle, not a thing to choose. */}
+            <p className="text-sm text-foreground/80">
+              Purchase credits for permanent storage and domains on Arweave.
+              Credits are issued by Turbo, an ar.io gateway run by the ArDrive
+              team.
+            </p>
           </div>
         </div>
       )}
@@ -1325,12 +1334,15 @@ export default function TopUpPanel({
                   const tokenName = tokenType === 'ario' ? 'ARIO'
                     : tokenType === 'arweave' ? 'AR'
                     : tokenType === 'solana' ? 'SOL'
+                    : tokenType === 'solana-usdc' ? 'USDC'
                     : tokenLabels[tokenType];
                   const networkName = tokenType === 'ario' ? 'AO Network'
                     : tokenType === 'arweave' ? 'Arweave'
                     : tokenType === 'solana' ? 'Solana'
+                    : tokenType === 'solana-usdc' ? 'Solana'
                     : '';
-                  const isFast = tokenType === 'ario' || tokenType === 'solana';
+                  const isFast = tokenType === 'ario' || tokenType === 'solana'
+                    || tokenType === 'solana-usdc';
                   // No "No Fee" badge: ARIO now carries a 25% fee, and a
                   // hardcoded fee claim is exactly what goes stale when the
                   // service's fee changes. Fees belong to the live quote.

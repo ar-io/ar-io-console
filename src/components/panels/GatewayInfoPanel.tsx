@@ -21,6 +21,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import CopyButton from '../CopyButton';
 import { formatWalletAddress } from '../../utils';
 import { formatFeePercent } from '../../utils/infraFee';
+import { endpointSourceFor } from '../../utils/tokenEndpoints';
 import { useStore } from '../../store/useStore';
 
 export default function GatewayInfoPanel() {
@@ -448,7 +449,7 @@ export default function GatewayInfoPanel() {
                     {Object.entries(currentConfig.tokenMap).map(([token, url]) => (
                       <div key={token}>
                         <label htmlFor={`cfg-token-${token}`} className="block text-xs font-medium text-foreground/80 mb-1 uppercase">{token}</label>
-                        {configMode === 'custom' ? (
+                        {configMode === 'custom' && !endpointSourceFor(token) ? (
                           <input
                             id={`cfg-token-${token}`}
                             type="text"
@@ -463,6 +464,15 @@ export default function GatewayInfoPanel() {
                             </code>
                             <CopyButton textToCopy={url} />
                           </div>
+                        )}
+                        {/* Shown read-only even in custom mode: the store sets it
+                            from its source on every read, so an input here would
+                            accept a value and then silently ignore it. */}
+                        {endpointSourceFor(token) && (
+                          <p className="mt-1 text-xs text-foreground/60">
+                            Same chain as {endpointSourceFor(token)?.toUpperCase()}, so it
+                            uses that endpoint.
+                          </p>
                         )}
                       </div>
                     ))}
@@ -532,7 +542,24 @@ export default function GatewayInfoPanel() {
           {/* Pricing */}
           {pricingInfo && (
             <div className="mb-6">
-              <div className="text-sm font-medium text-foreground/80 mb-3 uppercase tracking-wider">Upload Pricing</div>
+              <div className="text-sm font-medium text-foreground/80 mb-1 uppercase tracking-wider">Upload Pricing</div>
+              {/* The one place the console says what Turbo is. Every charge
+                  below is Turbo's, and the word turns up in the app (credits,
+                  sponsored ArNS actions) without ever being introduced.
+
+                  Turbo IS an ar.io gateway: in production it is the gateway this
+                  page reports on, at turbo-gateway.com, which serves and
+                  resolves like any other. What sets it apart is that it also
+                  takes paid uploads. So it is "an ar.io gateway run by the
+                  ArDrive team": "an" because it is one of many, and ArDrive
+                  because that is the brand its endpoints carry. Two earlier
+                  framings were wrong: "the service behind ar.io" read as Turbo
+                  powering the network, and "the write side, not a gateway"
+                  was simply false. See knowledge-base naming.md. */}
+              <p className="text-sm text-foreground/80 mb-3 max-w-prose">
+                Set by Turbo, an ar.io gateway run by the ArDrive team. It issues
+                the credits you spend here and bundles your uploads onto Arweave.
+              </p>
               {/* Two across on phones, four from md — an even grid at both
                   widths, so no card is orphaned and the long "Infrastructure
                   Fee" label never squeezes into a half column. */}

@@ -33,9 +33,24 @@ describe('defaultTokenForWallet', () => {
 
 describe('availableTokensForWallet', () => {
   it('never offers a token the wallet cannot sign for', () => {
-    expect(availableTokensForWallet('solana', all)).toEqual(['solana']);
+    // Both Solana options are signed by the same ed25519 key: SOL natively,
+    // USDC as an SPL transfer from a token account the wallet owns.
+    expect(availableTokensForWallet('solana', all)).toEqual([
+      'solana',
+      'solana-usdc',
+    ]);
     expect(availableTokensForWallet('arweave', all)).toEqual(['arweave']);
     expect(availableTokensForWallet('arweave', all)).not.toContain('solana');
+    // The invariant that matters: a Solana key cannot sign an EVM transfer.
+    expect(availableTokensForWallet('solana', all)).not.toContain('base-usdc');
+    expect(availableTokensForWallet('ethereum', all)).not.toContain(
+      'solana-usdc',
+    );
+  });
+
+  it('drops a Solana token the deny-list withdraws', () => {
+    const noSolanaUsdc = ((t: string) => t !== 'solana-usdc') as never;
+    expect(availableTokensForWallet('solana', noSolanaUsdc)).toEqual(['solana']);
   });
 
   it('is empty with no wallet', () => {

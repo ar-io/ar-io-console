@@ -14,7 +14,7 @@ describe('buildPaymentOptions', () => {
     // The whole point: a Solana session cannot sign an Ethereum transaction, so
     // ETH/USDC are absent rather than offered and failing later.
     expect(ids(buildPaymentOptions({ ...base, walletType: 'solana' })))
-      .toEqual(['card', 'token:solana']);
+      .toEqual(['card', 'token:solana', 'token:solana-usdc']);
     expect(ids(buildPaymentOptions({ ...base, walletType: 'ethereum' })))
       .toEqual(['card', 'token:base-usdc', 'token:base-eth', 'token:usdc', 'token:pol', 'token:ethereum']);
   });
@@ -39,7 +39,7 @@ describe('buildPaymentOptions', () => {
     // The bundler 503s when Stripe is off (normal on testnet); offering Card
     // there would be a dead end.
     const o = buildPaymentOptions({ ...base, walletType: 'solana', cardEnabled: false });
-    expect(ids(o)).toEqual(['token:solana']);
+    expect(ids(o)).toEqual(['token:solana', 'token:solana-usdc']);
   });
 
   it('leads with Balance when there is one — it is what gets preselected', () => {
@@ -110,14 +110,23 @@ describe('extraTokens', () => {
     const withArio = buildPaymentOptions({
       ...base, walletType: 'solana', extraTokens: ['ario'],
     });
-    expect(withArio.map((o) => o.id)).toEqual(['card', 'token:ario', 'token:solana']);
+    expect(withArio.map((o) => o.id)).toEqual([
+      'card',
+      'token:ario',
+      'token:solana',
+      'token:solana-usdc',
+    ]);
   });
 
   it('does not duplicate a token the wallet already offers', () => {
     const o = buildPaymentOptions({
       ...base, walletType: 'solana', extraTokens: ['solana'],
     });
-    expect(o.map((o2) => o2.id)).toEqual(['card', 'token:solana']);
+    expect(o.map((o2) => o2.id)).toEqual([
+      'card',
+      'token:solana',
+      'token:solana-usdc',
+    ]);
   });
 
   it('never offers an extra token with no wallet to sign it', () => {
@@ -146,7 +155,13 @@ describe('defaultPaymentOption', () => {
     // so the picker never renders with nothing chosen.
     const o = buildPaymentOptions({
       ...base, walletType: 'solana', credits: 1, priceInCredits: 5,
-      cardEnabled: false, tokenBalances: { solana: 0 }, tokenPrices: { solana: 2 },
+      cardEnabled: false,
+      // Every offered token must be broke for the premise to hold: an unknown
+      // balance deliberately reads as sufficient (see paymentOptions.ts), so
+      // omitting one would leave it "payable" and the assertion would be
+      // asserting the wrong thing.
+      tokenBalances: { solana: 0, 'solana-usdc': 0 },
+      tokenPrices: { solana: 2, 'solana-usdc': 1 },
     });
     expect(o.every((x) => !x.sufficient)).toBe(true);
     expect(defaultPaymentOption(o)).toBe(o[0]);
@@ -269,9 +284,9 @@ describe('the token menu follows the payer', () => {
     never reads. `availableTokensForWallet` is exactly "what this wallet can
     sign", which makes the two line up by construction.
   */
-  it('offers a Solana session SOL, unchanged', () => {
+  it('offers a Solana session its own chain: SOL and USDC', () => {
     expect(ids(buildPaymentOptions({ ...arns, walletType: 'solana' })))
-      .toEqual(['card', 'token:ario', 'token:solana']);
+      .toEqual(['card', 'token:ario', 'token:solana', 'token:solana-usdc']);
   });
 
   it('offers an Ethereum session its own chains, and no SOL', () => {
