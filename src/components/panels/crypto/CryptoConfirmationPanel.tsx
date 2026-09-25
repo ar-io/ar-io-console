@@ -26,6 +26,7 @@ import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { formatTokenAmount } from '../../../utils/jitPayment';
 import { savePendingTopUpTx, removePendingTopUpTx } from '../../../utils/pendingTopUp';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { CONTRACT_WALLET_DESTINATION_ERROR, isContractWalletCode } from '../../../utils/contractWallet';
 
 interface CryptoConfirmationPanelProps {
   cryptoAmount: number;
@@ -438,6 +439,25 @@ export default function CryptoConfirmationPanel({
             );
           }
 
+          // A smart-contract wallet sends through its own contract, so Turbo
+          // never reads the destination memo and credits the sender instead of
+          // the Buying For account. Checked on the post-switch provider because
+          // a smart wallet is deployed per chain. A failed lookup lets the
+          // payment through: the worst case is credits on the user's own wallet,
+          // which Share Credits can move, whereas blocking on a flaky RPC would
+          // stop every Buying For payment.
+          if (turboCreditDestinationAddress) {
+            let code: string | undefined;
+            try {
+              code = await provider.getCode(signerAddress);
+            } catch (codeError) {
+              console.warn('Could not check whether the wallet is a contract wallet:', codeError);
+            }
+            if (isContractWalletCode(code)) {
+              throw new Error(CONTRACT_WALLET_DESTINATION_ERROR);
+            }
+          }
+
           const turbo = TurboFactory.authenticated(turboConfig_forSDK);
 
           // Convert to smallest unit (wei for ETH/Base, POL for Polygon, 6 decimals for USDC/ARIO)
@@ -555,7 +575,10 @@ export default function CryptoConfirmationPanel({
           });
         }
 
-        if (error.message.includes('insufficient funds') || (error as any).code === 'INSUFFICIENT_FUNDS') {
+        if (error.message === CONTRACT_WALLET_DESTINATION_ERROR) {
+          // Matched exactly, before the keyword branches below could claim it.
+          setPaymentError(CONTRACT_WALLET_DESTINATION_ERROR);
+        } else if (error.message.includes('insufficient funds') || (error as any).code === 'INSUFFICIENT_FUNDS') {
           setPaymentError(
             `Insufficient ${tokenLabels[tokenType]} balance. You need enough to cover both the payment amount and gas fees. Current transaction requires approximately ${cryptoAmount} ${tokenLabels[tokenType]} + gas fees.`
           );
