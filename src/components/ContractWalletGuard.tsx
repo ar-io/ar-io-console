@@ -71,9 +71,17 @@ export default function ContractWalletGuard() {
       return isContract;
     };
 
+    // True while the store still holds the session this check was for. The
+    // store can move to another address before this effect's cleanup runs, and
+    // wagmi's disconnect acts on whatever is connected now.
+    const stillThisSession = () => {
+      const current = useStore.getState();
+      return !cancelled && current.walletType === 'ethereum' && current.address?.toLowerCase() === key;
+    };
+
     (async () => {
       const isContract = await hasContractCode();
-      if (cancelled || !isContract) return;
+      if (!isContract || !stillThisSession()) return;
       console.warn('[Wallet] Smart-contract wallet detected, signing out:', address);
       try {
         await disconnectAsync();
@@ -81,7 +89,7 @@ export default function ContractWalletGuard() {
         // Continue: the app session is cleared either way.
       }
       // The session may have changed while disconnecting; never clear a new one.
-      if (cancelled) return;
+      if (!stillThisSession()) return;
       clearEthereumTurboClientCache();
       clearX402SignerCache();
       clearAllPaymentState();
