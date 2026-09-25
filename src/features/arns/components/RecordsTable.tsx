@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Globe,
@@ -69,6 +69,12 @@ interface RecordsTableProps {
   /** Undernames allowed by the current limit (excludes `@`). */
   undernameLimit?: number | null;
   onSuccess: () => void;
+  /**
+   * Bumped by the page's "Edit target" shortcut: opens the `@` row's editor
+   * and scrolls it into view. Waits for the record to load, so the editor is
+   * never seeded with an empty target that a save would then write.
+   */
+  editApexRequest?: number;
 }
 
 type RowKind = 'apex' | 'undername';
@@ -99,6 +105,7 @@ export default function RecordsTable({
   canManage,
   undernameLimit,
   onSuccess,
+  editApexRequest = 0,
 }: RecordsTableProps) {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
@@ -234,6 +241,20 @@ export default function RecordsTable({
     setOriginal(undefined);
     setEditKey('__new__');
   };
+  const rootRef = useRef<HTMLDivElement>(null);
+  const handledApexRequest = useRef(0);
+  useEffect(() => {
+    if (!editApexRequest || editApexRequest === handledApexRequest.current) return;
+    if (!canManage || !ant) return;
+    const apex = rows.find((r) => r.kind === 'apex');
+    if (!apex) return;
+    handledApexRequest.current = editApexRequest;
+    setQ('');
+    setPage(0);
+    openEdit(apex);
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [editApexRequest, canManage, ant, rows]);
+
   const close = () => {
     setEditKey(null);
     setRowError(null);
@@ -367,7 +388,7 @@ export default function RecordsTable({
   );
 
   return (
-    <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
+    <div ref={rootRef} className="mt-3 scroll-mt-24 rounded-2xl border border-border/20 bg-card p-4">
       {/*
         Row-action failures need somewhere to land when no row is open.
 

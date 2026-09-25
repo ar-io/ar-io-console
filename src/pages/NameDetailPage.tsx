@@ -5,6 +5,7 @@ import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
   CalendarPlus,
+  Crosshair,
   ExternalLink,
   Globe,
   Layers,
@@ -122,6 +123,7 @@ export default function NameDetailPage() {
   const { arnsAddress } = useLinkedSolanaWallet();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
+  const [editApexRequest, setEditApexRequest] = useState(0);
 
   const name = (rawName ?? '').toLowerCase();
   const displayName = toUnicodeName(name);
@@ -472,6 +474,7 @@ export default function NameDetailPage() {
             canManage={canEditRecords}
             undernameLimit={record.undernameLimit}
             onSuccess={refresh}
+            editApexRequest={editApexRequest}
           />
 
           {/* Actions for names you own or control. */}
@@ -483,6 +486,12 @@ export default function NameDetailPage() {
               <div className="flex flex-wrap gap-2">
                 {/* Renewing and upgrading are registry payments Turbo settles
                     from credits — no wallet approval, and no SOL. */}
+                {/* The `@` record's target, under the name users coming from
+                    arns.ar.io look for ("Target ID"): it otherwise lives only
+                    behind a pencil icon in the Records table. */}
+                {canEditRecords && (
+                  <ActionBtn icon={Crosshair} label="Edit target" onClick={() => setEditApexRequest((n) => n + 1)} />
+                )}
                 <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
                 <ActionBtn icon={Pencil} label="Edit details" onClick={() => openOwnerAction('edit')} />
                 <ActionBtn icon={Star} label="Set as primary" onClick={() => openOwnerAction('primary')} />

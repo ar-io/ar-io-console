@@ -10,6 +10,7 @@ import { useStore } from '../../store/useStore';
 import { getTurboBalance, resolveEthereumAddress } from '../../utils';
 import { clearEthereumTurboClientCache } from '../../hooks/useEthereumTurboClient';
 import { Mail } from 'lucide-react';
+import { selectableSolanaWallets } from '../../utils/selectableSolanaWallets';
 
 const WalletSelectionModal = ({
   onClose,
@@ -368,7 +369,7 @@ const WalletSelectionModal = ({
               Back
             </button>
 
-            {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).map((w) => (
+            {selectableSolanaWallets(solanaWallets).map((w) => (
               <button
                 key={w.adapter.name}
                 className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
@@ -381,7 +382,7 @@ const WalletSelectionModal = ({
                 </div>
               </button>
             ))}
-            {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).length === 0 && (
+            {selectableSolanaWallets(solanaWallets).length === 0 && (
               <div className="text-center py-6 text-sm text-foreground/60">
                 <p className="mb-3">No Solana wallets detected</p>
                 <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Install Phantom</a>
