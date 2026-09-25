@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useConfig, useDisconnect, usePublicClient } from 'wagmi';
+import { useDisconnect, usePublicClient } from 'wagmi';
 import { mainnet, base, polygon } from 'wagmi/chains';
 import { ShieldAlert } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { clearEthereumTurboClientCache } from '../hooks/useEthereumTurboClient';
 import { clearX402SignerCache } from '../hooks/useX402Upload';
 import { isContractWalletCode } from '../utils/contractWallet';
-import { SMART_CONTRACT_CONNECTOR_IDS } from '../utils/walletConnectors';
 import BaseModal from './modals/BaseModal';
 import ModalHeader from './modals/ModalHeader';
 
@@ -24,13 +23,13 @@ const checked = new Map<string, boolean>();
  * can connect and even pay, but every signed action fails, so credits it buys
  * land on an address it can never spend from.
  *
- * Two signals, either of which signs out:
- * - contract code on a chain the console's wallets pay on (EIP-7702
- *   delegations excepted, see `isContractWalletCode`);
- * - a session restored from a connector this app no longer offers (Base
- *   Account, Safe). wagmi skips such a connector on reconnect without clearing
- *   our store, which would otherwise leave a signed-in session that can sign
- *   nothing.
+ * The signal is contract code on a chain the console's wallets pay on
+ * (EIP-7702 delegations excepted, see `isContractWalletCode`). Not wagmi's
+ * persisted `recentConnectorId`: it outlives the session that set it, and an
+ * email (Privy) session never touches wagmi, so a stale "baseAccount" there
+ * would sign an ordinary email user out, and Privy would sign them back in, in
+ * a loop. A Base Account never used on-chain therefore gets through, and with
+ * no transaction behind it, it holds no crypto-bought credits.
  *
  * A lookup that fails counts as a plain wallet: a flaky RPC must not sign
  * anyone out. Privy sessions never reach the sign-out: Privy is not a wagmi
@@ -42,7 +41,6 @@ export default function ContractWalletGuard() {
   const walletType = useStore((s) => s.walletType);
   const clearAddress = useStore((s) => s.clearAddress);
   const clearAllPaymentState = useStore((s) => s.clearAllPaymentState);
-  const wagmiConfig = useConfig();
   const { disconnectAsync } = useDisconnect();
   const mainnetClient = usePublicClient({ chainId: mainnet.id });
   const baseClient = usePublicClient({ chainId: base.id });
@@ -53,15 +51,6 @@ export default function ContractWalletGuard() {
     if (walletType !== 'ethereum' || !address || !/^0x[0-9a-fA-F]{40}$/.test(address)) return;
     let cancelled = false;
     const key = address.toLowerCase();
-
-    const fromRetiredConnector = async (): Promise<boolean> => {
-      try {
-        const id = await wagmiConfig.storage?.getItem('recentConnectorId');
-        return typeof id === 'string' && SMART_CONTRACT_CONNECTOR_IDS.has(id);
-      } catch {
-        return false;
-      }
-    };
 
     const hasContractCode = async (): Promise<boolean> => {
       const cached = checked.get(key);
@@ -83,8 +72,8 @@ export default function ContractWalletGuard() {
     };
 
     (async () => {
-      const unsupported = (await fromRetiredConnector()) || (await hasContractCode());
-      if (cancelled || !unsupported) return;
+      const isContract = await hasContractCode();
+      if (cancelled || !isContract) return;
       console.warn('[Wallet] Smart-contract wallet detected, signing out:', address);
       try {
         await disconnectAsync();
@@ -101,7 +90,7 @@ export default function ContractWalletGuard() {
     return () => {
       cancelled = true;
     };
-  }, [address, walletType, wagmiConfig, mainnetClient, baseClient, polygonClient, disconnectAsync, clearAddress, clearAllPaymentState]);
+  }, [address, walletType, mainnetClient, baseClient, polygonClient, disconnectAsync, clearAddress, clearAllPaymentState]);
 
   if (!blocked) return null;
 
