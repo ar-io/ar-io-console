@@ -2,6 +2,44 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.10.0] - 2026-09-25
+
+### Added
+- **MetaMask's Solana wallet works here.** It could manage a name on
+  arns.ar.io but never appeared in the console: both Solana wallet pickers
+  hid anything called "MetaMask", a filter meant for the old MetaMask Snap,
+  which shares the name. You can now sign in with it or link it, and update
+  your names from it. It is listed as "Solana account in MetaMask", because it
+  is a different address from MetaMask on Ethereum, with its own credits.
+- **Edit target, on a name's page.** Pointing a name at a transaction is now
+  one click under Manage, which opens the name's record with the target field
+  ready. It used to sit behind a pencil icon on the `@` row of the Records
+  table, where people used to arns.ar.io's "Target ID" did not look for it.
+
+### Changed
+- **The homepage domain price says which price it is.** The figure is the
+  registry price when paying in ARIO, the cheapest route. By card or credits
+  the same 8-character name cost $49.51 against the $29.44 shown (checked
+  2026-09-23), so the line now says it is the ARIO price and that the name is
+  owned permanently. The three pricing actions share one colour.
+- **Every page uses the same width.** A name's page and the Pages builder were
+  capped narrower than every other screen on wide monitors. Phones were
+  already the same.
+- **USDC options in the name checkout show the USDC logo.**
+
+### Fixed
+- **Smart-contract wallets are no longer offered, and are signed out with an
+  explanation.** Base Account and Safe could connect and pay, by card or
+  crypto, but could never upload or spend what they bought: Turbo needs a
+  signature that a contract wallet cannot give. A top-up bought for another
+  account from one also credited the wallet itself. They are gone from the
+  connect list, and a contract wallet that connects another way, such as
+  through WalletConnect, is signed out before it can pay.
+- **Solana wallets stay listed after you sign out of an email account.** A bug
+  in a wallet library left only the email account's wallet in the Solana
+  pickers, with Phantom, Solflare and MetaMask missing until the page was
+  reloaded.
+
 ## [4.9.0] - 2026-09-23
 
 ### Added
@@ -15,8 +53,8 @@ All notable changes to the ar.io Console are documented in this file.
 ### Changed
 - **Settings and Buy Credits say what Turbo is.** The name appeared across the
   console, on credits, name actions and the pricing panel, without ever being
-  introduced. Each page now says it once: the upload and payment service behind
-  ar.io and ArDrive, which issues the credits you spend here.
+  introduced. Each page now says it once: an ar.io gateway run by the ArDrive
+  team, which issues the credits you spend here.
 - **KYVE is no longer offered as a payment token.** The upload service can no
   longer settle a KYVE payment, so offering it would start something that
   cannot finish. Existing KYVE history still displays, and a transfer already
