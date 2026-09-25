@@ -25,4 +25,14 @@ describe('selectableSolanaWallets', () => {
     ]);
     expect(out.map((w) => w.adapter.name)).toEqual(['Backpack']);
   });
+
+  it('lists a name once, keeping the first', () => {
+    const first = wallet('MetaMask', WalletReadyState.Installed);
+    const out = selectableSolanaWallets([
+      first,
+      wallet('MetaMask', WalletReadyState.Installed),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toBe(first);
+  });
 });

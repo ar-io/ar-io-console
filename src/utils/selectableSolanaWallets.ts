@@ -10,7 +10,15 @@ import { WalletReadyState } from '@solana/wallet-adapter-base';
  * name, so the filter hid a working wallet that ArNS writes can use.
  */
 export function selectableSolanaWallets<
-  T extends { readyState: WalletReadyState },
+  T extends { readyState: WalletReadyState; adapter: { name: string } },
 >(wallets: readonly T[]): T[] {
-  return wallets.filter((w) => w.readyState === WalletReadyState.Installed);
+  // One entry per name: the adapter resolves a selection by name, so a second
+  // wallet with the same name (the old Solflare MetaMask Snap also calls itself
+  // "MetaMask") could never be selected, and would collide as a React key.
+  const seen = new Set<string>();
+  return wallets.filter((w) => {
+    if (w.readyState !== WalletReadyState.Installed || seen.has(w.adapter.name)) return false;
+    seen.add(w.adapter.name);
+    return true;
+  });
 }

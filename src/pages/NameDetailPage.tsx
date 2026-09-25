@@ -484,14 +484,20 @@ export default function NameDetailPage() {
                 Manage
               </h2>
               <div className="flex flex-wrap gap-2">
-                {/* Renewing and upgrading are registry payments Turbo settles
-                    from credits — no wallet approval, and no SOL. */}
                 {/* The `@` record's target, under the name users coming from
                     arns.ar.io look for ("Target ID"): it otherwise lives only
-                    behind a pencil icon in the Records table. */}
+                    behind a pencil icon in the Records table. Disabled until
+                    the record loads, since it opens that record's editor. */}
                 {canEditRecords && (
-                  <ActionBtn icon={Crosshair} label="Edit target" onClick={() => setEditApexRequest((n) => n + 1)} />
+                  <ActionBtn
+                    icon={Crosshair}
+                    label="Edit target"
+                    disabled={!ant}
+                    onClick={() => setEditApexRequest((n) => n + 1)}
+                  />
                 )}
+                {/* Renewing and upgrading are registry payments Turbo settles
+                    from credits — no wallet approval, and no SOL. */}
                 <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
                 <ActionBtn icon={Pencil} label="Edit details" onClick={() => openOwnerAction('edit')} />
                 <ActionBtn icon={Star} label="Set as primary" onClick={() => openOwnerAction('primary')} />
@@ -555,19 +561,22 @@ function ActionBtn({
   label,
   onClick,
   danger,
+  disabled,
 }: {
   icon: typeof Globe;
   label: string;
   onClick: () => void;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+      disabled={disabled}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         danger
-          ? 'border-error/30 text-error hover:bg-error/10'
-          : 'border-border/20 bg-background text-foreground hover:border-primary/40'
+          ? 'border-error/30 text-error enabled:hover:bg-error/10'
+          : 'border-border/20 bg-background text-foreground enabled:hover:border-primary/40'
       }`}
     >
       <Icon className="h-4 w-4" /> {label}

@@ -378,7 +378,11 @@ const WalletSelectionModal = ({
                 <img src={w.adapter.icon} alt={w.adapter.name} className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-lg" />
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold mb-1 text-base">{w.adapter.name}</div>
-                  <div className="text-xs sm:text-sm text-foreground/70">Solana wallet</div>
+                  {/* MetaMask is also offered under Ethereum; its Solana
+                      account is a different address with its own credits. */}
+                  <div className="text-xs sm:text-sm text-foreground/70">
+                    {w.adapter.name === 'MetaMask' ? 'Solana account in MetaMask' : 'Solana wallet'}
+                  </div>
                 </div>
               </button>
             ))}

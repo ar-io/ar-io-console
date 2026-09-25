@@ -133,7 +133,7 @@ export default function RecordsTable({
   const undernameWrites = useUndernameWrites(name, processId);
   const metadata = useSetArNSMetadata();
 
-  const rows = useMemo<Row[]>(() => {
+  const allRows = useMemo<Row[]>(() => {
     const apex: Row = {
       key: APEX,
       label: APEX,
@@ -168,15 +168,17 @@ export default function RecordsTable({
         keywordsRaw: (u.keywords ?? []).join(', '),
       }),
     }));
-    const all = [apex, ...rest];
+    return [apex, ...rest];
+  }, [ant, undernames]);
+  const rows = useMemo<Row[]>(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return all;
-    return all.filter(
+    if (!needle) return allRows;
+    return allRows.filter(
       (r) =>
         r.label.toLowerCase().includes(needle) ||
         (r.target ?? '').toLowerCase().includes(needle),
     );
-  }, [ant, undernames, q]);
+  }, [allRows, q]);
 
   const used = undernames?.length ?? 0;
   const atLimit = undernameLimit != null && used >= undernameLimit;
@@ -241,19 +243,40 @@ export default function RecordsTable({
     setOriginal(undefined);
     setEditKey('__new__');
   };
-  const rootRef = useRef<HTMLDivElement>(null);
-  const handledApexRequest = useRef(0);
+  /*
+    The page's "Edit target" shortcut. Seeded with the current request so a
+    remount never replays an old click. It waits while a save is in flight (a
+    row pencil is disabled then too) and until the record loads, so the editor
+    is never seeded with an empty target. An editor already open on `@` keeps
+    what the user typed: the shortcut then only brings it back into view.
+  */
+  const handledApexRequest = useRef(editApexRequest);
+  const [focusApexTarget, setFocusApexTarget] = useState(0);
   useEffect(() => {
-    if (!editApexRequest || editApexRequest === handledApexRequest.current) return;
-    if (!canManage || !ant) return;
-    const apex = rows.find((r) => r.kind === 'apex');
+    if (editApexRequest === handledApexRequest.current) return;
+    if (!canManage || !ant || busy) return;
+    const apex = allRows.find((r) => r.kind === 'apex');
     if (!apex) return;
     handledApexRequest.current = editApexRequest;
     setQ('');
     setPage(0);
-    openEdit(apex);
-    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [editApexRequest, canManage, ant, rows]);
+    if (editKey !== APEX) openEdit(apex);
+    setFocusApexTarget(editApexRequest);
+    // openEdit only sets state, and editKey is read, not reacted to.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editApexRequest, canManage, ant, busy, allRows]);
+  // Runs after the editor has rendered, so the target field exists. Focus
+  // moves with the view, so keyboard and screen-reader users land in the field
+  // rather than on a button far below it.
+  useEffect(() => {
+    if (!focusApexTarget || editKey !== APEX) return;
+    setFocusApexTarget(0);
+    const field = document.getElementById(`rec-${APEX}-target`);
+    if (!field) return;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    field.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    field.focus({ preventScroll: true });
+  }, [focusApexTarget, editKey]);
 
   const close = () => {
     setEditKey(null);
@@ -388,7 +411,7 @@ export default function RecordsTable({
   );
 
   return (
-    <div ref={rootRef} className="mt-3 scroll-mt-24 rounded-2xl border border-border/20 bg-card p-4">
+    <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
       {/*
         Row-action failures need somewhere to land when no row is open.
 
