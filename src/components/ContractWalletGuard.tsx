@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
-import { usePublicClient, useDisconnect } from 'wagmi';
+import { useConfig, useDisconnect, usePublicClient } from 'wagmi';
 import { mainnet, base, polygon } from 'wagmi/chains';
 import { ShieldAlert } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { clearEthereumTurboClientCache } from '../hooks/useEthereumTurboClient';
 import { clearX402SignerCache } from '../hooks/useX402Upload';
 import { isContractWalletCode } from '../utils/contractWallet';
+import { SMART_CONTRACT_CONNECTOR_IDS } from '../utils/walletConnectors';
 import BaseModal from './modals/BaseModal';
 import ModalHeader from './modals/ModalHeader';
 
-// Addresses already checked this page load, so a re-render or a store
-// rehydrate does not repeat three RPC calls.
+// Answers already settled this page load, so a re-render or a store rehydrate
+// does not repeat three RPC calls. Only a definite answer is cached: one that
+// found contract code, or one where every chain replied. A failed lookup is
+// asked again next time rather than remembered as "plain wallet".
 const checked = new Map<string, boolean>();
 
 /**
@@ -19,14 +22,27 @@ const checked = new Map<string, boolean>();
  * Turbo's Ethereum signer recovers a public key from a plain message
  * signature, which a contract or passkey wallet cannot produce. Such a wallet
  * can connect and even pay, but every signed action fails, so credits it buys
- * land on an address it can never spend from. Stopping it at connect time is
- * the only point that covers card and crypto top-ups alike.
+ * land on an address it can never spend from.
  *
- * Checked on the three chains the console's wallets pay on. A lookup that
- * fails counts as a plain wallet: a flaky RPC must not sign anyone out.
+ * Two signals, either of which signs out:
+ * - contract code on a chain the console's wallets pay on (EIP-7702
+ *   delegations excepted, see `isContractWalletCode`);
+ * - a session restored from a connector this app no longer offers (Base
+ *   Account, Safe). wagmi skips such a connector on reconnect without clearing
+ *   our store, which would otherwise leave a signed-in session that can sign
+ *   nothing.
+ *
+ * A lookup that fails counts as a plain wallet: a flaky RPC must not sign
+ * anyone out. Privy sessions never reach the sign-out: Privy is not a wagmi
+ * connector here and creates EOAs. If Privy smart wallets are ever enabled,
+ * this must call Privy's logout too, or its login effect re-sets the address.
  */
 export default function ContractWalletGuard() {
-  const { address, walletType, clearAddress, clearAllPaymentState } = useStore();
+  const address = useStore((s) => s.address);
+  const walletType = useStore((s) => s.walletType);
+  const clearAddress = useStore((s) => s.clearAddress);
+  const clearAllPaymentState = useStore((s) => s.clearAllPaymentState);
+  const wagmiConfig = useConfig();
   const { disconnectAsync } = useDisconnect();
   const mainnetClient = usePublicClient({ chainId: mainnet.id });
   const baseClient = usePublicClient({ chainId: base.id });
@@ -38,24 +54,37 @@ export default function ContractWalletGuard() {
     let cancelled = false;
     const key = address.toLowerCase();
 
-    const check = async (): Promise<boolean> => {
+    const fromRetiredConnector = async (): Promise<boolean> => {
+      try {
+        const id = await wagmiConfig.storage?.getItem('recentConnectorId');
+        return typeof id === 'string' && SMART_CONTRACT_CONNECTOR_IDS.has(id);
+      } catch {
+        return false;
+      }
+    };
+
+    const hasContractCode = async (): Promise<boolean> => {
       const cached = checked.get(key);
       if (cached !== undefined) return cached;
       const clients = [mainnetClient, baseClient, polygonClient].filter(
         (c): c is NonNullable<typeof c> => c !== undefined,
       );
-      const codes = await Promise.all(
+      const results = await Promise.all(
         clients.map((c) =>
-          c.getCode({ address: key as `0x${string}` }).catch(() => undefined),
+          c.getCode({ address: key as `0x${string}` }).then(
+            (code) => ({ ok: true, code }),
+            () => ({ ok: false, code: undefined }),
+          ),
         ),
       );
-      const isContract = codes.some((code) => isContractWalletCode(code));
-      checked.set(key, isContract);
+      const isContract = results.some((r) => isContractWalletCode(r.code));
+      if (isContract || results.every((r) => r.ok)) checked.set(key, isContract);
       return isContract;
     };
 
-    check().then(async (isContract) => {
-      if (cancelled || !isContract) return;
+    (async () => {
+      const unsupported = (await fromRetiredConnector()) || (await hasContractCode());
+      if (cancelled || !unsupported) return;
       console.warn('[Wallet] Smart-contract wallet detected, signing out:', address);
       try {
         await disconnectAsync();
@@ -67,30 +96,33 @@ export default function ContractWalletGuard() {
       clearAllPaymentState();
       clearAddress();
       setBlocked(true);
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [address, walletType, mainnetClient, baseClient, polygonClient, disconnectAsync, clearAddress, clearAllPaymentState]);
+  }, [address, walletType, wagmiConfig, mainnetClient, baseClient, polygonClient, disconnectAsync, clearAddress, clearAllPaymentState]);
 
   if (!blocked) return null;
 
   return (
     <BaseModal onClose={() => setBlocked(false)}>
-      <div className="w-[26rem] max-w-full">
+      <div
+        className="flex flex-col p-4 text-foreground sm:p-5"
+        style={{ minWidth: 'min(85vw, 400px)', maxWidth: 'min(95vw, 440px)' }}
+      >
         <ModalHeader
           icon={ShieldAlert}
-          title="This wallet can't be used here"
-          description="Smart-contract wallets"
+          title="Wallet not supported"
+          description="Smart-contract wallets can't sign on ar.io"
         />
-        <p className="mt-4 text-sm text-foreground/80">
-          This is a smart-contract wallet. Uploads and credit payments on ar.io need a
-          signature from a standard wallet, which this kind of wallet cannot give, so
-          you have been signed out before anything was paid. Connect a standard
-          wallet, or sign in with email.
+        <p className="text-sm text-foreground/80">
+          This is a smart-contract wallet. Uploading and spending credits need a
+          signature from a standard wallet, which this kind of wallet cannot give,
+          so it has been signed out. Connect a standard wallet, or sign in with
+          email.
         </p>
-        <div className="mt-6 flex justify-end">
+        <div className="mt-5 flex justify-end">
           <button
             onClick={() => setBlocked(false)}
             className="inline-flex items-center gap-2 bg-foreground text-white px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity"

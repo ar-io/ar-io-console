@@ -16,6 +16,11 @@ const EIP7702_DELEGATION = /^0xef0100[0-9a-f]{40}$/i;
  * payment service credits the sender instead. A wallet not yet deployed
  * (a Coinbase Smart Wallet before its first transaction on that chain) has no
  * code and reads as false, which this cannot detect.
+ *
+ * An EIP-7702 delegated EOA is exempt because its plain `eth_sendTransaction`
+ * still goes straight to the target. If such a wallet batches or relays the
+ * transfer instead (paying gas in a token, for example), the memo can still be
+ * missed; that case is not detected here.
  */
 export function isContractWalletCode(code: string | null | undefined): boolean {
   if (!code) return false;
@@ -23,6 +28,12 @@ export function isContractWalletCode(code: string | null | undefined): boolean {
   if (hex === '0x' || hex === '0x0') return false;
   return !EIP7702_DELEGATION.test(hex);
 }
+
+export const CONTRACT_WALLET_PAYMENT_ERROR =
+  'This wallet is a smart-contract wallet. Uploading and spending credits need ' +
+  'a signature from a standard wallet, which this kind of wallet cannot give, ' +
+  'so credits bought with it could not be used. Nothing was sent. Connect a ' +
+  'standard wallet, or sign in with email.';
 
 export const CONTRACT_WALLET_DESTINATION_ERROR =
   'This wallet is a smart-contract wallet. Turbo cannot read which account to ' +
