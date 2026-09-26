@@ -205,11 +205,6 @@ export function ArNSPurchaseCard({
     nothing on screen to explain it.
   */
   const sessionAddress = useStore((s) => s.address);
-  const walletSplit = walletSplitNote({
-    sessionWalletType,
-    sessionAddress,
-    ownerAddress: address,
-  });
 
 
   const balances = useArNSPaymentBalances(address);
@@ -252,6 +247,24 @@ export function ArNSPurchaseCard({
   const selectedOption =
     routingOptions.find((o) => o.id === selectedId) ??
     defaultPaymentOption(routingOptions);
+  /*
+    The id the purchase will actually act on, which is what the picker shows.
+    Showing `selectedId` alone let the picker display nothing (or a choice that
+    no longer exists) while Buy acted on the fallback underneath it.
+  */
+  const committedId =
+    selectedId && routingOptions.some((o) => o.id === selectedId)
+      ? selectedId
+      : undefined;
+  const routedId = committedId ?? selectedOption?.id ?? '';
+  /*
+    A choice that stops existing (x402-only mode switching on, a wallet change
+    removing its token) is forgotten, so the preselection below runs again
+    rather than leaving Buy on a fallback nobody chose.
+  */
+  useEffect(() => {
+    if (selectedId && !committedId) setSelectedId(undefined);
+  }, [selectedId, committedId]);
 
   const route = useMemo(
     () =>
@@ -276,6 +289,18 @@ export function ArNSPurchaseCard({
     to say out loud rather than leave to be discovered at the wallet prompt.
   */
   const sponsored = priceUnit === 'credits';
+
+  /*
+    Named for the wallet that pays THIS route. ARIO is the owner's own
+    transaction, so on an Arweave or Ethereum session the linked Solana wallet
+    pays as well as holds, and the note says so rather than contradicting it.
+  */
+  const walletSplit = walletSplitNote({
+    sessionWalletType,
+    sessionAddress,
+    ownerAddress: address,
+    payingWalletType: route.kind === 'ario' ? 'solana' : sessionWalletType,
+  });
 
   /*
     Where the name points on its first block. Offered on every payment route.
@@ -327,7 +352,14 @@ export function ArNSPurchaseCard({
     data: creditsPrice,
     isFetching: creditsLoading,
     error: creditsError,
-  } = useArNSPrice({ name, type, years });
+  } = useArNSPrice({
+    name,
+    type,
+    years,
+    // Except in x402-only mode, where the payment service is off and ARIO is
+    // the only option, so there is no Credits or Card row to price.
+    enabled: !creditPurchasesUnavailable || priceUnit === 'credits',
+  });
 
   // Cost details (ARIO price + SOL gas + affordability) for the selected source.
   const {
@@ -396,18 +428,22 @@ export function ArNSPurchaseCard({
     route.kind === 'topup' ? (route.token as SupportedTokenType) : null;
   const sessionToken =
     payingToken && payingToken !== 'solana' ? payingToken : null;
-  const sessionTokenBalance = useTokenBalance(
-    sessionToken,
-    sessionWalletType ?? null,
-    sessionAddress ?? null,
-    !!sessionToken,
+  /*
+    Through `useBalanceRead`, so the render before the read starts (when
+    `useTokenBalance` still reports 0 and not loading) is unknown rather than
+    an empty wallet: that frame used to flash "Not enough USDC".
+  */
+  const sessionTokenBalance = useBalanceRead(
+    useTokenBalance(
+      sessionToken,
+      sessionWalletType ?? null,
+      sessionAddress ?? null,
+      !!sessionToken,
+    ),
+    sessionToken && sessionAddress ? `${sessionAddress}:${sessionToken}` : null,
   );
   /** `undefined` when unknown — a failed lookup must never read as zero. */
-  const heldForPayment = sessionToken
-    ? sessionTokenBalance.error || sessionTokenBalance.loading
-      ? undefined
-      : sessionTokenBalance.balance
-    : balances.sol;
+  const heldForPayment = sessionToken ? sessionTokenBalance.balance : balances.sol;
 
   /*
     One more balance for the picker's rows, never for routing: the session
@@ -573,7 +609,7 @@ export function ArNSPurchaseCard({
     creditsPrice?.sponsoredCredits ? creditsPrice.sponsoredCredits * 1e12 : undefined,
     topUpTokens,
   );
-  const arioUsdRate = useArioUsdRate();
+  const arioUsdRate = useArioUsdRate(!creditPurchasesUnavailable);
   const pickerSources = useMemo(
     () =>
       buildSources({
@@ -614,20 +650,49 @@ export function ArNSPurchaseCard({
     it, and their choice is never overridden. Until then the picker shows
     nothing selected rather than a choice about to change.
   */
+  /*
+    The picker-only balance never decides the default, so it is not allowed to
+    hold it up for long: after five seconds a read still in flight counts as
+    settled and unknown.
+  */
+  const [settleCapHit, setSettleCapHit] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettleCapHit(true), 5_000);
+    return () => clearTimeout(timer);
+  }, []);
   const defaultsSettled =
-    !balances.loading && !creditsLoading && !costLoading && !pickerTokenBalance.loading;
+    !balances.loading &&
+    !creditsLoading &&
+    !costLoading &&
+    (!pickerTokenBalance.loading || settleCapHit);
   useEffect(() => {
     if (selectedId || !defaultsSettled) return;
     const id = preselectNameCheckoutOption({
       options: paymentOptions,
       sources: pickerSources,
-      fallback: defaultPaymentOption(paymentOptions),
+      // Today's default, over the price-free routing list, unchanged: anyone
+      // for whom neither covering credits nor ARIO applies opens where they
+      // always did.
+      fallback: defaultPaymentOption(routingOptions),
+      // Liquid, because the funding source starts on 'balance'.
+      arioSpendable: address && !balances.loading ? balances.liquidArio : undefined,
+      solBalance: balances.loading ? undefined : balances.sol,
+      solRequired: cost?.gasTotalSol,
     });
     // Only an id the router knows. The display list and the routing list hold
     // the same ids, so this is a guard, not a translation.
     const chosen = routingOptions.find((o) => o.id === id) ?? selectedOption;
     if (chosen) setSelectedId(chosen.id);
-  }, [selectedId, defaultsSettled, paymentOptions, pickerSources, routingOptions, selectedOption]);
+  }, [
+    selectedId, defaultsSettled, paymentOptions, pickerSources, routingOptions,
+    selectedOption, address, balances.loading, balances.liquidArio, balances.sol,
+    cost?.gasTotalSol,
+  ]);
+  /*
+    Nothing is bought on a default the checkout has not settled on yet: the
+    buttons wait for a committed choice, whether preselected or clicked.
+  */
+  const awaitingChoice = !committedId;
 
   const priceReady =
     priceUnit === 'credits' ? !!creditsPrice : cost?.arioCost != null;
@@ -1075,7 +1140,7 @@ export function ArNSPurchaseCard({
         <ArNSPaymentSelector
           note={walletSplit}
           options={paymentOptions}
-          selectedId={selectedId ?? ''}
+          selectedId={routedId}
           sources={pickerSources}
           sessionWalletType={sessionWalletType ?? 'solana'}
           prices={{
@@ -1187,6 +1252,7 @@ export function ArNSPurchaseCard({
           onClick={() => setShowPayment(true)}
           disabled={
             isBusy ||
+            awaitingChoice ||
             // Once a card payment has settled the purchase finishes on its own.
             // Leaving this live would let the user reopen the payment modal and
             // pay a SECOND time for a name they have already funded.
@@ -1243,13 +1309,14 @@ export function ArNSPurchaseCard({
                 })
           }
           disabled={
-            route.kind === 'topup'
+            awaitingChoice ||
+            (route.kind === 'topup'
               ? !priceReady || gasUnavailable || insufficientSol || isBusy ||
                 !tokenSmallestUnitForName || tokenStepLabel !== undefined ||
                 // Same reason as the card button: the token is spent before the
                 // name is registered. `canPay` covers this on the other branch.
                 targetBlocks
-              : !canPay
+              : !canPay)
           }
           busy={isBusy || tokenStepLabel !== undefined}
           actionVerb="buy this name"

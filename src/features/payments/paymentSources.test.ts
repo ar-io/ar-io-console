@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -362,73 +363,104 @@ describe('resolveSourceSelection', () => {
 });
 
 describe('preselectNameCheckoutOption', () => {
-  const pick = (args: Parameters<typeof nameCheckout>[1] & { walletType?: WalletKind }) => {
-    const { walletType = 'solana', ...rest } = args;
+  /*
+    Built as ArNSPurchaseCard builds it: display options (priced) for the
+    credits check and the rows, and the price-free ROUTING options for the
+    fallback, which is exactly today's default.
+  */
+  const pick = (
+    args: Parameters<typeof nameCheckout>[1] & {
+      walletType?: WalletKind;
+      arioSpendable?: number;
+      solRequired?: number;
+    },
+  ) => {
+    const { walletType = 'solana', arioSpendable, solRequired, ...rest } = args;
     const { options, sources } = nameCheckout(walletType, rest);
     return preselectNameCheckoutOption({
       options,
       sources,
-      fallback: defaultPaymentOption(options),
+      fallback: defaultPaymentOption(routing(walletType, rest.credits ?? 0)),
+      arioSpendable,
+      solBalance: rest.solBalance,
+      solRequired,
     });
   };
+  const routing = (walletType: WalletKind, credits: number) =>
+    buildPaymentOptions({ walletType, credits, extraTokens: ['ario'], isTokenSelectable });
+  // ARIO fully affordable on known figures: liquid ARIO and SOL both cover.
+  const arioOk = {
+    balances: { ario: 30_000 },
+    prices: { ario: 20_715 },
+    arioSpendable: 30_000,
+    solBalance: 0.05,
+    solRequired: 0.0156,
+  };
 
-  it('picks ARIO when a known balance covers a known price', () => {
-    expect(pick({ balances: { ario: 30_000 }, prices: { ario: 20_715 } })).toBe('token:ario');
+  it('picks ARIO when liquid ARIO and SOL are known to cover it', () => {
+    expect(pick(arioOk)).toBe('token:ario');
   });
 
-  it('falls back to today\'s default (the card) when ARIO is short', () => {
-    expect(pick({ balances: { ario: 1 }, prices: { ario: 20_715 } })).toBe('card');
+  it('falls back to the routing default when ARIO is short: card, with no credits', () => {
+    expect(pick({ ...arioOk, balances: { ario: 1 }, arioSpendable: 1 })).toBe('card');
   });
 
-  it('does not preselect ARIO on an unknown balance or price', () => {
-    expect(pick({ prices: { ario: 20_715 } })).toBe('card');
-    expect(pick({ balances: { ario: 30_000 } })).toBe('card');
+  it('judges ARIO on LIQUID ARIO, not the staked total the row shows', () => {
+    // 30,000 in total but only 100 liquid: the default funding source is
+    // liquid, so ARIO cannot pay as opened.
+    expect(pick({ ...arioOk, arioSpendable: 100 })).toBe('card');
+    expect(pick({ ...arioOk, arioSpendable: undefined })).toBe('card');
+  });
+
+  it('does not preselect ARIO on an unknown price', () => {
+    expect(pick({ ...arioOk, prices: {} })).toBe('card');
+  });
+
+  it('does not preselect ARIO unless the SOL balance is KNOWN to cover network costs', () => {
+    expect(pick({ ...arioOk, solBalance: undefined })).toBe('card');
+    expect(pick({ ...arioOk, solRequired: undefined })).toBe('card');
+    expect(pick({ ...arioOk, solBalance: 0.01 })).toBe('card');
+    expect(pick({ ...arioOk, solBalance: 0.0156 })).toBe('token:ario');
+  });
+
+  it('keeps the ARIO row enabled when SOL is unknown, while not preselecting it', () => {
+    const { sources } = nameCheckout('solana', { ...arioOk, solBalance: undefined });
+    expect(sources.find((x) => x.token === 'ario')?.disabledReason).toBeUndefined();
   });
 
   it('does not preselect ARIO when it is blocked on SOL for network costs', () => {
     expect(
-      pick({
-        balances: { ario: 30_000 },
-        prices: { ario: 20_715 },
-        networkSolRequired: 0.0156,
-        solBalance: 0,
-      }),
+      pick({ ...arioOk, networkSolRequired: 0.0156, solBalance: 0 }),
     ).toBe('card');
   });
 
   it('prefers credits that cover the price, since nothing new is spent', () => {
-    expect(
-      pick({
-        credits: 10,
-        priceInCredits: 6.61,
-        balances: { ario: 30_000 },
-        prices: { ario: 20_715 },
-      }),
-    ).toBe('balance');
+    expect(pick({ ...arioOk, credits: 10, priceInCredits: 6.61 })).toBe('balance');
   });
 
-  it('passes over credits that fall short', () => {
-    expect(
-      pick({
-        credits: 2.45,
-        priceInCredits: 6.61,
-        balances: { ario: 30_000 },
-        prices: { ario: 20_715 },
-      }),
-    ).toBe('token:ario');
-    expect(pick({ credits: 2.45, priceInCredits: 6.61 })).toBe('card');
+  it('passes over short credits for ARIO', () => {
+    expect(pick({ ...arioOk, credits: 2.45, priceInCredits: 6.61 })).toBe('token:ario');
+  });
+
+  it('with credits short and ARIO out, falls back to today\'s default exactly', () => {
+    // Today's default over the routing list picks Balance whenever there are
+    // credits, since that list carries no price. Unchanged by this picker.
+    const got = pick({ credits: 2.45, priceInCredits: 6.61 });
+    expect(got).toBe(defaultPaymentOption(routing('solana', 2.45))?.id);
+    expect(got).toBe('balance');
   });
 
   it('works on every session type, since ARIO is offered on each', () => {
     for (const walletType of ['arweave', 'ethereum'] as const) {
-      expect(
-        pick({ walletType, balances: { ario: 30_000 }, prices: { ario: 20_715 } }),
-      ).toBe('token:ario');
+      expect(pick({ ...arioOk, walletType })).toBe('token:ario');
     }
   });
 
-  it('in x402-only mode ARIO is the only option, and is chosen', () => {
-    expect(pick({ creditPurchasesUnavailable: true })).toBe('token:ario');
+  it('in x402-only mode ARIO is the only option, and is the fallback', () => {
+    const { options, sources } = nameCheckout('ethereum', { creditPurchasesUnavailable: true });
+    expect(
+      preselectNameCheckoutOption({ options, sources, fallback: defaultPaymentOption(options) }),
+    ).toBe('token:ario');
   });
 });
 
@@ -457,10 +489,35 @@ describe('copy and formatting', () => {
 
 /*
   § 7.9: the fee threshold is taken from how turbo-sdk builds the transfer, so
-  pin it to that. The SDK adds no compute-budget (priority fee) instruction, so
-  the transfer costs exactly one base signature fee. If a later SDK adds one,
-  this fails and the threshold has to be re-derived rather than drifting.
+  pin it to that.
+
+  What this guard covers: the SDK's SPL transfer builder (`spl.js`, which
+  USDC on Solana uses) adding a compute-budget instruction, i.e. a priority
+  fee, which would make a transfer cost more than one base signature fee. It
+  also checks the token account is still created idempotently and the
+  transfer is still `transferChecked`, so the file is the one we think it is.
+
+  What it does not cover: the fee the network actually charges (a cluster
+  could change its base fee), a priority fee added somewhere other than this
+  file, or the case where Turbo's token account does not exist and the sender
+  pays its rent. It is a tripwire for an SDK upgrade, not a fee oracle.
 */
+function turboSdkRoot(): string {
+  // The package does not export its package.json, so resolve its entry point
+  // and walk up to the directory that owns it. Works through a symlinked
+  // node_modules, unlike a path relative to this file.
+  const require = createRequire(import.meta.url);
+  let dir = path.dirname(require.resolve('@ardrive/turbo-sdk'));
+  while (dir !== path.dirname(dir)) {
+    const pkg = path.join(dir, 'package.json');
+    if (existsSync(pkg) && JSON.parse(readFileSync(pkg, 'utf8')).name === '@ardrive/turbo-sdk') {
+      return dir;
+    }
+    dir = path.dirname(dir);
+  }
+  throw new Error('Could not locate @ardrive/turbo-sdk');
+}
+
 describe('the USDC-on-Solana fee threshold', () => {
   it('is the base signature fee, 5,000 lamports', () => {
     expect(SOLANA_BASE_FEE_LAMPORTS).toBe(5_000);
@@ -469,10 +526,7 @@ describe('the USDC-on-Solana fee threshold', () => {
 
   it('matches the SDK\'s transfer shape: no priority fee, idempotent token account', () => {
     const spl = readFileSync(
-      path.resolve(
-        __dirname,
-        '../../../node_modules/@ardrive/turbo-sdk/lib/esm/common/token/spl.js',
-      ),
+      path.join(turboSdkRoot(), 'lib/esm/common/token/spl.js'),
       'utf8',
     );
     expect(spl).not.toMatch(/ComputeBudget|setComputeUnitPrice|computeUnitPrice/i);

@@ -440,6 +440,7 @@ export default function TopUpPanel({
   };
 
   const handleCheckout = async () => {
+    markTokenSettled();
     const effectiveAmount = getEffectiveUsdAmount();
 
     // Validate recipient address - block if there's a visible validation error
@@ -647,8 +648,11 @@ export default function TopUpPanel({
     walletType === 'solana' ? 'solana' : walletType === 'arweave' ? 'arweave' : null;
   const rowToken2: SupportedTokenType | null =
     walletType === 'solana' ? 'solana-usdc' : null;
-  const rowKey = rowToken && address ? `${address}:${rowToken}` : null;
-  const rowKey2 = rowToken2 && address ? `${address}:${rowToken2}` : null;
+  // Not when a host opened this panel on the card: no token is shown, so
+  // nothing should be read.
+  const readRows = initialPaymentMethod !== 'fiat' && !!address;
+  const rowKey = rowToken && readRows ? `${address}:${rowToken}` : null;
+  const rowKey2 = rowToken2 && readRows ? `${address}:${rowToken2}` : null;
   // `undefined` until read, and after a failed read: unknown, never zero.
   const row1 = useBalanceRead(useTokenBalance(rowToken, walletType, address, !!rowKey), rowKey);
   const row2 = useBalanceRead(useTokenBalance(rowToken2, walletType, address, !!rowKey2), rowKey2);
@@ -688,15 +692,24 @@ export default function TopUpPanel({
     asked for is never overridden.
   */
   const preselectedForRef = useRef<string | null>(null);
+  /*
+    Once the user has touched anything on this screen, the token is theirs:
+    a balance landing late must not swap it under an amount they are typing,
+    or under a payment already under way.
+  */
+  const markTokenSettled = useCallback(() => {
+    if (address) preselectedForRef.current = address;
+  }, [address]);
   const rowsLoading = row1.loading || row2.loading;
   useEffect(() => {
     if (!address || !walletType || initialToken || deepLink.token) return;
+    if (cryptoFlowStep !== 'selection') return;
     if (preselectedForRef.current === address || rowsLoading) return;
     const pick = preselectSource(topUpSources, 'top-up');
     if (!pick) return;
     preselectedForRef.current = address;
     setSelectedTokenType(pick.token);
-  }, [address, walletType, initialToken, deepLink.token, rowsLoading, topUpSources]);
+  }, [address, walletType, initialToken, deepLink.token, cryptoFlowStep, rowsLoading, topUpSources]);
 
   const selectedSource = topUpSources.find((src) => src.token === selectedTokenType);
   const cryptoSourcesProps = {
@@ -707,7 +720,7 @@ export default function TopUpPanel({
       if (!src) return;
       // A token the user chose is theirs: the one-time preselection must not
       // land on top of it if a balance arrives late.
-      if (address) preselectedForRef.current = address;
+      markTokenSettled();
       setSelectedTokenType(src.token);
       setPaymentMethod('crypto');
       setErrorMessage('');
@@ -732,6 +745,7 @@ export default function TopUpPanel({
   ];
 
   const onPayMethodChange = (method: PaymentMethod) => {
+    markTokenSettled();
     setErrorMessage('');
     if (method === 'card') {
       setPaymentMethod('fiat');
@@ -1035,7 +1049,13 @@ export default function TopUpPanel({
   }
 
   return (
-    <div className={embedded ? '' : 'px-4 sm:px-6'}>
+    <div
+      className={embedded ? '' : 'px-4 sm:px-6'}
+      // Any click or edit on this screen (amount, presets, storage units)
+      // counts as the user taking over; see `markTokenSettled`.
+      onClickCapture={markTokenSettled}
+      onChangeCapture={markTokenSettled}
+    >
       {/* Inline Header with Description — hidden when embedded (the host modal
           provides its own header). */}
       {!embedded && (

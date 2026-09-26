@@ -16,7 +16,6 @@ import {
   isSelectable,
   methodForOption,
   paidFromLine,
-  preselectSource,
   resolveSourceSelection,
   sourceInputsFromOptions,
   type PaymentMethod,
@@ -205,20 +204,24 @@ export function ArNSPaymentSelector({
     else if (method === 'card' && card) onSelect(card.id);
     else if (method === 'crypto') {
       // Choosing Crypto is one click: it takes the token the dropdown already
-      // shows, or the preselection if that one cannot be paid with.
-      const target =
-        cryptoSource && isSelectable(cryptoSource)
-          ? cryptoSource
-          : preselectSource(sources, 'name-checkout');
-      if (target) onSelect(target.id);
+      // shows. If that token cannot be paid with, nothing changes; the
+      // dropdown already says why, and silently swapping in another token
+      // would pay with something the user did not pick.
+      if (cryptoSource && isSelectable(cryptoSource)) onSelect(cryptoSource.id);
     }
   };
 
-  // Said only when the wallet that pays is not the one signed in, which today
-  // means ARIO on an Arweave or Ethereum session: it comes from the linked
-  // Solana wallet.
+  /*
+    Said only when the wallet that pays is not the one signed in, which today
+    means ARIO on an Arweave or Ethereum session: it comes from the linked
+    Solana wallet. Not while ARIO is the SELECTED option, though: the host's
+    wallet note then says the same thing ("your linked Solana wallet pays for
+    and holds the name"), and one screen says it once.
+  */
   const paidFrom =
-    cryptoSource && cryptoSource.wallet !== session
+    cryptoSource &&
+    cryptoSource.wallet !== session &&
+    !(selected?.kind === 'token' && selected.id === cryptoSource.id)
       ? paidFromLine(cryptoSource.wallet)
       : undefined;
 

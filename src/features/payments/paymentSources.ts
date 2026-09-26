@@ -283,20 +283,6 @@ export function isSelectable(source: PaymentSource): boolean {
 }
 
 /**
- * Affordable on figures we actually have: a known balance covering a known
- * price. Stricter than `isSelectable`, and used only where a guess would put a
- * choice in front of the user rather than merely leave one open.
- */
-export function isKnownAffordable(source: PaymentSource): boolean {
-  return (
-    isSelectable(source) &&
-    source.balance !== undefined &&
-    source.price !== undefined &&
-    source.balance >= source.price
-  );
-}
-
-/**
  * The source the crypto dropdown opens on.
  *
  * Name checkout: ARIO when it can be chosen, because it pays the registry
@@ -367,29 +353,55 @@ export function methodForOption(option: Pick<PaymentOption, 'kind'>): PaymentMet
  * The option the name checkout opens on, once balances and prices are in.
  *
  * 1. Credits, when the balance covers the price: nothing new is spent.
- * 2. ARIO, when a known balance covers a known price and nothing blocks it:
- *    the cheapest route, and today's "Best price" badge.
- * 3. Otherwise `defaultPaymentOption`'s answer, today's rule, which is the
- *    card for most people.
+ * 2. ARIO, when it is affordable on KNOWN figures: its spendable ARIO covers
+ *    its price, and its SOL covers the network costs. The cheapest route, and
+ *    today's "Best price" badge.
+ * 3. Otherwise `fallback`, which the host passes as today's default
+ *    (`defaultPaymentOption` over the routing list), so anyone ARIO does not
+ *    suit opens exactly where they did before this picker.
  *
- * ARIO needs KNOWN figures to be preselected, unlike a row merely being
- * enabled. Preselecting it for someone signed out, or whose ARIO lookup
- * failed, would put a route in front of them that most people cannot pay with.
+ * Every ARIO figure must be known, unlike a row merely being enabled.
+ * Preselecting it for someone signed out, or whose lookup failed, would put a
+ * route in front of them that most people cannot pay with.
+ *
+ * `arioSpendable` is the LIQUID balance, not the row's liquid-plus-staked
+ * total: the checkout's funding source starts on 'balance' (liquid), so a
+ * wallet whose ARIO is mostly staked would otherwise open on a route that
+ * cannot pay until they change a second control.
  */
 export function preselectNameCheckoutOption({
   options,
   sources,
   fallback,
+  arioSpendable,
+  solBalance,
+  solRequired,
 }: {
   options: PaymentOption[];
   sources: PaymentSource[];
-  /** `defaultPaymentOption(options)`, passed in so the rule stays in one place. */
   fallback: PaymentOption | undefined;
+  /** Liquid ARIO; `undefined` when unknown. */
+  arioSpendable?: number;
+  /** SOL held by the paying wallet; `undefined` when unknown. */
+  solBalance?: number;
+  /** SOL the ARIO route spends on rent and fees; `undefined` when unquoted. */
+  solRequired?: number;
 }): string | undefined {
   const credits = options.find((o) => o.kind === 'balance');
   if (credits?.sufficient && !credits.blockedReason) return credits.id;
   const ario = sources.find((s) => s.token === 'ario');
-  if (ario && isKnownAffordable(ario)) return ario.id;
+  if (
+    ario &&
+    isSelectable(ario) &&
+    ario.price !== undefined &&
+    arioSpendable !== undefined &&
+    arioSpendable >= ario.price &&
+    solBalance !== undefined &&
+    solRequired !== undefined &&
+    solBalance >= solRequired
+  ) {
+    return ario.id;
+  }
   return fallback?.id;
 }
 

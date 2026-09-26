@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { usdPerArioFromLegs } from '../features/arns/priceRate';
@@ -186,13 +187,24 @@ export function useTokenPricesForWinc(
       smallestUnitForWincQuery(wincAmount, token, turboConfigFor(config, token)),
     ),
   });
-  const prices: Partial<Record<SupportedTokenType, number>> = {};
-  results.forEach((r, i) => {
-    if (r.data == null) return;
-    const token = tokens[i];
-    prices[token] = Number(BigInt(r.data)) / Number(getTokenSmallestUnit(token));
-  });
-  return prices;
+  /*
+    Stable while the quotes are. `useQueries` returns a fresh array every
+    render, and a fresh object here would re-run every memo and effect that
+    reads it (the checkout's rows and its one-time preselection) on every
+    render for nothing.
+  */
+  const signature = results
+    .map((r, i) => `${tokens[i]}=${r.data ?? ''}`)
+    .join('|');
+  return useMemo(() => {
+    const prices: Partial<Record<SupportedTokenType, number>> = {};
+    for (const entry of signature ? signature.split('|') : []) {
+      const [token, data] = entry.split('=') as [SupportedTokenType, string];
+      if (!data) continue;
+      prices[token] = Number(BigInt(data)) / Number(getTokenSmallestUnit(token));
+    }
+    return prices;
+  }, [signature]);
 }
 
 /**
@@ -246,7 +258,10 @@ export function useWincForCrypto(
  * while loading or when either denominator is zero/non-finite, so display code
  * degrades to ARIO-only rather than showing a broken value.
  */
-export function useArioUsdRate(): number | undefined {
+export function useArioUsdRate(
+  /** Off where the payment service is (x402-only mode): there is nothing to ask. */
+  enabled = true,
+): number | undefined {
   const turboConfig = useTurboConfig('ario');
 
   const { data } = useQuery({
@@ -289,6 +304,7 @@ export function useArioUsdRate(): number | undefined {
       // TanStack Query v5 forbids a queryFn resolving `undefined`.
       return rate ?? null;
     },
+    enabled,
     staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     retry: 2, // Retry failed requests twice

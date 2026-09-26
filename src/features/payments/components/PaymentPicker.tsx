@@ -101,7 +101,10 @@ export function PaymentPicker({
               className={`rounded-2xl border transition-colors ${
                 checked
                   ? 'border-primary bg-primary/10'
-                  : 'border-border/20 bg-card hover:border-primary/40'
+                  : // Lights up for the radio only, not for the dropdown that
+                    // shares this card: hovering the token list is not a vote
+                    // for "Crypto" until something in it is chosen.
+                    'border-border/20 bg-card has-[[role=radio]:hover]:border-primary/40'
               }`}
             >
               <Radio
@@ -278,6 +281,19 @@ export function CryptoSourceListbox({
                       <ListboxOption
                         key={source.id}
                         value={source.id}
+                        /*
+                          Announced as unavailable while staying reachable.
+                          Headless UI's own `disabled` would skip the row, and
+                          an `aria-disabled` prop is overwritten: the option
+                          merges its own `aria-disabled: undefined` last. So it
+                          is set on the element directly; React never manages
+                          that attribute here, so nothing resets it.
+                        */
+                        ref={(el: HTMLElement | null) => {
+                          if (!el) return;
+                          if (blocked) el.setAttribute('aria-disabled', 'true');
+                          else el.removeAttribute('aria-disabled');
+                        }}
                         className={`flex items-start gap-2 px-3 py-2 data-[focus]:bg-primary/10 ${
                           blocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                         }`}
