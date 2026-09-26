@@ -5,6 +5,35 @@ const SOL = 'So1anaOwner1111111111111111111111111111111111';
 const ETH = '0x1111111111111111111111111111111111111111';
 
 describe('walletSplitNote', () => {
+  /*
+    ARIO is paid by the owner's own transaction, so on an Ethereum or Arweave
+    session the linked Solana wallet pays too. The note must not tell them the
+    session wallet pays.
+  */
+  it('says the linked wallet pays when it is the one paying', () => {
+    for (const sessionWalletType of ['ethereum', 'arweave'] as const) {
+      const note = walletSplitNote({
+        sessionWalletType,
+        sessionAddress: ETH,
+        ownerAddress: SOL,
+        payingWalletType: 'solana',
+      });
+      expect(note).toBe(
+        `Your linked Solana wallet, ${shortAddress(SOL)}, pays for and holds the name.`,
+      );
+    }
+  });
+
+  it('keeps the usual note when the session wallet pays', () => {
+    const note = walletSplitNote({
+      sessionWalletType: 'ethereum',
+      sessionAddress: ETH,
+      ownerAddress: SOL,
+      payingWalletType: 'ethereum',
+    });
+    expect(note).toMatch(/You'll pay from your Ethereum wallet/);
+  });
+
   it('names both wallets when the payer is not the owner', () => {
     const note = walletSplitNote({
       sessionWalletType: 'ethereum',

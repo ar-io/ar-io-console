@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { usdPerArioFromLegs } from '../features/arns/priceRate';
 import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { SupportedTokenType } from '../constants';
-import { useTurboConfig } from './useTurboConfig';
+import { turboConfigFor, useTurboConfig } from './useTurboConfig';
+import { useStore } from '../store/useStore';
 
 /**
  * Get the smallest unit for a token type (e.g., 10^18 wei for ETH)
@@ -118,8 +120,24 @@ export function useSmallestUnitForWinc(
   tokenType: SupportedTokenType,
 ): bigint | undefined {
   const turboConfig = useTurboConfig(tokenType);
+  const { data } = useQuery(smallestUnitForWincQuery(wincAmount, tokenType, turboConfig));
 
-  const { data } = useQuery({
+  // Serialized as a string through the query cache — bigint isn't JSON-safe.
+  return data == null ? undefined : BigInt(data);
+}
+
+/**
+ * The query behind `useSmallestUnitForWinc`, shared so the multi-token hook
+ * below reads and fills the SAME cache entries. The price a picker row shows
+ * for SOL is then the very figure the purchase charges when SOL is chosen, not
+ * a second quote that could disagree with it.
+ */
+function smallestUnitForWincQuery(
+  wincAmount: number | undefined,
+  tokenType: SupportedTokenType,
+  turboConfig: any,
+) {
+  return {
     queryKey: [
       'smallestUnitForWinc',
       wincAmount,
@@ -146,10 +164,47 @@ export function useSmallestUnitForWinc(
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 2,
-  });
+  };
+}
 
-  // Serialized as a string through the query cache — bigint isn't JSON-safe.
-  return data == null ? undefined : BigInt(data);
+/**
+ * `useSmallestUnitForWinc` for several tokens at once, in WHOLE tokens.
+ *
+ * For the payment picker, which states each token's price in its own row. A
+ * hook per token would break the rules of hooks as the token list changes with
+ * the session, so this runs one query per token through `useQueries`. Tokens
+ * whose quote has not landed (or failed) are simply absent: an unquoted row
+ * reads as affordable, never as short.
+ */
+export function useTokenPricesForWinc(
+  wincAmount: number | undefined,
+  tokens: readonly SupportedTokenType[],
+): Partial<Record<SupportedTokenType, number>> {
+  const getCurrentConfig = useStore((s) => s.getCurrentConfig);
+  const config = getCurrentConfig();
+  const results = useQueries({
+    queries: tokens.map((token) =>
+      smallestUnitForWincQuery(wincAmount, token, turboConfigFor(config, token)),
+    ),
+  });
+  /*
+    Stable while the quotes are. `useQueries` returns a fresh array every
+    render, and a fresh object here would re-run every memo and effect that
+    reads it (the checkout's rows and its one-time preselection) on every
+    render for nothing.
+  */
+  const signature = results
+    .map((r, i) => `${tokens[i]}=${r.data ?? ''}`)
+    .join('|');
+  return useMemo(() => {
+    const prices: Partial<Record<SupportedTokenType, number>> = {};
+    for (const entry of signature ? signature.split('|') : []) {
+      const [token, data] = entry.split('=') as [SupportedTokenType, string];
+      if (!data) continue;
+      prices[token] = Number(BigInt(data)) / Number(getTokenSmallestUnit(token));
+    }
+    return prices;
+  }, [signature]);
 }
 
 /**
@@ -203,7 +258,10 @@ export function useWincForCrypto(
  * while loading or when either denominator is zero/non-finite, so display code
  * degrades to ARIO-only rather than showing a broken value.
  */
-export function useArioUsdRate(): number | undefined {
+export function useArioUsdRate(
+  /** Off where the payment service is (x402-only mode): there is nothing to ask. */
+  enabled = true,
+): number | undefined {
   const turboConfig = useTurboConfig('ario');
 
   const { data } = useQuery({
@@ -246,6 +304,7 @@ export function useArioUsdRate(): number | undefined {
       // TanStack Query v5 forbids a queryFn resolving `undefined`.
       return rate ?? null;
     },
+    enabled,
     staleTime: 5 * 60 * 1000, // Consider fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     retry: 2, // Retry failed requests twice

@@ -30,9 +30,12 @@ import { useStore } from '../../../store/useStore';
 import { walletSplitNote } from '../purchase/walletRoles';
 import {
   getTokenSmallestUnit,
+  useArioUsdRate,
   useSmallestUnitForWinc,
+  useTokenPricesForWinc,
 } from '../../../hooks/useCryptoPrice';
 import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
+import { buildSources, sourceInputsFromOptions } from '../../payments/paymentSources';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
@@ -190,7 +193,9 @@ export default function ManageDomainModal({
     intent: action,
     years: action === 'Extend-Lease' ? years : undefined,
     increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
-    enabled: active && priceUnit === 'credits',
+    // Whatever the route: the picker prices its Credits and Card rows from it
+    // even while ARIO is selected.
+    enabled: active,
   });
 
   // Cost details (ARIO price + SOL gas + affordability) for the selected source.
@@ -282,6 +287,32 @@ export default function ManageDomainModal({
         cardEnabled,
       }),
     [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits, sessionWalletType, creditPurchasesUnavailable],
+  );
+
+  // The crypto dropdown's rows, as on the registration checkout. Display only;
+  // routing reads `routingOptions`, and this modal keeps its own default.
+  const topUpTokens = useMemo(
+    () =>
+      routingOptions
+        .filter((o) => o.kind === 'token' && o.token && o.token !== 'ario')
+        .map((o) => o.token as SupportedTokenType),
+    [routingOptions],
+  );
+  const tokenPrices = useTokenPricesForWinc(
+    creditsPrice?.sponsoredCredits ? creditsPrice.sponsoredCredits * 1e12 : undefined,
+    topUpTokens,
+  );
+  const arioUsdRate = useArioUsdRate();
+  const pickerSources = useMemo(
+    () =>
+      buildSources({
+        tokens: sourceInputsFromOptions(paymentOptions),
+        balances: address ? { solana: balances.sol, ario: balances.totalArio } : {},
+        loadingTokens: balances.loading ? ['solana', 'ario'] : [],
+        prices: { ...tokenPrices, ario: cost?.arioCost },
+        solBalance: balances.loading ? undefined : balances.sol,
+      }),
+    [paymentOptions, address, balances.sol, balances.totalArio, balances.loading, tokenPrices, cost?.arioCost],
   );
 
   const priceReady =
@@ -522,6 +553,13 @@ export default function ManageDomainModal({
               <ArNSPaymentSelector
                 options={paymentOptions}
                 selectedId={selectedOption?.id ?? ''}
+                sources={pickerSources}
+                sessionWalletType={sessionWalletType ?? 'solana'}
+                prices={{
+                  credits: creditsPrice?.sponsoredCredits,
+                  cardUsd: creditsPrice?.usd,
+                }}
+                arioUsdRate={arioUsdRate}
                 fundingSource={fundingSource}
                 balances={balances}
                 onSelect={setSelectedId}
