@@ -1,9 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { usdPerArioFromLegs } from '../features/arns/priceRate';
 import { TurboFactory, USD } from '@ardrive/turbo-sdk/web';
 import { SupportedTokenType } from '../constants';
-import { useTurboConfig } from './useTurboConfig';
+import { turboConfigFor, useTurboConfig } from './useTurboConfig';
+import { useStore } from '../store/useStore';
 
 /**
  * Get the smallest unit for a token type (e.g., 10^18 wei for ETH)
@@ -118,8 +119,24 @@ export function useSmallestUnitForWinc(
   tokenType: SupportedTokenType,
 ): bigint | undefined {
   const turboConfig = useTurboConfig(tokenType);
+  const { data } = useQuery(smallestUnitForWincQuery(wincAmount, tokenType, turboConfig));
 
-  const { data } = useQuery({
+  // Serialized as a string through the query cache — bigint isn't JSON-safe.
+  return data == null ? undefined : BigInt(data);
+}
+
+/**
+ * The query behind `useSmallestUnitForWinc`, shared so the multi-token hook
+ * below reads and fills the SAME cache entries. The price a picker row shows
+ * for SOL is then the very figure the purchase charges when SOL is chosen, not
+ * a second quote that could disagree with it.
+ */
+function smallestUnitForWincQuery(
+  wincAmount: number | undefined,
+  tokenType: SupportedTokenType,
+  turboConfig: any,
+) {
+  return {
     queryKey: [
       'smallestUnitForWinc',
       wincAmount,
@@ -146,10 +163,36 @@ export function useSmallestUnitForWinc(
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 2,
-  });
+  };
+}
 
-  // Serialized as a string through the query cache — bigint isn't JSON-safe.
-  return data == null ? undefined : BigInt(data);
+/**
+ * `useSmallestUnitForWinc` for several tokens at once, in WHOLE tokens.
+ *
+ * For the payment picker, which states each token's price in its own row. A
+ * hook per token would break the rules of hooks as the token list changes with
+ * the session, so this runs one query per token through `useQueries`. Tokens
+ * whose quote has not landed (or failed) are simply absent: an unquoted row
+ * reads as affordable, never as short.
+ */
+export function useTokenPricesForWinc(
+  wincAmount: number | undefined,
+  tokens: readonly SupportedTokenType[],
+): Partial<Record<SupportedTokenType, number>> {
+  const getCurrentConfig = useStore((s) => s.getCurrentConfig);
+  const config = getCurrentConfig();
+  const results = useQueries({
+    queries: tokens.map((token) =>
+      smallestUnitForWincQuery(wincAmount, token, turboConfigFor(config, token)),
+    ),
+  });
+  const prices: Partial<Record<SupportedTokenType, number>> = {};
+  results.forEach((r, i) => {
+    if (r.data == null) return;
+    const token = tokens[i];
+    prices[token] = Number(BigInt(r.data)) / Number(getTokenSmallestUnit(token));
+  });
+  return prices;
 }
 
 /**

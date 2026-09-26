@@ -43,10 +43,18 @@ import {
 } from '../purchase/buyTarget';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
+import { useBalanceRead } from '../../payments/useBalanceRead';
 import {
   getTokenSmallestUnit,
+  useArioUsdRate,
   useSmallestUnitForWinc,
+  useTokenPricesForWinc,
 } from '../../../hooks/useCryptoPrice';
+import {
+  buildSources,
+  preselectNameCheckoutOption,
+  sourceInputsFromOptions,
+} from '../../payments/paymentSources';
 import { getTurboBalance } from '../../../utils';
 import {
   failureAdvice,
@@ -245,18 +253,6 @@ export function ArNSPurchaseCard({
     routingOptions.find((o) => o.id === selectedId) ??
     defaultPaymentOption(routingOptions);
 
-  /*
-    Commit the first real default, then stop.
-
-    Balances and prices arrive asynchronously, so `defaultPaymentOption`
-    re-evaluates as they land — which would let the selection move under the
-    user's cursor mid-click. Writing it once freezes it; the user can still
-    change it, and their choice is never overridden.
-  */
-  useEffect(() => {
-    if (selectedId || balances.loading || !selectedOption) return;
-    setSelectedId(selectedOption.id);
-  }, [selectedId, balances.loading, selectedOption]);
   const route = useMemo(
     () =>
       selectedOption
@@ -319,12 +315,19 @@ export function ArNSPurchaseCard({
   const fundFrom: ArNSFundFrom =
     route.kind === 'ario' ? route.fundFrom : 'balance';
 
-  // Credits price (winc → credits) for the credits method display.
+  /*
+    Credits price (winc → credits).
+
+    Fetched whatever the route, not only when paying in credits: the picker
+    states each choice's price in its own row, so the Credits and Card rows
+    need this figure even while ARIO is selected. It is the same query the
+    lease-term prefetcher already runs, so this adds no new request shape.
+  */
   const {
     data: creditsPrice,
     isFetching: creditsLoading,
     error: creditsError,
-  } = useArNSPrice({ name, type, years, enabled: priceUnit === 'credits' });
+  } = useArNSPrice({ name, type, years });
 
   // Cost details (ARIO price + SOL gas + affordability) for the selected source.
   const {
@@ -405,6 +408,36 @@ export function ArNSPurchaseCard({
       ? undefined
       : sessionTokenBalance.balance
     : balances.sol;
+
+  /*
+    One more balance for the picker's rows, never for routing: the session
+    wallet's other token that is cheap to read (USDC on Solana, or AR). The
+    token being paid with is already read above, so it is not read twice.
+
+    EVM tokens are deliberately NOT read here. `useTokenBalance` switches an
+    Ethereum wallet to the token's chain before reading it, so reading every
+    row would bounce the user's wallet between Base, Ethereum and Polygon just
+    for opening the checkout. An unread row shows no amount and stays enabled.
+  */
+  const pickerOnlyToken: SupportedTokenType | null =
+    sessionWalletType === 'solana'
+      ? 'solana-usdc'
+      : sessionWalletType === 'arweave'
+        ? 'arweave'
+        : null;
+  const readPickerToken =
+    !!pickerOnlyToken && !!sessionAddress && pickerOnlyToken !== sessionToken;
+  const pickerReadKey =
+    readPickerToken && pickerOnlyToken ? `${sessionAddress}:${pickerOnlyToken}` : null;
+  const pickerTokenBalance = useBalanceRead(
+    useTokenBalance(
+      readPickerToken ? pickerOnlyToken : null,
+      sessionWalletType ?? null,
+      sessionAddress ?? null,
+      readPickerToken,
+    ),
+    pickerReadKey,
+  );
 
   const insufficientToken =
     route.kind === 'topup' &&
@@ -522,6 +555,79 @@ export function ArNSPurchaseCard({
       cost?.gasTotalSol, balances.loading,
     ],
   );
+
+  /*
+    The crypto dropdown's rows: the token options above, with what each one
+    holds and costs. Display only. Routing still reads `routingOptions`.
+  */
+  const topUpTokens = useMemo(
+    () =>
+      routingOptions
+        .filter((o) => o.kind === 'token' && o.token && o.token !== 'ario')
+        .map((o) => o.token as SupportedTokenType),
+    [routingOptions],
+  );
+  // Priced exactly as the chosen token is charged (`tokenSmallestUnitForName`),
+  // through the same query cache, so a row never quotes a different figure.
+  const tokenPrices = useTokenPricesForWinc(
+    creditsPrice?.sponsoredCredits ? creditsPrice.sponsoredCredits * 1e12 : undefined,
+    topUpTokens,
+  );
+  const arioUsdRate = useArioUsdRate();
+  const pickerSources = useMemo(
+    () =>
+      buildSources({
+        tokens: sourceInputsFromOptions(paymentOptions),
+        // Signed out, holdings are unknown, not zero (see paymentOptions above).
+        balances: {
+          ...(address ? { solana: balances.sol, ario: balances.totalArio } : {}),
+          ...(pickerOnlyToken && pickerTokenBalance.balance !== undefined
+            ? { [pickerOnlyToken]: pickerTokenBalance.balance }
+            : {}),
+          ...(sessionToken && heldForPayment !== undefined
+            ? { [sessionToken]: heldForPayment }
+            : {}),
+        },
+        loadingTokens: [
+          ...(balances.loading ? (['solana', 'ario'] as const) : []),
+          ...(pickerOnlyToken && pickerTokenBalance.loading ? [pickerOnlyToken] : []),
+          ...(sessionToken && sessionTokenBalance.loading ? [sessionToken] : []),
+        ],
+        prices: { ...tokenPrices, ario: cost?.arioCost },
+        solBalance: balances.loading ? undefined : balances.sol,
+      }),
+    [
+      paymentOptions, address, balances.sol, balances.totalArio, balances.loading,
+      pickerOnlyToken, pickerTokenBalance.loading, pickerTokenBalance.balance, sessionToken,
+      heldForPayment, sessionTokenBalance.loading, tokenPrices, cost?.arioCost,
+    ],
+  );
+
+  /*
+    Commit the first real default, then stop.
+
+    Waits for the balances AND the two prices, because the default now depends
+    on both: credits that cover the name, then ARIO when a known balance covers
+    its price (the cheapest route, and its "Best price" badge), then today's
+    rule. Committing before the prices land would pick on half the facts and
+    then have to move. Writing it once freezes it; the user can still change
+    it, and their choice is never overridden. Until then the picker shows
+    nothing selected rather than a choice about to change.
+  */
+  const defaultsSettled =
+    !balances.loading && !creditsLoading && !costLoading && !pickerTokenBalance.loading;
+  useEffect(() => {
+    if (selectedId || !defaultsSettled) return;
+    const id = preselectNameCheckoutOption({
+      options: paymentOptions,
+      sources: pickerSources,
+      fallback: defaultPaymentOption(paymentOptions),
+    });
+    // Only an id the router knows. The display list and the routing list hold
+    // the same ids, so this is a guard, not a translation.
+    const chosen = routingOptions.find((o) => o.id === id) ?? selectedOption;
+    if (chosen) setSelectedId(chosen.id);
+  }, [selectedId, defaultsSettled, paymentOptions, pickerSources, routingOptions, selectedOption]);
 
   const priceReady =
     priceUnit === 'credits' ? !!creditsPrice : cost?.arioCost != null;
@@ -969,7 +1075,15 @@ export function ArNSPurchaseCard({
         <ArNSPaymentSelector
           note={walletSplit}
           options={paymentOptions}
-          selectedId={selectedOption?.id ?? ''}
+          selectedId={selectedId ?? ''}
+          sources={pickerSources}
+          sessionWalletType={sessionWalletType ?? 'solana'}
+          prices={{
+            credits: creditsPrice?.sponsoredCredits,
+            // What the card is actually charged; see `topUpUsd`.
+            cardUsd: topUpUsd,
+          }}
+          arioUsdRate={arioUsdRate}
           fundingSource={fundingSource}
           balances={balances}
           onSelect={setSelectedId}
