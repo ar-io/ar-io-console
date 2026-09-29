@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { mARIOToken } from '@ar.io/sdk';
 import { useCreditsForFiat } from './useCreditsForFiat';
+import { useArioUsdRate } from './useCryptoPrice';
 import { getARIO } from '../utils';
 import { useArNSConfigKey } from '../features/arns/hooks/useArNSConfigKey';
 
@@ -147,6 +148,7 @@ export function useArNSPricing(): UseArNSPricingReturn {
 
   // Get conversion rate from USD to Turbo credits
   const [creditsPerUSD] = useCreditsForFiat(1, () => {});
+  const arioUsdRate = useArioUsdRate();
 
   // Active ArNS network config: prices are network-specific, so a change must
   // bypass the cache and refetch (see the effect deps below).
@@ -272,6 +274,13 @@ export function useArNSPricing(): UseArNSPricingReturn {
           return;
         }
 
+        // A fresh load needs the ARIO rate. Until it arrives, stay loading; the
+        // effect runs again when it does.
+        if (!arioUsdRate || arioUsdRate <= 0) {
+          waitingForRate = true;
+          return;
+        }
+
         console.log('Fetching fresh ArNS pricing data');
         const ario = getARIO();
 
@@ -280,18 +289,12 @@ export function useArNSPricing(): UseArNSPricingReturn {
         if (cancelled) return;
         setDemandFactor(currentDemandFactor);
 
-        // Fetch ARIO price and registration fees in parallel
-        const COINGECKO_ENDPOINT = 'https://api.coingecko.com/api/v3/simple/price?ids=ar-io-network&vs_currencies=usd';
-        const [arioUSDPrice, fees] = await Promise.all([
-          fetch(COINGECKO_ENDPOINT)
-            .then((res) => res.json())
-            .then((data) => data['ar-io-network'].usd),
-          ario.getRegistrationFees(),
-        ]);
-
-        if (!arioUSDPrice || arioUSDPrice <= 0) {
-          throw new Error('Failed to fetch ARIO price from CoinGecko');
-        }
+        // The ARIO/USD rate comes from Turbo's own quotes (useArioUsdRate), the
+        // same figure every other ARIO price in the app uses. It used to be a
+        // keyless browser call to CoinGecko, which stopped answering keyless
+        // requests, so every uncached visitor got no price table at all.
+        const arioUSDPrice = arioUsdRate;
+        const fees = await ario.getRegistrationFees();
         const tiers: ArNSPricingTier[] = [];
 
         // Process the fee structure (similar to the example file)
@@ -382,15 +385,16 @@ export function useArNSPricing(): UseArNSPricingReturn {
         console.error('Failed to load ArNS pricing:', err);
         if (!cancelled) setError('Failed to load ArNS pricing data');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !waitingForRate) setLoading(false);
       }
     };
 
+    let waitingForRate = false;
     loadPricing();
     return () => {
       cancelled = true;
     };
-  }, [creditsPerUSD, configKey]); // Re-run on rate change OR network-config change
+  }, [creditsPerUSD, configKey, arioUsdRate]); // Re-run on rate change OR network-config change
 
   return {
     pricingTiers,
