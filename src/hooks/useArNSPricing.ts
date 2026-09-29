@@ -5,6 +5,9 @@ import { useArioUsdRate } from './useCryptoPrice';
 import { getARIO } from '../utils';
 import { useArNSConfigKey } from '../features/arns/hooks/useArNSConfigKey';
 
+/** How long a fresh load waits for Turbo's ARIO rate before showing an error. */
+const RATE_WAIT_MS = 15_000;
+
 interface ArNSPricingTier {
   characterLength: number;
   displayName: string;
@@ -390,9 +393,22 @@ export function useArNSPricing(): UseArNSPricingReturn {
     };
 
     let waitingForRate = false;
-    loadPricing();
+    let rateTimeout: ReturnType<typeof setTimeout> | undefined;
+    loadPricing().then(() => {
+      // The rate may never come (payment service unreachable). Give up on it
+      // after a while and show the error, rather than loading forever. The
+      // effect re-runs, and clears this, the moment a rate does arrive.
+      if (waitingForRate && !cancelled) {
+        rateTimeout = setTimeout(() => {
+          if (cancelled) return;
+          setError('Failed to load ArNS pricing data');
+          setLoading(false);
+        }, RATE_WAIT_MS);
+      }
+    });
     return () => {
       cancelled = true;
+      if (rateTimeout) clearTimeout(rateTimeout);
     };
   }, [creditsPerUSD, configKey, arioUsdRate]); // Re-run on rate change OR network-config change
 
