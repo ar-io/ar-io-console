@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortAddress, walletSplitNote } from './walletRoles';
+import { shortAddress, tokenShortfallNote, walletSplitNote } from './walletRoles';
 
 const SOL = 'So1anaOwner1111111111111111111111111111111111';
 const ETH = '0x1111111111111111111111111111111111111111';
@@ -67,5 +67,54 @@ describe('shortAddress', () => {
   });
   it('leaves a short string alone rather than padding it with an ellipsis', () => {
     expect(shortAddress('abc')).toBe('abc');
+  });
+});
+
+describe('tokenShortfallNote', () => {
+  it('names the token, the paying wallet and both amounts', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'USDC (Base)',
+      walletType: 'ethereum',
+      walletAddress: ETH,
+      held: 0,
+      needed: 2.9512,
+    });
+    expect(note).toBe(
+      `Not enough USDC (Base) in your Ethereum wallet (${shortAddress(ETH)}). You have 0; this name needs 2.96.`,
+    );
+  });
+
+  it('rounds the requirement up, never down', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'SOL',
+      walletType: 'solana',
+      walletAddress: undefined,
+      held: 0.01,
+      needed: 0.010601,
+    });
+    expect(note).toContain('this name needs 0.0107');
+  });
+
+  it('never blames SOL for another token', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'USDC (Base)',
+      walletType: 'ethereum',
+      walletAddress: ETH,
+      held: 0,
+      needed: 3,
+    });
+    expect(note).not.toMatch(/SOL/);
+  });
+
+  it('reads plainly without a wallet address', () => {
+    expect(
+      tokenShortfallNote({
+        tokenLabel: 'SOL',
+        walletType: 'solana',
+        walletAddress: undefined,
+        held: 0.12,
+        needed: 0.24,
+      }),
+    ).toBe('Not enough SOL in your Solana wallet. You have 0.12; this name needs 0.24.');
   });
 });
