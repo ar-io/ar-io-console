@@ -35,6 +35,11 @@ All notable changes to the ar.io Console are documented in this file.
   account from one also credited the wallet itself. They are gone from the
   connect list, and a contract wallet that connects another way, such as
   through WalletConnect, is signed out before it can pay.
+- **The domain price table loads again.** It priced ARIO with a keyless call
+  to CoinGecko from your browser, which CoinGecko no longer answers, so anyone
+  without a recent cached copy saw no prices on the pricing page, in name
+  search or at checkout. It now uses Turbo's own ARIO rate, the one every other
+  ARIO price in the console already shows.
 - **Solana wallets stay listed after you sign out of an email account.** A bug
   in a wallet library left only the email account's wallet in the Solana
   pickers, with Phantom, Solflare and MetaMask missing until the page was
