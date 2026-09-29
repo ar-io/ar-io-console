@@ -502,12 +502,20 @@ export default function CryptoConfirmationPanel({
           solanaSignMessage &&
           (tokenType === 'solana' || tokenType === 'solana-usdc')
         ) {
+          // The payment is a transaction the wallet must sign. Wallet Standard
+          // makes transaction signing optional, so check for it here rather
+          // than let the SDK fail with a message about adapters.
+          if (!solanaSignTransaction) {
+            throw new Error(
+              "This Solana wallet can't sign transactions, so it can't send this payment. Connect a wallet that can, such as Phantom or Solflare.",
+            );
+          }
           const turboAuthenticated = TurboFactory.authenticated({
             token: tokenType,
             paymentServiceConfig: {
               url: turboConfig.paymentServiceUrl || 'https://payment.ardrive.io',
             },
-            walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
+            walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction },
             // Same RPC for both: USDC on Solana is an SPL token on the very
             // same chain, so there is no second endpoint to configure.
             gatewayUrl: turboConfig.tokenMap.solana,
