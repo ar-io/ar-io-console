@@ -117,4 +117,39 @@ describe('tokenShortfallNote', () => {
       }),
     ).toBe('Not enough SOL in your Solana wallet. You have 0.12; this name needs 0.24.');
   });
+
+  it('does not report an unread balance as zero', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'SOL',
+      walletType: 'solana',
+      walletAddress: undefined,
+      held: undefined,
+      needed: 0.24,
+    });
+    expect(note).not.toMatch(/You have/);
+    expect(note).toMatch(/Couldn't read the SOL balance/);
+  });
+
+  it('ignores float noise when rounding up', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'USDC (Base)',
+      walletType: 'ethereum',
+      walletAddress: undefined,
+      held: 0,
+      needed: 2.95,
+    });
+    expect(note).toContain('this name needs 2.95.');
+  });
+
+  it('shows large requirements in whole units, rounded up', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'ARIO',
+      walletType: 'solana',
+      walletAddress: undefined,
+      held: 0,
+      needed: 12_345.01,
+    });
+    expect(note).toContain('this name needs 12,346.');
+  });
 });
+

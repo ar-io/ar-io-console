@@ -826,7 +826,7 @@ export function ArNSPurchaseCard({
           // the session wallet, which is the account the top-up credits.
           walletType: sessionToken ? sessionWalletType : 'solana',
           walletAddress: sessionToken ? sessionAddress : address,
-          held: heldForPayment ?? 0,
+          held: heldForPayment,
           needed: tokenNeededForPayment ?? 0,
         }),
       };

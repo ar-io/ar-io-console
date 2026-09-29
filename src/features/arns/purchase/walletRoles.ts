@@ -71,7 +71,8 @@ export function tokenShortfallNote({
   tokenLabel: string;
   walletType: SessionWalletType;
   walletAddress: string | null | undefined;
-  held: number;
+  /** Undefined when the balance could not be read. */
+  held: number | undefined;
   needed: number;
 }): string {
   const wallet =
@@ -79,6 +80,12 @@ export function tokenShortfallNote({
       ? `your ${WALLET_LABEL[walletType]} wallet`
       : 'your wallet';
   const which = walletAddress ? ` (${shortAddress(walletAddress)})` : '';
+  // An unread balance is not an empty one. Saying "You have 0" to a funded
+  // wallet whose lookup failed is the mistake this whole area keeps guarding
+  // against.
+  if (held === undefined) {
+    return `Couldn't read the ${tokenLabel} balance in ${wallet}${which}. Reload and try again; this name needs ${formatNeeded(needed)}.`;
+  }
   return `Not enough ${tokenLabel} in ${wallet}${which}. You have ${formatHeldBalance(held)}; this name needs ${formatNeeded(needed)}.`;
 }
 
@@ -88,9 +95,11 @@ export function tokenShortfallNote({
  */
 function formatNeeded(amount: number): string {
   if (!Number.isFinite(amount) || amount <= 0) return '0';
-  const places = amount >= 1 ? 2 : 4;
-  const up = Math.ceil(amount * 10 ** places) / 10 ** places;
-  return up >= 10_000
-    ? formatHeldBalance(up)
-    : up.toLocaleString('en-US', { maximumFractionDigits: places });
+  // Whole units from ten thousand up: no abbreviation, which would round down.
+  const places = amount >= 10_000 ? 0 : amount >= 1 ? 2 : 4;
+  const scale = 10 ** places;
+  // Subtract float noise before rounding up, relative to the amount, so 2.95
+  // (295.00000000000006 once scaled) stays 2.95 while a real 2.9501 is 2.96.
+  const up = Math.ceil(amount * scale - Math.max(1e-9, amount * scale * 1e-12)) / scale;
+  return up.toLocaleString('en-US', { maximumFractionDigits: places });
 }
