@@ -35,7 +35,11 @@ export interface ArNSCostDetails {
   shortfallMARIO: number;
   /** SOL the wallet must hold for this action (rent + fees). Same for all sources. */
   gasTotalSol: number;
-  /** Rent-exempt deposit portion (SOL) — dominates; partly reclaimable. */
+  /**
+   * Solana account rent (SOL); dominates. Not refunded to the buyer: on lease
+   * expiry it goes to whoever prunes the record, on release to the releasing
+   * owner (ar-io-solana-contracts prune.rs / manage.rs).
+   */
   gasRentSol: number;
   /** Transaction-fee portion (SOL). */
   gasFeeSol: number;

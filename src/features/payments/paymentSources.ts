@@ -341,6 +341,57 @@ export function sourceUsd(
 const TOKENS_WITH_EXTRA_COST: readonly SupportedTokenType[] = ['ario'];
 
 /**
+ * What a row adds to its own price, in words: "+ 0.056 SOL" for ARIO when its
+ * network cost is known, "+ SOL network costs" when it is not. `undefined` for
+ * a token whose price is the whole cost.
+ *
+ * Stated on the row so ARIO's figure is never read as all-in when it is not.
+ * The SOL is account rent and fee, not a deposit: it is not refunded to the
+ * buyer when a lease ends.
+ */
+export function extraCostLabel(
+  source: PaymentSource,
+  extraSol?: Partial<Record<SupportedTokenType, number | undefined>>,
+): string | undefined {
+  if (!TOKENS_WITH_EXTRA_COST.includes(source.token)) return undefined;
+  const sol = extraSol?.[source.token];
+  return sol === undefined ? '+ SOL network costs' : `+ ${formatSourceAmount(sol)} SOL`;
+}
+
+/**
+ * Keep ARIO's "Best price" badge only when it is true for this purchase: its
+ * all-in dollar price is known, it can be paid with, and nothing else known
+ * (another token, or the card's real charge) is cheaper. Unknown means no
+ * badge. `paymentOptions` still sets the badge; this decides whether it shows.
+ */
+export function applyBestPriceBadge(
+  sources: PaymentSource[],
+  {
+    arioUsdRate,
+    extraUsd,
+    cardUsd,
+  }: {
+    arioUsdRate: number | undefined;
+    extraUsd: Partial<Record<SupportedTokenType, number | undefined>>;
+    cardUsd?: number;
+  },
+): PaymentSource[] {
+  const allIn = (s: PaymentSource) => sourceUsd(s, arioUsdRate, extraUsd);
+  return sources.map((source) => {
+    if (!source.badge) return source;
+    const mine = isSelectable(source) ? allIn(source) : undefined;
+    const others = [
+      ...sources
+        .filter((o) => o.id !== source.id && isSelectable(o))
+        .map(allIn),
+      cardUsd,
+    ].filter((v): v is number => v !== undefined);
+    const best = mine !== undefined && others.every((v) => mine <= v);
+    return best ? source : { ...source, badge: undefined };
+  });
+}
+
+/**
  * The cheapest known dollar price among the sources that can be paid with,
  * for the Crypto segment's "from $X". `undefined` when none is known, so the
  * segment says nothing rather than something made up.

@@ -583,6 +583,7 @@ export default function ManageDomainModal({
                 }}
                 arioUsdRate={arioUsdRate}
                 extraUsd={{ ario: arioExtraUsd }}
+          extraSol={{ ario: cost?.gasTotalSol }}
                 fundingSource={fundingSource}
                 balances={balances}
                 onSelect={setSelectedId}

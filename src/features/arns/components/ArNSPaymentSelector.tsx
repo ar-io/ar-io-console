@@ -11,8 +11,11 @@ import {
   type MethodChoice,
 } from '../../payments/components/PaymentPicker';
 import {
+  applyBestPriceBadge,
   buildSources,
   cheapestUsd,
+  extraCostLabel,
+  sourceUsd,
   creditsShortReason,
   formatSourceAmount,
   groupSources,
@@ -71,6 +74,8 @@ interface Props {
    * accounts and fee. ARIO counts toward "from $X" only when this is known.
    */
   extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>;
+  /** The same extra cost in SOL, stated on ARIO's row ("+ 0.056 SOL"). */
+  extraSol?: Partial<Record<SupportedTokenType, number | undefined>>;
 }
 
 /**
@@ -97,6 +102,7 @@ export function ArNSPaymentSelector({
   prices,
   arioUsdRate,
   extraUsd,
+  extraSol,
 }: Props) {
   const fundingHeadingId = useId();
   /*
@@ -107,8 +113,15 @@ export function ArNSPaymentSelector({
   const selected = options.find((o) => o.id === selectedId);
   const showSources = arioOnly || selected?.token === 'ario';
 
-  const sources =
-    sourcesProp ?? buildSources({ tokens: sourceInputsFromOptions(options) });
+  /*
+    "Best price" only when it is true for this purchase: ARIO's all-in price
+    (its SOL included) is known and nothing payable, card included, is
+    cheaper. The option still carries the badge; this decides whether it shows.
+  */
+  const sources = applyBestPriceBadge(
+    sourcesProp ?? buildSources({ tokens: sourceInputsFromOptions(options) }),
+    { arioUsdRate, extraUsd: extraUsd ?? {}, cardUsd: prices?.cardUsd },
+  );
   const session = sessionWalletType ?? 'solana';
   // ARIO's group first: it is the best price, and on an Ethereum session it
   // would otherwise open below five EVM rows.
@@ -216,10 +229,16 @@ export function ArNSPaymentSelector({
       ? paidFromPhrase(cryptoSource.wallet)
       : undefined;
 
-  const usdFor = (s: PaymentSource) =>
-    s.token === 'ario' && arioUsdRate !== undefined && s.price !== undefined
-      ? `≈ ${usd(s.price * arioUsdRate)}`
-      : undefined;
+  /*
+    ARIO's "≈ $" is its ALL-IN price, SOL included, so it sits beside the
+    other rows' prices and the card's charge on equal terms. With the SOL cost
+    unknown there is no dollar figure at all rather than a partial one.
+  */
+  const usdFor = (s: PaymentSource) => {
+    if (s.token !== 'ario') return undefined;
+    const allIn = sourceUsd(s, arioUsdRate, extraUsd ?? {});
+    return allIn !== undefined ? `≈ ${usd(allIn)}` : undefined;
+  };
 
   return (
     <div>
@@ -243,6 +262,7 @@ export function ArNSPaymentSelector({
               },
               note: paidFrom,
               usdFor,
+              extraFor: (s) => extraCostLabel(s, extraSol),
             }}
           />
         </div>

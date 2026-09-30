@@ -123,6 +123,8 @@ export interface CryptoSourcesProps {
   note?: string;
   /** An approximate dollar figure for a row's price, where one is known. */
   usdFor?: (source: PaymentSource) => string | undefined;
+  /** What a row costs beyond its own price, e.g. "+ 0.056 SOL" for ARIO. */
+  extraFor?: (source: PaymentSource) => string | undefined;
   disabled?: boolean;
   /** Spoken before the current choice, since no visible label names the select. */
   label?: string;
@@ -255,11 +257,14 @@ function rowDetail(source: PaymentSource): { text: string; error?: boolean } | u
 function SourceLine({
   source,
   usd,
+  extra,
   detail,
   mobileTwoLines,
 }: {
   source: PaymentSource;
   usd?: string;
+  /** Appended to the price, e.g. "+ 0.056 SOL". */
+  extra?: string;
   detail?: { text: string; error?: boolean };
   mobileTwoLines?: boolean;
 }) {
@@ -267,6 +272,7 @@ function SourceLine({
     source.price !== undefined ? (
       <span className="whitespace-nowrap text-sm font-medium text-foreground tabular-nums">
         {formatSourceAmount(source.price)} {source.label}
+        {extra && <span className="font-normal text-foreground/80"> {extra}</span>}
         {usd && <span className="ml-1 text-xs font-normal text-foreground/60">{usd}</span>}
       </span>
     ) : null;
@@ -331,6 +337,7 @@ export function CryptoSourceListbox({
   onSelect,
   note,
   usdFor,
+  extraFor,
   disabled,
   label,
 }: CryptoSourcesProps) {
@@ -360,7 +367,7 @@ export function CryptoSourceListbox({
     return (
       <div>
         <div className={box}>
-          <SourceLine source={selected} usd={usdFor?.(selected)} />
+          <SourceLine source={selected} usd={usdFor?.(selected)} extra={extraFor?.(selected)} />
         </div>
         {status}
       </div>
@@ -385,7 +392,7 @@ export function CryptoSourceListbox({
           {/* Named, but not by aria-label, which would hide the current
               choice from a screen reader behind the control's name. */}
           {label && <span className="sr-only">{label}: </span>}
-          <SourceLine source={selected} usd={usdFor?.(selected)} />
+          <SourceLine source={selected} usd={usdFor?.(selected)} extra={extraFor?.(selected)} />
           <span className="flex h-5 flex-none items-center">
             <ChevronDown className="h-4 w-4 text-foreground/60" aria-hidden="true" />
           </span>
@@ -435,6 +442,7 @@ export function CryptoSourceListbox({
                     <SourceLine
                       source={source}
                       usd={usdFor?.(source)}
+                      extra={extraFor?.(source)}
                       detail={rowDetail(source)}
                       mobileTwoLines={mobileTwoLines}
                     />
