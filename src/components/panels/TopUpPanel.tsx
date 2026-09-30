@@ -3,11 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
-import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable } from '../../constants';
+import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable, ARIO_TOPUP_MAX_USD } from '../../constants';
 import { useStore } from '../../store/useStore';
 import { Loader2, Lock, CreditCard, DollarSign, Wallet, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
-import { useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
+import { useArioUsdRate, useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
 import CryptoConfirmationPanel from './crypto/CryptoConfirmationPanel';
 import CryptoManualPaymentPanel from './crypto/CryptoManualPaymentPanel';
 import PaymentDetailsPanel from './fiat/PaymentDetailsPanel';
@@ -19,7 +19,7 @@ import { parseTopUpDeepLink, formatDeepLinkSource } from '../../utils/topupDeepL
 import WalletSelectionModal from '../modals/WalletSelectionModal';
 import PendingTxRecoveryBanner from './crypto/PendingTxRecoveryBanner';
 import { getTurboBalance } from '../../utils';
-import { availableTokensForWallet } from '../../utils/walletTokens';
+import { topUpTokensForWallet } from '../../utils/walletTokens';
 import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { useBalanceRead } from '../../features/payments/useBalanceRead';
 import {
@@ -387,11 +387,45 @@ export default function TopUpPanel({
     setCryptoAmountInput(String(cryptoForTarget));
   }, [targetedTopUp, cryptoForTarget]);
 
+  /*
+    The $200 ARIO cap, in ARIO at Turbo's live rate (the same rate every other
+    ARIO price here uses). Undefined until the rate loads: an ARIO top-up then
+    waits rather than going ahead unbounded.
+  */
+  const arioUsdRate = useArioUsdRate();
+  const arioMaxTokens =
+    arioUsdRate && arioUsdRate > 0
+      ? Math.floor(ARIO_TOPUP_MAX_USD / arioUsdRate)
+      : undefined;
+  const arioPresets =
+    arioMaxTokens === undefined
+      ? [10_000, 25_000, 50_000, 100_000]
+      : [
+          ...[10_000, 25_000, 50_000, 100_000].filter((a) => a < arioMaxTokens),
+          arioMaxTokens,
+        ].slice(-4);
+  const arioAmount =
+    inputType === 'storage' && cryptoForStorage !== undefined
+      ? cryptoForStorage
+      : cryptoAmount;
+  const arioOverCap =
+    selectedTokenType === 'ario' &&
+    (arioMaxTokens === undefined || arioAmount > arioMaxTokens);
+  const arioCapNote =
+    selectedTokenType === 'ario'
+      ? arioMaxTokens === undefined
+        ? 'Loading the ARIO rate for the $200 limit…'
+        : `Up to $${ARIO_TOPUP_MAX_USD} in ARIO per top-up (${arioMaxTokens.toLocaleString()} ARIO at today's rate).`
+      : undefined;
+
   // Crypto preset amounts based on token type (from reference app)
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
     switch (tokenType) {
       case 'arweave': return [0.5, 1, 5, 10];
-      case 'ario': return [50, 100, 500, 1000];
+      // Sized to the $200 cap rather than to a round number of tokens: at
+      // ARIO's price, 1,000 ARIO was a dollar and a half. Presets above the
+      // cap are dropped; the cap is always offered.
+      case 'ario': return arioPresets;
       case 'base-ario': return [50, 100, 500, 1000]; // Same presets as ARIO
       case 'ethereum': return [0.01, 0.05, 0.1, 0.25];
       case 'base-eth': return [0.01, 0.05, 0.1, 0.25];
@@ -612,7 +646,7 @@ export default function TopUpPanel({
   // Get available tokens based on wallet type (ordered by priority - first token is default)
   const getAvailableTokens = useCallback(
     (): SupportedTokenType[] =>
-      availableTokensForWallet(walletType, isTokenSelectable),
+      topUpTokensForWallet(walletType, isTokenSelectable),
     [walletType],
   );
 
@@ -626,7 +660,7 @@ export default function TopUpPanel({
    */
   useEffect(() => {
     if (!walletType) return;
-    const available = availableTokensForWallet(walletType, isTokenSelectable);
+    const available = topUpTokensForWallet(walletType, isTokenSelectable);
     if (available.length === 0) return;
     if (!available.includes(selectedTokenType)) {
       setSelectedTokenType(available[0]);
@@ -656,29 +690,39 @@ export default function TopUpPanel({
   // `undefined` until read, and after a failed read: unknown, never zero.
   const row1 = useBalanceRead(useTokenBalance(rowToken, walletType, address, !!rowKey), rowKey);
   const row2 = useBalanceRead(useTokenBalance(rowToken2, walletType, address, !!rowKey2), rowKey2);
+  const rowToken3: SupportedTokenType | null = walletType === 'solana' ? 'ario' : null;
+  const rowKey3 = rowToken3 && readRows ? `${address}:${rowToken3}` : null;
+  const row3 = useBalanceRead(useTokenBalance(rowToken3, walletType, address, !!rowKey3), rowKey3);
   const rowHeld = row1.balance;
   const rowHeld2 = row2.balance;
+  const rowHeld3 = row3.balance;
 
   const topUpSources = useMemo(
     () =>
       buildSources({
         // Exactly the tokens this wallet could pay with before the dropdown.
-        tokens: availableTokensForWallet(walletType, isTokenSelectable).map((token) => ({
+        tokens: topUpTokensForWallet(walletType, isTokenSelectable).map((token) => ({
           token,
+          // ARIO top-ups carry a 25% infrastructure fee against 35% for the
+          // rest. Said as a small tag and nothing more: it is never preselected.
+          ...(token === 'ario' ? { badge: 'Lower fee' } : {}),
         })),
         balances: {
           ...(rowToken ? { [rowToken]: rowHeld } : {}),
           ...(rowToken2 ? { [rowToken2]: rowHeld2 } : {}),
+          ...(rowToken3 ? { [rowToken3]: rowHeld3 } : {}),
         },
         loadingTokens: [
           ...(rowToken && row1.loading ? [rowToken] : []),
           ...(rowToken2 && row2.loading ? [rowToken2] : []),
+          ...(rowToken3 && row3.loading ? [rowToken3] : []),
         ],
         // The SOL that pays a USDC transfer's network fee (§ 7.9).
         solBalance: walletType === 'solana' ? rowHeld : undefined,
       }),
     [
-      walletType, rowToken, rowToken2, rowHeld, rowHeld2, row1.loading, row2.loading,
+      walletType, rowToken, rowToken2, rowToken3, rowHeld, rowHeld2, rowHeld3,
+      row1.loading, row2.loading, row3.loading,
     ],
   );
 
@@ -765,7 +809,7 @@ export default function TopUpPanel({
       case 'arweave':
         return 'Connect an Arweave wallet (like Wander) to pay with AR tokens on Arweave';
       case 'ario':
-        return 'Connect an Arweave or Ethereum wallet (like Wander or MetaMask) to pay with ARIO tokens';
+        return 'Connect a Solana wallet (like Phantom or Solflare) to pay with ARIO';
       case 'base-ario':
         return 'Connect an Ethereum wallet (like MetaMask) to pay with ARIO on Base L2 (fast & low fees)';
       case 'ethereum':
@@ -1834,6 +1878,17 @@ export default function TopUpPanel({
                     <div className="mt-2 text-xs text-foreground/80">
                       Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
                     </div>
+                    {/* The ARIO cap applies to storage too; say it where the
+                        blocked Continue would otherwise be unexplained. */}
+                    {arioCapNote && (
+                      <div
+                        className={`mt-1 text-xs ${
+                          arioOverCap && arioMaxTokens !== undefined ? 'text-error' : 'text-foreground/70'
+                        }`}
+                      >
+                        {arioCapNote}
+                      </div>
+                    )}
                   </div>
 
                 </>
@@ -1855,7 +1910,7 @@ export default function TopUpPanel({
                             : 'border-border/20 text-foreground/80 hover:bg-card hover:text-foreground'
                         }`}
                       >
-                        {amount} {tokenLabels[selectedTokenType].replace(/\s*\([^)]*\)/, '')}
+                        {amount.toLocaleString()} {tokenLabels[selectedTokenType].replace(/\s*\([^)]*\)/, '')}
                       </button>
                     ))}
                   </div>
@@ -1884,6 +1939,15 @@ export default function TopUpPanel({
                     <div className="mt-2 text-xs text-foreground/80">
                       Enter the amount of {tokenLabels[selectedTokenType]} you want to spend
                     </div>
+                    {arioCapNote && (
+                      <div
+                        className={`mt-1 text-xs ${
+                          arioOverCap && arioMaxTokens !== undefined ? 'text-error' : 'text-foreground/70'
+                        }`}
+                      >
+                        {arioCapNote}
+                      </div>
+                    )}
 
                     {/* Token Pricing Status */}
                     {tokenPricingLoading && (
@@ -2100,6 +2164,7 @@ export default function TopUpPanel({
             )) ||
             (paymentMethod === 'crypto' && (
               !!targetAddressError || // Block checkout if recipient address validation failed
+              arioOverCap || // ARIO: at most $200 per top-up, and not before the rate loads
               (inputType === 'dollars' && (cryptoAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || !!tokenPricingError)) ||
               (inputType === 'storage' && (!wincForOneGiB || !creditsForOneUSD || storageAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || cryptoForStorage === undefined))
             )) ||

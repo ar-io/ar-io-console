@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { availableTokensForWallet, defaultTokenForWallet } from './walletTokens';
+import {
+  availableTokensForWallet,
+  defaultTokenForWallet,
+  topUpTokensForWallet,
+} from './walletTokens';
 
 const all = () => true;
 const none = () => false;
@@ -57,3 +61,29 @@ describe('availableTokensForWallet', () => {
     expect(availableTokensForWallet(null, all)).toEqual([]);
   });
 });
+
+describe('topUpTokensForWallet', () => {
+  it('adds ARIO for a Solana wallet, last so it is never the default', () => {
+    expect(topUpTokensForWallet('solana', all)).toEqual([
+      'solana',
+      'solana-usdc',
+      'ario',
+    ]);
+  });
+
+  it('adds nothing for other wallets', () => {
+    expect(topUpTokensForWallet('arweave', all)).toEqual(['arweave']);
+    expect(topUpTokensForWallet('ethereum', all)).not.toContain('ario');
+    expect(topUpTokensForWallet(null, all)).toEqual([]);
+  });
+
+  it('respects the deny-list', () => {
+    const noArio = ((t: string) => t !== 'ario') as never;
+    expect(topUpTokensForWallet('solana', noArio)).not.toContain('ario');
+  });
+
+  it('leaves the shared list alone', () => {
+    expect(availableTokensForWallet('solana', all)).not.toContain('ario');
+  });
+});
+

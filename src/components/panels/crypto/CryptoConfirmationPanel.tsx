@@ -15,6 +15,7 @@ import {
   tokenProcessingTimes,
   wincPerCredit,
   SupportedTokenType,
+  ARIO_TOPUP_MAX_USD,
 } from '../../../constants';
 import { useWincForAnyToken, useWincForOneGiB } from '../../../hooks/useWincForOneGiB';
 import useTurboWallets from '../../../hooks/useTurboWallets';
@@ -26,6 +27,7 @@ import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { formatTokenAmount } from '../../../utils/jitPayment';
 import { savePendingTopUpTx, removePendingTopUpTx } from '../../../utils/pendingTopUp';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useArioUsdRate } from '../../../hooks/useCryptoPrice';
 import {
   CONTRACT_WALLET_DESTINATION_ERROR,
   CONTRACT_WALLET_PAYMENT_ERROR,
@@ -57,6 +59,7 @@ export default function CryptoConfirmationPanel({
   const [isRetrying, setIsRetrying] = useState(false);
 
   const turboConfig = useStore((state) => state.getCurrentConfig());
+  const arioUsdRate = useArioUsdRate(tokenType === 'ario');
   const turboConfigForRetry = useTurboConfig(tokenType);
 
   // Cross-wallet top-up: Use target address if different from connected wallet
@@ -119,7 +122,7 @@ export default function CryptoConfirmationPanel({
         tokenType === 'base-usdc' ||
         tokenType === 'polygon-usdc')) ||
     (walletType === 'solana' &&
-      (tokenType === 'solana' || tokenType === 'solana-usdc'));
+      (tokenType === 'solana' || tokenType === 'solana-usdc' || tokenType === 'ario'));
 
   const handlePayment = async () => {
     if (!address || !quote) return;
@@ -500,11 +503,21 @@ export default function CryptoConfirmationPanel({
           walletType === 'solana' &&
           solanaPublicKey &&
           solanaSignMessage &&
-          (tokenType === 'solana' || tokenType === 'solana-usdc')
+          (tokenType === 'solana' || tokenType === 'solana-usdc' || tokenType === 'ario')
         ) {
           // The payment is a transaction the wallet must sign. Wallet Standard
           // makes transaction signing optional, so check for it here rather
           // than let the SDK fail with a message about adapters.
+          // Top Up's $200 ARIO cap, checked again where the money moves. The
+          // panel already blocks it; this stops any other caller from going
+          // over, and an unknown rate never lets an ARIO payment through.
+          if (tokenType === 'ario') {
+            if (!arioUsdRate || cryptoAmount * arioUsdRate > ARIO_TOPUP_MAX_USD) {
+              throw new Error(
+                `ARIO top-ups are limited to $${ARIO_TOPUP_MAX_USD} each. Lower the amount and try again.`,
+              );
+            }
+          }
           if (!solanaSignTransaction) {
             throw new Error(
               "This Solana wallet can't sign transactions, so it can't send this payment. Connect a wallet that can, such as Phantom or Solflare.",
@@ -530,7 +543,8 @@ export default function CryptoConfirmationPanel({
             // (turbo-sdk's USDCToTokenAmount is not re-exported from the
             // package entry, so this file already does it by hand for USDC.)
             tokenAmount:
-              tokenType === 'solana-usdc'
+              // USDC and ARIO both have 6 decimals; SOL has 9 (lamports).
+              tokenType === 'solana-usdc' || tokenType === 'ario'
                 ? Math.round(cryptoAmount * 1e6).toString()
                 : SOLToTokenAmount(cryptoAmount),
             turboCreditDestinationAddress,
