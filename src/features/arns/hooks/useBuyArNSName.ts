@@ -89,8 +89,13 @@ function isInsufficientCredits(err: unknown): boolean {
  * Register an ArNS name with Turbo Credits — **atomically**.
  *
  * On @ar.io/sdk >= 4.1.0-alpha.5, `buyRecord` with no `processId` mints a fresh
- * user-owned ANT and assigns the name in the SAME transaction (one signature),
- * returning the new ANT id as `result.result.processId`. This replaces the prior
+ * user-owned ANT and assigns the name in the SAME transaction, returning the
+ * new ANT id as `result.result.processId`. Usually that is one signature. A
+ * long name can push the atomic transaction past Solana's size limit, and the
+ * SDK then routes it through an ephemeral address lookup table, which costs
+ * extra wallet approvals: names of 40+ characters already take that path for
+ * everyone, and the gateway-operator discount adds one account (~33 bytes),
+ * so with the discount names of about 29+ characters take it too. This replaces the prior
  * two-step Model-B flow (client `ANT.spawn` → bundler settle), which spent SOL
  * on the ANT *before* settling and could orphan it if settlement failed. With
  * atomic buyRecord there is no separate spawn and therefore no orphan window —

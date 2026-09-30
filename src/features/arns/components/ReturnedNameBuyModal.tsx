@@ -81,8 +81,10 @@ export default function ReturnedNameBuyModal({
 
   const signerAddress = signer.address ?? undefined;
   const balances = useArNSPaymentBalances(signerAddress);
-  // An operations wallet names its gateway; an operator's own is tried by the SDK.
-  const { discount: operatorDiscount } = useOperatorDiscountGateway(signerAddress);
+  // An operations wallet names its gateway; an operator's own is tried by the
+  // SDK. Auctions are ARIO-only, so the operations scan may run here.
+  const { discount: operatorDiscount, checking: operatorDiscountChecking } =
+    useOperatorDiscountGateway(signerAddress, { scanOperations: true });
   const buyState = useBuyReturnedName();
 
   // Freshness re-check — a soft, non-blocking signal. Its rejection can't be told
@@ -343,7 +345,8 @@ export default function ReturnedNameBuyModal({
             {/* Cost breakdown */}
             <div className="mb-4">
               <ArNSCostBreakdown
-          operatorDiscountArio={cost?.discountArio}
+                operatorDiscountArio={cost?.discountArio}
+                operatorDiscountChecking={operatorDiscountChecking}
                 priceUnit="ario"
                 arioPrice={cost?.arioCost}
                 priceLoading={costLoading}

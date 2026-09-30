@@ -186,7 +186,11 @@ export default function ManageDomainModal({
     before this hook is ever called.
   */
   const mechanism = settlementMechanismFor(route);
-  const { discount: operatorDiscount } = useOperatorDiscountGateway(address);
+  // The operations-wallet scan only on the ARIO route, the one that can use it.
+  const { discount: operatorDiscount, checking: operatorDiscountChecking } =
+    useOperatorDiscountGateway(address, {
+      scanOperations: mechanism.kind === 'ario-direct',
+    });
 
   const { manage, phase, statusMessage, result, error, insufficientCredits, isBusy } =
     useManageArNSName();
@@ -613,8 +617,9 @@ export default function ManageDomainModal({
                 </p>
               )}
               <ArNSCostBreakdown
-          operatorDiscountArio={cost?.discountArio}
-          operatorDiscountHint={!!operatorDiscount?.eligible}
+                operatorDiscountArio={cost?.discountArio}
+                operatorDiscountHint={!!operatorDiscount?.eligible}
+                operatorDiscountChecking={operatorDiscountChecking}
                 priceUnit={priceUnit}
                 creditsPrice={creditsPrice?.sponsoredCredits}
                 tokenForName={tokenForName}

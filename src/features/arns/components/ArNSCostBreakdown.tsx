@@ -134,6 +134,12 @@ interface Props {
    * carry it, so one quiet line says where it applies.
    */
   operatorDiscountHint?: boolean;
+  /**
+   * The operator-discount lookup is still running. On the ARIO route this
+   * says so in one muted line; it never holds up Buy, since almost nobody is
+   * an operator and nobody else should wait for the answer.
+   */
+  operatorDiscountChecking?: boolean;
 }
 
 /**
@@ -220,6 +226,7 @@ export function ArNSCostBreakdown({
   tokenForName,
   operatorDiscountArio,
   operatorDiscountHint = false,
+  operatorDiscountChecking = false,
 }: Props) {
   // Credits per $1, inverted. Shown with "~" because this is an indicative
   // rate, not the amount that will be charged — minimums and rounding apply.
@@ -404,7 +411,9 @@ export function ArNSCostBreakdown({
             label={
               <span className="inline-flex items-center gap-1.5">
                 Gateway operator discount
-                <InfoTip text="Your gateway earns 20% off ArNS names paid with ARIO. It is already taken off the name price above." />
+                <InfoTip
+                  text={`Your gateway earns ${OPERATOR_DISCOUNT_PERCENT}% off ArNS names paid with ARIO. It is already taken off the name price above.`}
+                />
               </span>
             }
           >
@@ -649,6 +658,11 @@ export function ArNSCostBreakdown({
         Only off the ARIO route: Turbo pays the registry on every other route,
         so there is no operator signer for the discount to check.
       */}
+      {priceUnit === 'ario' &&
+        operatorDiscountChecking &&
+        !(operatorDiscountArio != null && operatorDiscountArio > 0) && (
+          <p className="mt-2 text-xs text-foreground/60">Checking operator discount…</p>
+        )}
       {operatorDiscountHint && priceUnit !== 'ario' && (
         <p className="mt-2 text-xs text-foreground/60">
           Your gateway&apos;s {OPERATOR_DISCOUNT_PERCENT}% operator discount applies when

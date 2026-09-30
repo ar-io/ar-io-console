@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getARIO } from '../../../utils';
 import { useArNSConfigKey } from './useArNSConfigKey';
 import {
+  operatorDiscountIneligibility,
   resolveOperatorDiscount,
   type GatewayForDiscount,
   type OperatorDiscount,
@@ -21,51 +23,77 @@ type GatewayReadable = {
   }>;
 };
 
+type OperationsGateway = GatewayForDiscount & { gatewayAddress: string };
+
 /** Enough pages for the whole registry (~620 gateways) with room to grow. */
 const MAX_PAGES = 20;
+const STALE_MS = 10 * 60_000;
+const GC_MS = 30 * 60_000;
 
 /**
  * Whether the ArNS signer (the Solana wallet that owns and pays for names:
  * the session wallet on a Solana session, else the linked one) can claim the
  * gateway-operator discount, and which gateway to name to claim it.
  *
- * Two reads, cached for ten minutes: the signer's own gateway, and (only when
- * that does not qualify) the gateway that lists the signer as its operations
- * address. The second is a full registry scan in the SDK, which is why it is
- * cached and skipped for an operator whose own gateway already qualifies.
+ * Two reads, each cached for ten minutes per signer:
+ *
+ * - The signer's own gateway: one account, always read, so an operator's
+ *   hint shows on every route.
+ * - The gateway that lists the signer as its operations address: a full
+ *   registry scan in the SDK (~620 accounts). Run only when
+ *   `scanOperations` is true, which the hosts set on the ARIO route (the only
+ *   route that can use the discount), and never when the signer's own gateway
+ *   already qualifies. Toggling the route does not refetch: the result stays
+ *   cached under the signer.
  *
  * Any read failure resolves to "not eligible": the discount is never claimed
  * on a guess, because a named gateway that does not qualify fails the
  * purchase outright.
  */
-export function useOperatorDiscountGateway(signerAddress: string | undefined): {
+export function useOperatorDiscountGateway(
+  signerAddress: string | undefined,
+  { scanOperations = false }: { scanOperations?: boolean } = {},
+): {
   discount: OperatorDiscount | undefined;
-  loading: boolean;
+  /** A lookup that could still find a discount is in flight. */
+  checking: boolean;
 } {
   const configKey = useArNSConfigKey();
 
-  const query = useQuery<OperatorDiscount>({
-    queryKey: ['arns-operator-discount', configKey, signerAddress ?? ''],
+  const own = useQuery<GatewayForDiscount | null>({
+    queryKey: ['arns-operator-gateway-own', configKey, signerAddress ?? ''],
     enabled: !!signerAddress,
-    staleTime: 10 * 60_000,
-    gcTime: 30 * 60_000,
+    staleTime: STALE_MS,
+    gcTime: GC_MS,
+    retry: 1,
+    queryFn: async () => {
+      const ario = getARIO() as unknown as GatewayReadable;
+      // The SDK throws "Gateway not found" for a wallet that runs none.
+      return ario.getGateway({ address: signerAddress! }).catch(() => null);
+    },
+  });
+
+  // No scan when the signer's own gateway already gives the discount.
+  const ownQualifies =
+    !!signerAddress &&
+    !!own.data &&
+    !operatorDiscountIneligibility(own.data, {
+      operator: signerAddress,
+      signer: signerAddress,
+      nowMs: Date.now(),
+    });
+
+  const scanEnabled = !!signerAddress && scanOperations && own.isFetched && !ownQualifies;
+
+  const ops = useQuery<OperationsGateway | null>({
+    queryKey: ['arns-operator-gateway-ops', configKey, signerAddress ?? ''],
+    enabled: scanEnabled,
+    staleTime: STALE_MS,
+    gcTime: GC_MS,
     retry: 1,
     queryFn: async () => {
       const signer = signerAddress!;
       const ario = getARIO() as unknown as GatewayReadable;
-      const nowMs = Date.now();
-
-      // The SDK throws "Gateway not found" for a wallet that runs none.
-      const ownGateway = await ario.getGateway({ address: signer }).catch(() => null);
-      const own = resolveOperatorDiscount({
-        signer,
-        ownGateway,
-        operationsGateway: null,
-        nowMs,
-      });
-      if (own.eligible) return own;
-
-      let operationsGateway: (GatewayForDiscount & { gatewayAddress: string }) | null = null;
       try {
         let cursor: string | undefined;
         for (let page = 0; page < MAX_PAGES; page++) {
@@ -74,26 +102,32 @@ export function useOperatorDiscountGateway(signerAddress: string | undefined): {
             filters: { operationsAddress: signer },
             ...(cursor ? { cursor } : {}),
           });
-          // Filtered server side of the SDK, checked again here: a gateway is
-          // only used when it names this signer, whatever the filter did.
+          // Filtered inside the SDK, checked again here: a gateway is only
+          // used when it names this signer, whatever the filter did.
           const hit = res.items.find((g) => g.operationsAddress === signer);
-          if (hit) {
-            operationsGateway = hit;
-            break;
-          }
+          if (hit) return hit;
           if (!res.nextCursor) break;
           cursor = res.nextCursor;
         }
       } catch {
-        operationsGateway = null;
+        // Unreadable counts as none.
       }
-
-      return resolveOperatorDiscount({ signer, ownGateway, operationsGateway, nowMs });
+      return null;
     },
   });
 
+  const discount = useMemo(() => {
+    if (!signerAddress || !own.isFetched) return undefined;
+    return resolveOperatorDiscount({
+      signer: signerAddress,
+      ownGateway: own.data ?? null,
+      operationsGateway: ops.data ?? null,
+      nowMs: Date.now(),
+    });
+  }, [signerAddress, own.isFetched, own.data, ops.data]);
+
   return {
-    discount: signerAddress ? query.data : undefined,
-    loading: !!signerAddress && query.isLoading,
+    discount,
+    checking: !!signerAddress && (own.isLoading || (scanEnabled && ops.isLoading)),
   };
 }

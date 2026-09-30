@@ -187,11 +187,6 @@ export function ArNSPurchaseCard({
 
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
-  /*
-    Whether the ArNS signer runs (or is the operations wallet of) a gateway
-    that earns the 20% operator discount. Only the ARIO route can use it.
-  */
-  const { discount: operatorDiscount } = useOperatorDiscountGateway(address);
 
   /*
     The menu follows the PAYER. `availableTokensForWallet` returns what this
@@ -288,6 +283,15 @@ export function ArNSPurchaseCard({
   // Which unit the price is quoted in. Card and token top-ups both land as
   // credits, so they price like credits — only ARIO prices in ARIO.
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
+
+  /*
+    Whether the ArNS signer runs (or is the operations wallet of) a gateway
+    that earns the operator discount. Only the ARIO route can use it, so the
+    registry scan for an operations wallet runs only there; the signer's own
+    gateway (one account) is read on every route for the hint.
+  */
+  const { discount: operatorDiscount, checking: operatorDiscountChecking } =
+    useOperatorDiscountGateway(address, { scanOperations: route.kind === 'ario' });
 
   /*
     Whether Turbo pays the Solana costs for this purchase.
@@ -1216,6 +1220,7 @@ export function ArNSPurchaseCard({
         <ArNSCostBreakdown
           operatorDiscountArio={cost?.discountArio}
           operatorDiscountHint={!!operatorDiscount?.eligible}
+          operatorDiscountChecking={operatorDiscountChecking}
           priceUnit={priceUnit}
           creditsPrice={creditsPrice?.sponsoredCredits}
           /* Turbo mints the name and pays the Solana rent, recovering it as the
