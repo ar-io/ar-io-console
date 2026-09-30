@@ -118,7 +118,7 @@ describe('mapRecordWriteError and the signing window', () => {
         `Action ${NONCE} expired at 2026-09-30T14:15:00.000Z — its blockhash is no longer valid. … refunded automatically.`,
       ),
     ]) {
-      expect(mapRecordWriteError(e)).toMatch(/nothing changed.*within about 20 minutes/);
+      expect(mapRecordWriteError(e)).toMatch(/nothing changed.*within about 10 minutes/);
     }
   });
 

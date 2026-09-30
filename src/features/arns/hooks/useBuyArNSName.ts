@@ -35,6 +35,7 @@ import {
   heldWincFrom,
   readHeldAttempt,
   settledByStatus,
+  settlementFromStatus,
   writeHeldAttempt,
   type HeldAttempt,
 } from '../purchase/actionFailure';
@@ -415,7 +416,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             unconfirmed: boolean,
           ): Promise<
             | { held: Pick<HeldAttempt, 'heldUntil' | 'untilKnown' | 'heldWinc' | 'unconfirmed'> }
-            | { settled: 'released' | 'completed' }
+            | { settled: 'released' | 'completed'; status: Record<string, unknown> | undefined }
             | undefined
           > => {
             if (!nonce) return undefined;
@@ -427,7 +428,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               Neither leaves anything held, so nothing is recorded.
             */
             const settled = settledByStatus(status?.status);
-            if (settled) return { settled };
+            if (settled) return { settled, status };
             const held = {
               ...heldUntilFrom(status?.expiresAt, Date.now()),
               ...(heldWincFrom(status?.wincQty) !== undefined
@@ -447,6 +448,27 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
           if ((kind === 'expired-held' || kind === 'unconfirmed') && nonce) {
             const outcome = await recordHold(kind === 'unconfirmed');
             if (!current()) return undefined;
+            /*
+              Completed after all: the /sign response was lost, or the failure
+              came after a successful submit. With the messageId to prove it,
+              that is a purchase, so it gets the receipt, not an apology.
+            */
+            const landed =
+              outcome && 'settled' in outcome && outcome.settled === 'completed'
+                ? settlementFromStatus(outcome.status, nonce)
+                : undefined;
+            if (landed) {
+              clearPendingArNSPurchase();
+              const stored = readHeldAttempt(heldStorage(), Date.now());
+              if (stored && stored.payer === payer) clearHeldAttempt(heldStorage());
+              window.dispatchEvent(new CustomEvent('refresh-balance'));
+              if (!current()) return undefined;
+              setFailure(undefined);
+              setError(undefined);
+              setResult(landed);
+              setPhase('success');
+              return landed;
+            }
             if (outcome && 'settled' in outcome && outcome.settled === 'released') {
               clearPendingArNSPurchase();
               const e = new Error(RELEASED_MESSAGE);
@@ -459,8 +481,9 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               outcome && 'held' in outcome
                 ? outcome.held
                 : {
-                    // Completed after all, or unreadable: nothing is claimed
-                    // either way, and the buyer is sent to check their names.
+                    // Completed without a messageId to show, or unreadable:
+                    // nothing is claimed either way, and the buyer is sent to
+                    // check their names.
                     ...heldUntilFrom(undefined, Date.now()),
                     unconfirmed: true,
                   };

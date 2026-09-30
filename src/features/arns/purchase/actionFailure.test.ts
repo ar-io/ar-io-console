@@ -16,6 +16,7 @@ import {
   mapActionExpiryMessage,
   readHeldAttempt,
   settledByStatus,
+  settlementFromStatus,
   shouldRecordHold,
   writeHeldAttempt,
   type HeldAttempt,
@@ -181,7 +182,7 @@ describe('held-until', () => {
     });
   });
 
-  it('falls back to twenty minutes when there is nothing to read', () => {
+  it('falls back to ten minutes when there is nothing to read', () => {
     for (const v of [undefined, 'not a date', null]) {
       expect(heldUntilFrom(v, NOW)).toEqual({ heldUntil: NOW + HELD_FALLBACK_MS, untilKnown: false });
     }
@@ -193,9 +194,9 @@ describe('held-until', () => {
     expect(heldWincFrom('abc')).toBeUndefined();
   });
 
-  it('phrases the time as "by about HH:MM", or "within about 20 minutes"', () => {
+  it('phrases the time as "by about HH:MM", or "within about 10 minutes"', () => {
     expect(heldByPhrase({ heldUntil: NOW + 5 * 60_000, untilKnown: true }, fmt)).toBe('by about 14:05');
-    expect(heldByPhrase({ heldUntil: NOW, untilKnown: false }, fmt)).toBe('within about 20 minutes');
+    expect(heldByPhrase({ heldUntil: NOW, untilKnown: false }, fmt)).toBe('within about 10 minutes');
   });
 
   it('tells a credits buyer nothing was charged', () => {
@@ -203,7 +204,7 @@ describe('held-until', () => {
       'Nothing was charged. The credits for that attempt are held and return to your balance by about 14:17.',
     );
     expect(heldMessage({ heldUntil: NOW, untilKnown: false }, { formatTime: fmt })).toBe(
-      'Nothing was charged. The credits for that attempt are held and return to your balance within about 20 minutes.',
+      'Nothing was charged. The credits for that attempt are held and return to your balance within about 10 minutes.',
     );
   });
 
@@ -300,7 +301,7 @@ describe('mapActionExpiryMessage (record and owner writes)', () => {
 
   it('says nothing changed and when the credits return on a held expiry', () => {
     for (const e of [failed(409, BODY_409_HELD), failed(400, BODY_400_EXPIRED_AT)]) {
-      expect(mapActionExpiryMessage(e)).toMatch(/nothing changed.*within about 20 minutes/);
+      expect(mapActionExpiryMessage(e)).toMatch(/nothing changed.*within about 10 minutes/);
     }
   });
 
@@ -422,5 +423,35 @@ describe('the action status settles a hold', () => {
       expect(settledByStatus(s)).toBeUndefined();
       expect(shouldRecordHold(s)).toBe(true);
     }
+  });
+});
+
+describe('settlementFromStatus (a failure whose action completed anyway)', () => {
+  const completed = {
+    nonce: 'n1',
+    status: 'completed',
+    messageId: 'tx-abc',
+    antId: 'ant-1',
+    name: 'example',
+  };
+
+  it('turns a completed action with a messageId into the success result', () => {
+    expect(settlementFromStatus(completed, 'n1')).toEqual({
+      nonce: 'n1',
+      messageId: 'tx-abc',
+      receipt: completed,
+    });
+  });
+
+  it('is nothing without a messageId to show as proof', () => {
+    expect(settlementFromStatus({ ...completed, messageId: undefined }, 'n1')).toBeUndefined();
+    expect(settlementFromStatus({ ...completed, messageId: '' }, 'n1')).toBeUndefined();
+  });
+
+  it('is nothing for any other status, or no status at all', () => {
+    for (const status of ['expired', 'reserved', 'awaiting-signature', undefined]) {
+      expect(settlementFromStatus({ ...completed, status }, 'n1')).toBeUndefined();
+    }
+    expect(settlementFromStatus(undefined, 'n1')).toBeUndefined();
   });
 });

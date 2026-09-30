@@ -4,8 +4,9 @@
  * A sponsored action runs in two requests. `POST /v1/arns/actions/<action>`
  * RESERVES the credits and returns a transaction for the owner to sign; that
  * transaction is only valid for roughly 60 to 90 seconds (its blockhash).
- * `expiresAt`, about 15 minutes out, is the REFUND deadline, not a signing
- * deadline. Then `POST /:nonce/sign` submits it. When that fails the credits
+ * `expiresAt`, about 5 minutes after the action is created, is the REFUND
+ * deadline, not a signing deadline; the reconciler, which runs about every 5
+ * minutes, refunds after it. Then `POST /:nonce/sign` submits it. When that fails the credits
  * are in one of three states, and the copy has to say which:
  *
  * - Released: the service proved the transaction expired AND refunded it:
@@ -49,8 +50,12 @@ export type ActionFailureKind =
   | 'insufficient'
   | 'other';
 
-/** How long a held attempt may take to return when `expiresAt` is unknown. */
-export const HELD_FALLBACK_MS = 20 * 60_000;
+/**
+ * How long a held attempt may take to return when `expiresAt` is unknown:
+ * about 5 minutes to expiry after the action is created, plus up to 5 more for
+ * the reconciler.
+ */
+export const HELD_FALLBACK_MS = 10 * 60_000;
 
 function statusOf(err: unknown): number | undefined {
   const e = err as { status?: unknown; response?: { status?: unknown } } | null;
@@ -212,6 +217,24 @@ export function settledByStatus(status: unknown): 'released' | 'completed' | und
   return undefined;
 }
 
+/**
+ * A failed submission whose action nonetheless COMPLETED (the /sign response
+ * was lost, or the failure came after a successful submit) is a purchase that
+ * landed. Built into the same shape `purchaseWithCredits` returns, so the
+ * normal receipt shows. `undefined` unless the status says `completed` AND
+ * carries the `messageId` the receipt links to; without it, there is nothing
+ * to show as proof and the unconfirmed copy stays.
+ */
+export function settlementFromStatus(
+  status: Record<string, unknown> | undefined,
+  nonce: string,
+): { nonce: string; messageId: string; receipt: Record<string, unknown> } | undefined {
+  if (!status || status.status !== 'completed') return undefined;
+  const messageId = status.messageId;
+  if (typeof messageId !== 'string' || messageId.length === 0) return undefined;
+  return { nonce, messageId, receipt: status };
+}
+
 /** Whether a hold should be recorded for an action in this status. */
 export function shouldRecordHold(status: unknown): boolean {
   return settledByStatus(status) === undefined;
@@ -267,12 +290,12 @@ function hhmm(ms: number): string {
 export const RELEASED_MESSAGE =
   'The approval window closed before it was submitted. Your credits are back; try again.';
 
-/** "by about 14:05", or "within about 20 minutes" when the time is a fallback. */
+/** "by about 14:05", or "within about 10 minutes" when the time is a fallback. */
 export function heldByPhrase(
   held: Pick<HeldAttempt, 'heldUntil' | 'untilKnown'>,
   formatTime: (ms: number) => string = hhmm,
 ): string {
-  return held.untilKnown ? `by about ${formatTime(held.heldUntil)}` : 'within about 20 minutes';
+  return held.untilKnown ? `by about ${formatTime(held.heldUntil)}` : 'within about 10 minutes';
 }
 
 /**
@@ -288,7 +311,7 @@ export function heldMessage(
     formatTime = hhmm,
   }: { paid?: boolean; formatTime?: (ms: number) => string } = {},
 ): string {
-  const by = held ? heldByPhrase(held, formatTime) : 'within about 20 minutes';
+  const by = held ? heldByPhrase(held, formatTime) : 'within about 10 minutes';
   if (held?.unconfirmed) {
     return `We couldn't confirm the purchase. Check My domains in a minute. If it didn't go through, the credits for this attempt return to your balance ${by}.`;
   }
@@ -321,10 +344,10 @@ export function mapActionExpiryMessage(err: unknown): string | undefined {
     return 'The approval expired before it was submitted, so nothing changed. Your credits are back. Try again.';
   }
   if (kind === 'expired-held' && !isWalletRejection(err)) {
-    return 'The approval expired before it was submitted, so nothing changed. The credits for it return to your balance within about 20 minutes. Try again.';
+    return 'The approval expired before it was submitted, so nothing changed. The credits for it return to your balance within about 10 minutes. Try again.';
   }
   if (kind === 'unconfirmed') {
-    return "We couldn't confirm the change. Check again in a minute. If it didn't go through, the credits for it return to your balance within about 20 minutes.";
+    return "We couldn't confirm the change. Check again in a minute. If it didn't go through, the credits for it return to your balance within about 10 minutes.";
   }
   return undefined;
 }
