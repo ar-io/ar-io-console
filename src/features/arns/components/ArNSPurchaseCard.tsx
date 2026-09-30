@@ -43,6 +43,8 @@ import {
 } from '../purchase/buyTarget';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import { useArNSTokenTopUp } from '../hooks/useArNSTokenTopUp';
+import { useOperatorDiscountGateway } from '../hooks/useOperatorDiscountGateway';
+import { withDiscountGateway } from '../purchase/operatorDiscount';
 import { useBalanceRead } from '../../payments/useBalanceRead';
 import {
   getTokenSmallestUnit,
@@ -113,11 +115,13 @@ function PrefetchLeaseTerm({
   years,
   fundFrom,
   fromAddress,
+  discountGatewayAddress,
 }: {
   name: string;
   years: number;
   fundFrom: ArNSFundFrom;
   fromAddress?: string;
+  discountGatewayAddress?: string;
 }) {
   useArNSPrice({ name, type: 'lease', years });
   useArNSCostDetails({
@@ -127,6 +131,7 @@ function PrefetchLeaseTerm({
     years,
     fundFrom,
     fromAddress,
+    discountGatewayAddress,
   });
   return null;
 }
@@ -140,6 +145,7 @@ function LeaseTermPrefetcher(props: {
   name: string;
   fundFrom: ArNSFundFrom;
   fromAddress?: string;
+  discountGatewayAddress?: string;
 }) {
   return (
     <>
@@ -181,6 +187,11 @@ export function ArNSPurchaseCard({
 
   const signer = useArNSTurboSigner();
   const address = signer.address ?? undefined;
+  /*
+    Whether the ArNS signer runs (or is the operations wallet of) a gateway
+    that earns the 20% operator discount. Only the ARIO route can use it.
+  */
+  const { discount: operatorDiscount } = useOperatorDiscountGateway(address);
 
   /*
     The menu follows the PAYER. `availableTokensForWallet` returns what this
@@ -378,6 +389,8 @@ export function ArNSPurchaseCard({
     // is resolved, and only ARIO-vs-not affects the estimate.
     payWithCredits: route.kind !== 'ario',
     fromAddress: address,
+    // An operations wallet names its gateway; an operator's own is automatic.
+    discountGatewayAddress: operatorDiscount?.discountGatewayAddress,
   });
 
   /** Charged amount, in the token's smallest unit — what the SDK requires. */
@@ -543,7 +556,12 @@ export function ArNSPurchaseCard({
     it as 'balance' and debits the wallet's ARIO. Credits are debited only by
     turbo-sdk, so the mechanism, not a funding label, picks the path.
   */
-  const mechanism = settlementMechanismFor(route);
+  // Carries the operator-discount gateway on the ARIO route, and only the one
+  // the quote just honoured, so a purchase never names a gateway it was refused.
+  const mechanism = withDiscountGateway(
+    settlementMechanismFor(route),
+    cost?.discountGatewayAddress,
+  );
 
   /*
     Card is chosen but a cheaper, self-owned route is one click away.
@@ -1069,7 +1087,12 @@ export function ArNSPurchaseCard({
       {/* Warm every lease term's price so switching the term is instant (no
           per-term RPC). Only while leasing; renders nothing. */}
       {type === 'lease' && name && (
-        <LeaseTermPrefetcher name={name} fundFrom={fundFrom} fromAddress={address} />
+        <LeaseTermPrefetcher
+          name={name}
+          fundFrom={fundFrom}
+          fromAddress={address}
+          discountGatewayAddress={operatorDiscount?.discountGatewayAddress}
+        />
       )}
       <div className="mb-1 flex items-baseline justify-between">
         <h3 className="font-heading text-lg font-extrabold text-foreground">
@@ -1191,6 +1214,8 @@ export function ArNSPurchaseCard({
       {/* Cost breakdown */}
       <div className="mb-4">
         <ArNSCostBreakdown
+          operatorDiscountArio={cost?.discountArio}
+          operatorDiscountHint={!!operatorDiscount?.eligible}
           priceUnit={priceUnit}
           creditsPrice={creditsPrice?.sponsoredCredits}
           /* Turbo mints the name and pays the Solana rent, recovering it as the

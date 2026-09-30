@@ -188,6 +188,8 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               // worked — but it meant the two paths derived the target
               // separately and would diverge the moment either fallback moved.
               targetId: desiredTarget,
+              // An operations wallet's gateway, when the quote honoured it.
+              discountGatewayAddress: mechanism.discountGatewayAddress,
             }),
           );
           settlement = toSettlement(res);

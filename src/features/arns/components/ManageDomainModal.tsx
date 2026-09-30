@@ -35,6 +35,8 @@ import {
   useTokenPricesForWinc,
 } from '../../../hooks/useCryptoPrice';
 import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
+import { useOperatorDiscountGateway } from '../hooks/useOperatorDiscountGateway';
+import { withDiscountGateway } from '../purchase/operatorDiscount';
 import { buildSources, sourceInputsFromOptions } from '../../payments/paymentSources';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
@@ -184,6 +186,7 @@ export default function ManageDomainModal({
     before this hook is ever called.
   */
   const mechanism = settlementMechanismFor(route);
+  const { discount: operatorDiscount } = useOperatorDiscountGateway(address);
 
   const { manage, phase, statusMessage, result, error, insufficientCredits, isBusy } =
     useManageArNSName();
@@ -219,8 +222,12 @@ export default function ManageDomainModal({
     // Credits pay the name, so the wallet's ARIO shortfall is not a blocker.
     payWithCredits: mechanism.kind !== 'ario-direct',
     fromAddress: address,
+    // An operations wallet names its gateway; an operator's own is automatic.
+    discountGatewayAddress: operatorDiscount?.discountGatewayAddress,
     enabled: active,
   });
+  // The write carries the gateway only when the quote just honoured it.
+  const writeMechanism = withDiscountGateway(mechanism, cost?.discountGatewayAddress);
 
   /*
     Renewing, upgrading and adding undername slots are registry payments Turbo
@@ -416,7 +423,7 @@ export default function ManageDomainModal({
         intent: action,
         years: action === 'Extend-Lease' ? years : undefined,
         increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
-        mechanism,
+        mechanism: writeMechanism,
       });
       if (res) onSuccess?.();
     } catch {
@@ -606,6 +613,8 @@ export default function ManageDomainModal({
                 </p>
               )}
               <ArNSCostBreakdown
+          operatorDiscountArio={cost?.discountArio}
+          operatorDiscountHint={!!operatorDiscount?.eligible}
                 priceUnit={priceUnit}
                 creditsPrice={creditsPrice?.sponsoredCredits}
                 tokenForName={tokenForName}

@@ -155,3 +155,27 @@ describe('submittingMessage', () => {
     }
   });
 });
+
+describe('buildBuyRecordArgs and the operator discount', () => {
+  const base = {
+    name: 'example',
+    type: 'lease' as const,
+    years: 1,
+    fundFrom: 'balance' as const,
+    referrer: 'ar.io Console',
+  };
+
+  it('names the gateway only when one was chosen', () => {
+    const OPERATOR = 'Operator1111111111111111111111111111111111111';
+    expect(
+      buildBuyRecordArgs({ ...base, discountGatewayAddress: OPERATOR }).discountGatewayAddress,
+    ).toBe(OPERATOR);
+  });
+
+  it('leaves the key off otherwise, so the SDK tries the signer\'s own gateway', () => {
+    expect('discountGatewayAddress' in buildBuyRecordArgs(base)).toBe(false);
+    expect(
+      'discountGatewayAddress' in buildBuyRecordArgs({ ...base, discountGatewayAddress: undefined }),
+    ).toBe(false);
+  });
+});
