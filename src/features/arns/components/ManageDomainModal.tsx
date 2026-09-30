@@ -27,7 +27,7 @@ import {
 } from './ArNSPaymentSelector';
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
 import { useStore } from '../../../store/useStore';
-import { walletSplitNote } from '../purchase/walletRoles';
+import { walletSplitPhrase } from '../purchase/walletRoles';
 import {
   getTokenSmallestUnit,
   useArioUsdRate,
@@ -164,7 +164,8 @@ export default function ManageDomainModal({
     transaction, so on an Arweave or Ethereum session the linked Solana wallet
     pays as well as holds, and the note says so rather than contradicting it.
   */
-  const walletSplit = walletSplitNote({
+  // The short form: it joins the picker's one status line.
+  const walletSplit = walletSplitPhrase({
     sessionWalletType,
     sessionAddress,
     ownerAddress: address,
@@ -309,6 +310,22 @@ export default function ManageDomainModal({
     topUpTokens,
   );
   const arioUsdRate = useArioUsdRate();
+  /*
+    What ARIO costs on top of its own price, in dollars: the SOL its route
+    spends on the name's accounts and fee, which the sponsored routes do not.
+    Priced from figures already here (the card rate and the SOL quote for the
+    same credits), so it needs no new lookup; unknown leaves ARIO out of the
+    Crypto segment's "from $X" rather than comparing a partial price with
+    Card's all-in charge.
+  */
+  const solUsd =
+    creditsPrice?.sponsoredCredits && creditsForOneUSD && tokenPrices.solana
+      ? creditsPrice.sponsoredCredits / creditsForOneUSD / tokenPrices.solana
+      : undefined;
+  const arioExtraUsd =
+    cost?.gasTotalSol !== undefined && solUsd !== undefined
+      ? cost.gasTotalSol * solUsd
+      : undefined;
   const pickerSources = useMemo(
     () =>
       buildSources({
@@ -565,6 +582,7 @@ export default function ManageDomainModal({
                   cardUsd: creditsPrice?.usd,
                 }}
                 arioUsdRate={arioUsdRate}
+                extraUsd={{ ario: arioExtraUsd }}
                 fundingSource={fundingSource}
                 balances={balances}
                 onSelect={setSelectedId}

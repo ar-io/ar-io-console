@@ -68,6 +68,11 @@ export function paidFromLine(wallet: SourceWallet): string {
   return `Paid from your ${WALLET_NAME[wallet]} wallet`;
 }
 
+/** The same, as a phrase that joins a status line: "paid from your Solana wallet". */
+export function paidFromPhrase(wallet: SourceWallet): string {
+  return `paid from your ${WALLET_NAME[wallet]} wallet`;
+}
+
 /**
  * How long a slow token takes to reach the balance, as a row label.
  *
@@ -304,17 +309,36 @@ const DOLLAR_STABLECOINS: readonly SupportedTokenType[] = [
  * A source's price in dollars, where one is known without a new lookup: ARIO
  * through the rate the checkout already fetches, and USDC at face value.
  * Anything else is `undefined` rather than estimated.
+ *
+ * `extraUsd` is what a route costs on top of its own price, in dollars. ARIO
+ * is the case: it is the buyer's own transaction, so the wallet also pays the
+ * SOL for the name's accounts and fee, which every sponsored route does not.
+ * Comparing ARIO's bare price with Card's all-in charge would flatter it.
+ * When `extraUsd` is given, a token that carries such a cost (ARIO) is priced
+ * only if its extra is known; unknown makes the whole figure unknown.
  */
 export function sourceUsd(
   source: PaymentSource,
   arioUsdRate: number | undefined,
+  extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>,
 ): number | undefined {
   if (source.price === undefined) return undefined;
+  let base: number | undefined;
   if (source.token === 'ario') {
-    return arioUsdRate !== undefined ? source.price * arioUsdRate : undefined;
+    base = arioUsdRate !== undefined ? source.price * arioUsdRate : undefined;
+  } else {
+    base = DOLLAR_STABLECOINS.includes(source.token) ? source.price : undefined;
   }
-  return DOLLAR_STABLECOINS.includes(source.token) ? source.price : undefined;
+  if (base === undefined || !extraUsd) return base;
+  if (TOKENS_WITH_EXTRA_COST.includes(source.token)) {
+    const extra = extraUsd[source.token];
+    return extra === undefined ? undefined : base + extra;
+  }
+  return base + (extraUsd[source.token] ?? 0);
 }
+
+/** Tokens whose route costs more than their own price (ARIO also spends SOL). */
+const TOKENS_WITH_EXTRA_COST: readonly SupportedTokenType[] = ['ario'];
 
 /**
  * The cheapest known dollar price among the sources that can be paid with,
@@ -324,11 +348,12 @@ export function sourceUsd(
 export function cheapestUsd(
   sources: PaymentSource[],
   arioUsdRate: number | undefined,
+  extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>,
 ): number | undefined {
   let best: number | undefined;
   for (const source of sources) {
     if (!isSelectable(source)) continue;
-    const usd = sourceUsd(source, arioUsdRate);
+    const usd = sourceUsd(source, arioUsdRate, extraUsd);
     if (usd !== undefined && (best === undefined || usd < best)) best = usd;
   }
   return best;

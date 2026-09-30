@@ -61,6 +61,8 @@ export function SegmentedControl<T extends string>({
   labelledBy: string;
   disabled?: boolean;
 }) {
+  // Segments stretch to one height, so a segment without a second line sits
+  // centred beside those with one rather than carrying an empty line.
   const twoLine = segments.some((s) => s.sub !== undefined);
   return (
     <RadioGroup
@@ -76,7 +78,7 @@ export function SegmentedControl<T extends string>({
           value={segment.value}
           disabled={segment.disabled}
           title={segment.hint}
-          className={`group flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border border-transparent px-2 text-center transition-colors data-[checked]:border-primary data-[checked]:bg-primary/10 data-[checked]:text-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${
+          className={`group flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-[16px] border border-transparent px-2 text-center transition-colors data-[checked]:border-primary data-[checked]:bg-primary/10 data-[checked]:text-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${
             twoLine ? 'py-1' : 'py-2'
           } ${
             segment.hint
@@ -94,9 +96,9 @@ export function SegmentedControl<T extends string>({
               segment.label
             )}
           </span>
-          {twoLine && (
+          {segment.sub !== undefined && (
             <span className="block max-w-full truncate text-xs leading-4 text-foreground/60 tabular-nums group-data-[checked]:text-foreground/70">
-              {segment.sub ?? ' '}
+              {segment.sub}
             </span>
           )}
           {segment.hint && <span className="sr-only">, {segment.hint}</span>}
@@ -146,6 +148,7 @@ export function PaymentPicker({
   disabled,
   heading = 'Pay with',
   note,
+  cryptoPreview = false,
 }: {
   choices: MethodChoice[];
   value: PaymentMethod | undefined;
@@ -155,10 +158,16 @@ export function PaymentPicker({
   heading?: string;
   /** The host's wallet note, folded into the status line. */
   note?: string;
+  /**
+   * Show the token select without Crypto being the routed choice: used when
+   * no token can pay, so the reasons can be read. The segments are untouched.
+   */
+  cryptoPreview?: boolean;
 }) {
   const headingId = useId();
   const chosen = choices.find((c) => c.value === value);
-  const showCrypto = value === 'crypto' && !!crypto && crypto.groups.length > 0;
+  const showCrypto =
+    (value === 'crypto' || cryptoPreview) && !!crypto && crypto.groups.length > 0;
 
   return (
     <div>
@@ -183,26 +192,23 @@ export function PaymentPicker({
         </div>
       ) : (
         (() => {
-          // The wallet note says more than "via Stripe", so it replaces a
-          // muted method status rather than queueing behind it. An error
-          // (credits short) always stays first.
-          const parts =
-            chosen?.statusTone === 'error'
-              ? [chosen.status, note]
-              : [note ?? chosen?.status];
-          const text = parts.filter(Boolean).join(' · ');
-          return text ? (
+          /*
+            One line: the method's own status, then the wallet note. Card is
+            the exception: "via Stripe" says less than the wallet note, so the
+            note replaces it rather than making the line wrap on a phone.
+          */
+          const own = chosen?.value === 'card' && note ? undefined : chosen?.status;
+          if (!own && !note) return null;
+          return (
             <StatusLine tone={chosen?.statusTone}>
-              {chosen?.statusTone === 'error' && note ? (
-                <>
-                  {chosen.status}
-                  <span className="text-foreground/60"> · {note}</span>
-                </>
+              {own}
+              {own && note ? (
+                <span className="text-foreground/60"> · {note}</span>
               ) : (
-                text
+                !own && note
               )}
             </StatusLine>
-          ) : null;
+          );
         })()
       )}
     </div>
@@ -311,10 +317,9 @@ function SourceLine({
 /**
  * The token select (§ 7.2), flat on the page.
  *
- * The open list is anchored to the button and portalled, so it is never cut
- * off by a scrolling modal and opens upward when there is no room below. Rows
- * are one line on desktop (two on a phone, all alike), so eight tokens fit
- * before it scrolls.
+ * The open list opens under the button, in the page's own DOM (see the note on
+ * `ListboxOptions`). Rows are one line on desktop (two on a phone, all alike),
+ * so eight tokens fit before it scrolls.
  *
  * A row that cannot be paid with stays in the list with its reason and stays
  * reachable by keyboard: it is not marked `disabled` to Headless UI (which
@@ -348,7 +353,7 @@ export function CryptoSourceListbox({
   const mobileTwoLines = all.some((s) => s.price !== undefined || !!rowDetail(s));
 
   const box =
-    'flex w-full items-start gap-2 rounded-xl border border-border/20 bg-background px-3 py-2 text-left';
+    'flex w-full items-start gap-2 rounded-2xl border border-border/20 bg-background px-3 py-2 text-left';
 
   if (all.length === 1) {
     // One token is a fact, not a choice: shown the same way, without a menu.
@@ -371,6 +376,8 @@ export function CryptoSourceListbox({
           if (s && isSelectable(s)) onSelect(id);
         }}
         disabled={disabled}
+        as="div"
+        className="relative"
       >
         <ListboxButton
           className={`${box} cursor-pointer transition-colors hover:border-primary/40 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50`}
@@ -383,13 +390,17 @@ export function CryptoSourceListbox({
             <ChevronDown className="h-4 w-4 text-foreground/60" aria-hidden="true" />
           </span>
         </ListboxButton>
-        <ListboxOptions
-          anchor="bottom start"
-          // Not modal: a modal list locks page scroll, and inside BaseModal
-          // that would fight the modal's own scroll lock.
-          modal={false}
-          className="z-[10000] w-[var(--button-width)] overflow-auto rounded-2xl border border-border/20 bg-background py-1 shadow-lg [--anchor-gap:4px] [--anchor-max-height:28rem] [--anchor-padding:8px] focus:outline-none"
-        >
+        {/*
+          Not anchored and not portalled: it is placed under the button, inside
+          the same DOM as everything else. Portalled, it sat outside
+          BaseModal's panel, so Tab tripped the modal's focus trap (jumping a
+          scrolled modal to the top) and a screen reader could treat the
+          options as outside the aria-modal dialog. Anchored, it flipped up
+          over "Pay with" on a phone. Here it always opens downward; on the
+          page it overlays what is below, and inside a modal's scroll
+          container it extends the scroll area rather than being clipped.
+        */}
+        <ListboxOptions className="absolute inset-x-0 top-full z-30 mt-1 max-h-[28rem] overflow-auto rounded-2xl border border-border/20 bg-background py-1 shadow-lg focus:outline-none">
           {groups.map((group) => (
             <div key={group.wallet} role="group" aria-label={group.heading}>
               <div

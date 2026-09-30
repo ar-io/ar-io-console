@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortAddress, tokenShortfallNote, walletSplitNote } from './walletRoles';
+import { shortAddress, tokenShortfallNote, walletSplitNote, walletSplitPhrase } from './walletRoles';
 
 const SOL = 'So1anaOwner1111111111111111111111111111111111';
 const ETH = '0x1111111111111111111111111111111111111111';
@@ -182,3 +182,46 @@ describe('tokenShortfallNote', () => {
   });
 });
 
+
+describe('walletSplitPhrase', () => {
+  it('says the linked wallet pays when it is the one paying', () => {
+    expect(
+      walletSplitPhrase({
+        sessionWalletType: 'arweave',
+        sessionAddress: ETH,
+        ownerAddress: SOL,
+        payingWalletType: 'solana',
+      }),
+    ).toBe('paid from your linked Solana wallet');
+  });
+
+  it('names the holding wallet when the session wallet pays', () => {
+    expect(
+      walletSplitPhrase({
+        sessionWalletType: 'ethereum',
+        sessionAddress: ETH,
+        ownerAddress: SOL,
+        payingWalletType: 'ethereum',
+      }),
+    ).toBe(`name held by your linked Solana wallet ${shortAddress(SOL)}`);
+  });
+
+  it('says nothing for one wallet, or when anything is unknown', () => {
+    expect(
+      walletSplitPhrase({ sessionWalletType: 'solana', sessionAddress: SOL, ownerAddress: SOL }),
+    ).toBeUndefined();
+    expect(
+      walletSplitPhrase({ sessionWalletType: 'ethereum', sessionAddress: ETH, ownerAddress: undefined }),
+    ).toBeUndefined();
+  });
+
+  it('has no sentence punctuation, so it joins a status line cleanly', () => {
+    const p = walletSplitPhrase({
+      sessionWalletType: 'ethereum',
+      sessionAddress: ETH,
+      ownerAddress: SOL,
+    })!;
+    expect(p).not.toMatch(/[.,]$/);
+    expect(p[0]).toBe(p[0].toLowerCase());
+  });
+});

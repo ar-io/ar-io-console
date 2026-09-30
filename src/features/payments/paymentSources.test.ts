@@ -20,6 +20,7 @@ import {
   groupSources,
   methodForOption,
   paidFromLine,
+  paidFromPhrase,
   preselectNameCheckoutOption,
   preselectSource,
   resolveSourceSelection,
@@ -168,6 +169,7 @@ describe('groupSources', () => {
 
   it('says where a source that is not the session\'s is paid from', () => {
     expect(paidFromLine('solana')).toBe('Paid from your Solana wallet');
+    expect(paidFromPhrase('solana')).toBe('paid from your Solana wallet');
   });
 });
 
@@ -226,6 +228,26 @@ describe('dollar prices', () => {
       balances: { ario: 1 },
     }).sources;
     expect(cheapestUsd(blocked, 0.02)).toBe(3.1);
+  });
+
+  it('adds ARIO\'s SOL cost when it is known, so it is compared all-in', () => {
+    const by = (t: string) => sources.find((x) => x.token === t)!;
+    // 100 ARIO at $0.02 is $2, plus $1.50 of SOL for the name's accounts.
+    expect(sourceUsd(by('ario'), 0.02, { ario: 1.5 })).toBeCloseTo(3.5);
+    expect(cheapestUsd(sources, 0.02, { ario: 1.5 })).toBe(3.1);
+    expect(cheapestUsd(sources, 0.02, { ario: 0.5 })).toBeCloseTo(2.5);
+  });
+
+  it('leaves ARIO out of "from $X" when its SOL cost is unknown', () => {
+    const by = (t: string) => sources.find((x) => x.token === t)!;
+    expect(sourceUsd(by('ario'), 0.02, { ario: undefined })).toBeUndefined();
+    expect(sourceUsd(by('ario'), 0.02, {})).toBeUndefined();
+    expect(cheapestUsd(sources, 0.02, {})).toBe(3.1);
+  });
+
+  it('prices a token with no extra cost as before when extras are passed', () => {
+    const by = (t: string) => sources.find((x) => x.token === t)!;
+    expect(sourceUsd(by('solana-usdc'), 0.02, { ario: 1 })).toBe(3.1);
   });
 
   it('knows nothing when nothing is priced', () => {

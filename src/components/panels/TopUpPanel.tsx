@@ -734,8 +734,9 @@ export default function TopUpPanel({
       value: 'crypto',
       label: 'Crypto',
       // Signed out there is nothing to list; choosing Crypto opens the wallet
-      // picker, as the tab did.
-      hint: !address || !walletType ? 'Connect a wallet' : undefined,
+      // picker, as the tab did. Said on the segment itself, not only on
+      // hover: it is what the click will do.
+      sub: !address || !walletType ? 'Connect a wallet' : undefined,
     },
   ];
 

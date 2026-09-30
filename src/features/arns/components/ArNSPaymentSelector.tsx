@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import type { PaymentOption } from '../purchase/paymentOptions';
 import type { ArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import type { WalletKind } from '../../../utils/walletTokens';
+import type { SupportedTokenType } from '../../../constants';
 import { formatHeldBalance } from '../purchase/formatBalance';
 import {
   PaymentPicker,
@@ -13,10 +14,12 @@ import {
   buildSources,
   cheapestUsd,
   creditsShortReason,
+  formatSourceAmount,
   groupSources,
   isSelectable,
   methodForOption,
-  paidFromLine,
+  paidFromPhrase,
+  preselectSource,
   resolveSourceSelection,
   sourceInputsFromOptions,
   type PaymentMethod,
@@ -63,6 +66,11 @@ interface Props {
   prices?: { credits?: number; cardUsd?: number };
   /** Dollars per ARIO, to put ARIO's saving next to the card's dollar price. */
   arioUsdRate?: number;
+  /**
+   * Dollars a route costs beyond its own price: ARIO's SOL for the name's
+   * accounts and fee. ARIO counts toward "from $X" only when this is known.
+   */
+  extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>;
 }
 
 /**
@@ -88,8 +96,14 @@ export function ArNSPaymentSelector({
   sessionWalletType,
   prices,
   arioUsdRate,
+  extraUsd,
 }: Props) {
   const fundingHeadingId = useId();
+  /*
+    Crypto with nothing payable in it still opens its list, so the reasons can
+    be read, without touching what the purchase is routed on.
+  */
+  const [previewCrypto, setPreviewCrypto] = useState(false);
   const selected = options.find((o) => o.id === selectedId);
   const showSources = arioOnly || selected?.token === 'ario';
 
@@ -128,10 +142,10 @@ export function ArNSPaymentSelector({
       label: 'Credits',
       sub:
         prices?.credits !== undefined
-          ? `${formatHeldBalance(prices.credits)} credits`
+          ? `${formatSourceAmount(prices.credits)} credits`
           : undefined,
       hint: shortBy,
-      status: shortBy ?? `You have ${formatHeldBalance(balances.credits)} credits`,
+      status: shortBy ?? `You have ${formatSourceAmount(balances.credits)} credits`,
       statusTone: shortBy ? 'error' : 'muted',
     });
   }
@@ -149,27 +163,45 @@ export function ArNSPaymentSelector({
       through its rate, USDC at face value). Failing that, the token Crypto
       would open on, in its own unit. Never a guessed conversion.
     */
-    const fromUsd = cheapestUsd(sources, arioUsdRate);
+    const fromUsd = cheapestUsd(sources, arioUsdRate, extraUsd);
+    const payable = sources.some(isSelectable);
     choices.push({
       value: 'crypto',
       label: 'Crypto',
-      sub:
-        fromUsd !== undefined
+      sub: !payable
+        ? // Never a silent dead control: say why, and the click opens the
+          // list with each token's reason.
+          'No token can pay this'
+        : fromUsd !== undefined
           ? `from ${usd(fromUsd)}`
-          : cryptoSource?.price !== undefined
-            ? `${formatHeldBalance(cryptoSource.price)} ${cryptoSource.label}`
+          : cryptoSource && isSelectable(cryptoSource) && cryptoSource.price !== undefined
+            ? `${formatSourceAmount(cryptoSource.price)} ${cryptoSource.label}`
             : undefined,
+      hint: payable ? undefined : 'No token in your wallet can pay for this',
     });
   }
 
   const onMethodChange = (method: PaymentMethod) => {
+    setPreviewCrypto(false);
     if (method === 'credits' && credits) onSelect(credits.id);
     else if (method === 'card' && card) onSelect(card.id);
     else if (method === 'crypto') {
-      // Choosing Crypto is one click: it takes the token the select already
-      // holds. If that token cannot be paid with, nothing changes; silently
-      // swapping in another would pay with something the user did not pick.
-      if (cryptoSource && isSelectable(cryptoSource)) onSelect(cryptoSource.id);
+      /*
+        One click: the token the select already holds, or, if that one cannot
+        pay, the best one that can (it shows in the select, so nothing is
+        swapped out of sight). If none can, the list opens to show why, and
+        the purchase stays routed where it was.
+      */
+      const target =
+        cryptoSource && isSelectable(cryptoSource)
+          ? cryptoSource
+          : preselectSource(sources.filter(isSelectable), 'name-checkout');
+      if (target) {
+        setLastCryptoId(target.id);
+        onSelect(target.id);
+      } else {
+        setPreviewCrypto(true);
+      }
     }
   };
 
@@ -181,7 +213,7 @@ export function ArNSPaymentSelector({
   */
   const paidFrom =
     cryptoSource && cryptoSource.wallet !== session && !note
-      ? paidFromLine(cryptoSource.wallet).replace(/^Paid/, 'paid')
+      ? paidFromPhrase(cryptoSource.wallet)
       : undefined;
 
   const usdFor = (s: PaymentSource) =>
@@ -196,6 +228,9 @@ export function ArNSPaymentSelector({
           <PaymentPicker
             choices={choices}
             value={selected ? methodForOption(selected) : undefined}
+            // The segments keep showing what the purchase is routed on; the
+            // list opens beside it only to explain why no token can pay.
+            cryptoPreview={previewCrypto}
             onChange={onMethodChange}
             disabled={disabled}
             note={note}
@@ -214,7 +249,8 @@ export function ArNSPaymentSelector({
       )}
 
       {showSources && (
-        <div className={arioOnly ? '' : 'mt-3'}>
+        // Auction modal (arioOnly): the same bottom margin it always had.
+        <div className={arioOnly ? 'mb-3' : 'mt-3'}>
           <p id={fundingHeadingId} className="mb-1 text-xs font-medium text-foreground/70">
             Funding source
           </p>
