@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { FundFrom } from '@ar.io/sdk/solana';
 
@@ -23,8 +23,37 @@ import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import type { ArNSRegistrationType } from './useArNSPrice';
+import { useStore } from '../../../store/useStore';
+import {
+  RELEASED_MESSAGE,
+  classifyActionFailure,
+  explainInsufficient,
+  heldMessage,
+  heldUntilFrom,
+  readHeldAttempt,
+  writeHeldAttempt,
+  type HeldAttempt,
+} from '../purchase/actionFailure';
 
 export type BuyPhase = 'idle' | 'submitting' | 'success' | 'error';
+
+/**
+ * What a failed credits purchase did with the buyer's credits, when that is
+ * worth saying. See `purchase/actionFailure.ts`.
+ */
+export type BuyFailure =
+  /** The signing window closed; the credits are already back. */
+  | { kind: 'released' }
+  /**
+   * The attempt's credits are reserved until a refund around `heldUntil`.
+   * `unconfirmed`: the service could not prove it expired (503 "Blockhash not
+   * found"), so the purchase may still land and nothing is promised either way.
+   */
+  | { kind: 'held'; held: Pick<HeldAttempt, 'heldUntil' | 'untilKnown' | 'unconfirmed'> };
+
+/** localStorage, when there is one (never in tests or SSR). */
+const storage = (): Storage | undefined =>
+  typeof window !== 'undefined' ? window.localStorage : undefined;
 
 /** Where the name's ARIO price is funded from. */
 export type ArNSBuyFundFrom = FundFrom;
@@ -67,6 +96,13 @@ export interface UseBuyArNSNameResult {
   error: Error | undefined;
   /** True when the failure was insufficient credits — the UI offers Top-Up. */
   insufficientCredits: boolean;
+  /** What a failed credits purchase did with the credits, when known. */
+  failure: BuyFailure | undefined;
+  /**
+   * The name the current (or last) attempt was for. The receipt and status
+   * read this, not the panel's selection, which can change underneath.
+   */
+  purchasedName: string | undefined;
   isBusy: boolean;
 }
 
@@ -112,6 +148,32 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
   const [result, setResult] = useState<ArNSSettlementResult | undefined>();
   const [error, setError] = useState<Error | undefined>();
   const [insufficientCredits, setInsufficientCredits] = useState(false);
+  const [failure, setFailure] = useState<BuyFailure | undefined>();
+  const [purchasedName, setPurchasedName] = useState<string | undefined>();
+  /** The payer whose credits a sponsored buy spends: the session identity. */
+  const payer = useStore((s) => s.address) ?? undefined;
+  /*
+    Each buy() gets an id; reset() and every new buy() move it on. A result
+    arriving for an older id is dropped: it belongs to a name the screen is no
+    longer showing, and its outcome is recoverable from My domains.
+  */
+  const attemptRef = useRef(0);
+  /*
+    True from the credits create until the signed transaction is submitted or
+    fails. The approval is only valid for about a minute, and leaving mid-way
+    strands the attempt with its credits held, so the tab warns before closing.
+  */
+  const [creditsPending, setCreditsPending] = useState(false);
+  useEffect(() => {
+    if (!creditsPending) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Browsers show their own wording; a non-empty value is what triggers it.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [creditsPending]);
 
   /**
    * Record a purchase that settled somewhere else.
@@ -133,11 +195,16 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
   );
 
   const reset = useCallback(() => {
+    // Anything still in flight now reports to nobody.
+    attemptRef.current += 1;
+    setCreditsPending(false);
     setPhase('idle');
     setStatusMessage('');
     setResult(undefined);
     setError(undefined);
     setInsufficientCredits(false);
+    setFailure(undefined);
+    setPurchasedName(undefined);
   }, []);
 
   const buy = useCallback(
@@ -156,9 +223,15 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         and both are handed the identical value.
       */
       const desiredTarget = targetId?.trim() || DEFAULT_ARNS_TARGET_TX;
+      const attempt = ++attemptRef.current;
+      const current = () => attempt === attemptRef.current;
+      /** Set from `onNonce`: the action exists and its credits are reserved. */
+      let nonce: string | undefined;
       setError(undefined);
       setInsufficientCredits(false);
+      setFailure(undefined);
       setResult(undefined);
+      setPurchasedName(lowered);
 
       const owner = signer.address;
       if (!signer.isReady || !owner || !signer.walletAdapter) {
@@ -217,6 +290,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             );
           }
 
+          setCreditsPending(true);
           settlement = await client.purchaseWithCredits({
             /*
               Same target as the ARIO path above, so a name points at the same
@@ -254,23 +328,82 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               charged; the nonce is the only way back to it. Turbo refunds an
               unsigned action on expiry, but polling beats waiting.
             */
-            onNonce: (nonce) =>
+            onNonce: (created) => {
+              nonce = created;
               savePendingArNSPurchase({
                 intent: 'Buy-Name',
                 name: lowered,
                 owner,
-                nonce,
+                nonce: created,
                 savedAt: Date.now(),
-              }),
+              });
+            },
           });
           clearPendingArNSPurchase();
+          setCreditsPending(false);
         }
+        // Superseded (reset, or another buy started): the screen has moved on.
+        if (!current()) return undefined;
         setResult(settlement);
         setPhase('success');
         // The name price was debited (credits or ARIO) — refresh the balance.
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return settlement;
       } catch (err) {
+        if (mechanism.kind === 'turbo-credits') setCreditsPending(false);
+        if (!current()) return undefined;
+
+        /*
+          The signing window. Only the credits path has one: the service
+          reserves credits at create, and the transaction it hands back is
+          valid for about a minute. How it failed decides what the buyer is
+          told about those credits; see purchase/actionFailure.ts.
+        */
+        if (mechanism.kind === 'turbo-credits') {
+          const kind = classifyActionFailure(err, { nonceCreated: !!nonce, nonce });
+          if (kind === 'expired-released') {
+            clearPendingArNSPurchase();
+            const e = new Error(RELEASED_MESSAGE);
+            setFailure({ kind: 'released' });
+            setPhase('error');
+            setError(e);
+            throw e;
+          }
+          if ((kind === 'expired-held' || kind === 'unconfirmed') && nonce) {
+            // When the refund lands: the action's own expiresAt, if readable.
+            const status = await client?.getActionStatus(nonce).catch(() => undefined);
+            if (!current()) return undefined;
+            const held = {
+              ...heldUntilFrom(status?.expiresAt, Date.now()),
+              // 503 "Blockhash not found" is not proof of expiry: it may land.
+              ...(kind === 'unconfirmed' ? { unconfirmed: true } : {}),
+            };
+            if (payer) {
+              writeHeldAttempt(storage(), { nonce, payer, name: lowered, ...held });
+            }
+            const e = new Error(heldMessage(held));
+            setFailure({ kind: 'held', held });
+            setPhase('error');
+            setError(e);
+            throw e;
+          }
+          if (kind === 'insufficient') {
+            /*
+              A 402 while an earlier attempt's credits are still held is the
+              hold, not an empty balance. Sending that buyer to buy more
+              credits would charge them for money they already have.
+            */
+            const held = readHeldAttempt(storage(), Date.now());
+            if (held && explainInsufficient({ held, payer, now: Date.now() }) === 'held') {
+              const e = new Error(heldMessage(held));
+              setFailure({ kind: 'held', held });
+              setPhase('error');
+              setError(e);
+              throw e;
+            }
+          }
+        }
+
         // Only route to the Turbo-Credits Top-Up when paying WITH credits. On the
         // ARIO path (balance/stakes/any) an insufficient-funds error is an ARIO
         // shortfall, which buying Turbo Credits wouldn't resolve — surface it as
@@ -292,7 +425,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         throw normalized;
       }
     },
-    [signer, client, getOwnerClient],
+    [signer, client, getOwnerClient, payer],
   );
 
   return {
@@ -304,6 +437,8 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
     result,
     error,
     insufficientCredits,
+    failure,
+    purchasedName,
     isBusy: phase === 'submitting',
   };
 }

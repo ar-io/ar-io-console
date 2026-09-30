@@ -89,9 +89,13 @@ export function waitingNotice(
       */
       return 'Checking every few seconds for your credits. Your payment is safe — if this takes too long you can finish registering later without paying again.';
     case 'registering':
+      /*
+        The registration approval is only valid for about a minute, and a late
+        one leaves the attempt's credits held for up to 20 minutes. So: now.
+      */
       return funding === 'card'
-        ? 'Keep this tab open — approve the prompt in your Solana wallet to claim the name.'
-        : 'Keep this tab open — approve the second prompt to claim the name.';
+        ? 'Approve the prompt in your Solana wallet now, within about a minute, to claim the name.'
+        : 'Approve the second prompt in your wallet now, within about a minute, to claim the name.';
     default:
       return undefined;
   }

@@ -406,6 +406,33 @@ export class TurboArNSClient {
   }
 
   /**
+   * Status of a sponsored action (`GET /v1/arns/actions/:nonce`): `expiresAt`
+   * while it awaits a signature, `failedDate` once it has failed.
+   *
+   * The endpoint is open, but turbo-sdk only exposes it on the AUTHENTICATED
+   * payment service, and building one would prompt the wallet again just to
+   * read a status. So this is a plain GET, with a short timeout: it only
+   * refines copy (when held credits come back), and must never hang a failure
+   * screen.
+   */
+  public async getActionStatus(nonce: string): Promise<Record<string, unknown> | undefined> {
+    const base = this.paymentUrl.replace(/\/+$/, '');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8_000);
+    try {
+      const res = await fetch(`${base}/v1/arns/actions/${encodeURIComponent(nonce)}`, {
+        signal: ctrl.signal,
+      });
+      if (!res.ok) return undefined;
+      return (await res.json()) as Record<string, unknown>;
+    } catch {
+      return undefined;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
    * Poll target for a submitted purchase (`GET /v1/arns/purchase/:nonce`).
    *
    * Uses the SDK method rather than a raw fetch so a non-2xx becomes a thrown

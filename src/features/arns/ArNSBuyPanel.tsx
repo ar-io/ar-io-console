@@ -223,7 +223,12 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
             setBoughtTarget(undefined);
             buyState.reset();
           }}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
+          /*
+            Not mid-purchase: the wallet may be showing an approval for this
+            name, and leaving would strand it with the credits held.
+          */
+          disabled={buyState.isBusy}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ArrowLeft className="h-4 w-4" />
           Search a different name
@@ -257,10 +262,12 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
           result={buyState.result}
           error={buyState.error}
           insufficientCredits={buyState.insufficientCredits}
+          failure={buyState.failure}
           alreadyFunded={tokenFunded}
           targetId={boughtTarget}
           targetLabel={boughtTargetLabel}
-          name={selectedName}
+          // The name this attempt bought, not whatever is selected now.
+          name={buyState.purchasedName ?? selectedName}
           onDone={handleDone}
           onRetry={handleRetry}
         />

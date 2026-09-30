@@ -1386,7 +1386,9 @@ export function ArNSPurchaseCard({
               <Loader2 className="h-4 w-4 animate-spin" />{' '}
               {/* Name the step: two wallet popups with one spinner between
                   them is indistinguishable from a stuck app. */}
-              {tokenStepLabel ?? 'Processing…'}
+              {/* The approval is only valid for about a minute, so say to act
+                  on it now. No countdown: the wallet sets the pace. */}
+              {tokenStepLabel ?? 'Approve in your wallet now, within about a minute'}
             </>
           }
         >
