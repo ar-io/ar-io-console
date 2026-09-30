@@ -43,7 +43,7 @@ export interface PaymentOption {
   blockedReason?: string;
 }
 
-const TOKEN_LABEL: Partial<Record<SupportedTokenType, string>> = {
+export const TOKEN_LABEL: Partial<Record<SupportedTokenType, string>> = {
   solana: 'SOL',
   ario: 'ARIO',
   arweave: 'AR',
@@ -55,7 +55,7 @@ const TOKEN_LABEL: Partial<Record<SupportedTokenType, string>> = {
   pol: 'POL',
 };
 
-const TOKEN_NETWORK: Partial<Record<SupportedTokenType, string>> = {
+export const TOKEN_NETWORK: Partial<Record<SupportedTokenType, string>> = {
   'base-eth': 'Base',
   'base-usdc': 'Base',
   ethereum: 'Ethereum',
