@@ -189,7 +189,13 @@ function SourceSummary({
         : undefined;
   return (
     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+      {/*
+        One layout per width, never a mix. On a phone every row stacks its
+        price under the token, lined up with the label; letting it wrap on its
+        own put ARIO's price (pushed down by the badge) under the coin while
+        SOL's stayed on the right, and the list read ragged.
+      */}
+      <span className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3">
         <span className="flex min-w-0 items-center gap-2">
           <TokenCoin token={source.token} />
           <span className="font-medium text-foreground">{source.label}</span>
@@ -203,7 +209,7 @@ function SourceSummary({
           )}
         </span>
         {source.price !== undefined && (
-          <span className="text-sm font-medium text-foreground">
+          <span className="pl-7 text-sm font-medium text-foreground sm:pl-0">
             {formatSourceAmount(source.price)} {unit}
             {usd && <span className="ml-1 text-xs font-normal text-foreground/60">{usd}</span>}
           </span>
