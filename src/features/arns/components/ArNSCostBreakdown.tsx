@@ -10,6 +10,7 @@ import {
 import type { ArNSPriceUnit } from './ArNSPaymentSelector';
 import PriceAmount from './PriceAmount';
 import { splitNameAndSetup } from '../purchase/priceTotals';
+import { OPERATOR_DISCOUNT_PERCENT } from '../purchase/operatorDiscount';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
 /** Where to send users who need SOL for account rent and fees. Configurable. */
@@ -121,6 +122,24 @@ interface Props {
    * to sign 0.02. The figure was never wrong, it was simply never shown.
    */
   tokenForName?: { amount: number; label: string };
+  /**
+   * ARIO taken off the name by the gateway-operator discount, on the ARIO
+   * route. The name price above is already net of it (the SDK quotes the
+   * discounted cost); this row says why it is lower.
+   */
+  operatorDiscountArio?: number;
+  /**
+   * The signer qualifies for the operator discount, but the chosen route is
+   * not ARIO. Credits, card and token routes are Turbo actions that cannot
+   * carry it, so one quiet line says where it applies.
+   */
+  operatorDiscountHint?: boolean;
+  /**
+   * The operator-discount lookup is still running. On the ARIO route this
+   * says so in one muted line; it never holds up Buy, since almost nobody is
+   * an operator and nobody else should wait for the answer.
+   */
+  operatorDiscountChecking?: boolean;
 }
 
 /**
@@ -205,6 +224,9 @@ export function ArNSCostBreakdown({
   sponsored = false,
   setupCredits,
   tokenForName,
+  operatorDiscountArio,
+  operatorDiscountHint = false,
+  operatorDiscountChecking = false,
 }: Props) {
   // Credits per $1, inverted. Shown with "~" because this is an indicative
   // rate, not the amount that will be charged — minimums and rounding apply.
@@ -384,6 +406,22 @@ export function ArNSCostBreakdown({
         >
           {priceNode}
         </Row>
+        {priceUnit === 'ario' && operatorDiscountArio != null && operatorDiscountArio > 0 && (
+          <Row
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                Gateway operator discount
+                <InfoTip
+                  text={`Your gateway earns ${OPERATOR_DISCOUNT_PERCENT}% off ArNS names paid with ARIO. It is already taken off the name price above.`}
+                />
+              </span>
+            }
+          >
+            <span className="text-sm font-medium text-primary">
+              {`−${OPERATOR_DISCOUNT_PERCENT}% (−${fmtNum(operatorDiscountArio)} ARIO)`}
+            </span>
+          </Row>
+        )}
         <div className="my-2 border-t border-border/10" />
 
         {/*
@@ -616,6 +654,21 @@ export function ArNSCostBreakdown({
       total. It is help text about the card, so it belongs beside it, quiet and
       left-aligned.
     */}
+      {/*
+        Only off the ARIO route: Turbo pays the registry on every other route,
+        so there is no operator signer for the discount to check.
+      */}
+      {priceUnit === 'ario' &&
+        operatorDiscountChecking &&
+        !(operatorDiscountArio != null && operatorDiscountArio > 0) && (
+          <p className="mt-2 text-xs text-foreground/60">Checking operator discount…</p>
+        )}
+      {operatorDiscountHint && priceUnit !== 'ario' && (
+        <p className="mt-2 text-xs text-foreground/60">
+          Your gateway&apos;s {OPERATOR_DISCOUNT_PERCENT}% operator discount applies when
+          you pay with ARIO.
+        </p>
+      )}
       <a
         href="https://docs.ar.io/build/upload/turbo-credits#pricing--fees"
         target="_blank"

@@ -24,6 +24,12 @@ export interface BuyReturnedNameInput {
   years?: number;
   /** Funding source for the ARIO price. Defaults to Turbo Credits. */
   fundFrom?: ArNSBuyFundFrom;
+  /**
+   * Gateway (its operator's address) to claim the operator discount through,
+   * when an operations wallet's quote honoured it. Absent, the SDK tries the
+   * signer's own gateway.
+   */
+  discountGatewayAddress?: string;
 }
 
 export interface BuyReturnedNameProgress {
@@ -124,6 +130,7 @@ export function useBuyReturnedName() {
         the source that is actually used keeps the lie from being copied.
       */
       fundFrom = 'balance',
+      discountGatewayAddress,
     }: BuyReturnedNameInput): Promise<BuyReturnedNameResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       setError(undefined);
@@ -205,6 +212,7 @@ export function useBuyReturnedName() {
           processId,
           fundFrom,
           referrer: APP_NAME,
+          ...(discountGatewayAddress ? { discountGatewayAddress } : {}),
         });
 
         const settlement: BuyReturnedNameResult = {

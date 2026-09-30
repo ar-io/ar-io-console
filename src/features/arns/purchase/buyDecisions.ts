@@ -48,6 +48,12 @@ export interface BuyRecordArgs {
    * turbo-sdk, which this function has nothing to do with.
    */
   fundFrom?: ArioFundFrom;
+  /**
+   * The gateway (its operator's address) to claim the operator discount
+   * through. Present only when an operations wallet names its gateway; absent,
+   * the SDK tries the signer's own gateway. See `purchase/operatorDiscount.ts`.
+   */
+  discountGatewayAddress?: string;
   referrer: string;
   /**
    * Initial ANT metadata and `@` target, applied on the atomic buy path.
@@ -75,6 +81,7 @@ export function buildBuyRecordArgs({
   fundFrom,
   referrer,
   targetId,
+  discountGatewayAddress,
 }: BuyRecordArgs & {
   years?: number;
   /**
@@ -94,6 +101,9 @@ export function buildBuyRecordArgs({
     ...(type === 'lease' && years ? { years } : {}),
     fundFrom,
     referrer,
+    // Spread, not set: an explicit gateway is a claim the SDK enforces, so
+    // the key is absent unless one was actually chosen.
+    ...(discountGatewayAddress ? { discountGatewayAddress } : {}),
     // Only meaningful on the atomic path (no `processId`), which is the one
     // this app uses — a supplied ANT keeps whatever target it already has.
     antState: { transactionId: targetId?.trim() || DEFAULT_ARNS_TARGET_TX },

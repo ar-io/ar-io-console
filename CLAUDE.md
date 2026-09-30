@@ -204,6 +204,12 @@ The pin stays exact anyway, for a smaller reason: this app narrows the SDK's
 token changes what compiles here. Check `npm view @ardrive/turbo-sdk dist-tags`
 and the `tokenTypes` array before moving it.
 
+**`@ar.io/sdk` and `@ar.io/solana-contracts` are pinned exactly too** (`4.5.0`
+and `1.4.0`). The SDK pins contracts exactly, and the console also imports
+contracts directly for its instruction builders, so a range here could install
+a second, nested copy whose types and builders disagree with the SDK's. Move
+them together, and check `npm ls @ar.io/solana-contracts` shows one copy.
+
 **Every action costs credits, and the SDK says otherwise.** The eight
 non-purchase actions were free at launch and now carry a small margin
 (ar-io-bundler#303). The published SDK's doc comments still call them "free" —
@@ -359,6 +365,23 @@ nothing.
 **ACL drift** (`services/aclDrift.ts`): the on-chain ANT ACL is an eventually-consistent index powering "your names". A **raw Metaplex Core transfer** (direct send or NFT-marketplace sale) moves the asset but does *not* update the ACL, so a newly-owned name goes missing until `syncAcl` is called. Drift is detected by scanning MPL Core assets by owner and diffing against the ACL owner set.
 
 **Service layer** (`services/TurboArNSClient.ts`): framework-agnostic (plain `fetch` + turbo-sdk), holds no React state, and takes **signers injected per call** rather than reading `window.solana`. Intents: `Buy-Name`, `Extend-Lease`, `Increase-Undername-Limit`, `Upgrade-Name`. `purchaseWithCredits` dispatches to the SDK's per-action methods; `Buy-Name` is the only one needing an `owner` signer, and the only one that opens a wallet.
+
+**The gateway-operator discount** (`purchase/operatorDiscount.ts`,
+`hooks/useOperatorDiscountGateway.ts`): 20% off buying, extending, adding
+undernames and upgrading, never primary names, and on the **ARIO route only**.
+Credits, card and token routes are Turbo actions: Turbo pays the registry, so
+there is no operator signer for the program to check. `@ar.io/sdk` >= 4.4
+attaches an operator's own gateway implicitly and skips it silently when it
+does not qualify. An operations wallet has no gateway of its own and must name
+one with `discountGatewayAddress` (the operator's address), and a named gateway
+that fails the program's checks THROWS, in the quote and in the write. So the
+console names a gateway only for an operations wallet, and only the one the
+quote just honoured (`useArNSCostDetails` returns it; `withDiscountGateway` puts
+it on the `ario-direct` mechanism). `operatorDiscountIneligibility` mirrors
+pricing.rs `try_apply_gateway_discount` (joined, 180 days, 90% pass rate with
+the program's integer rule). The operations lookup is a full registry scan, so
+it runs only while the ARIO route is selected; the signer's own gateway is one
+account and is read on every route.
 
 `features/arns/index.ts` is the public surface — import from there, not via deep relative paths.
 
