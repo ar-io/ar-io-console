@@ -2,9 +2,12 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [4.10.0] - 2026-09-25
+## [4.10.0] - 2026-09-30
 
 ### Added
+- **Top up with ARIO from a Solana wallet.** Buy Credits offers ARIO beside
+  SOL and USDC, with a lower fee than the other tokens (25% against 35%). Each
+  ARIO top-up is limited to $200 at the day's ARIO rate.
 - **MetaMask's Solana wallet works here.** It could manage a name on
   arns.ar.io but never appeared in the console: both Solana wallet pickers
   hid anything called "MetaMask", a filter meant for the old MetaMask Snap,
