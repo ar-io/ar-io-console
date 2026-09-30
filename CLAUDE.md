@@ -187,12 +187,16 @@ wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
 `ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
 is sponsored (`actions/sponsorship.ts`).
 
-**Pin turbo-sdk EXACTLY** (currently `2.1.0-alpha.2`). That alpha is 2.1.0 plus
-turbo-sdk#524, without which a browser Solana wallet cannot pay with USDC or
-ARIO: the SDK built a wallet signer for `solana` alone, and signed SPL
-transfers through `signMessage`, which wallets refuse. Its version sorts
-*below* 2.1.0 in semver, which is one more reason the pin must stay exact.
-Move to the next stable release once it carries #524. The
+**Pin turbo-sdk EXACTLY** (currently `2.1.0-alpha.3`). That alpha is 2.1.0 plus
+two fixes. turbo-sdk#524: without it a browser Solana wallet cannot pay with
+USDC or ARIO (the SDK built a wallet signer for `solana` alone, and signed SPL
+transfers through `signMessage`, which wallets refuse). turbo-sdk#525: `/sign`
+sends no payer signature (the route is authorised by the owner's signature
+inside the transaction), so the only prompt inside the ~30 second signing
+window is the owner's, and `/sign` failures map to `ArNSActionExpiredError`
+(`creditsReleased`) and `InsufficientCreditsError`. Its version sorts *below*
+2.1.0 in semver, which is one more reason the pin must stay exact. Move to the
+next stable release once it carries both. The
 long-standing reason for this rule has now expired: the ArNS surface and
 `solana-usdc` used to exist only on the `alpha` line, so a caret range silently
 resolved to a stable release carrying neither, and nothing failed until someone
