@@ -1878,6 +1878,17 @@ export default function TopUpPanel({
                     <div className="mt-2 text-xs text-foreground/80">
                       Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
                     </div>
+                    {/* The ARIO cap applies to storage too; say it where the
+                        blocked Continue would otherwise be unexplained. */}
+                    {arioCapNote && (
+                      <div
+                        className={`mt-1 text-xs ${
+                          arioOverCap && arioMaxTokens !== undefined ? 'text-error' : 'text-foreground/70'
+                        }`}
+                      >
+                        {arioCapNote}
+                      </div>
+                    )}
                   </div>
 
                 </>

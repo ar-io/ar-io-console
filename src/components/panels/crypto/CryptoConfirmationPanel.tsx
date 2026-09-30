@@ -512,7 +512,7 @@ export default function CryptoConfirmationPanel({
           // panel already blocks it; this stops any other caller from going
           // over, and an unknown rate never lets an ARIO payment through.
           if (tokenType === 'ario') {
-            if (!arioUsdRate || cryptoAmount * arioUsdRate > ARIO_TOPUP_MAX_USD * 1.01) {
+            if (!arioUsdRate || cryptoAmount * arioUsdRate > ARIO_TOPUP_MAX_USD) {
               throw new Error(
                 `ARIO top-ups are limited to $${ARIO_TOPUP_MAX_USD} each. Lower the amount and try again.`,
               );
