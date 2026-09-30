@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortAddress, walletSplitNote } from './walletRoles';
+import { shortAddress, tokenShortfallNote, walletSplitNote } from './walletRoles';
 
 const SOL = 'So1anaOwner1111111111111111111111111111111111';
 const ETH = '0x1111111111111111111111111111111111111111';
@@ -69,3 +69,87 @@ describe('shortAddress', () => {
     expect(shortAddress('abc')).toBe('abc');
   });
 });
+
+describe('tokenShortfallNote', () => {
+  it('names the token, the paying wallet and both amounts', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'USDC (Base)',
+      walletType: 'ethereum',
+      walletAddress: ETH,
+      held: 0,
+      needed: 2.9512,
+    });
+    expect(note).toBe(
+      `Not enough USDC (Base) in your Ethereum wallet (${shortAddress(ETH)}). You have 0; this name needs 2.96.`,
+    );
+  });
+
+  it('rounds the requirement up, never down', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'SOL',
+      walletType: 'solana',
+      walletAddress: undefined,
+      held: 0.01,
+      needed: 0.010601,
+    });
+    expect(note).toContain('this name needs 0.0107');
+  });
+
+  it('never blames SOL for another token', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'USDC (Base)',
+      walletType: 'ethereum',
+      walletAddress: ETH,
+      held: 0,
+      needed: 3,
+    });
+    expect(note).not.toMatch(/SOL/);
+  });
+
+  it('reads plainly without a wallet address', () => {
+    expect(
+      tokenShortfallNote({
+        tokenLabel: 'SOL',
+        walletType: 'solana',
+        walletAddress: undefined,
+        held: 0.12,
+        needed: 0.24,
+      }),
+    ).toBe('Not enough SOL in your Solana wallet. You have 0.12; this name needs 0.24.');
+  });
+
+  it('does not report an unread balance as zero', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'SOL',
+      walletType: 'solana',
+      walletAddress: undefined,
+      held: undefined,
+      needed: 0.24,
+    });
+    expect(note).not.toMatch(/You have/);
+    expect(note).toMatch(/Couldn't read the SOL balance/);
+  });
+
+  it('ignores float noise when rounding up', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'USDC (Base)',
+      walletType: 'ethereum',
+      walletAddress: undefined,
+      held: 0,
+      needed: 2.95,
+    });
+    expect(note).toContain('this name needs 2.95.');
+  });
+
+  it('shows large requirements in whole units, rounded up', () => {
+    const note = tokenShortfallNote({
+      tokenLabel: 'ARIO',
+      walletType: 'solana',
+      walletAddress: undefined,
+      held: 0,
+      needed: 12_345.01,
+    });
+    expect(note).toContain('this name needs 12,346.');
+  });
+});
+
