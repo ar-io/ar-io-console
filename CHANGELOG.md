@@ -17,6 +17,13 @@ All notable changes to the ar.io Console are documented in this file.
   table, where people used to arns.ar.io's "Target ID" did not look for it.
 
 ### Changed
+- **One way to choose how you pay.** The name checkout and Top Up offer
+  Credits, Card and Crypto, with every token you can pay with in one dropdown,
+  grouped by the wallet it comes from and showing your balance and the price.
+  A token you cannot use stays listed with the reason. The checkout starts on
+  credits when they cover the price, then on ARIO when your wallet can pay with
+  it, and waits for your balances before choosing so the button never acts on
+  something the screen is not showing.
 - **The homepage domain price says which price it is.** The figure is the
   registry price when paying in ARIO, the cheapest route. By card or credits
   the same 8-character name cost $49.51 against the $29.44 shown (checked
