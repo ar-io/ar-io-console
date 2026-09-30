@@ -34,6 +34,7 @@ import {
   heldUntilFrom,
   heldWincFrom,
   readHeldAttempt,
+  settledByStatus,
   writeHeldAttempt,
   type HeldAttempt,
 } from '../purchase/actionFailure';
@@ -163,8 +164,6 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
   const [purchasedName, setPurchasedName] = useState<string | undefined>();
   /** The payer whose credits a sponsored buy spends: the session identity. */
   const payer = useStore((s) => s.address) ?? undefined;
-  /** Spendable credits on hand, for the 402-during-a-hold decision. */
-  const creditBalance = useStore((s) => s.creditBalance);
   const [awaitingApproval, setAwaitingApproval] = useState(false);
   /*
     Each buy() gets an id; reset() and every new buy() move it on. A result
@@ -370,8 +369,10 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
           });
           clearPendingArNSPurchase();
           // A purchase went through, so nothing this payer tried before is
-          // still standing in its way.
-          clearHeldAttempt(heldStorage());
+          // still standing in its way. Only THIS payer's: a hold recorded for
+          // another wallet in this browser is still that wallet's.
+          const stored = readHeldAttempt(heldStorage(), Date.now());
+          if (stored && stored.payer === payer) clearHeldAttempt(heldStorage());
           if (current()) setCreditsPending(false);
         }
         // The name price was debited (credits or ARIO), whatever the screen is
@@ -410,10 +411,23 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             later 402 is checked against. Only the expiries change the copy;
             an ordinary failure keeps the message it always had.
           */
-          const recordHold = async (unconfirmed: boolean) => {
+          const recordHold = async (
+            unconfirmed: boolean,
+          ): Promise<
+            | { held: Pick<HeldAttempt, 'heldUntil' | 'untilKnown' | 'heldWinc' | 'unconfirmed'> }
+            | { settled: 'released' | 'completed' }
+            | undefined
+          > => {
             if (!nonce) return undefined;
             // When the refund lands, and how much: the action's own status.
             const status = await client?.getActionStatus(nonce).catch(() => undefined);
+            /*
+              The status can settle it outright: `expired` means the credits
+              are already back, `completed` that it went through after all.
+              Neither leaves anything held, so nothing is recorded.
+            */
+            const settled = settledByStatus(status?.status);
+            if (settled) return { settled };
             const held = {
               ...heldUntilFrom(status?.expiresAt, Date.now()),
               ...(heldWincFrom(status?.wincQty) !== undefined
@@ -425,12 +439,31 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             if (payer) {
               writeHeldAttempt(heldStorage(), { nonce, payer, name: lowered, ...held });
             }
-            return held;
+            // The reservation is in the balance now; let the store catch up.
+            window.dispatchEvent(new CustomEvent('refresh-balance'));
+            return { held };
           };
 
           if ((kind === 'expired-held' || kind === 'unconfirmed') && nonce) {
-            const held = (await recordHold(kind === 'unconfirmed'))!;
+            const outcome = await recordHold(kind === 'unconfirmed');
             if (!current()) return undefined;
+            if (outcome && 'settled' in outcome && outcome.settled === 'released') {
+              clearPendingArNSPurchase();
+              const e = new Error(RELEASED_MESSAGE);
+              setFailure({ kind: 'released' });
+              setPhase('error');
+              setError(e);
+              throw e;
+            }
+            const held =
+              outcome && 'held' in outcome
+                ? outcome.held
+                : {
+                    // Completed after all, or unreadable: nothing is claimed
+                    // either way, and the buyer is sent to check their names.
+                    ...heldUntilFrom(undefined, Date.now()),
+                    unconfirmed: true,
+                  };
             const e = new Error(heldMessage(held));
             setFailure({ kind: 'held', held });
             setPhase('error');
@@ -450,7 +483,9 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
                 held,
                 payer,
                 now: Date.now(),
-                creditBalance,
+                // Live, not the render's value: a top-up may have landed
+                // since this buy() was created.
+                creditBalance: useStore.getState().creditBalance,
                 priceCredits,
               }) === 'held'
             ) {
@@ -462,8 +497,9 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             }
           }
           if (kind === 'other' && nonce) {
-            await recordHold(false);
-            if (!current()) return undefined;
+            // Recorded in the background: this failure's copy does not depend
+            // on it, so the buyer is not kept waiting for a status read.
+            void recordHold(false);
           }
         }
 
@@ -488,7 +524,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         throw normalized;
       }
     },
-    [signer, client, getOwnerClient, payer, creditBalance],
+    [signer, client, getOwnerClient, payer],
   );
 
   return {

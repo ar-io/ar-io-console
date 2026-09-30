@@ -196,6 +196,27 @@ export function heldWincFrom(wincQty: unknown): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
+/**
+ * What the action's own status says about its credits, when it settles the
+ * question.
+ *
+ * The service's lifecycle is prepared/awaiting-signature, reserved, completed,
+ * expired. `expired` means the reconciler has already refunded it, so the
+ * credits are back. `completed` means it went through after all, so nothing is
+ * held and the buyer should look at their names. Anything else, or an unread
+ * status, leaves the failure's own classification in charge.
+ */
+export function settledByStatus(status: unknown): 'released' | 'completed' | undefined {
+  if (status === 'expired') return 'released';
+  if (status === 'completed') return 'completed';
+  return undefined;
+}
+
+/** Whether a hold should be recorded for an action in this status. */
+export function shouldRecordHold(status: unknown): boolean {
+  return settledByStatus(status) === undefined;
+}
+
 /** A held attempt counts until the credits are due back. */
 export function isHeldActive(held: HeldAttempt | undefined, payer: string | undefined, now: number): boolean {
   return !!held && !!payer && held.payer === payer && now < held.heldUntil;

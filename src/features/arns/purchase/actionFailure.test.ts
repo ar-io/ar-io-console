@@ -15,6 +15,8 @@ import {
   isWalletRejection,
   mapActionExpiryMessage,
   readHeldAttempt,
+  settledByStatus,
+  shouldRecordHold,
   writeHeldAttempt,
   type HeldAttempt,
 } from './actionFailure';
@@ -400,6 +402,25 @@ describe('held-attempt storage', () => {
     } finally {
       if (had) g.window = previous;
       else delete g.window;
+    }
+  });
+});
+
+describe('the action status settles a hold', () => {
+  it('"expired" means the reconciler already refunded it: released, no hold', () => {
+    expect(settledByStatus('expired')).toBe('released');
+    expect(shouldRecordHold('expired')).toBe(false);
+  });
+
+  it('"completed" means it went through after all: no hold', () => {
+    expect(settledByStatus('completed')).toBe('completed');
+    expect(shouldRecordHold('completed')).toBe(false);
+  });
+
+  it('still in flight, or unread, leaves the hold to be recorded', () => {
+    for (const s of ['prepared', 'awaiting-signature', 'reserved', undefined, null, 42]) {
+      expect(settledByStatus(s)).toBeUndefined();
+      expect(shouldRecordHold(s)).toBe(true);
     }
   });
 });
