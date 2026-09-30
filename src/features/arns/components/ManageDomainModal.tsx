@@ -27,7 +27,7 @@ import {
 } from './ArNSPaymentSelector';
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
 import { useStore } from '../../../store/useStore';
-import { walletSplitNote } from '../purchase/walletRoles';
+import { walletSplitPhrase } from '../purchase/walletRoles';
 import {
   getTokenSmallestUnit,
   useArioUsdRate,
@@ -116,11 +116,6 @@ export default function ManageDomainModal({
     balance reading empty is just as confusing here.
   */
   const sessionAddress = useStore((s) => s.address);
-  const walletSplit = walletSplitNote({
-    sessionWalletType,
-    sessionAddress,
-    ownerAddress: address,
-  });
   const creditPurchasesUnavailable = !isPaymentServiceAvailable();
   const balances = useArNSPaymentBalances(address);
 
@@ -164,6 +159,18 @@ export default function ManageDomainModal({
     ? resolveSettlementRoute(selectedOption, fundingSource)
     : ({ kind: 'credits' } as const);
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
+  /*
+    Named for the wallet that pays THIS route. ARIO is the owner's own
+    transaction, so on an Arweave or Ethereum session the linked Solana wallet
+    pays as well as holds, and the note says so rather than contradicting it.
+  */
+  // The short form: it joins the picker's one status line.
+  const walletSplit = walletSplitPhrase({
+    sessionWalletType,
+    sessionAddress,
+    ownerAddress: address,
+    payingWalletType: route.kind === 'ario' ? 'solana' : sessionWalletType,
+  });
   /** ARIO-only: what the cost estimate prices against. */
   const fundFrom: ArNSFundFrom =
     route.kind === 'ario' ? route.fundFrom : 'balance';
@@ -303,6 +310,22 @@ export default function ManageDomainModal({
     topUpTokens,
   );
   const arioUsdRate = useArioUsdRate();
+  /*
+    What ARIO costs on top of its own price, in dollars: the SOL its route
+    spends on the name's accounts and fee, which the sponsored routes do not.
+    Priced from figures already here (the card rate and the SOL quote for the
+    same credits), so it needs no new lookup; unknown leaves ARIO out of the
+    Crypto segment's "from $X" rather than comparing a partial price with
+    Card's all-in charge.
+  */
+  const solUsd =
+    creditsPrice?.sponsoredCredits && creditsForOneUSD && tokenPrices.solana
+      ? creditsPrice.sponsoredCredits / creditsForOneUSD / tokenPrices.solana
+      : undefined;
+  const arioExtraUsd =
+    cost?.gasTotalSol !== undefined && solUsd !== undefined
+      ? cost.gasTotalSol * solUsd
+      : undefined;
   const pickerSources = useMemo(
     () =>
       buildSources({
@@ -546,11 +569,10 @@ export default function ManageDomainModal({
 
             {/* Payment method + source */}
             <div className="mb-4">
-              {walletSplit && (
-                <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
-              )}
-
               <ArNSPaymentSelector
+                // Under "Pay with", as on the registration checkout, so the
+                // picker knows the paying wallet is already named.
+                note={walletSplit}
                 options={paymentOptions}
                 selectedId={selectedOption?.id ?? ''}
                 sources={pickerSources}
@@ -560,6 +582,8 @@ export default function ManageDomainModal({
                   cardUsd: creditsPrice?.usd,
                 }}
                 arioUsdRate={arioUsdRate}
+                extraUsd={{ ario: arioExtraUsd }}
+          extraSol={{ ario: cost?.gasTotalSol }}
                 fundingSource={fundingSource}
                 balances={balances}
                 onSelect={setSelectedId}

@@ -88,16 +88,12 @@ export default function BaseModal({
 
       if (e.key === 'Escape') {
         /*
-          An open dropdown inside the modal owns this Escape. Headless UI moves
-          focus to the open options list (role="listbox"), and this listener
-          runs in the capture phase, so without this the first Escape closed
-          the whole modal instead of the dropdown the user was looking at.
+          An open dropdown owns this Escape. Headless UI moves focus to the
+          open options list (role="listbox"), and this listener runs in the
+          capture phase, so without this the first Escape closed the whole
+          modal instead of the dropdown the user was looking at.
         */
-        if (
-          e.target instanceof Element &&
-          e.target.closest('[role="listbox"]') &&
-          panelRef.current?.contains(e.target)
-        ) {
+        if (e.target instanceof Element && e.target.closest('[role="listbox"]')) {
           return;
         }
         e.preventDefault();

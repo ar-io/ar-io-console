@@ -29,7 +29,7 @@ import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { planNamePurchase } from '../purchase/cardPlan';
 import { useStore } from '../../../store/useStore';
-import { tokenShortfallNote, walletSplitNote } from '../purchase/walletRoles';
+import { tokenShortfallNote, walletSplitPhrase } from '../purchase/walletRoles';
 import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
@@ -295,7 +295,8 @@ export function ArNSPurchaseCard({
     transaction, so on an Arweave or Ethereum session the linked Solana wallet
     pays as well as holds, and the note says so rather than contradicting it.
   */
-  const walletSplit = walletSplitNote({
+  // The short form: it joins the picker's one status line.
+  const walletSplit = walletSplitPhrase({
     sessionWalletType,
     sessionAddress,
     ownerAddress: address,
@@ -610,6 +611,22 @@ export function ArNSPurchaseCard({
     topUpTokens,
   );
   const arioUsdRate = useArioUsdRate(!creditPurchasesUnavailable);
+  /*
+    What ARIO costs on top of its own price, in dollars: the SOL its route
+    spends on the name's accounts and fee, which the sponsored routes do not.
+    Priced from figures already here (the card rate and the SOL quote for the
+    same credits), so it needs no new lookup; unknown leaves ARIO out of the
+    Crypto segment's "from $X" rather than comparing a partial price with
+    Card's all-in charge.
+  */
+  const solUsd =
+    creditsPrice?.sponsoredCredits && creditsForOneUSD && tokenPrices.solana
+      ? creditsPrice.sponsoredCredits / creditsForOneUSD / tokenPrices.solana
+      : undefined;
+  const arioExtraUsd =
+    cost?.gasTotalSol !== undefined && solUsd !== undefined
+      ? cost.gasTotalSol * solUsd
+      : undefined;
   const pickerSources = useMemo(
     () =>
       buildSources({
@@ -1161,6 +1178,8 @@ export function ArNSPurchaseCard({
             cardUsd: topUpUsd,
           }}
           arioUsdRate={arioUsdRate}
+          extraUsd={{ ario: arioExtraUsd }}
+          extraSol={{ ario: cost?.gasTotalSol }}
           fundingSource={fundingSource}
           balances={balances}
           onSelect={setSelectedId}

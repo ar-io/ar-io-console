@@ -68,6 +68,11 @@ export function paidFromLine(wallet: SourceWallet): string {
   return `Paid from your ${WALLET_NAME[wallet]} wallet`;
 }
 
+/** The same, as a phrase that joins a status line: "paid from your Solana wallet". */
+export function paidFromPhrase(wallet: SourceWallet): string {
+  return `paid from your ${WALLET_NAME[wallet]} wallet`;
+}
+
 /**
  * How long a slow token takes to reach the balance, as a row label.
  *
@@ -258,6 +263,17 @@ export interface SourceGroup {
 export function groupSources(
   sources: PaymentSource[],
   sessionWalletType: WalletKind,
+  {
+    leadToken,
+  }: {
+    /**
+     * Put the group holding this token first, ahead of the session's. The name
+     * checkout passes 'ario': it is the best price there, and on an Ethereum
+     * session its group would otherwise sit under five EVM rows, below the
+     * fold of the open list.
+     */
+    leadToken?: SupportedTokenType;
+  } = {},
 ): SourceGroup[] {
   const groups: SourceGroup[] = [];
   for (const source of sources) {
@@ -274,7 +290,124 @@ export function groupSources(
   }
   const session = groups.findIndex((g) => g.wallet === sessionWalletType);
   if (session > 0) groups.unshift(...groups.splice(session, 1));
+  if (leadToken) {
+    const lead = groups.findIndex((g) => g.sources.some((x) => x.token === leadToken));
+    if (lead > 0) groups.unshift(...groups.splice(lead, 1));
+  }
   return groups;
+}
+
+/** Tokens whose price in their own unit is, near enough, a price in dollars. */
+const DOLLAR_STABLECOINS: readonly SupportedTokenType[] = [
+  'usdc',
+  'base-usdc',
+  'polygon-usdc',
+  'solana-usdc',
+];
+
+/**
+ * A source's price in dollars, where one is known without a new lookup: ARIO
+ * through the rate the checkout already fetches, and USDC at face value.
+ * Anything else is `undefined` rather than estimated.
+ *
+ * `extraUsd` is what a route costs on top of its own price, in dollars. ARIO
+ * is the case: it is the buyer's own transaction, so the wallet also pays the
+ * SOL for the name's accounts and fee, which every sponsored route does not.
+ * Comparing ARIO's bare price with Card's all-in charge would flatter it.
+ * When `extraUsd` is given, a token that carries such a cost (ARIO) is priced
+ * only if its extra is known; unknown makes the whole figure unknown.
+ */
+export function sourceUsd(
+  source: PaymentSource,
+  arioUsdRate: number | undefined,
+  extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>,
+): number | undefined {
+  if (source.price === undefined) return undefined;
+  let base: number | undefined;
+  if (source.token === 'ario') {
+    base = arioUsdRate !== undefined ? source.price * arioUsdRate : undefined;
+  } else {
+    base = DOLLAR_STABLECOINS.includes(source.token) ? source.price : undefined;
+  }
+  if (base === undefined || !extraUsd) return base;
+  if (TOKENS_WITH_EXTRA_COST.includes(source.token)) {
+    const extra = extraUsd[source.token];
+    return extra === undefined ? undefined : base + extra;
+  }
+  return base + (extraUsd[source.token] ?? 0);
+}
+
+/** Tokens whose route costs more than their own price (ARIO also spends SOL). */
+const TOKENS_WITH_EXTRA_COST: readonly SupportedTokenType[] = ['ario'];
+
+/**
+ * What a row adds to its own price, in words: "+ 0.056 SOL" for ARIO when its
+ * network cost is known, "+ SOL network costs" when it is not. `undefined` for
+ * a token whose price is the whole cost.
+ *
+ * Stated on the row so ARIO's figure is never read as all-in when it is not.
+ * The SOL is account rent and fee, not a deposit: it is not refunded to the
+ * buyer when a lease ends.
+ */
+export function extraCostLabel(
+  source: PaymentSource,
+  extraSol?: Partial<Record<SupportedTokenType, number | undefined>>,
+): string | undefined {
+  if (!TOKENS_WITH_EXTRA_COST.includes(source.token)) return undefined;
+  const sol = extraSol?.[source.token];
+  return sol === undefined ? '+ SOL network costs' : `+ ${formatSourceAmount(sol)} SOL`;
+}
+
+/**
+ * Keep ARIO's "Best price" badge only when it is true for this purchase: its
+ * all-in dollar price is known, it can be paid with, and nothing else known
+ * (another token, or the card's real charge) is cheaper. Unknown means no
+ * badge. `paymentOptions` still sets the badge; this decides whether it shows.
+ */
+export function applyBestPriceBadge(
+  sources: PaymentSource[],
+  {
+    arioUsdRate,
+    extraUsd,
+    cardUsd,
+  }: {
+    arioUsdRate: number | undefined;
+    extraUsd: Partial<Record<SupportedTokenType, number | undefined>>;
+    cardUsd?: number;
+  },
+): PaymentSource[] {
+  const allIn = (s: PaymentSource) => sourceUsd(s, arioUsdRate, extraUsd);
+  return sources.map((source) => {
+    if (!source.badge) return source;
+    const mine = isSelectable(source) ? allIn(source) : undefined;
+    const others = [
+      ...sources
+        .filter((o) => o.id !== source.id && isSelectable(o))
+        .map(allIn),
+      cardUsd,
+    ].filter((v): v is number => v !== undefined);
+    const best = mine !== undefined && others.every((v) => mine <= v);
+    return best ? source : { ...source, badge: undefined };
+  });
+}
+
+/**
+ * The cheapest known dollar price among the sources that can be paid with,
+ * for the Crypto segment's "from $X". `undefined` when none is known, so the
+ * segment says nothing rather than something made up.
+ */
+export function cheapestUsd(
+  sources: PaymentSource[],
+  arioUsdRate: number | undefined,
+  extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>,
+): number | undefined {
+  let best: number | undefined;
+  for (const source of sources) {
+    if (!isSelectable(source)) continue;
+    const usd = sourceUsd(source, arioUsdRate, extraUsd);
+    if (usd !== undefined && (best === undefined || usd < best)) best = usd;
+  }
+  return best;
 }
 
 /** Can be chosen, and is not known to fall short. Unknown reads as affordable. */

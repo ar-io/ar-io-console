@@ -1,5 +1,5 @@
 import { SupportedTokenType, tokenLabels } from '../constants';
-import { Check } from 'lucide-react';
+import { TokenCoin } from '../features/payments/components/TokenCoin';
 
 interface JitTokenSelectorProps {
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
@@ -87,28 +87,30 @@ export function JitTokenSelector({
             key={token}
             type="button"
             onClick={() => onTokenSelect(token)}
-            className={`
-              p-2 rounded-2xl border transition-all text-left
-              ${
-                selectedToken === token
-                  ? 'border-foreground bg-foreground/10'
-                  : 'border-border/20 hover:border-foreground/50 bg-card'
-              }
-            `}
+            aria-pressed={selectedToken === token}
+            /*
+              Selected in the same style as the payment picker's segments
+              (primary border, lavender tint), so the two read as one family.
+            */
+            className={`flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-foreground transition-colors ${
+              selectedToken === token
+                ? 'border-primary bg-primary/10'
+                : 'border-border/20 bg-card hover:border-primary/40'
+            }`}
           >
-            <div className="flex items-center justify-between gap-1">
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-foreground">{getShortLabel(token)}</span>
-                  {getNetworkLabel(token) && (
-                    <span className="text-[10px] text-foreground/80">({getNetworkLabel(token)})</span>
-                  )}
-                </div>
-              </div>
-              {selectedToken === token && (
-                <Check className="w-3.5 h-3.5 text-foreground flex-shrink-0" />
+            <TokenCoin token={token} size="sm" />
+            <span className="flex min-w-0 items-baseline gap-1">
+              <span className="text-xs font-semibold">{getShortLabel(token)}</span>
+              {getNetworkLabel(token) && (
+                <span
+                  className={`truncate text-[10px] ${
+                    selectedToken === token ? 'text-foreground/70' : 'text-foreground/60'
+                  }`}
+                >
+                  {getNetworkLabel(token)}
+                </span>
               )}
-            </div>
+            </span>
           </button>
         ))}
       </div>

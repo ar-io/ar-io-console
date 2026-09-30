@@ -12,7 +12,7 @@ import PriceAmount from './PriceAmount';
 import { splitNameAndSetup } from '../purchase/priceTotals';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
-/** Where to send users who need SOL for the network deposit. Configurable. */
+/** Where to send users who need SOL for account rent and fees. Configurable. */
 const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
 
 /**
@@ -101,7 +101,7 @@ interface Props {
    * True for registration, renewal, upgrade and undername actions, where the
    * buyer's wallet needs no SOL at all. False for a returned-name auction,
    * which still runs through the buyer's own wallet — the one purchase in the
-   * app that costs real SOL, so it keeps the deposit and fee rows below.
+   * app that costs real SOL, so it keeps the rent and fee rows below.
    */
   sponsored?: boolean;
   /**
@@ -178,8 +178,11 @@ function Row({
 
 /**
  * Itemized cost for an ArNS action: the name price (Credits or ARIO) plus the
- * Solana network cost the wallet pays in SOL — the account-rent deposit (which
- * dominates) and the transaction fee. The SOL line is shown for BOTH payment
+ * Solana network cost the wallet pays in SOL: rent for the accounts that hold
+ * the name (which dominates) and the transaction fee. The rent is not a
+ * deposit: when a lease ends it goes to whoever prunes the record, and on
+ * release to the releasing owner, who pays rent for the returned-name account
+ * in the same transaction (ar-io-solana-contracts, prune.rs / manage.rs). The SOL line is shown for BOTH payment
  * methods because every on-chain purchase creates accounts the wallet must fund
  * rent for, even when the name itself is paid with credits.
  */
@@ -384,7 +387,7 @@ export function ArNSCostBreakdown({
         <div className="my-2 border-t border-border/10" />
 
         {/*
-          Turbo pays the Solana costs, so there is no deposit to hold and no
+          Turbo pays the Solana costs, so there is no rent to fund and no
           balance to be short of. What remains is the one-time setup charge —
           the rent Turbo fronts to register the name — and the total.
         */}
@@ -395,7 +398,7 @@ export function ArNSCostBreakdown({
                 label={
                   <span className="inline-flex items-center gap-1.5">
                     One-time setup
-                    <InfoTip text="Registers your name on Solana. This charge covers the network deposit, so you don't need SOL of your own for it. Charged once, when you buy." />
+                    <InfoTip text="Registers your name on Solana. This charge covers the Solana account rent, so you don't need SOL of your own for it. Charged once, when you buy." />
                   </span>
                 }
               >
@@ -436,7 +439,7 @@ export function ArNSCostBreakdown({
               — you don't need SOL": extra text answering a question nobody asks
               while paying, and plainly false on the token route, where the
               figure above IS the SOL leaving their wallet. The setup row's own
-              tooltip already says who covers the network deposit, at the line
+              tooltip already says who covers the account rent, at the line
               where that actually matters.
             */}
             <Row label="Total" strong>
@@ -462,8 +465,8 @@ export function ArNSCostBreakdown({
             <Row
               label={
                 <span className="inline-flex items-center gap-1.5">
-                  Network deposit
-                  <InfoTip text="Solana account rent, held on-chain while the name is registered. The figure is an upper bound — the network usually charges less, so your wallet may quote a smaller amount." />
+                  Solana account rent
+                  <InfoTip text="Rent for the Solana accounts that hold your name. It isn't refunded to you when a lease ends. The figure is an upper bound: the network usually charges less, so your wallet may quote a smaller amount." />
                 </span>
               }
             >
@@ -537,10 +540,10 @@ export function ArNSCostBreakdown({
                   */}
                   <span className="flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> You have{' '}
-                    {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL —
+                    {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL,
                     {solShortfallText
                       ? ` need ${solShortfallText} more`
-                      : ' add more to cover the deposit'}
+                      : ' add more to cover the rent and fee'}
                   </span>
                   <a
                     href={GET_SOL_URL}

@@ -116,3 +116,28 @@ function formatNeeded(amount: number): string {
   const up = Math.ceil(amount * scale - Math.max(1e-9, amount * scale * 1e-12)) / scale;
   return up.toLocaleString('en-US', { maximumFractionDigits: places });
 }
+
+/**
+ * `walletSplitNote` as a phrase that fits the payment picker's one status
+ * line: lower case, no sentence punctuation, short enough to share a line
+ * with "You have 3.11 credits" on a phone. Same conditions, same facts.
+ *
+ * - The linked wallet pays (ARIO on an Arweave or Ethereum session):
+ *   "paid from your linked Solana wallet".
+ * - The session wallet pays and the linked one holds the name:
+ *   "name held by your linked Solana wallet 7xKX…9fA2".
+ */
+export function walletSplitPhrase(input: {
+  sessionWalletType: SessionWalletType;
+  sessionAddress: string | null | undefined;
+  ownerAddress: string | null | undefined;
+  payingWalletType?: SessionWalletType;
+}): string | undefined {
+  const { sessionWalletType, sessionAddress, ownerAddress, payingWalletType } = input;
+  if (!sessionWalletType || !sessionAddress || !ownerAddress) return undefined;
+  if (sessionAddress === ownerAddress) return undefined;
+  if (payingWalletType === 'solana' && sessionWalletType !== 'solana') {
+    return 'paid from your linked Solana wallet';
+  }
+  return `name held by your linked Solana wallet ${shortAddress(ownerAddress)}`;
+}
