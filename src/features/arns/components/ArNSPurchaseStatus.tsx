@@ -14,21 +14,28 @@ import type { ArNSSettlementResult } from '../services/TurboArNSClient';
 import TransactionReceipt from './TransactionReceipt';
 import { toUnicodeName } from '@/utils/punycode';
 import type { BuyFailure, BuyPhase } from '../hooks/useBuyArNSName';
-import { heldMessage, heldUntilPhrase } from '../purchase/actionFailure';
+import { heldByPhrase, heldMessage } from '../purchase/actionFailure';
 
-/** Re-renders every 15 s until `until`, then stops. For "try again after". */
-function useNowUntil(until: number | undefined): number {
-  const [now, setNow] = useState(() => Date.now());
+/**
+ * Whether `until` has passed, re-checked every 15 s until it has.
+ *
+ * Readiness is computed from `Date.now()` at render; the interval only forces
+ * the re-render. Storing "now" and deriving from that left a time that was
+ * already past on entry reading as not-yet forever, since nothing set it.
+ */
+function useReachedAt(until: number | undefined): boolean {
+  const [, tick] = useState(0);
   useEffect(() => {
-    if (until === undefined || Date.now() >= until) return;
+    if (until === undefined) return;
+    tick((n) => n + 1);
+    if (Date.now() >= until) return;
     const id = window.setInterval(() => {
-      const t = Date.now();
-      setNow(t);
-      if (t >= until) window.clearInterval(id);
+      tick((n) => n + 1);
+      if (Date.now() >= until) window.clearInterval(id);
     }, 15_000);
     return () => window.clearInterval(id);
   }, [until]);
-  return now;
+  return until !== undefined && Date.now() >= until;
 }
 
 interface ArNSPurchaseStatusProps {
@@ -85,8 +92,9 @@ export function ArNSPurchaseStatus({
   onRetry,
 }: ArNSPurchaseStatusProps) {
   const navigate = useNavigate();
+  // `heldUntil` already includes the refund reconciler's cadence.
   const heldUntil = failure?.kind === 'held' ? failure.held.heldUntil : undefined;
-  const now = useNowUntil(heldUntil);
+  const ready = useReachedAt(heldUntil);
 
   if (phase === 'idle') return null;
 
@@ -203,7 +211,6 @@ export function ArNSPurchaseStatus({
     waits for the refund and says when, instead of looping silently.
   */
   if (alreadyFunded && failure?.kind === 'held') {
-    const ready = heldUntil !== undefined && now >= heldUntil;
     return (
       <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">
         <div className="flex items-start gap-3">
@@ -216,7 +223,8 @@ export function ArNSPurchaseStatus({
             </p>
             <p className="text-sm text-foreground/70 mt-1">
               Your payment went through and you don&apos;t need to pay again.{' '}
-              {heldMessage(failure.held)}
+              {/* They DID pay, for the credits: never "nothing was charged". */}
+              {heldMessage(failure.held, { paid: true })}
             </p>
             <button
               onClick={onRetry}
@@ -227,7 +235,7 @@ export function ArNSPurchaseStatus({
             </button>
             {!ready && (
               <p className="mt-2 text-xs text-foreground/60">
-                You can finish {heldUntilPhrase(failure.held)}, once the credits are back.
+                You can finish {heldByPhrase(failure.held)}, once the credits are back.
               </p>
             )}
           </div>

@@ -27,9 +27,12 @@ import { useStore } from '../../../store/useStore';
 import {
   RELEASED_MESSAGE,
   classifyActionFailure,
+  clearHeldAttempt,
   explainInsufficient,
   heldMessage,
+  heldStorage,
   heldUntilFrom,
+  heldWincFrom,
   readHeldAttempt,
   writeHeldAttempt,
   type HeldAttempt,
@@ -50,10 +53,6 @@ export type BuyFailure =
    * found"), so the purchase may still land and nothing is promised either way.
    */
   | { kind: 'held'; held: Pick<HeldAttempt, 'heldUntil' | 'untilKnown' | 'unconfirmed'> };
-
-/** localStorage, when there is one (never in tests or SSR). */
-const storage = (): Storage | undefined =>
-  typeof window !== 'undefined' ? window.localStorage : undefined;
 
 /** Where the name's ARIO price is funded from. */
 export type ArNSBuyFundFrom = FundFrom;
@@ -83,6 +82,12 @@ export interface BuyArNSNameInput {
    * a buyer who skips the control. Already validated by `resolveBuyTarget`.
    */
   targetId?: string;
+  /**
+   * What this purchase costs in credits, for telling a real shortfall from
+   * credits held by an earlier attempt. Absent, a 402 during a hold is put
+   * down to the hold.
+   */
+  priceCredits?: number;
 }
 
 export interface UseBuyArNSNameResult {
@@ -98,6 +103,12 @@ export interface UseBuyArNSNameResult {
   insufficientCredits: boolean;
   /** What a failed credits purchase did with the credits, when known. */
   failure: BuyFailure | undefined;
+  /**
+   * The owner's wallet is showing the approval prompt right now. The
+   * transaction it signs is only valid for about 30 seconds, so this is when
+   * the screen says "approve now", and only then.
+   */
+  awaitingApproval: boolean;
   /**
    * The name the current (or last) attempt was for. The receipt and status
    * read this, not the panel's selection, which can change underneath.
@@ -152,6 +163,9 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
   const [purchasedName, setPurchasedName] = useState<string | undefined>();
   /** The payer whose credits a sponsored buy spends: the session identity. */
   const payer = useStore((s) => s.address) ?? undefined;
+  /** Spendable credits on hand, for the 402-during-a-hold decision. */
+  const creditBalance = useStore((s) => s.creditBalance);
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
   /*
     Each buy() gets an id; reset() and every new buy() move it on. A result
     arriving for an older id is dropped: it belongs to a name the screen is no
@@ -198,6 +212,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
     // Anything still in flight now reports to nobody.
     attemptRef.current += 1;
     setCreditsPending(false);
+    setAwaitingApproval(false);
     setPhase('idle');
     setStatusMessage('');
     setResult(undefined);
@@ -214,6 +229,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       years,
       mechanism,
       targetId,
+      priceCredits,
     }: BuyArNSNameInput): Promise<ArNSSettlementResult | undefined> => {
       const lowered = lowerCaseDomain(name);
       /*
@@ -289,6 +305,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               'Connect the Solana wallet that will own this name.',
             );
           }
+          const walletAdapter = signer.walletAdapter;
 
           setCreditsPending(true);
           settlement = await client.purchaseWithCredits({
@@ -319,8 +336,20 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             */
             owner: browserArNSOwnerSigner({
               address: owner,
-              signTransaction: signer.walletAdapter.signTransaction,
-              signMessage: signer.walletAdapter.signMessage,
+              /*
+                Wrapped so the screen knows when the prompt is actually open:
+                "approve now" is true only between these two points, and a
+                label saying it at any other time is noise.
+              */
+              signTransaction: async (tx) => {
+                if (current()) setAwaitingApproval(true);
+                try {
+                  return await walletAdapter.signTransaction(tx);
+                } finally {
+                  if (current()) setAwaitingApproval(false);
+                }
+              },
+              signMessage: walletAdapter.signMessage,
             }),
             /*
               Persist before the wallet opens. Credits are reserved when the
@@ -340,18 +369,24 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             },
           });
           clearPendingArNSPurchase();
-          setCreditsPending(false);
+          // A purchase went through, so nothing this payer tried before is
+          // still standing in its way.
+          clearHeldAttempt(heldStorage());
+          if (current()) setCreditsPending(false);
         }
+        // The name price was debited (credits or ARIO), whatever the screen is
+        // showing now, so the balance refreshes before the staleness check.
+        window.dispatchEvent(new CustomEvent('refresh-balance'));
         // Superseded (reset, or another buy started): the screen has moved on.
         if (!current()) return undefined;
         setResult(settlement);
         setPhase('success');
-        // The name price was debited (credits or ARIO) — refresh the balance.
-        window.dispatchEvent(new CustomEvent('refresh-balance'));
         return settlement;
       } catch (err) {
-        if (mechanism.kind === 'turbo-credits') setCreditsPending(false);
+        // A stale attempt must not clear a newer attempt's pending flag.
         if (!current()) return undefined;
+        if (mechanism.kind === 'turbo-credits') setCreditsPending(false);
+        setAwaitingApproval(false);
 
         /*
           The signing window. Only the credits path has one: the service
@@ -369,18 +404,33 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
             setError(e);
             throw e;
           }
-          if ((kind === 'expired-held' || kind === 'unconfirmed') && nonce) {
-            // When the refund lands: the action's own expiresAt, if readable.
+          /*
+            Any failure after the action exists may have left its credits
+            reserved, so the hold is recorded for all of them: that is what a
+            later 402 is checked against. Only the expiries change the copy;
+            an ordinary failure keeps the message it always had.
+          */
+          const recordHold = async (unconfirmed: boolean) => {
+            if (!nonce) return undefined;
+            // When the refund lands, and how much: the action's own status.
             const status = await client?.getActionStatus(nonce).catch(() => undefined);
-            if (!current()) return undefined;
             const held = {
               ...heldUntilFrom(status?.expiresAt, Date.now()),
+              ...(heldWincFrom(status?.wincQty) !== undefined
+                ? { heldWinc: heldWincFrom(status?.wincQty) }
+                : {}),
               // 503 "Blockhash not found" is not proof of expiry: it may land.
-              ...(kind === 'unconfirmed' ? { unconfirmed: true } : {}),
+              ...(unconfirmed ? { unconfirmed: true } : {}),
             };
             if (payer) {
-              writeHeldAttempt(storage(), { nonce, payer, name: lowered, ...held });
+              writeHeldAttempt(heldStorage(), { nonce, payer, name: lowered, ...held });
             }
+            return held;
+          };
+
+          if ((kind === 'expired-held' || kind === 'unconfirmed') && nonce) {
+            const held = (await recordHold(kind === 'unconfirmed'))!;
+            if (!current()) return undefined;
             const e = new Error(heldMessage(held));
             setFailure({ kind: 'held', held });
             setPhase('error');
@@ -393,14 +443,27 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
               hold, not an empty balance. Sending that buyer to buy more
               credits would charge them for money they already have.
             */
-            const held = readHeldAttempt(storage(), Date.now());
-            if (held && explainInsufficient({ held, payer, now: Date.now() }) === 'held') {
+            const held = readHeldAttempt(heldStorage(), Date.now());
+            if (
+              held &&
+              explainInsufficient({
+                held,
+                payer,
+                now: Date.now(),
+                creditBalance,
+                priceCredits,
+              }) === 'held'
+            ) {
               const e = new Error(heldMessage(held));
               setFailure({ kind: 'held', held });
               setPhase('error');
               setError(e);
               throw e;
             }
+          }
+          if (kind === 'other' && nonce) {
+            await recordHold(false);
+            if (!current()) return undefined;
           }
         }
 
@@ -425,7 +488,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         throw normalized;
       }
     },
-    [signer, client, getOwnerClient, payer],
+    [signer, client, getOwnerClient, payer, creditBalance],
   );
 
   return {
@@ -439,6 +502,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
     insufficientCredits,
     failure,
     purchasedName,
+    awaitingApproval,
     isBusy: phase === 'submitting',
   };
 }

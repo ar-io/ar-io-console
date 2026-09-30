@@ -249,6 +249,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
         <ArNSPurchaseCard
           name={selectedName}
           isBusy={buyState.isBusy}
+          awaitingApproval={buyState.awaitingApproval}
           onBuy={handleBuy}
           onTokenFunded={() => setTokenFunded(true)}
           initialTarget={retryTarget}

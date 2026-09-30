@@ -90,12 +90,14 @@ export function waitingNotice(
       return 'Checking every few seconds for your credits. Your payment is safe — if this takes too long you can finish registering later without paying again.';
     case 'registering':
       /*
-        The registration approval is only valid for about a minute, and a late
-        one leaves the attempt's credits held for up to 20 minutes. So: now.
+        Shown only while the prompt is open (ArNSPurchaseCard gates it on
+        `awaitingApproval`). The transaction it signs is valid for about 30
+        seconds, and a late approval leaves the attempt's credits held until
+        they are refunded. So: now.
       */
       return funding === 'card'
-        ? 'Approve the prompt in your Solana wallet now, within about a minute, to claim the name.'
-        : 'Approve the second prompt in your wallet now, within about a minute, to claim the name.';
+        ? 'Approve the prompt in your Solana wallet now to claim the name.'
+        : 'Approve the second prompt in your wallet now to claim the name.';
     default:
       return undefined;
   }
