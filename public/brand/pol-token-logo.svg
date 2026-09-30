@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<!-- Polygon's mark (source: cryptologos.cc, polygon-matic-logo.svg), path
+     unaltered, in white on a disc of Polygon's own purple #6C00F6: the form
+     the POL token is shown in, and the same treatment ARIO and SOL get so
+     every coin in the payment picker is a disc of one size. -->
+<circle cx="16" cy="16" r="16" fill="#6C00F6"/>
+<path fill="#FFF" transform="translate(7 7.86) scale(0.1011)" d="M66.8,54.7l-16.7-9.7L0,74.1v58l50.1,29l50.1-29V41.9L128,25.8l27.8,16.1v32.2L128,90.2l-16.7-9.7v25.8l16.7,9.7l50.1-29V29L128,0L77.9,29v90.2l-27.8,16.1l-27.8-16.1V86.9l27.8-16.1l16.7,9.7V54.7z"/>
+</svg>

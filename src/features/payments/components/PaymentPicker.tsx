@@ -7,7 +7,7 @@ import {
   Radio,
   RadioGroup,
 } from '@headlessui/react';
-import { Check, CheckCircle2, ChevronDown, Circle } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
 import {
   formatSourceAmount,
@@ -20,44 +20,123 @@ import { TokenCoin } from './TokenCoin';
 // Holdings abbreviate (1.5M ARIO) exactly as the name checkout always has.
 import { formatHeldBalance } from '../../arns/purchase/formatBalance';
 
-/** One of the three top-level choices, already worded by the host. */
-export interface MethodChoice {
-  method: PaymentMethod;
+/** One segment of a segmented control, already worded by the host. */
+export interface Segment<T extends string> {
+  value: T;
   label: string;
-  icon: ReactNode;
-  /** Muted second word: "2.45 credits", "via Stripe". */
-  detail?: string;
-  /** What it costs, in its own unit: "$49.51", "6.61 credits". */
-  price?: string;
-  /** Shown in place of the price when this choice falls short. */
-  reason?: string;
+  /** Shown instead of `label` on phones, where a long label would be cut. */
+  shortLabel?: string;
+  /** Second line, small and muted: a price ("0.23 credits", "$1.49"). */
+  sub?: string;
+  /**
+   * The segment cannot complete as things stand (credits short of the price),
+   * but stays selectable, as it always has been. Dimmed, with the reason on
+   * hover and to a screen reader; the status line says it in full once chosen.
+   */
+  hint?: string;
   disabled?: boolean;
+}
+
+/**
+ * A segmented control: one rounded container, equal-width segments, the chosen
+ * one in the checkout's own selected style (primary border, lavender tint,
+ * foreground text), the same as the Lease / Permabuy toggle that sits directly
+ * above it. A solid fill here would put two selection languages on one card.
+ * Built on a Headless UI radio group so arrow keys move the choice and the
+ * global focus outline applies.
+ *
+ * If any segment has a second line, every segment reserves one, so the row
+ * keeps one height whichever segments have a price.
+ */
+export function SegmentedControl<T extends string>({
+  segments,
+  value,
+  onChange,
+  labelledBy,
+  disabled,
+}: {
+  segments: Segment<T>[];
+  value: T | undefined;
+  onChange: (value: T) => void;
+  labelledBy: string;
+  disabled?: boolean;
+}) {
+  const twoLine = segments.some((s) => s.sub !== undefined);
+  return (
+    <RadioGroup
+      value={value ?? null}
+      onChange={(v: T | null) => v && onChange(v)}
+      disabled={disabled}
+      aria-labelledby={labelledBy}
+      className="flex w-full gap-1 rounded-2xl border border-border/20 bg-card p-1"
+    >
+      {segments.map((segment) => (
+        <Radio
+          key={segment.value}
+          value={segment.value}
+          disabled={segment.disabled}
+          title={segment.hint}
+          className={`group flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border border-transparent px-2 text-center transition-colors data-[checked]:border-primary data-[checked]:bg-primary/10 data-[checked]:text-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${
+            twoLine ? 'py-1' : 'py-2'
+          } ${
+            segment.hint
+              ? 'text-foreground/50 hover:text-foreground/70'
+              : 'text-foreground/70 hover:text-foreground'
+          }`}
+        >
+          <span className="block max-w-full truncate text-sm font-medium leading-[1.125rem]">
+            {segment.shortLabel ? (
+              <>
+                <span className="sm:hidden">{segment.shortLabel}</span>
+                <span className="hidden sm:inline">{segment.label}</span>
+              </>
+            ) : (
+              segment.label
+            )}
+          </span>
+          {twoLine && (
+            <span className="block max-w-full truncate text-xs leading-4 text-foreground/60 tabular-nums group-data-[checked]:text-foreground/70">
+              {segment.sub ?? ' '}
+            </span>
+          )}
+          {segment.hint && <span className="sr-only">, {segment.hint}</span>}
+        </Radio>
+      ))}
+    </RadioGroup>
+  );
+}
+
+/** One of the three top-level choices, already worded by the host. */
+export interface MethodChoice extends Segment<PaymentMethod> {
+  /** The status line while this method is chosen. Crypto derives its own. */
+  status?: string;
+  statusTone?: 'muted' | 'error';
 }
 
 export interface CryptoSourcesProps {
   groups: SourceGroup[];
   selectedId: string | undefined;
   onSelect: (id: string) => void;
-  /** One line under the dropdown, e.g. "Paid from your Solana wallet". */
-  note?: ReactNode;
+  /** Appended to the status line, e.g. "paid from your Solana wallet". */
+  note?: string;
   /** An approximate dollar figure for a row's price, where one is known. */
   usdFor?: (source: PaymentSource) => string | undefined;
   disabled?: boolean;
-  /** Spoken before the current choice, since no visible label names the dropdown. */
+  /** Spoken before the current choice, since no visible label names the select. */
   label?: string;
 }
 
 /**
- * "Pay with": Credits, Card, Crypto, one line each (SPEC-payment-sources § 7.1).
+ * "Pay with" (SPEC-payment-sources § 7.1): one segmented control, one status
+ * line, and, while Crypto is chosen, one token select.
  *
- * A radio group rather than a row of cards. A flat row of equal cards stopped
- * scanning once an Ethereum session had seven of them, and every new token made
- * it worse. Three choices stay three choices; the tokens live in one dropdown
- * under Crypto, grouped by the wallet that pays.
+ * Deliberately flat and short. The first version gave each method a card and
+ * nested the token dropdown inside the Crypto card, which cost a card of height
+ * per method (in a renew modal that already scrolls) and read as a frame inside
+ * a frame. This one is label, control, select, and a single line of status.
  *
- * The dropdown is shown whatever is selected, so its collapsed row (and ARIO's
- * "Best price" with it) is visible to someone still sitting on Card. Choosing a
- * token from it chooses Crypto too: one decision, not two.
+ * `note` is the host's wallet disclosure. It joins the status line rather than
+ * sitting on a line of its own: one line under the control, not two.
  */
 export function PaymentPicker({
   choices,
@@ -74,161 +153,172 @@ export function PaymentPicker({
   crypto?: CryptoSourcesProps;
   disabled?: boolean;
   heading?: string;
-  /** A line explaining the choice, under the heading. */
-  note?: ReactNode;
+  /** The host's wallet note, folded into the status line. */
+  note?: string;
 }) {
   const headingId = useId();
+  const chosen = choices.find((c) => c.value === value);
+  const showCrypto = value === 'crypto' && !!crypto && crypto.groups.length > 0;
+
   return (
     <div>
       <p id={headingId} className="mb-1 block text-sm font-medium">
         {heading}
       </p>
-      {note && <p className="mb-2 text-xs text-foreground/70">{note}</p>}
-      <RadioGroup
-        value={value ?? null}
-        onChange={(m: PaymentMethod | null) => m && onChange(m)}
+      <SegmentedControl
+        segments={choices}
+        value={value}
+        onChange={onChange}
+        labelledBy={headingId}
         disabled={disabled}
-        aria-labelledby={headingId}
-        className="flex flex-col gap-2"
-      >
-        {choices.map((choice) => {
-          const checked = choice.method === value;
-          const showCrypto =
-            choice.method === 'crypto' && !!crypto && crypto.groups.length > 0;
-          return (
-            <div
-              key={choice.method}
-              className={`rounded-2xl border transition-colors ${
-                checked
-                  ? 'border-primary bg-primary/10'
-                  : // Lights up for the radio only, not for the dropdown that
-                    // shares this card: hovering the token list is not a vote
-                    // for "Crypto" until something in it is chosen.
-                    'border-border/20 bg-card has-[[role=radio]:hover]:border-primary/40'
-              }`}
-            >
-              <Radio
-                value={choice.method}
-                disabled={choice.disabled}
-                className="flex w-full cursor-pointer items-start gap-3 rounded-2xl p-3 text-left data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
-              >
-                {checked ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none text-primary" aria-hidden="true" />
-                ) : (
-                  <Circle className="mt-0.5 h-4 w-4 flex-none text-foreground/40" aria-hidden="true" />
-                )}
-                <span
-                  className={`mt-0.5 flex h-4 w-5 flex-none items-center justify-center ${
-                    checked ? 'text-primary' : 'text-foreground/60'
-                  }`}
-                  aria-hidden="true"
-                >
-                  {choice.icon}
-                </span>
-                {/*
-                  Wraps rather than truncates: on a phone the price drops under
-                  the label instead of being cut, and a number cut mid-digits
-                  reads as broken.
-                */}
-                <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                  <span className="min-w-0">
-                    <span className="font-medium text-foreground">{choice.label}</span>
-                    {choice.detail && (
-                      <span className="ml-2 text-xs text-foreground/60">{choice.detail}</span>
-                    )}
-                  </span>
-                  {choice.reason ? (
-                    <span className="text-xs text-error/80">{choice.reason}</span>
-                  ) : choice.price ? (
-                    <span className="text-sm font-medium text-foreground">{choice.price}</span>
-                  ) : null}
-                </span>
-              </Radio>
-              {showCrypto && (
-                /*
-                  Outside the Radio, so the dropdown is its own control rather
-                  than a button nested in a radio. The keydown stop keeps the
-                  radio group's arrow-key and Enter handling from also acting
-                  on keys meant for the dropdown.
-                */
-                <div
-                  className="px-3 pb-3 sm:pl-[4.5rem]"
-                  onKeyDown={(e) => e.stopPropagation()}
-                >
-                  <CryptoSourceListbox
-                    {...crypto}
-                    disabled={disabled || crypto.disabled}
-                    label={crypto.label ?? 'Token to pay with'}
-                  />
-                </div>
+      />
+      {showCrypto ? (
+        <div className="mt-2">
+          <CryptoSourceListbox
+            {...crypto}
+            note={[crypto.note, note].filter(Boolean).join(' · ') || undefined}
+            disabled={disabled || crypto.disabled}
+            label={crypto.label ?? 'Token to pay with'}
+          />
+        </div>
+      ) : (
+        (() => {
+          // The wallet note says more than "via Stripe", so it replaces a
+          // muted method status rather than queueing behind it. An error
+          // (credits short) always stays first.
+          const parts =
+            chosen?.statusTone === 'error'
+              ? [chosen.status, note]
+              : [note ?? chosen?.status];
+          const text = parts.filter(Boolean).join(' · ');
+          return text ? (
+            <StatusLine tone={chosen?.statusTone}>
+              {chosen?.statusTone === 'error' && note ? (
+                <>
+                  {chosen.status}
+                  <span className="text-foreground/60"> · {note}</span>
+                </>
+              ) : (
+                text
               )}
-            </div>
-          );
-        })}
-      </RadioGroup>
+            </StatusLine>
+          ) : null;
+        })()
+      )}
     </div>
   );
 }
 
-function SourceSummary({
+function StatusLine({ tone, children }: { tone?: 'muted' | 'error'; children: ReactNode }) {
+  return (
+    <p
+      className={`mt-1.5 text-xs leading-4 ${tone === 'error' ? 'text-error/80' : 'text-foreground/60'}`}
+      aria-live="polite"
+    >
+      {children}
+    </p>
+  );
+}
+
+/**
+ * What a row says after its name: why it cannot be used, or what it holds.
+ * Nothing at all when the balance is unknown (signed out, or a token this
+ * surface does not read) rather than a placeholder on every row.
+ */
+function rowDetail(source: PaymentSource): { text: string; error?: boolean } | undefined {
+  if (source.disabledReason) return { text: source.disabledReason, error: true };
+  const parts = [
+    source.balanceLoading
+      ? 'Bal …'
+      : source.balance !== undefined
+        ? `Bal ${formatHeldBalance(source.balance)}`
+        : undefined,
+    source.wait,
+  ].filter(Boolean);
+  return parts.length > 0 ? { text: parts.join(' · ') } : undefined;
+}
+
+/**
+ * One token, identical in the button and in every option.
+ *
+ * Desktop, one line: coin, token, network, detail, badge, and the price
+ * right-aligned. Phone, two: the name line, then price and detail, starting
+ * where the name starts. `mobileTwoLines` forces the second line (blank if
+ * need be) so every row in one list is the same height.
+ */
+function SourceLine({
   source,
   usd,
-  compact,
+  detail,
+  mobileTwoLines,
 }: {
   source: PaymentSource;
   usd?: string;
-  /** The collapsed button: price only, no reason (the reason is in the list). */
-  compact?: boolean;
+  detail?: { text: string; error?: boolean };
+  mobileTwoLines?: boolean;
 }) {
-  const unit = source.label;
-  const held =
-    source.balanceLoading
-      ? '…'
-      : source.balance !== undefined
-        ? `${formatHeldBalance(source.balance)} ${unit}`
-        : undefined;
+  const price =
+    source.price !== undefined ? (
+      <span className="whitespace-nowrap text-sm font-medium text-foreground tabular-nums">
+        {formatSourceAmount(source.price)} {source.label}
+        {usd && <span className="ml-1 text-xs font-normal text-foreground/60">{usd}</span>}
+      </span>
+    ) : null;
+  const detailEl = (className: string) =>
+    detail ? (
+      <span
+        className={`truncate text-xs ${detail.error ? 'text-error/80' : 'text-foreground/60'} ${className}`}
+      >
+        {detail.text}
+      </span>
+    ) : null;
+  const secondLine = !!price || !!detail || !!mobileTwoLines;
+
   return (
-    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <span className="flex min-w-0 items-center gap-2">
-          <TokenCoin token={source.token} />
-          <span className="font-medium text-foreground">{source.label}</span>
+    <span className="flex min-w-0 flex-1 items-start gap-2.5 leading-5">
+      <span className="flex h-5 flex-none items-center">
+        <TokenCoin token={source.token} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="text-sm font-medium text-foreground">{source.label}</span>
           {source.network && (
-            <span className="text-xs text-foreground/60">{source.network}</span>
+            <span className="flex-none text-xs text-foreground/60">{source.network}</span>
           )}
+          {detailEl('hidden sm:inline')}
           {source.badge && (
             <span className="flex-none rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-primary">
               {source.badge}
             </span>
           )}
         </span>
-        {source.price !== undefined && (
-          <span className="text-sm font-medium text-foreground">
-            {formatSourceAmount(source.price)} {unit}
-            {usd && <span className="ml-1 text-xs font-normal text-foreground/60">{usd}</span>}
+        {/* Desktop: the price on the right. */}
+        {price && <span className="hidden flex-none sm:inline">{price}</span>}
+        {/* Phone: price and detail on a second line, under the name. */}
+        {secondLine && (
+          <span className="flex min-w-0 items-baseline gap-1.5 sm:hidden">
+            {price}
+            {price && detail && <span className="text-xs text-foreground/40">·</span>}
+            {detailEl('')}
+            {!price && !detail && '\u00A0'}
           </span>
         )}
       </span>
-      {(held || source.wait) && (
-        <span className="pl-7 text-xs text-foreground/60">
-          {held && <>Balance {held}</>}
-          {held && source.wait && ' · '}
-          {source.wait}
-        </span>
-      )}
-      {!compact && source.disabledReason && (
-        <span className="pl-7 text-xs text-error/80">{source.disabledReason}</span>
-      )}
     </span>
   );
 }
 
 /**
- * The crypto dropdown (§ 7.2): rows grouped by wallet, each with token,
- * balance and price. A row that cannot be paid with stays in the list, with
- * its reason, and stays reachable by keyboard: it is not marked `disabled` to
- * Headless UI (which would skip it), and choosing it is simply ignored. Hiding
- * it, or skipping it silently, would leave the user wondering where it went.
+ * The token select (§ 7.2), flat on the page.
+ *
+ * The open list is anchored to the button and portalled, so it is never cut
+ * off by a scrolling modal and opens upward when there is no room below. Rows
+ * are one line on desktop (two on a phone, all alike), so eight tokens fit
+ * before it scrolls.
+ *
+ * A row that cannot be paid with stays in the list with its reason and stays
+ * reachable by keyboard: it is not marked `disabled` to Headless UI (which
+ * would skip it), and choosing it is simply ignored.
  */
 export function CryptoSourceListbox({
   groups,
@@ -243,85 +333,114 @@ export function CryptoSourceListbox({
   const selected = all.find((s) => s.id === selectedId) ?? all[0];
   if (!selected) return null;
 
-  const onlyOne = all.length === 1;
+  const held =
+    selected.balance !== undefined
+      ? `Balance ${formatHeldBalance(selected.balance)} ${selected.label}`
+      : undefined;
+  const statusParts = [held, selected.wait, note].filter(Boolean);
+  const status = selected.disabledReason ? (
+    <StatusLine tone="error">{selected.disabledReason}</StatusLine>
+  ) : statusParts.length > 0 ? (
+    <StatusLine>{statusParts.join(' · ')}</StatusLine>
+  ) : null;
+
+  // Equal heights on a phone: if any row needs a second line, every row gets one.
+  const mobileTwoLines = all.some((s) => s.price !== undefined || !!rowDetail(s));
+
+  const box =
+    'flex w-full items-start gap-2 rounded-xl border border-border/20 bg-background px-3 py-2 text-left';
+
+  if (all.length === 1) {
+    // One token is a fact, not a choice: shown the same way, without a menu.
+    return (
+      <div>
+        <div className={box}>
+          <SourceLine source={selected} usd={usdFor?.(selected)} />
+        </div>
+        {status}
+      </div>
+    );
+  }
 
   return (
     <div>
-      {onlyOne ? (
-        // One row is a fact, not a choice: shown, but not as a dropdown.
-        <div className="flex w-full items-start gap-2 rounded-xl border border-border/20 bg-background px-3 py-2.5">
-          <SourceSummary source={selected} usd={usdFor?.(selected)} />
-        </div>
-      ) : (
-        <Listbox
-          value={selected.id}
-          onChange={(id: string) => {
-            const s = all.find((x) => x.id === id);
-            if (s && isSelectable(s)) onSelect(id);
-          }}
-          disabled={disabled}
+      <Listbox
+        value={selected.id}
+        onChange={(id: string) => {
+          const s = all.find((x) => x.id === id);
+          if (s && isSelectable(s)) onSelect(id);
+        }}
+        disabled={disabled}
+      >
+        <ListboxButton
+          className={`${box} cursor-pointer transition-colors hover:border-primary/40 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50`}
         >
-          <div className="relative">
-            <ListboxButton className="flex w-full cursor-pointer items-start gap-2 rounded-xl border border-border/20 bg-background px-3 py-2.5 text-left transition-colors hover:border-primary/40 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50">
-              {/* Named, but not by aria-label, which would hide the current
-                  choice from a screen reader behind the control's name. */}
-              {label && <span className="sr-only">{label}: </span>}
-              <SourceSummary source={selected} usd={usdFor?.(selected)} compact />
-              <ChevronDown className="mt-0.5 h-4 w-4 flex-none text-foreground/60" aria-hidden="true" />
-            </ListboxButton>
-            <ListboxOptions className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-2xl border border-border/20 bg-background py-1 shadow-lg focus:outline-none">
-              {groups.map((group) => (
-                <div key={group.wallet} role="group" aria-label={group.heading}>
-                  <div aria-hidden="true" className="px-3 pb-1 pt-2 text-xs font-medium text-foreground/60">
-                    {group.heading}
-                  </div>
-                  {group.sources.map((source) => {
-                    const blocked = !isSelectable(source);
-                    return (
-                      <ListboxOption
-                        key={source.id}
-                        value={source.id}
-                        /*
-                          Announced as unavailable while staying reachable.
-                          Headless UI's own `disabled` would skip the row, and
-                          an `aria-disabled` prop is overwritten: the option
-                          merges its own `aria-disabled: undefined` last. So it
-                          is set on the element directly; React never manages
-                          that attribute here, so nothing resets it.
-                        */
-                        ref={(el: HTMLElement | null) => {
-                          if (!el) return;
-                          if (blocked) el.setAttribute('aria-disabled', 'true');
-                          else el.removeAttribute('aria-disabled');
-                        }}
-                        className={`flex items-start gap-2 px-3 py-2 data-[focus]:bg-primary/10 ${
-                          blocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-                        }`}
-                      >
-                        {({ selected: isSelected }) => (
-                          <>
-                            <SourceSummary source={source} usd={usdFor?.(source)} />
-                            <Check
-                              className={`mt-0.5 h-4 w-4 flex-none text-primary ${
-                                isSelected ? '' : 'invisible'
-                              }`}
-                              aria-hidden="true"
-                            />
-                          </>
-                        )}
-                      </ListboxOption>
-                    );
-                  })}
-                </div>
-              ))}
-            </ListboxOptions>
-          </div>
-        </Listbox>
-      )}
-      {selected.disabledReason && (
-        <p className="mt-1 text-xs text-error/80">{selected.disabledReason}</p>
-      )}
-      {note && <p className="mt-1 text-xs text-foreground/70">{note}</p>}
+          {/* Named, but not by aria-label, which would hide the current
+              choice from a screen reader behind the control's name. */}
+          {label && <span className="sr-only">{label}: </span>}
+          <SourceLine source={selected} usd={usdFor?.(selected)} />
+          <span className="flex h-5 flex-none items-center">
+            <ChevronDown className="h-4 w-4 text-foreground/60" aria-hidden="true" />
+          </span>
+        </ListboxButton>
+        <ListboxOptions
+          anchor="bottom start"
+          // Not modal: a modal list locks page scroll, and inside BaseModal
+          // that would fight the modal's own scroll lock.
+          modal={false}
+          className="z-[10000] w-[var(--button-width)] overflow-auto rounded-2xl border border-border/20 bg-background py-1 shadow-lg [--anchor-gap:4px] [--anchor-max-height:28rem] [--anchor-padding:8px] focus:outline-none"
+        >
+          {groups.map((group) => (
+            <div key={group.wallet} role="group" aria-label={group.heading}>
+              <div
+                aria-hidden="true"
+                className="px-3 pb-0.5 pt-2 text-[11px] font-medium uppercase leading-4 tracking-wide text-foreground/50"
+              >
+                {group.heading}
+              </div>
+              {group.sources.map((source) => {
+                const blocked = !isSelectable(source);
+                return (
+                  <ListboxOption
+                    key={source.id}
+                    value={source.id}
+                    /*
+                      Announced as unavailable while staying reachable.
+                      Headless UI's own `disabled` would skip the row, and an
+                      `aria-disabled` prop is overwritten: the option merges its
+                      own `aria-disabled: undefined` last. So it is set on the
+                      element directly; React never manages that attribute
+                      here, so nothing resets it.
+                    */
+                    ref={(el: HTMLElement | null) => {
+                      if (!el) return;
+                      if (blocked) el.setAttribute('aria-disabled', 'true');
+                      else el.removeAttribute('aria-disabled');
+                    }}
+                    className={`group flex items-start gap-2 px-3 py-2.5 sm:py-3 data-[focus]:bg-primary/10 ${
+                      blocked ? 'cursor-not-allowed' : 'cursor-pointer'
+                    }`}
+                  >
+                    <SourceLine
+                      source={source}
+                      usd={usdFor?.(source)}
+                      detail={rowDetail(source)}
+                      mobileTwoLines={mobileTwoLines}
+                    />
+                    <span className="flex h-5 w-4 flex-none items-center">
+                      <Check
+                        className="invisible h-4 w-4 text-primary group-data-[selected]:visible"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </ListboxOption>
+                );
+              })}
+            </div>
+          ))}
+        </ListboxOptions>
+      </Listbox>
+      {status}
     </div>
   );
 }

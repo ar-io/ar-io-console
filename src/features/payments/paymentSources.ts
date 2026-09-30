@@ -258,6 +258,17 @@ export interface SourceGroup {
 export function groupSources(
   sources: PaymentSource[],
   sessionWalletType: WalletKind,
+  {
+    leadToken,
+  }: {
+    /**
+     * Put the group holding this token first, ahead of the session's. The name
+     * checkout passes 'ario': it is the best price there, and on an Ethereum
+     * session its group would otherwise sit under five EVM rows, below the
+     * fold of the open list.
+     */
+    leadToken?: SupportedTokenType;
+  } = {},
 ): SourceGroup[] {
   const groups: SourceGroup[] = [];
   for (const source of sources) {
@@ -274,7 +285,53 @@ export function groupSources(
   }
   const session = groups.findIndex((g) => g.wallet === sessionWalletType);
   if (session > 0) groups.unshift(...groups.splice(session, 1));
+  if (leadToken) {
+    const lead = groups.findIndex((g) => g.sources.some((x) => x.token === leadToken));
+    if (lead > 0) groups.unshift(...groups.splice(lead, 1));
+  }
   return groups;
+}
+
+/** Tokens whose price in their own unit is, near enough, a price in dollars. */
+const DOLLAR_STABLECOINS: readonly SupportedTokenType[] = [
+  'usdc',
+  'base-usdc',
+  'polygon-usdc',
+  'solana-usdc',
+];
+
+/**
+ * A source's price in dollars, where one is known without a new lookup: ARIO
+ * through the rate the checkout already fetches, and USDC at face value.
+ * Anything else is `undefined` rather than estimated.
+ */
+export function sourceUsd(
+  source: PaymentSource,
+  arioUsdRate: number | undefined,
+): number | undefined {
+  if (source.price === undefined) return undefined;
+  if (source.token === 'ario') {
+    return arioUsdRate !== undefined ? source.price * arioUsdRate : undefined;
+  }
+  return DOLLAR_STABLECOINS.includes(source.token) ? source.price : undefined;
+}
+
+/**
+ * The cheapest known dollar price among the sources that can be paid with,
+ * for the Crypto segment's "from $X". `undefined` when none is known, so the
+ * segment says nothing rather than something made up.
+ */
+export function cheapestUsd(
+  sources: PaymentSource[],
+  arioUsdRate: number | undefined,
+): number | undefined {
+  let best: number | undefined;
+  for (const source of sources) {
+    if (!isSelectable(source)) continue;
+    const usd = sourceUsd(source, arioUsdRate);
+    if (usd !== undefined && (best === undefined || usd < best)) best = usd;
+  }
+  return best;
 }
 
 /** Can be chosen, and is not known to fall short. Unknown reads as affordable. */

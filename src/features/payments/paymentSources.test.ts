@@ -14,6 +14,7 @@ import {
   SOLANA_BASE_FEE_SOL,
   SOL_FEE_REASON,
   buildSources,
+  cheapestUsd,
   creditsShortReason,
   formatSourceAmount,
   groupSources,
@@ -23,6 +24,7 @@ import {
   preselectSource,
   resolveSourceSelection,
   sourceInputsFromOptions,
+  sourceUsd,
   walletForToken,
   type BuildSourcesInput,
 } from './paymentSources';
@@ -166,6 +168,68 @@ describe('groupSources', () => {
 
   it('says where a source that is not the session\'s is paid from', () => {
     expect(paidFromLine('solana')).toBe('Paid from your Solana wallet');
+  });
+});
+
+describe('groupSources with a lead token', () => {
+  it('puts the group holding ARIO first on an Ethereum session', () => {
+    const groups = groupSources(nameCheckout('ethereum').sources, 'ethereum', {
+      leadToken: 'ario',
+    });
+    expect(groups.map((g) => g.heading)).toEqual([
+      'From your Solana wallet',
+      'From your Ethereum wallet',
+    ]);
+    expect(tokens(groups[0].sources)).toEqual(['ario']);
+  });
+
+  it('does the same on an Arweave session', () => {
+    const groups = groupSources(nameCheckout('arweave').sources, 'arweave', {
+      leadToken: 'ario',
+    });
+    expect(groups[0].heading).toBe('From your Solana wallet');
+  });
+
+  it('changes nothing when the lead group is already first, or absent', () => {
+    const solana = nameCheckout('solana').sources;
+    expect(groupSources(solana, 'solana', { leadToken: 'ario' })).toEqual(
+      groupSources(solana, 'solana'),
+    );
+    const top = topUp('ethereum');
+    expect(groupSources(top, 'ethereum', { leadToken: 'ario' })).toEqual(
+      groupSources(top, 'ethereum'),
+    );
+  });
+});
+
+describe('dollar prices', () => {
+  const { sources } = nameCheckout('solana', {
+    prices: { ario: 100, solana: 0.02, 'solana-usdc': 3.1 },
+  });
+
+  it('prices ARIO through the rate and USDC at face value, nothing else', () => {
+    const by = (t: string) => sources.find((x) => x.token === t)!;
+    expect(sourceUsd(by('ario'), 0.02)).toBeCloseTo(2);
+    expect(sourceUsd(by('ario'), undefined)).toBeUndefined();
+    expect(sourceUsd(by('solana-usdc'), undefined)).toBe(3.1);
+    expect(sourceUsd(by('solana'), 0.02)).toBeUndefined();
+  });
+
+  it('finds the cheapest known dollar price', () => {
+    expect(cheapestUsd(sources, 0.02)).toBeCloseTo(2);
+    expect(cheapestUsd(sources, undefined)).toBe(3.1);
+  });
+
+  it('skips sources that cannot be paid with', () => {
+    const blocked = nameCheckout('solana', {
+      prices: { ario: 100, 'solana-usdc': 3.1 },
+      balances: { ario: 1 },
+    }).sources;
+    expect(cheapestUsd(blocked, 0.02)).toBe(3.1);
+  });
+
+  it('knows nothing when nothing is priced', () => {
+    expect(cheapestUsd(nameCheckout('ethereum').sources, 0.02)).toBeUndefined();
   });
 });
 

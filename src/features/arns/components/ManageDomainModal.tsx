@@ -116,11 +116,6 @@ export default function ManageDomainModal({
     balance reading empty is just as confusing here.
   */
   const sessionAddress = useStore((s) => s.address);
-  const walletSplit = walletSplitNote({
-    sessionWalletType,
-    sessionAddress,
-    ownerAddress: address,
-  });
   const creditPurchasesUnavailable = !isPaymentServiceAvailable();
   const balances = useArNSPaymentBalances(address);
 
@@ -164,6 +159,17 @@ export default function ManageDomainModal({
     ? resolveSettlementRoute(selectedOption, fundingSource)
     : ({ kind: 'credits' } as const);
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
+  /*
+    Named for the wallet that pays THIS route. ARIO is the owner's own
+    transaction, so on an Arweave or Ethereum session the linked Solana wallet
+    pays as well as holds, and the note says so rather than contradicting it.
+  */
+  const walletSplit = walletSplitNote({
+    sessionWalletType,
+    sessionAddress,
+    ownerAddress: address,
+    payingWalletType: route.kind === 'ario' ? 'solana' : sessionWalletType,
+  });
   /** ARIO-only: what the cost estimate prices against. */
   const fundFrom: ArNSFundFrom =
     route.kind === 'ario' ? route.fundFrom : 'balance';
@@ -546,11 +552,10 @@ export default function ManageDomainModal({
 
             {/* Payment method + source */}
             <div className="mb-4">
-              {walletSplit && (
-                <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
-              )}
-
               <ArNSPaymentSelector
+                // Under "Pay with", as on the registration checkout, so the
+                // picker knows the paying wallet is already named.
+                note={walletSplit}
                 options={paymentOptions}
                 selectedId={selectedOption?.id ?? ''}
                 sources={pickerSources}

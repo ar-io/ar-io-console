@@ -727,20 +727,15 @@ export default function TopUpPanel({
     },
   };
 
+  // Two segments and no prices: the amount is chosen after the method here.
   const payChoices: MethodChoice[] = [
+    { value: 'card', label: 'Card', status: 'via Stripe' },
     {
-      method: 'card',
-      label: 'Card',
-      icon: <CreditCard className="h-4 w-4" />,
-      detail: 'via Stripe',
-    },
-    {
-      method: 'crypto',
+      value: 'crypto',
       label: 'Crypto',
-      icon: <Wallet className="h-4 w-4" />,
       // Signed out there is nothing to list; choosing Crypto opens the wallet
       // picker, as the tab did.
-      detail: !address || !walletType ? 'Connect a wallet' : undefined,
+      hint: !address || !walletType ? 'Connect a wallet' : undefined,
     },
   ];
 
