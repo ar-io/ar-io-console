@@ -29,7 +29,7 @@ import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { planNamePurchase } from '../purchase/cardPlan';
 import { useStore } from '../../../store/useStore';
-import { walletSplitNote } from '../purchase/walletRoles';
+import { tokenShortfallNote, walletSplitNote } from '../purchase/walletRoles';
 import { useTokenBalance } from '../../../hooks/useTokenBalance';
 import { useLinkedSolanaWallet } from '../../../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from '../../../components/modals/LinkSolanaWalletModal';
@@ -817,8 +817,19 @@ export function ArNSPurchaseCard({
       cost panel shows a credits total on this route and would not explain a
       dead button.
     */
-    if (insufficientToken) {
-      return { text: 'Not enough SOL in your wallet to pay for this name.' };
+    if (insufficientToken && route.kind === 'topup') {
+      const token = route.token as SupportedTokenType;
+      return {
+        text: tokenShortfallNote({
+          tokenLabel: tokenLabels[token],
+          // SOL is paid from the linked Solana wallet; every other token from
+          // the session wallet, which is the account the top-up credits.
+          walletType: sessionToken ? sessionWalletType : 'solana',
+          walletAddress: sessionToken ? sessionAddress : address,
+          held: heldForPayment,
+          needed: tokenNeededForPayment ?? 0,
+        }),
+      };
     }
     /*
       The token route disables on its own conditions, so it needs its own
@@ -839,6 +850,7 @@ export function ArNSPurchaseCard({
     insufficientFunds, route, sponsored, insufficientToken, targetBlocks,
     balances.sol, balances.loading,
     tokenSmallestUnitForName,
+    sessionToken, sessionWalletType, sessionAddress, heldForPayment, tokenNeededForPayment,
   ]);
 
   // Lease-vs-permabuy decision aid: how many years of leasing equal a permabuy.
