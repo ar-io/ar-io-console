@@ -38,6 +38,24 @@ All notable changes to the ar.io Console are documented in this file.
 - **USDC options in the name checkout show the USDC logo.**
 
 ### Fixed
+- **Gateway operators get their 20% ArNS discount.** The price shown to an
+  operator already included it, but the purchase never claimed it, so they
+  paid full price. Buying, renewing, upgrading and adding undernames with ARIO
+  now apply it, and the cost breakdown shows it as its own line. A gateway's
+  operations wallet qualifies too. The discount applies when paying with ARIO;
+  with credits, a card or another token, Turbo pays the registry and the line
+  says so.
+- **A renewal opened from a name's page shows the right expiry date.** It
+  could read as 1970.
+- **A name purchase that runs out of time says what happened to your
+  credits.** Solana accepts the approval for about 30 seconds. If it lapsed,
+  or you rejected the wallet prompt, the console said "Not enough Turbo
+  Credits" and offered to sell you more, because the first attempt's credits
+  were still reserved. It now says whether they are already back or when they
+  return, and a card or token buyer's "Finish registering" waits until they
+  have. Buying also asks for one fewer wallet approval, the screen tells you to
+  approve only while the prompt is open, and you can no longer switch names
+  mid-purchase.
 - **Smart-contract wallets are no longer offered, and are signed out with an
   explanation.** Base Account and Safe could connect and pay, by card or
   crypto, but could never upload or spend what they bought: Turbo needs a
