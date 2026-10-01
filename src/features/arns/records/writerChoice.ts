@@ -21,8 +21,10 @@ export type WriterKind = 'sponsored' | 'self-signed' | 'blocked';
 
 /** Why this writer was chosen — the copy differs, so the reason must survive. */
 export type WriterReason =
-  /** Owner on the ordinary route: Turbo fee-pays, credits are billed. */
+  /** Owner on the credits route: Turbo fee-pays, credits are billed. */
   | 'owner'
+  /** Owner holding SOL: signs and pays the network directly, the default. */
+  | 'owner-sol'
   /** Controller: Turbo won't take their signature, so they pay the network. */
   | 'controller'
   /** Owner who cannot cover the credits price but can cover the SOL. */
@@ -35,7 +37,16 @@ export type WriterReason =
 export interface WriterChoice {
   kind: WriterKind;
   reason: WriterReason;
+  /**
+   * The other rail, when it would also work for this owner, so the surface
+   * can offer "pay with credits instead" (or SOL). Absent when there is no
+   * real choice: a controller, a wallet without SOL, or credits short.
+   */
+  alternative?: Exclude<WriterKind, 'blocked'>;
 }
+
+/** Which rail the owner asked for, overriding the default when both work. */
+export type WriterPreference = 'sol' | 'credits';
 
 /**
  * What the wallet must hold for the funds-aware fallback to fire.
@@ -53,6 +64,12 @@ export interface WriterFunds {
   priceCredits?: number;
   /** Owner wallet's SOL. */
   sol?: number;
+  /**
+   * The SOL balance is still being read. The default rail now turns on it, so
+   * the choice waits rather than showing credits and then switching rail, and
+   * the cost sentence with it, under someone already reading it.
+   */
+  solLoading?: boolean;
 }
 
 /**
@@ -158,21 +175,25 @@ export function solRailRequirementNote(
 /**
  * The writer for a record change, given the wallet's role and what it holds.
  *
- * Credits stay the DEFAULT for an owner rather than "SOL first if you have
- * it": the credits price can be quoted exactly before the click, the sponsored
- * route is a single message signature with no transaction to confirm or fail,
- * and every price in this feature is denominated in credits. Preferring SOL
- * whenever it happens to be present would make the quoted figure wrong for
- * exactly the wallets that hold some.
+ * An owner holding SOL signs and pays the network directly by DEFAULT. The two
+ * rails cost very different amounts: a record save was 0.108 credits on
+ * production when this was written, tens of cents, while signing it yourself
+ * costs a Solana fee, usually a fraction of a cent (plus rent where a write
+ * creates an account). Defaulting to credits charged the people who could least afford
+ * to notice it the most, with no visible way out.
  *
- * The fallback exists for the one case that was a dead end: an owner short on
- * credits who is perfectly able to sign for themselves. The minimum top-up is
- * $5, so sending them to buy credits for an action costing a fraction of a
- * cent is not a real option.
+ * Credits remain the rail for everyone else: a wallet with no SOL (every
+ * email sign-in starts there), and an owner who prefers it. When both rails
+ * would work, `alternative` says so and `preference` lets the owner switch.
+ * When neither would, the choice says so before the click.
+ *
+ * `funds` absent means "role only" (see {@link writerForRole}): the credits
+ * rail, as before, for callers that cannot wait on a balance.
  */
 export function chooseWriter(
   role: StrictAntRole,
   funds?: WriterFunds,
+  preference?: WriterPreference,
 ): WriterChoice {
   switch (role) {
     case 'controller':
@@ -184,31 +205,35 @@ export function chooseWriter(
       break;
   }
 
-  const credits = funds?.credits;
-  const price = funds?.priceCredits;
-  const sol = funds?.sol;
-
-  /*
-    Only a KNOWN shortfall may reroute. Both figures load asynchronously, and
-    treating "not yet" as "can't afford it" would flip the route — and the
-    quoted cost with it — under a user who is already reading the note.
-  */
-  const shortOnCredits =
-    credits !== undefined && price !== undefined && credits < price;
-
-  if (shortOnCredits && sol !== undefined) {
-    return sol >= MIN_SOL_FOR_RECORD_WRITE
-      ? { kind: 'self-signed', reason: 'insufficient-credits' }
-      : /*
-          Neither will cover it. Still the credits route — there is nothing
-          better to route to — but flagged so the editor can say so up front
-          rather than letting them fill in a record and meet the failure on
-          save.
-        */
-        { kind: 'sponsored', reason: 'insufficient-both' };
+  if (!funds) return { kind: 'sponsored', reason: 'owner' };
+  if (funds.solLoading && funds.sol === undefined) {
+    return { kind: 'blocked', reason: 'unresolved' };
   }
 
-  return { kind: 'sponsored', reason: 'owner' };
+  const { credits, priceCredits: price, sol } = funds;
+  // An unread SOL balance is not SOL: it never routes anyone onto that rail.
+  const solOk = sol !== undefined && sol >= MIN_SOL_FOR_RECORD_WRITE;
+  /*
+    Only a KNOWN shortfall rules credits out. Both figures load
+    asynchronously, and treating "not yet" as "can't afford it" would flip
+    the route under a user who is already reading the note.
+  */
+  const creditsOk =
+    credits === undefined || price === undefined || credits >= price;
+
+  if (solOk && creditsOk) {
+    return preference === 'credits'
+      ? { kind: 'sponsored', reason: 'owner', alternative: 'self-signed' }
+      : { kind: 'self-signed', reason: 'owner-sol', alternative: 'sponsored' };
+  }
+  if (solOk) return { kind: 'self-signed', reason: 'insufficient-credits' };
+  if (creditsOk) return { kind: 'sponsored', reason: 'owner' };
+  /*
+    Neither will cover it. Still the credits route, since there is nothing
+    better to route to, but flagged so the editor can say so up front rather
+    than letting them fill in a record and meet the failure on save.
+  */
+  return { kind: 'sponsored', reason: 'insufficient-both' };
 }
 
 /**
@@ -268,9 +293,11 @@ export function writerCostNote(
         is the owner — not the controller — who is most likely to read this,
         since they arrived by running out of credits.
       */
-      return reason === 'insufficient-credits'
-        ? 'Not enough credits for this, so your wallet signs and pays the Solana fee instead.'
-        : 'You control this name but don’t own it, so your wallet pays the Solana fee on each change.';
+      return reason === 'owner-sol'
+        ? 'Your wallet signs this and pays the Solana network fee in SOL.'
+        : reason === 'insufficient-credits'
+          ? 'Not enough credits for this, so your wallet signs and pays the Solana fee instead.'
+          : 'You control this name but don’t own it, so your wallet pays the Solana fee on each change.';
     case 'blocked':
       return undefined;
   }
@@ -294,9 +321,10 @@ export function writerCostNote(
 export function chooseOwnerActionWriter(
   role: StrictAntRole,
   funds?: WriterFunds,
+  preference?: WriterPreference,
 ): WriterChoice {
   if (role !== 'owner') {
     return { kind: 'blocked', reason: 'unresolved' };
   }
-  return chooseWriter('owner', funds);
+  return chooseWriter('owner', funds, preference);
 }

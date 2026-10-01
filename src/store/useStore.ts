@@ -327,6 +327,14 @@ interface StoreState {
   // X402-only mode (disables payment service features)
   x402OnlyMode: boolean;
 
+  /**
+   * Which rail an ArNS owner chose for record and owner actions, when both
+   * would work (`chooseWriter`'s `alternative`). Session-only, deliberately
+   * not persisted: a balance changes between visits, and a remembered
+   * "credits" would silently keep charging someone who now holds SOL.
+   */
+  arnsWriterPreference: 'sol' | 'credits' | null;
+
   // Smart Deploy state (file deduplication)
   fileHashCache: Record<string, FileHashEntry>;
   smartDeployEnabled: boolean;
@@ -451,6 +459,7 @@ interface StoreState {
 
   // X402-only mode actions
   setX402OnlyMode: (enabled: boolean) => void;
+  setArnsWriterPreference: (preference: 'sol' | 'credits' | null) => void;
   isPaymentServiceAvailable: () => boolean;
 
   // Smart Deploy actions
@@ -506,6 +515,8 @@ export const useStore = create<StoreState>()(
 
       // X402-only mode (disabled by default)
       x402OnlyMode: false,
+
+      arnsWriterPreference: null,
 
       // Smart Deploy state (file deduplication)
       fileHashCache: {},
@@ -943,6 +954,7 @@ export const useStore = create<StoreState>()(
 
       // X402-only mode actions
       setX402OnlyMode: (enabled) => set({ x402OnlyMode: enabled }),
+      setArnsWriterPreference: (preference) => set({ arnsWriterPreference: preference }),
       isPaymentServiceAvailable: () => !get().x402OnlyMode,
 
       // Smart Deploy actions

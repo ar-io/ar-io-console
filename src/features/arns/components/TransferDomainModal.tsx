@@ -35,8 +35,16 @@ export default function TransferDomainModal({
 }: TransferDomainModalProps) {
   const [recipient, setRecipient] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
-  const { transfer, phase, error, paysNetworkDirectly, txId, isBusy } =
-    useTransferArNSName(domain.processId);
+  const {
+    transfer,
+    phase,
+    error,
+    paysNetworkDirectly,
+    alternative,
+    switchRail,
+    txId,
+    isBusy,
+  } = useTransferArNSName(domain.processId);
 
   // Trim once and use the SAME value to validate and to write, so the gate can
   // never green-light one address while the transfer submits another.
@@ -113,6 +121,9 @@ export default function TransferDomainModal({
             <ActionCostNote
               action="transfer"
               paysNetworkDirectly={paysNetworkDirectly}
+              alternative={alternative}
+              onSwitchRail={switchRail}
+              disabled={isBusy}
               className="mb-4"
             />
 

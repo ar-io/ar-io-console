@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 
+import { useStore } from '../../../store/useStore';
+
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import { useAntSummaries } from './useAntLogos';
@@ -61,11 +63,20 @@ export function useRecordWriter(processId: string | undefined) {
   */
   const balances = useArNSPaymentBalances(signer.address ?? undefined);
 
-  const { kind, reason } = chooseWriter(role, {
-    credits: balances.credits,
-    priceCredits,
-    sol: balances.sol,
-  });
+  // The owner's choice of rail, shared across this page's editors.
+  const preference = useStore((st) => st.arnsWriterPreference);
+  const setPreference = useStore((st) => st.setArnsWriterPreference);
+
+  const { kind, reason, alternative } = chooseWriter(
+    role,
+    {
+      credits: balances.credits,
+      priceCredits,
+      sol: balances.sol,
+      solLoading: balances.loading,
+    },
+    preference ?? undefined,
+  );
 
   const getWriter = useCallback(
     async (antId?: string): Promise<RecordWriter> => {
@@ -117,7 +128,7 @@ export function useRecordWriter(processId: string | undefined) {
     /** True when a wallet is present and able to approve a write. */
     canWrite: signer.isReady && kind !== 'blocked',
     /** True while the role is still resolving — writes must wait, not guess. */
-    isResolving: kind === 'blocked' && role === 'unknown',
+    isResolving: kind === 'blocked' && (role === 'unknown' || role === 'owner'),
     /** What this wallet's edits cost, for the note above the editor. */
     costNote: writerCostNote(kind, priceCredits, reason),
     /**
@@ -129,5 +140,15 @@ export function useRecordWriter(processId: string | undefined) {
     paysNetworkDirectly: kind === 'self-signed',
     /** Why, so a surface can explain an unexpected route. */
     writerReason: reason,
+    /**
+     * The other rail, when it would also work, and a way to take it. The
+     * surface offers it in one line ("Pay with credits instead"), so the
+     * default is never the only option on screen.
+     */
+    alternative,
+    switchRail: () =>
+      setPreference(alternative === 'sponsored' ? 'credits' : 'sol'),
+    /** The credits rail's price, for the switch's own label. */
+    alternativeCredits: alternative === 'sponsored' ? priceCredits : undefined,
   };
 }

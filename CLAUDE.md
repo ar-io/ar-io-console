@@ -255,12 +255,23 @@ Not sponsored, each still costing the user SOL:
 **Two rails, and the choice is by funds** (`records/writerChoice.ts`). Every
 write Turbo lists in `arNSActions` can go either way: Turbo as fee payer,
 billed in credits, or the wallet signing the Solana transaction and paying the
-network. `chooseWriter` prefers **credits** — that price can be quoted exactly
-before the click, and the route is one message signature with no transaction to
-confirm or fail — and falls back to the wallet only on a **known** shortfall.
-Unknown balances never reroute: both figures load asynchronously, and treating
-"not yet" as "can't afford it" would swap the route, and the cost sentence with
-it, under someone already reading it.
+network. An owner holding SOL (at least `MIN_SOL_FOR_RECORD_WRITE`) **signs
+with SOL by default**: a record save was 0.108 credits on production when this
+changed, tens of cents, against a Solana fee of a fraction of a cent. Credits
+are the rail for a wallet without SOL (every email sign-in starts there) and
+for an owner who switches. When both rails would work, `chooseWriter` returns
+an `alternative` and the surface shows `RailSwitch` ("Pay with credits
+instead"); the choice is `arnsWriterPreference` in the store, session-only and
+deliberately not persisted. While the SOL balance loads the choice is
+`blocked` rather than defaulting to credits and switching under the reader; an
+unreadable SOL balance falls back to credits. A credits shortfall still counts
+only when **known**. Role-only callers (`writerForRole`, used mid-deploy by
+`useOwnedArNSNames`) stay on credits, since they cannot wait on a balance.
+
+The `@` record goes through the same writer as every undername
+(`useUndernameWrites.saveUndername(processId, '@', …)`). It used to call the
+ANT directly, which always paid SOL while the editor quoted credits, and left
+an owner with no SOL unable to change where their name points.
 
 `chooseOwnerActionWriter` is the same ladder for transfer and controller
 changes, minus the controller branch — a controller may edit records but cannot

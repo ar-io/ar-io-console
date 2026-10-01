@@ -119,7 +119,14 @@ export function useUndernameWrites(_name?: string, processId?: string) {
   const signer = useArNSTurboSigner();
   // One writer now: Turbo performs every record write and pays the Solana fee,
   // and the owner approves it. Nothing to resolve first, so nothing to block on.
-  const { getWriter, costNote, paysNetworkDirectly } = useRecordWriter(processId);
+  const {
+    getWriter,
+    costNote,
+    paysNetworkDirectly,
+    alternative,
+    switchRail,
+    writerReason,
+  } = useRecordWriter(processId);
   const [phase, setPhase] = useState<UndernameWritePhase>('idle');
   /** The undername currently being written (for per-row busy state). */
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -246,8 +253,13 @@ export function useUndernameWrites(_name?: string, processId?: string) {
     transferUndernameOwnership,
     /** One line on what this wallet's edits cost. */
     costNote,
-    /** True for a controller: they pay the Solana network, not credits. */
+    /** True when this wallet signs and pays the Solana network, not credits. */
     paysNetworkDirectly,
+    /** The other rail, when it would also work, and a way to take it. */
+    alternative,
+    switchRail,
+    /** Why this rail, so the editor can name both ways out when neither pays. */
+    writerReason,
     reset,
     phase,
     busyKey,

@@ -3,6 +3,8 @@ import { Loader2, Trash2 } from 'lucide-react';
 import BaseModal from '../../../components/modals/BaseModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
+import type { WriterChoice } from '../records/writerChoice';
+import RailSwitch from './RailSwitch';
 
 /**
  * Confirm removing one record, and name what it costs.
@@ -25,6 +27,8 @@ export default function RemoveRecordConfirm({
   displayName,
   busy,
   paysNetworkDirectly,
+  alternative,
+  onSwitchRail,
   onConfirm,
   onCancel,
 }: {
@@ -38,7 +42,8 @@ export default function RemoveRecordConfirm({
   displayName?: string;
   busy?: boolean;
   /**
-   * True for a controller. Turbo's paid route accepts the OWNER's signature
+   * True when this wallet signs and pays the network itself: a controller
+   * always, and an owner on the SOL rail. Turbo's paid route accepts the OWNER's signature
    * only, so a controller signs the Solana transaction with their own wallet
    * and pays the network directly in SOL. Quoting credits to them names a cost
    * they will never be charged — reported after someone removed a record, was
@@ -48,6 +53,9 @@ export default function RemoveRecordConfirm({
    * fee payer and bills the fee back in credits.
    */
   paysNetworkDirectly?: boolean;
+  /** The other rail, when it would also work, and a way to take it. */
+  alternative?: WriterChoice['alternative'];
+  onSwitchRail?: () => void;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -91,10 +99,18 @@ export default function RemoveRecordConfirm({
 
         <p className="mb-4 text-sm text-foreground/80">
           {displayName
-            ? `${undername}.${displayName}.ar.io will stop working for anyone using it.`
+            ? `${undername}_${displayName}.ar.io will stop working for anyone using it.`
             : 'This record will stop working for anyone using it.'}{' '}
           You can add it back later. Removing costs {cost}.
         </p>
+        {alternative && onSwitchRail && (
+          <RailSwitch
+            alternative={alternative}
+            onSwitch={onSwitchRail}
+            disabled={busy}
+            className="-mt-2 mb-4"
+          />
+        )}
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button

@@ -42,6 +42,8 @@ export default function ControllersModal({
     busyKey,
     error,
     paysNetworkDirectly,
+    alternative,
+    switchRail,
     isBusy,
   } =
     useControllerWrites(domain.processId);
@@ -139,6 +141,9 @@ export default function ControllersModal({
             buttons is right on prod and wrong where we test. */}
         <ActionCostNote
           paysNetworkDirectly={paysNetworkDirectly}
+          alternative={alternative}
+          onSwitchRail={switchRail}
+          disabled={isBusy}
           action="add-controller"
           secondaryAction="remove-controller"
           primaryVerb="Adding a controller"

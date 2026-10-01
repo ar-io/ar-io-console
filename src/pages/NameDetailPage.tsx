@@ -4,13 +4,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
-  CalendarPlus,
-  Crosshair,
   ExternalLink,
   Globe,
   Layers,
   Loader2,
-  Pencil,
   Shuffle,
   Send,
   Star,
@@ -72,22 +69,51 @@ function shorten(id: string, head = 6, tail = 4) {
 function SectionCard({
   title,
   icon: Icon,
+  action,
   children,
 }: {
   title: string;
   icon: typeof Globe;
+  /**
+   * The section's own action, beside its title. Actions live with what they
+   * change: they used to be one row of eight buttons at the foot of the page,
+   * below a records table that can run long.
+   */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-border/20 bg-card p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-primary" />
-        <h2 className="font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
-          {title}
-        </h2>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon className="h-4 w-4 flex-shrink-0 text-primary" />
+          <h2 className="truncate font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
+            {title}
+          </h2>
+        </div>
+        {action}
       </div>
       {children}
     </div>
+  );
+}
+
+/** A section's action: small, quiet, in the brand's accent. */
+function SectionAction({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="-mr-2 flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -123,7 +149,6 @@ export default function NameDetailPage() {
   const { arnsAddress } = useLinkedSolanaWallet();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
-  const [editApexRequest, setEditApexRequest] = useState(0);
 
   const name = (rawName ?? '').toLowerCase();
   const displayName = toUnicodeName(name);
@@ -322,6 +347,16 @@ export default function NameDetailPage() {
                       You: {role}
                     </span>
                   )}
+                  {/* Beside the Primary badge it would earn. */}
+                  {canManage && !isPrimary && (
+                    <button
+                      type="button"
+                      onClick={() => openOwnerAction('primary')}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <Star className="h-3 w-3" /> Set as primary
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -337,7 +372,20 @@ export default function NameDetailPage() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {/* Overview */}
-            <SectionCard title="Overview" icon={Globe}>
+            {/* Renewing and upgrading are registry payments, settled through
+                the payment picker; the same modal adds undername slots. */}
+            <SectionCard
+              title="Overview"
+              icon={Globe}
+              action={
+                canManage && (
+                  <SectionAction
+                    label={record.type === 'lease' ? 'Renew or upgrade' : 'Add undername slots'}
+                    onClick={() => setOpen('manage')}
+                  />
+                )
+              }
+            >
               <InfoRow label="Registered">{fmtDate(record.startTimestamp)}</InfoRow>
               <InfoRow label="Expires">
                 {record.type === 'permabuy' ? (
@@ -361,7 +409,15 @@ export default function NameDetailPage() {
             </SectionCard>
 
             {/* Details (ANT metadata) */}
-            <SectionCard title="Details" icon={Tag}>
+            <SectionCard
+              title="Details"
+              icon={Tag}
+              action={
+                canManage && (
+                  <SectionAction label="Edit" onClick={() => openOwnerAction('edit')} />
+                )
+              }
+            >
               {ant &&
               (ant.name ||
                 ant.ticker ||
@@ -403,8 +459,10 @@ export default function NameDetailPage() {
               )}
             </SectionCard>
 
-            {/* On-chain */}
-            <SectionCard title="On-chain" icon={Layers}>
+            {/* Ownership: who holds the name, and the owner's actions that
+                change that. Set apart in red because none of them is undone
+                by the same button. */}
+            <SectionCard title="Ownership" icon={Layers}>
               <InfoRow label="Name token (ANT)">
                 <div className="flex min-w-0 items-center justify-end gap-1">
                   <span className="truncate font-mono text-xs">
@@ -435,10 +493,28 @@ export default function NameDetailPage() {
                   </a>
                 </InfoRow>
               )}
+              {ownerOnly && (
+                // The last row's own divider already separates these.
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ActionBtn icon={Send} label="Transfer" danger onClick={() => setOpen('transfer')} />
+                  <ActionBtn icon={Shuffle} label="Reassign" danger onClick={() => openOwnerAction('reassign')} />
+                  {record.type === 'permabuy' && (
+                    <ActionBtn icon={Trash2} label="Release" danger onClick={() => openOwnerAction('release')} />
+                  )}
+                </div>
+              )}
             </SectionCard>
 
             {/* Controllers */}
-            <SectionCard title="Controllers" icon={Users}>
+            <SectionCard
+              title="Controllers"
+              icon={Users}
+              action={
+                ownerOnly && (
+                  <SectionAction label="Manage" onClick={() => openOwnerAction('controllers')} />
+                )
+              }
+            >
               {controllers ? (
                 controllers.controllers.length > 0 ? (
                   controllers.controllers.map((c) => (
@@ -474,46 +550,7 @@ export default function NameDetailPage() {
             canManage={canEditRecords}
             undernameLimit={record.undernameLimit}
             onSuccess={refresh}
-            editApexRequest={editApexRequest}
           />
-
-          {/* Actions for names you own or control. */}
-          {canManage && (
-            <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
-              <h2 className="mb-2 font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
-                Manage
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {/* The `@` record's target, under the name users coming from
-                    arns.ar.io look for ("Target ID"): it otherwise lives only
-                    behind a pencil icon in the Records table. Disabled until
-                    the record loads, since it opens that record's editor. */}
-                {canEditRecords && (
-                  <ActionBtn
-                    icon={Crosshair}
-                    label="Edit target"
-                    disabled={!ant}
-                    onClick={() => setEditApexRequest((n) => n + 1)}
-                  />
-                )}
-                {/* Renewing and upgrading are registry payments Turbo settles
-                    from credits — no wallet approval, and no SOL. */}
-                <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
-                <ActionBtn icon={Pencil} label="Edit details" onClick={() => openOwnerAction('edit')} />
-                <ActionBtn icon={Star} label="Set as primary" onClick={() => openOwnerAction('primary')} />
-                {ownerOnly && (
-                  <>
-                    <ActionBtn icon={Users} label="Controllers" onClick={() => openOwnerAction('controllers')} />
-                    <ActionBtn icon={Send} label="Transfer" danger onClick={() => setOpen('transfer')} />
-                    <ActionBtn icon={Shuffle} label="Reassign" danger onClick={() => openOwnerAction('reassign')} />
-                    {record.type === 'permabuy' && (
-                      <ActionBtn icon={Trash2} label="Release" danger onClick={() => openOwnerAction('release')} />
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Action modals — each reuses the existing component, refetches on success */}
           {open === 'manage' && (
