@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { mapActionExpiryMessage } from '../purchase/actionFailure';
 
 
 import { useArNSTurboSigner } from './useArNSTurboSigner';
@@ -52,7 +53,14 @@ export function useTransferArNSName(processId?: string) {
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return res?.id;
       } catch (err) {
-        const normalized = err instanceof Error ? err : new Error(String(err));
+        // An approval that expired before submission changed nothing: say so,
+        // and what happened to the credits, rather than the raw service error.
+        const expiry = mapActionExpiryMessage(err);
+        const normalized = expiry
+          ? new Error(expiry)
+          : err instanceof Error
+            ? err
+            : new Error(String(err));
         setPhase('error');
         setError(normalized);
         throw normalized;

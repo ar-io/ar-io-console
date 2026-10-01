@@ -187,12 +187,16 @@ wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
 `ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
 is sponsored (`actions/sponsorship.ts`).
 
-**Pin turbo-sdk EXACTLY** (currently `2.1.0-alpha.2`). That alpha is 2.1.0 plus
-turbo-sdk#524, without which a browser Solana wallet cannot pay with USDC or
-ARIO: the SDK built a wallet signer for `solana` alone, and signed SPL
-transfers through `signMessage`, which wallets refuse. Its version sorts
-*below* 2.1.0 in semver, which is one more reason the pin must stay exact.
-Move to the next stable release once it carries #524. The
+**Pin turbo-sdk EXACTLY** (currently `2.1.0-alpha.3`). That alpha is 2.1.0 plus
+two fixes. turbo-sdk#524: without it a browser Solana wallet cannot pay with
+USDC or ARIO (the SDK built a wallet signer for `solana` alone, and signed SPL
+transfers through `signMessage`, which wallets refuse). turbo-sdk#525: `/sign`
+sends no payer signature (the route is authorised by the owner's signature
+inside the transaction), so the only prompt inside the ~30 second signing
+window is the owner's, and `/sign` failures map to `ArNSActionExpiredError`
+(`creditsReleased`) and `InsufficientCreditsError`. Its version sorts *below*
+2.1.0 in semver, which is one more reason the pin must stay exact. Move to the
+next stable release once it carries both. The
 long-standing reason for this rule has now expired: the ArNS surface and
 `solana-usdc` used to exist only on the `alpha` line, so a caret range silently
 resolved to a stable release carrying neither, and nothing failed until someone
@@ -358,7 +362,7 @@ only — both `ANT.spawn` and `buyRecord` accept `targetProtocol: 1` (IPFS), but
 no ar.io gateway resolves one, so offering it would sell a name pointing at
 nothing.
 
-**Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): **credits are debited when the action is CREATED**, not when it is signed, so an abandoned wallet prompt has already been charged (Turbo refunds it on TTL expiry). The nonce is persisted via the SDK's `onNonce`, which fires *before* the wallet opens — that is the only route back to a paid-for purchase if the page reloads mid-approval. Resuming by nonce is a pure read (`GET /v1/arns/actions/:nonce`) and can never double-debit; **re-creating an action always can.** `processId` persistence now serves the auction path only, where a client spawn still happens and a retry must reuse it rather than bleed another ~0.02 SOL.
+**A sponsored buy reserves credits at create, and is not resumed** (`purchase/actionFailure.ts`). `POST /v1/arns/actions/<action>` reserves the credits and returns a transaction that Solana only accepts for about 30 seconds after it is built (its blockhash); `expiresAt`, about 5 minutes after the action is created, is the refund deadline, not a signing deadline. The nonce is still saved through the SDK's `onNonce` (`services/arnsPurchaseResume.ts`), but nothing reads it back for a buy: `getPendingArNSPurchase` serves only the auction path, which reuses a spawned `processId` so a retry does not bleed another ~0.02 SOL. So a reload or a late approval abandons the attempt, and what the buyer is told depends on how `/sign` failed. The credits are back only when the service says so: a 409 whose body says "Your credits have been returned", or a 400 "Action <nonce> expired and was refunded". A 409 without that wording, a 400 "Action <nonce> expired at ...", or a wallet rejection after create means they stay held until the reconciler refunds them; it runs about every 5 minutes, so the refund lands by `expiresAt` plus up to 5 more. The console reads `expiresAt` (and `wincQty`) from the open `GET /v1/arns/actions/:nonce`, so it follows whatever window the service sets; when the time cannot be read it says "within about 10 minutes". A 503 "Blockhash not found" proves nothing: the service could not confirm expiry and the transaction may still land, so the copy sends the buyer to check My domains and never says nothing was charged. Only a 400 naming this action is an expiry; the program's own "Lease has expired" style 400s are ordinary errors. Every failure after create records the hold (per payer, localStorage with an in-memory fallback), and a success clears it. A new attempt that meets 402 during the hold is told about the hold only when the credits on hand plus the held ones would cover it; otherwise it is a real shortfall and gets the usual "Buy Turbo Credits". Record, transfer and controller writes get the same wording only for sponsored failures, which carry an HTTP status; a self-signed write reserved no credits and is never told about them. Never re-create an action to retry a failure the buyer did not ask to retry: each create reserves again.
 
 **Owner vs. controller gating** (`antRole.ts`): `getArNSRecordsForAddress` returns `Owned ∪ Controlled`, so a name in "your names" may be one the wallet only *controls*. Controllers can edit records/metadata/undernames; **transfer, reassign, release, and controller changes are owner-only**. Use `deriveAntRole` (optimistic — `unknown` treated leniently) only on owned-name surfaces where every row is in the ACL; use `deriveAntRoleStrict` (`none` is a real answer) anywhere a name isn't guaranteed to be the wallet's, such as the public Name Detail page. `isOwnerOnlyAllowed` denies both `unknown` and `controller` so destructive actions never flash before ownership is confirmed.
 

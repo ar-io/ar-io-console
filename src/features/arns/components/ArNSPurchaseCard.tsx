@@ -69,6 +69,12 @@ import { toUnicodeName } from '@/utils/punycode';
 interface ArNSPurchaseCardProps {
   name: string;
   isBusy: boolean;
+  /**
+   * The owner's wallet is showing the registration prompt right now
+   * (`useBuyArNSName().awaitingApproval`). Only then does the screen say to
+   * approve: the transaction is valid for about 30 seconds.
+   */
+  awaitingApproval?: boolean;
   onBuy: (input: BuyArNSNameInput) => void | Promise<unknown>;
   /**
    * A card purchase settled server-side. Reported up so the host shows the same
@@ -165,6 +171,7 @@ function LeaseTermPrefetcher(props: {
 export function ArNSPurchaseCard({
   name,
   isBusy,
+  awaitingApproval = false,
   onBuy,
   onTokenFunded,
   initialTarget,
@@ -862,6 +869,8 @@ export function ArNSPurchaseCard({
         // the ARIO SDK, which would charge the wallet's ARIO on top.
         mechanism: { kind: 'turbo-credits' },
         targetId: targetForBuy,
+        // Tells a real shortfall from credits an earlier attempt still holds.
+        priceCredits: creditsPrice?.sponsoredCredits,
       });
       if (settled === undefined) {
         tokenTopUp.failAfterFunding(
@@ -875,7 +884,10 @@ export function ArNSPurchaseCard({
         err instanceof Error ? err.message : String(err),
       );
     }
-  }, [onBuy, name, type, years, onTokenFunded, tokenTopUp, targetForBuy]);
+  }, [
+    onBuy, name, type, years, onTokenFunded, tokenTopUp, targetForBuy,
+    creditsPrice?.sponsoredCredits,
+  ]);
 
   /**
    * A card payment settled. Finish the purchase instead of just closing:
@@ -1367,6 +1379,7 @@ export function ArNSPurchaseCard({
                   years: type === 'lease' ? years : undefined,
                   mechanism,
                   targetId: targetForBuy,
+                  priceCredits: creditsPrice?.sponsoredCredits,
                 })
           }
           disabled={
@@ -1386,7 +1399,10 @@ export function ArNSPurchaseCard({
               <Loader2 className="h-4 w-4 animate-spin" />{' '}
               {/* Name the step: two wallet popups with one spinner between
                   them is indistinguishable from a stuck app. */}
-              {tokenStepLabel ?? 'Processing…'}
+              {/* "Approve now" only while the prompt is actually open: the
+                  transaction it signs is valid for about 30 seconds. No
+                  countdown; the wallet sets the pace. */}
+              {tokenStepLabel ?? (awaitingApproval ? 'Approve in your wallet now' : 'Registering…')}
             </>
           }
         >
@@ -1395,7 +1411,13 @@ export function ArNSPurchaseCard({
       )}
 
       {/* Says what to DO while it runs; the button only says where it is. */}
-      {waitingNotice(tokenTopUp.step, promptSource) && (
+      {/*
+        The registering notice tells the buyer to approve NOW, so it shows only
+        while the wallet prompt is open; before it opens there is nothing to
+        approve yet. Every other step's notice shows as before.
+      */}
+      {waitingNotice(tokenTopUp.step, promptSource) &&
+        (tokenTopUp.step.phase !== 'registering' || awaitingApproval) && (
         <p className="mt-2 text-center text-xs text-foreground/70">
           {waitingNotice(tokenTopUp.step, promptSource)}
         </p>
