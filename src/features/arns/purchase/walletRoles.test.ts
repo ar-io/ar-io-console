@@ -192,7 +192,7 @@ describe('walletSplitPhrase', () => {
         ownerAddress: SOL,
         payingWalletType: 'solana',
       }),
-    ).toBe('paid from your linked Solana wallet');
+    ).toBe(`Your linked Solana wallet, ${shortAddress(SOL)}, pays for and holds the name.`);
   });
 
   it('names the holding wallet when the session wallet pays', () => {
@@ -203,7 +203,7 @@ describe('walletSplitPhrase', () => {
         ownerAddress: SOL,
         payingWalletType: 'ethereum',
       }),
-    ).toBe(`name held by your linked Solana wallet ${shortAddress(SOL)}`);
+    ).toBe(`The name is held by your linked Solana wallet, ${shortAddress(SOL)}.`);
   });
 
   it('says nothing for one wallet, or when anything is unknown', () => {
@@ -215,13 +215,15 @@ describe('walletSplitPhrase', () => {
     ).toBeUndefined();
   });
 
-  it('has no sentence punctuation, so it joins a status line cleanly', () => {
-    const p = walletSplitPhrase({
-      sessionWalletType: 'ethereum',
-      sessionAddress: ETH,
-      ownerAddress: SOL,
-    })!;
-    expect(p).not.toMatch(/[.,]$/);
-    expect(p[0]).toBe(p[0].toLowerCase());
+  it('never says the session wallet pays: on a card route it does not', () => {
+    for (const payingWalletType of ['ethereum', 'arweave', undefined] as const) {
+      const p = walletSplitPhrase({
+        sessionWalletType: 'ethereum',
+        sessionAddress: ETH,
+        ownerAddress: SOL,
+        payingWalletType,
+      })!;
+      expect(p).not.toMatch(/pay/i);
+    }
   });
 });

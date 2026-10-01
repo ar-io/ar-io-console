@@ -12,6 +12,7 @@ import {
 } from '../../payments/components/PaymentPicker';
 import {
   applyBestPriceBadge,
+  DOLLAR_STABLECOINS,
   buildSources,
   cheapestUsd,
   extraCostLabel,
@@ -21,12 +22,12 @@ import {
   groupSources,
   isSelectable,
   methodForOption,
-  paidFromPhrase,
   preselectSource,
   resolveSourceSelection,
   sourceInputsFromOptions,
   type PaymentMethod,
   type PaymentSource,
+  type UsdRates,
 } from '../../payments/paymentSources';
 
 /**
@@ -54,8 +55,6 @@ interface Props {
    * wallet's ARIO at the premium price — see ReturnedNameBuyModal).
    */
   arioOnly?: boolean;
-  /** The wallet note, folded into the picker's status line. */
-  note?: string;
   /**
    * The crypto dropdown's rows, from `buildSources`. Built by the host because
    * it holds the balances and quotes, and because the checkout's preselection
@@ -67,8 +66,11 @@ interface Props {
   sessionWalletType?: WalletKind;
   /** What this purchase costs as credits, and as a card charge in dollars. */
   prices?: { credits?: number; cardUsd?: number };
-  /** Dollars per ARIO, to put ARIO's saving next to the card's dollar price. */
-  arioUsdRate?: number;
+  /**
+   * Dollars per whole token (`useTokenUsdRates`), so every row can carry a
+   * dollar figure and "Best price" is judged against all of them.
+   */
+  usdRates?: UsdRates;
   /**
    * Dollars a route costs beyond its own price: ARIO's SOL for the name's
    * accounts and fee. ARIO counts toward "from $X" only when this is known.
@@ -96,11 +98,10 @@ export function ArNSPaymentSelector({
   onSourceChange,
   disabled,
   arioOnly = false,
-  note,
   sources: sourcesProp,
   sessionWalletType,
   prices,
-  arioUsdRate,
+  usdRates = {},
   extraUsd,
   extraSol,
 }: Props) {
@@ -111,7 +112,16 @@ export function ArNSPaymentSelector({
   */
   const [previewCrypto, setPreviewCrypto] = useState(false);
   const selected = options.find((o) => o.id === selectedId);
-  const showSources = arioOnly || selected?.token === 'ario';
+  /*
+    Funding source only matters to someone with ARIO staked: with none, every
+    choice draws from the same liquid balance, and three segments would ask a
+    question with one answer. Still shown if a source other than liquid is
+    already chosen, so the control never disappears from under a choice it
+    holds.
+  */
+  const showSources =
+    (arioOnly || selected?.token === 'ario') &&
+    (balances.stakedArio > 0 || fundingSource !== 'balance');
 
   /*
     "Best price" only when it is true for this purchase: ARIO's all-in price
@@ -120,7 +130,7 @@ export function ArNSPaymentSelector({
   */
   const sources = applyBestPriceBadge(
     sourcesProp ?? buildSources({ tokens: sourceInputsFromOptions(options) }),
-    { arioUsdRate, extraUsd: extraUsd ?? {}, cardUsd: prices?.cardUsd },
+    { usdRates, extraUsd: extraUsd ?? {}, cardUsd: prices?.cardUsd },
   );
   const session = sessionWalletType ?? 'solana';
   // ARIO's group first: it is the best price, and on an Ethereum session it
@@ -158,8 +168,10 @@ export function ArNSPaymentSelector({
           ? `${formatSourceAmount(prices.credits)} credits`
           : undefined,
       hint: shortBy,
-      status: shortBy ?? `You have ${formatSourceAmount(balances.credits)} credits`,
-      statusTone: shortBy ? 'error' : 'muted',
+      // Only the shortfall: what you hold is a number, and it sits with the
+      // others in the cost summary.
+      status: shortBy,
+      statusTone: 'error',
     });
   }
   if (card) {
@@ -176,7 +188,7 @@ export function ArNSPaymentSelector({
       through its rate, USDC at face value). Failing that, the token Crypto
       would open on, in its own unit. Never a guessed conversion.
     */
-    const fromUsd = cheapestUsd(sources, arioUsdRate, extraUsd);
+    const fromUsd = cheapestUsd(sources, usdRates, extraUsd);
     const payable = sources.some(isSelectable);
     choices.push({
       value: 'crypto',
@@ -219,24 +231,15 @@ export function ArNSPaymentSelector({
   };
 
   /*
-    Said only when the wallet that pays is not the one signed in, which today
-    means ARIO on an Arweave or Ethereum session: it comes from the linked
-    Solana wallet. Not when the host's wallet note is shown, though: that note
-    already names the paying wallet, and one screen says it once.
-  */
-  const paidFrom =
-    cryptoSource && cryptoSource.wallet !== session && !note
-      ? paidFromPhrase(cryptoSource.wallet)
-      : undefined;
-
-  /*
-    ARIO's "≈ $" is its ALL-IN price, SOL included, so it sits beside the
-    other rows' prices and the card's charge on equal terms. With the SOL cost
-    unknown there is no dollar figure at all rather than a partial one.
+    "≈ $" on every row whose dollar price is known, so the rows compare on one
+    scale. ARIO's is its ALL-IN price, SOL included, to sit beside the others
+    and the card's charge on equal terms; with its SOL cost unknown there is no
+    dollar figure rather than a partial one. A stablecoin's amount already is
+    dollars, so repeating it would only add a number.
   */
   const usdFor = (s: PaymentSource) => {
-    if (s.token !== 'ario') return undefined;
-    const allIn = sourceUsd(s, arioUsdRate, extraUsd ?? {});
+    if (DOLLAR_STABLECOINS.includes(s.token)) return undefined;
+    const allIn = sourceUsd(s, usdRates, extraUsd ?? {});
     return allIn !== undefined ? `≈ ${usd(allIn)}` : undefined;
   };
 
@@ -252,7 +255,6 @@ export function ArNSPaymentSelector({
             cryptoPreview={previewCrypto}
             onChange={onMethodChange}
             disabled={disabled}
-            note={note}
             crypto={{
               groups,
               selectedId: cryptoSource?.id,
@@ -260,7 +262,6 @@ export function ArNSPaymentSelector({
                 setLastCryptoId(id);
                 onSelect(id);
               },
-              note: paidFrom,
               usdFor,
               extraFor: (s) => extraCostLabel(s, extraSol),
             }}
@@ -271,7 +272,7 @@ export function ArNSPaymentSelector({
       {showSources && (
         // Auction modal (arioOnly): the same bottom margin it always had.
         <div className={arioOnly ? 'mb-3' : 'mt-3'}>
-          <p id={fundingHeadingId} className="mb-1 text-xs font-medium text-foreground/70">
+          <p id={fundingHeadingId} className="mb-2 text-sm font-medium">
             Funding source
           </p>
           <SegmentedControl

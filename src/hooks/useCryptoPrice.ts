@@ -312,3 +312,86 @@ export function useArioUsdRate(
 
   return data ?? undefined;
 }
+
+/**
+ * Dollars per whole token, for several tokens at once, from Turbo's own rates.
+ *
+ * The same derivation as `useArioUsdRate` (each token's winc rate against the
+ * dollar's, both scaled back to fee-free), so every figure on one screen comes
+ * from one source. ARIO is read through `useArioUsdRate` itself, sharing its
+ * cache entry, so a price table and a checkout on the same page cannot quote
+ * two ARIO rates. The dollar leg is fetched once for all tokens.
+ *
+ * A token whose quote has not landed, or failed, is absent: callers show no
+ * dollar figure for it rather than an estimate.
+ */
+export function useTokenUsdRates(
+  tokens: readonly SupportedTokenType[],
+  /** Off where the payment service is (x402-only mode): there is nothing to ask. */
+  enabled = true,
+): Partial<Record<SupportedTokenType, number>> {
+  const getCurrentConfig = useStore((s) => s.getCurrentConfig);
+  const config = getCurrentConfig();
+  const arioUsdRate = useArioUsdRate(enabled && tokens.includes('ario'));
+  const others = tokens.filter((t) => t !== 'ario');
+  const usdConfig = turboConfigFor(config, 'ario');
+
+  const { data: usdLeg } = useQuery({
+    queryKey: ['wincForOneUsd', usdConfig.paymentServiceConfig.url],
+    queryFn: async () => {
+      const turbo = TurboFactory.unauthenticated({ ...usdConfig, token: 'ario' as any });
+      const quote = await turbo.getWincForFiat({ amount: USD(1), promoCodes: [] });
+      return { winc: Number(quote.winc), fees: quote.fees };
+    },
+    enabled: enabled && others.length > 0,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+  });
+
+  const legs = useQueries({
+    queries: others.map((token) => {
+      const turboConfig = turboConfigFor(config, token);
+      return {
+        queryKey: ['wincForOneToken', token, turboConfig.paymentServiceConfig.url],
+        queryFn: async () => {
+          const turbo = TurboFactory.unauthenticated({ ...turboConfig, token: token as any });
+          const quote = await turbo.getWincForToken({
+            tokenAmount: getTokenSmallestUnit(token),
+          });
+          return { winc: Number(quote.winc), fees: quote.fees };
+        },
+        enabled,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+        retry: 2,
+      };
+    }),
+  });
+
+  // Stable while the quotes are: `useQueries` returns a fresh array each render.
+  const rates = others.map((token, i) => {
+    const leg = legs[i]?.data;
+    const rate =
+      leg && usdLeg
+        ? usdPerArioFromLegs({
+            // The arithmetic is token-agnostic: winc per whole token against
+            // winc per dollar, each net of its own fee.
+            wincPerArio: leg.winc,
+            wincPerUsd: usdLeg.winc,
+            usdFees: usdLeg.fees,
+            arioFees: leg.fees,
+          })
+        : undefined;
+    return `${token}=${rate ?? ''}`;
+  });
+  const signature = [...rates, `ario=${arioUsdRate ?? ''}`].join('|');
+  return useMemo(() => {
+    const out: Partial<Record<SupportedTokenType, number>> = {};
+    for (const entry of signature.split('|')) {
+      const [token, value] = entry.split('=') as [SupportedTokenType, string];
+      if (value && Number.isFinite(Number(value))) out[token] = Number(value);
+    }
+    return out;
+  }, [signature]);
+}

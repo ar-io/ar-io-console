@@ -48,10 +48,11 @@ import { withDiscountGateway } from '../purchase/operatorDiscount';
 import { useBalanceRead } from '../../payments/useBalanceRead';
 import {
   getTokenSmallestUnit,
-  useArioUsdRate,
   useSmallestUnitForWinc,
   useTokenPricesForWinc,
+  useTokenUsdRates,
 } from '../../../hooks/useCryptoPrice';
+import { heldLabel } from '../purchase/heldLabel';
 import {
   buildSources,
   preselectNameCheckoutOption,
@@ -317,7 +318,7 @@ export function ArNSPurchaseCard({
     transaction, so on an Arweave or Ethereum session the linked Solana wallet
     pays as well as holds, and the note says so rather than contradicting it.
   */
-  // The short form: it joins the picker's one status line.
+  // One sentence under the cost summary.
   const walletSplit = walletSplitPhrase({
     sessionWalletType,
     sessionAddress,
@@ -639,22 +640,27 @@ export function ArNSPurchaseCard({
     creditsPrice?.sponsoredCredits ? creditsPrice.sponsoredCredits * 1e12 : undefined,
     topUpTokens,
   );
-  const arioUsdRate = useArioUsdRate(!creditPurchasesUnavailable);
+  /*
+    Dollars per token, from Turbo's own rates, for every row the picker shows
+    plus ARIO and SOL: ARIO's all-in price is its ARIO and its SOL, each at its
+    own rate. SOL is asked for directly rather than backed out of a top-up
+    quote, which existed only on a Solana session; on an Arweave or Ethereum
+    session with a linked wallet ARIO had no dollar figure at all.
+  */
+  const usdTokens = useMemo(
+    () => [...new Set<SupportedTokenType>([...topUpTokens, 'ario', 'solana'])],
+    [topUpTokens],
+  );
+  const usdRates = useTokenUsdRates(usdTokens, !creditPurchasesUnavailable);
   /*
     What ARIO costs on top of its own price, in dollars: the SOL its route
     spends on the name's accounts and fee, which the sponsored routes do not.
-    Priced from figures already here (the card rate and the SOL quote for the
-    same credits), so it needs no new lookup; unknown leaves ARIO out of the
-    Crypto segment's "from $X" rather than comparing a partial price with
-    Card's all-in charge.
+    Unknown leaves ARIO out of the Crypto segment's "from $X" rather than
+    comparing a partial price with Card's all-in charge.
   */
-  const solUsd =
-    creditsPrice?.sponsoredCredits && creditsForOneUSD && tokenPrices.solana
-      ? creditsPrice.sponsoredCredits / creditsForOneUSD / tokenPrices.solana
-      : undefined;
   const arioExtraUsd =
-    cost?.gasTotalSol !== undefined && solUsd !== undefined
-      ? cost.gasTotalSol * solUsd
+    cost?.gasTotalSol !== undefined && usdRates.solana !== undefined
+      ? cost.gasTotalSol * usdRates.solana
       : undefined;
   const pickerSources = useMemo(
     () =>
@@ -1178,9 +1184,12 @@ export function ArNSPurchaseCard({
               <button
                 key={y}
                 onClick={() => setYears(y)}
+                // The checkout's one selected style, as on Lease / Permabuy
+                // above and Pay with below; a solid fill here was a second.
+                aria-pressed={years === y}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                   years === y
-                    ? 'border-primary bg-primary text-primary-foreground'
+                    ? 'border-primary bg-primary/10 text-foreground'
                     : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
                 }`}
               >
@@ -1206,7 +1215,6 @@ export function ArNSPurchaseCard({
       <div className="mb-4">
 
         <ArNSPaymentSelector
-          note={walletSplit}
           options={paymentOptions}
           selectedId={routedId}
           sources={pickerSources}
@@ -1216,7 +1224,7 @@ export function ArNSPurchaseCard({
             // What the card is actually charged; see `topUpUsd`.
             cardUsd: topUpUsd,
           }}
-          arioUsdRate={arioUsdRate}
+          usdRates={usdRates}
           extraUsd={{ ario: arioExtraUsd }}
           extraSol={{ ario: cost?.gasTotalSol }}
           fundingSource={fundingSource}
@@ -1230,6 +1238,26 @@ export function ArNSPurchaseCard({
       {/* Cost breakdown */}
       <div className="mb-4">
         <ArNSCostBreakdown
+          usdRates={usdRates}
+          walletLine={walletSplit}
+          heldLabel={heldLabel({
+            route,
+            // ARIO is read from the owner's wallet; every other balance
+            // belongs to the session.
+            signedIn: route.kind === 'ario' ? !!address : !!sessionAddress,
+            loading:
+              route.kind === 'topup' && sessionToken
+                ? sessionTokenBalance.loading
+                : balances.loading,
+            balances,
+            token:
+              route.kind === 'topup'
+                ? {
+                    held: heldForPayment,
+                    label: tokenLabels[route.token as SupportedTokenType],
+                  }
+                : undefined,
+          })}
           operatorDiscountArio={cost?.discountArio}
           operatorDiscountHint={!!operatorDiscount?.eligible}
           operatorDiscountChecking={operatorDiscountChecking}

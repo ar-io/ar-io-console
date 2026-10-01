@@ -297,8 +297,11 @@ export function groupSources(
   return groups;
 }
 
+/** Dollars per whole token, by token. A missing token has no known rate. */
+export type UsdRates = Partial<Record<SupportedTokenType, number>>;
+
 /** Tokens whose price in their own unit is, near enough, a price in dollars. */
-const DOLLAR_STABLECOINS: readonly SupportedTokenType[] = [
+export const DOLLAR_STABLECOINS: readonly SupportedTokenType[] = [
   'usdc',
   'base-usdc',
   'polygon-usdc',
@@ -306,9 +309,9 @@ const DOLLAR_STABLECOINS: readonly SupportedTokenType[] = [
 ];
 
 /**
- * A source's price in dollars, where one is known without a new lookup: ARIO
- * through the rate the checkout already fetches, and USDC at face value.
- * Anything else is `undefined` rather than estimated.
+ * A source's price in dollars: its amount times Turbo's fee-free rate for the
+ * token (`useTokenUsdRates`), or face value for a dollar stablecoin whose rate
+ * has not landed. Anything else is `undefined` rather than estimated.
  *
  * `extraUsd` is what a route costs on top of its own price, in dollars. ARIO
  * is the case: it is the buyer's own transaction, so the wallet also pays the
@@ -319,16 +322,17 @@ const DOLLAR_STABLECOINS: readonly SupportedTokenType[] = [
  */
 export function sourceUsd(
   source: PaymentSource,
-  arioUsdRate: number | undefined,
+  usdRates: UsdRates,
   extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>,
 ): number | undefined {
   if (source.price === undefined) return undefined;
-  let base: number | undefined;
-  if (source.token === 'ario') {
-    base = arioUsdRate !== undefined ? source.price * arioUsdRate : undefined;
-  } else {
-    base = DOLLAR_STABLECOINS.includes(source.token) ? source.price : undefined;
-  }
+  const rate = usdRates[source.token];
+  const base =
+    rate !== undefined
+      ? source.price * rate
+      : DOLLAR_STABLECOINS.includes(source.token)
+        ? source.price
+        : undefined;
   if (base === undefined || !extraUsd) return base;
   if (TOKENS_WITH_EXTRA_COST.includes(source.token)) {
     const extra = extraUsd[source.token];
@@ -355,7 +359,7 @@ export function extraCostLabel(
 ): string | undefined {
   if (!TOKENS_WITH_EXTRA_COST.includes(source.token)) return undefined;
   const sol = extraSol?.[source.token];
-  return sol === undefined ? '+ SOL network costs' : `+ ${formatSourceAmount(sol)} SOL`;
+  return sol === undefined ? '+ SOL network costs' : `+ ${formatNetworkSol(sol)} SOL`;
 }
 
 /**
@@ -367,16 +371,16 @@ export function extraCostLabel(
 export function applyBestPriceBadge(
   sources: PaymentSource[],
   {
-    arioUsdRate,
+    usdRates,
     extraUsd,
     cardUsd,
   }: {
-    arioUsdRate: number | undefined;
+    usdRates: UsdRates;
     extraUsd: Partial<Record<SupportedTokenType, number | undefined>>;
     cardUsd?: number;
   },
 ): PaymentSource[] {
-  const allIn = (s: PaymentSource) => sourceUsd(s, arioUsdRate, extraUsd);
+  const allIn = (s: PaymentSource) => sourceUsd(s, usdRates, extraUsd);
   return sources.map((source) => {
     if (!source.badge) return source;
     const mine = isSelectable(source) ? allIn(source) : undefined;
@@ -398,13 +402,13 @@ export function applyBestPriceBadge(
  */
 export function cheapestUsd(
   sources: PaymentSource[],
-  arioUsdRate: number | undefined,
+  usdRates: UsdRates,
   extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>,
 ): number | undefined {
   let best: number | undefined;
   for (const source of sources) {
     if (!isSelectable(source)) continue;
-    const usd = sourceUsd(source, arioUsdRate, extraUsd);
+    const usd = sourceUsd(source, usdRates, extraUsd);
     if (usd !== undefined && (best === undefined || usd < best)) best = usd;
   }
   return best;
@@ -550,6 +554,18 @@ export function formatSourceAmount(amount: number): string {
     return amount.toLocaleString(undefined, { maximumSignificantDigits: 4 });
   }
   return amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+/**
+ * An ESTIMATED Solana network cost (account rent plus fee): two significant
+ * figures, so 0.0105 reads 0.011. The figure is an upper bound and the wallet
+ * usually quotes less, so a third digit claims a precision the estimate does
+ * not have. An exact amount being sent (a SOL top-up) keeps
+ * `formatSourceAmount`'s four.
+ */
+export function formatNetworkSol(amount: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return '0';
+  return amount.toLocaleString(undefined, { maximumSignificantDigits: 2 });
 }
 
 /** "Not enough, need 6.61": the shortfall, in credits. */

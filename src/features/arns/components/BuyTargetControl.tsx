@@ -2,6 +2,10 @@ import { useEffect, useId, useMemo } from 'react';
 import { ChevronDown, File, FileText, Globe } from 'lucide-react';
 
 import {
+  SegmentedControl,
+  type Segment,
+} from '../../payments/components/PaymentPicker';
+import {
   describeBuyTarget,
   describeOptionMeta,
   resolveBuyTarget,
@@ -59,6 +63,7 @@ export function BuyTargetControl({
 }: BuyTargetControlProps) {
   const inputId = useId();
   const panelId = useId();
+  const headingId = useId();
 
   const resolved = useMemo(() => resolveBuyTarget(value), [value]);
   // Read once per render rather than per row, so every date on screen is
@@ -94,12 +99,12 @@ export function BuyTargetControl({
     is a dead end, and it looks broken to exactly the people most likely to be
     new to this.
   */
-  const segments: Array<{ mode: BuyTargetMode; label: string }> = [
-    { mode: 'default', label: 'Default' },
+  const segments: Segment<BuyTargetMode>[] = [
+    { value: 'default', label: 'Default' },
     ...(options.length > 0
-      ? [{ mode: 'deployment' as BuyTargetMode, label: 'Recent' }]
+      ? [{ value: 'deployment' as BuyTargetMode, label: 'Recent' }]
       : []),
-    { mode: 'custom', label: 'Paste ID' },
+    { value: 'custom', label: 'Paste ID' },
   ];
 
   const selectMode = (mode: BuyTargetMode) => {
@@ -129,7 +134,7 @@ export function BuyTargetControl({
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-foreground">
+          <span id={headingId} className="block text-sm font-medium text-foreground">
             Points at
           </span>
           <span className="block truncate text-xs text-foreground/60">
@@ -147,33 +152,20 @@ export function BuyTargetControl({
       {open && (
         <div id={panelId} className="border-t border-border/20 p-3">
           {/*
-            `aria-pressed` buttons, not a tablist. Tab semantics promise a
-            tabpanel per tab and the Default segment has no panel at all, so
-            the roles would describe a structure that isn't there — worse for a
-            screen reader than plain buttons. Matches the rest of this card.
+            The checkout's own segmented control, so this choice looks and
+            behaves like Pay with and Funding source: the same lavender
+            selected state (a solid fill here was a second selection language
+            on one card) and arrow keys between segments. A radio group, not a
+            tablist: tab semantics promise a panel per tab, and Default has
+            none.
           */}
-          <div
-            role="group"
-            aria-label="Where the name points"
-            className="flex w-full rounded-full border border-border/20 bg-background p-1"
-          >
-            {segments.map(({ mode, label }) => (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={value.mode === mode}
-                disabled={disabled}
-                onClick={() => selectMode(mode)}
-                className={`flex-1 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 sm:text-sm ${
-                  value.mode === mode
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground/70 hover:text-foreground'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            segments={segments}
+            value={value.mode}
+            onChange={selectMode}
+            labelledBy={headingId}
+            disabled={disabled}
+          />
 
           {value.mode === 'deployment' && (
             /* Capped so a long history can't bury the payment step. The partial

@@ -30,10 +30,11 @@ import { useStore } from '../../../store/useStore';
 import { walletSplitPhrase } from '../purchase/walletRoles';
 import {
   getTokenSmallestUnit,
-  useArioUsdRate,
   useSmallestUnitForWinc,
   useTokenPricesForWinc,
+  useTokenUsdRates,
 } from '../../../hooks/useCryptoPrice';
+import { heldLabel } from '../purchase/heldLabel';
 import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
 import { useOperatorDiscountGateway } from '../hooks/useOperatorDiscountGateway';
 import { withDiscountGateway } from '../purchase/operatorDiscount';
@@ -166,7 +167,7 @@ export default function ManageDomainModal({
     transaction, so on an Arweave or Ethereum session the linked Solana wallet
     pays as well as holds, and the note says so rather than contradicting it.
   */
-  // The short form: it joins the picker's one status line.
+  // One sentence under the cost summary.
   const walletSplit = walletSplitPhrase({
     sessionWalletType,
     sessionAddress,
@@ -320,22 +321,21 @@ export default function ManageDomainModal({
     creditsPrice?.sponsoredCredits ? creditsPrice.sponsoredCredits * 1e12 : undefined,
     topUpTokens,
   );
-  const arioUsdRate = useArioUsdRate();
+  // Dollars per token for every row, plus ARIO and SOL; see ArNSPurchaseCard.
+  const usdTokens = useMemo(
+    () => [...new Set<SupportedTokenType>([...topUpTokens, 'ario', 'solana'])],
+    [topUpTokens],
+  );
+  const usdRates = useTokenUsdRates(usdTokens, !creditPurchasesUnavailable);
   /*
     What ARIO costs on top of its own price, in dollars: the SOL its route
     spends on the name's accounts and fee, which the sponsored routes do not.
-    Priced from figures already here (the card rate and the SOL quote for the
-    same credits), so it needs no new lookup; unknown leaves ARIO out of the
-    Crypto segment's "from $X" rather than comparing a partial price with
-    Card's all-in charge.
+    Unknown leaves ARIO out of the Crypto segment's "from $X" rather than
+    comparing a partial price with Card's all-in charge.
   */
-  const solUsd =
-    creditsPrice?.sponsoredCredits && creditsForOneUSD && tokenPrices.solana
-      ? creditsPrice.sponsoredCredits / creditsForOneUSD / tokenPrices.solana
-      : undefined;
   const arioExtraUsd =
-    cost?.gasTotalSol !== undefined && solUsd !== undefined
-      ? cost.gasTotalSol * solUsd
+    cost?.gasTotalSol !== undefined && usdRates.solana !== undefined
+      ? cost.gasTotalSol * usdRates.solana
       : undefined;
   const pickerSources = useMemo(
     () =>
@@ -501,7 +501,7 @@ export default function ManageDomainModal({
                       disabled={isBusy}
                       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
                         action === a
-                          ? 'border-primary bg-primary text-primary-foreground'
+                          ? 'border-primary bg-primary/10 text-foreground'
                           : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
                       }`}
                     >
@@ -527,7 +527,7 @@ export default function ManageDomainModal({
                       disabled={isBusy}
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
                         years === y
-                          ? 'border-primary bg-primary text-primary-foreground'
+                          ? 'border-primary bg-primary/10 text-foreground'
                           : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
                       }`}
                     >
@@ -551,7 +551,7 @@ export default function ManageDomainModal({
                       disabled={isBusy}
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
                         qty === n
-                          ? 'border-primary bg-primary text-primary-foreground'
+                          ? 'border-primary bg-primary/10 text-foreground'
                           : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
                       }`}
                     >
@@ -581,9 +581,6 @@ export default function ManageDomainModal({
             {/* Payment method + source */}
             <div className="mb-4">
               <ArNSPaymentSelector
-                // Under "Pay with", as on the registration checkout, so the
-                // picker knows the paying wallet is already named.
-                note={walletSplit}
                 options={paymentOptions}
                 selectedId={selectedOption?.id ?? ''}
                 sources={pickerSources}
@@ -592,7 +589,7 @@ export default function ManageDomainModal({
                   credits: creditsPrice?.sponsoredCredits,
                   cardUsd: creditsPrice?.usd,
                 }}
-                arioUsdRate={arioUsdRate}
+                usdRates={usdRates}
                 extraUsd={{ ario: arioExtraUsd }}
           extraSol={{ ario: cost?.gasTotalSol }}
                 fundingSource={fundingSource}
@@ -617,6 +614,25 @@ export default function ManageDomainModal({
                 </p>
               )}
               <ArNSCostBreakdown
+                usdRates={usdRates}
+                walletLine={walletSplit}
+                heldLabel={heldLabel({
+                  route,
+                  // ARIO is read from the owner's wallet; every other balance
+                  // belongs to the session.
+                  signedIn: route.kind === 'ario' ? !!address : !!sessionAddress,
+                  loading: balances.loading,
+                  balances,
+                  /*
+                    This modal reads no balance for a top-up token but SOL, so
+                    the row is shown for SOL alone rather than as "unavailable"
+                    for a balance it never asked for.
+                  */
+                  token:
+                    route.kind === 'topup' && route.token === 'solana'
+                      ? { held: balances.sol, label: tokenLabels.solana }
+                      : undefined,
+                })}
                 operatorDiscountArio={cost?.discountArio}
                 operatorDiscountHint={!!operatorDiscount?.eligible}
                 operatorDiscountChecking={operatorDiscountChecking}

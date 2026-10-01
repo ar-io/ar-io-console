@@ -28,6 +28,8 @@ import { useReturnedName } from '../hooks/useReturnedNames';
 import { auctionMultiplier, formatCountdown } from '../returnedNamePricing';
 import { ArNSFundingSource, ArNSPaymentSelector } from './ArNSPaymentSelector';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
+import { heldLabel } from '../purchase/heldLabel';
+import { useTokenUsdRates } from '../../../hooks/useCryptoPrice';
 import EditDetailsModal from './EditDetailsModal';
 import ReturnedNamePremiumChart from './ReturnedNamePremiumChart';
 import { toUnicodeName } from '@/utils/punycode';
@@ -35,6 +37,7 @@ import ModalHeader from '../../../components/modals/ModalHeader';
 import TransactionReceipt from './TransactionReceipt';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
+const AUCTION_TOKENS = ['ario', 'solana'] as const;
 
 interface ReturnedNameBuyModalProps {
   name: string;
@@ -81,6 +84,8 @@ export default function ReturnedNameBuyModal({
 
   const signerAddress = signer.address ?? undefined;
   const balances = useArNSPaymentBalances(signerAddress);
+  // The auction is paid in ARIO and SOL; their rates give the dollar total.
+  const usdRates = useTokenUsdRates(AUCTION_TOKENS);
   // An operations wallet names its gateway; an operator's own is tried by the
   // SDK. Auctions are ARIO-only, so the operations scan may run here.
   const { discount: operatorDiscount, checking: operatorDiscountChecking } =
@@ -317,7 +322,7 @@ export default function ReturnedNameBuyModal({
                       onClick={() => setYears(y)}
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                         years === y
-                          ? 'border-primary bg-primary text-primary-foreground'
+                          ? 'border-primary bg-primary/10 text-foreground'
                           : 'border-border/20 bg-card text-foreground/70 hover:border-primary/40'
                       }`}
                     >
@@ -345,6 +350,13 @@ export default function ReturnedNameBuyModal({
             {/* Cost breakdown */}
             <div className="mb-4">
               <ArNSCostBreakdown
+                usdRates={usdRates}
+                heldLabel={heldLabel({
+                  route: { kind: 'ario', fundFrom: fundingSource },
+                  signedIn: !!signerAddress,
+                  loading: balances.loading,
+                  balances,
+                })}
                 operatorDiscountArio={cost?.discountArio}
                 operatorDiscountChecking={operatorDiscountChecking}
                 priceUnit="ario"

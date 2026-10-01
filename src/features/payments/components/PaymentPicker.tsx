@@ -173,7 +173,7 @@ export function PaymentPicker({
 
   return (
     <div>
-      <p id={headingId} className="mb-1 block text-sm font-medium">
+      <p id={headingId} className="mb-2 block text-sm font-medium">
         {heading}
       </p>
       <SegmentedControl
@@ -345,11 +345,12 @@ export function CryptoSourceListbox({
   const selected = all.find((s) => s.id === selectedId) ?? all[0];
   if (!selected) return null;
 
-  const held =
-    selected.balance !== undefined
-      ? `Balance ${formatHeldBalance(selected.balance)} ${selected.label}`
-      : undefined;
-  const statusParts = [held, selected.wait, note].filter(Boolean);
+  /*
+    No balance here: the open list shows each row's, and the host's cost
+    summary shows the chosen one beside the price it has to cover. A third
+    copy under the select said the same number twice on one screen.
+  */
+  const statusParts = [selected.wait, note].filter(Boolean);
   const status = selected.disabledReason ? (
     <StatusLine tone="error">{selected.disabledReason}</StatusLine>
   ) : statusParts.length > 0 ? (

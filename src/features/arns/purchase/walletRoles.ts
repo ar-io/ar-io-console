@@ -118,14 +118,18 @@ function formatNeeded(amount: number): string {
 }
 
 /**
- * `walletSplitNote` as a phrase that fits the payment picker's one status
- * line: lower case, no sentence punctuation, short enough to share a line
- * with "You have 3.11 credits" on a phone. Same conditions, same facts.
+ * `walletSplitNote` as the one line under the checkout's cost summary. Same
+ * conditions, same facts, but it never names the wallet that pays unless that
+ * is the linked one: on a card route "you'll pay from your Ethereum wallet"
+ * is not true, and the line is there to say where the NAME goes.
  *
  * - The linked wallet pays (ARIO on an Arweave or Ethereum session):
- *   "paid from your linked Solana wallet".
- * - The session wallet pays and the linked one holds the name:
- *   "name held by your linked Solana wallet 7xKX…9fA2".
+ *   "Your linked Solana wallet, 7xKX…9fA2, pays for and holds the name."
+ * - Otherwise: "The name is held by your linked Solana wallet, 7xKX…9fA2."
+ *
+ * It replaced a lower-case phrase on the payment picker's status line, which
+ * read "name held by your linked Solana wallet 7xKX…9fA2" under Card: a
+ * fragment about ownership sitting where a payment method's status belongs.
  */
 export function walletSplitPhrase(input: {
   sessionWalletType: SessionWalletType;
@@ -137,7 +141,7 @@ export function walletSplitPhrase(input: {
   if (!sessionWalletType || !sessionAddress || !ownerAddress) return undefined;
   if (sessionAddress === ownerAddress) return undefined;
   if (payingWalletType === 'solana' && sessionWalletType !== 'solana') {
-    return 'paid from your linked Solana wallet';
+    return `Your linked Solana wallet, ${shortAddress(ownerAddress)}, pays for and holds the name.`;
   }
-  return `name held by your linked Solana wallet ${shortAddress(ownerAddress)}`;
+  return `The name is held by your linked Solana wallet, ${shortAddress(ownerAddress)}.`;
 }

@@ -17,6 +17,7 @@ import {
   buildSources,
   cheapestUsd,
   extraCostLabel,
+  formatNetworkSol,
   creditsShortReason,
   formatSourceAmount,
   groupSources,
@@ -211,17 +212,27 @@ describe('dollar prices', () => {
     prices: { ario: 100, solana: 0.02, 'solana-usdc': 3.1 },
   });
 
+  it('prices any token through its rate, and USDC at face value without one', () => {
+    const by = (t: string) => sources.find((x) => x.token === t)!;
+    // 0.02 SOL at $150.
+    expect(sourceUsd(by('solana'), { solana: 150 })).toBeCloseTo(3);
+    // A known rate wins over face value, which is only the fallback.
+    expect(sourceUsd(by('solana-usdc'), { 'solana-usdc': 0.999 })).toBeCloseTo(3.0969);
+    // Every token priced: the cheapest of all of them, not just ARIO and USDC.
+    expect(cheapestUsd(sources, { ario: 0.05, solana: 100 })).toBeCloseTo(2);
+  });
+
   it('prices ARIO through the rate and USDC at face value, nothing else', () => {
     const by = (t: string) => sources.find((x) => x.token === t)!;
-    expect(sourceUsd(by('ario'), 0.02)).toBeCloseTo(2);
-    expect(sourceUsd(by('ario'), undefined)).toBeUndefined();
-    expect(sourceUsd(by('solana-usdc'), undefined)).toBe(3.1);
-    expect(sourceUsd(by('solana'), 0.02)).toBeUndefined();
+    expect(sourceUsd(by('ario'), { ario: 0.02 })).toBeCloseTo(2);
+    expect(sourceUsd(by('ario'), {})).toBeUndefined();
+    expect(sourceUsd(by('solana-usdc'), {})).toBe(3.1);
+    expect(sourceUsd(by('solana'), { ario: 0.02 })).toBeUndefined();
   });
 
   it('finds the cheapest known dollar price', () => {
-    expect(cheapestUsd(sources, 0.02)).toBeCloseTo(2);
-    expect(cheapestUsd(sources, undefined)).toBe(3.1);
+    expect(cheapestUsd(sources, { ario: 0.02 })).toBeCloseTo(2);
+    expect(cheapestUsd(sources, {})).toBe(3.1);
   });
 
   it('skips sources that cannot be paid with', () => {
@@ -229,31 +240,44 @@ describe('dollar prices', () => {
       prices: { ario: 100, 'solana-usdc': 3.1 },
       balances: { ario: 1 },
     }).sources;
-    expect(cheapestUsd(blocked, 0.02)).toBe(3.1);
+    expect(cheapestUsd(blocked, { ario: 0.02 })).toBe(3.1);
   });
 
   it('adds ARIO\'s SOL cost when it is known, so it is compared all-in', () => {
     const by = (t: string) => sources.find((x) => x.token === t)!;
     // 100 ARIO at $0.02 is $2, plus $1.50 of SOL for the name's accounts.
-    expect(sourceUsd(by('ario'), 0.02, { ario: 1.5 })).toBeCloseTo(3.5);
-    expect(cheapestUsd(sources, 0.02, { ario: 1.5 })).toBe(3.1);
-    expect(cheapestUsd(sources, 0.02, { ario: 0.5 })).toBeCloseTo(2.5);
+    expect(sourceUsd(by('ario'), { ario: 0.02 }, { ario: 1.5 })).toBeCloseTo(3.5);
+    expect(cheapestUsd(sources, { ario: 0.02 }, { ario: 1.5 })).toBe(3.1);
+    expect(cheapestUsd(sources, { ario: 0.02 }, { ario: 0.5 })).toBeCloseTo(2.5);
   });
 
   it('leaves ARIO out of "from $X" when its SOL cost is unknown', () => {
     const by = (t: string) => sources.find((x) => x.token === t)!;
-    expect(sourceUsd(by('ario'), 0.02, { ario: undefined })).toBeUndefined();
-    expect(sourceUsd(by('ario'), 0.02, {})).toBeUndefined();
-    expect(cheapestUsd(sources, 0.02, {})).toBe(3.1);
+    expect(sourceUsd(by('ario'), { ario: 0.02 }, { ario: undefined })).toBeUndefined();
+    expect(sourceUsd(by('ario'), { ario: 0.02 }, {})).toBeUndefined();
+    expect(cheapestUsd(sources, { ario: 0.02 }, {})).toBe(3.1);
   });
 
   it('prices a token with no extra cost as before when extras are passed', () => {
     const by = (t: string) => sources.find((x) => x.token === t)!;
-    expect(sourceUsd(by('solana-usdc'), 0.02, { ario: 1 })).toBe(3.1);
+    expect(sourceUsd(by('solana-usdc'), { ario: 0.02 }, { ario: 1 })).toBe(3.1);
   });
 
   it('knows nothing when nothing is priced', () => {
-    expect(cheapestUsd(nameCheckout('ethereum').sources, 0.02)).toBeUndefined();
+    expect(cheapestUsd(nameCheckout('ethereum').sources, { ario: 0.02 })).toBeUndefined();
+  });
+});
+
+describe('formatNetworkSol', () => {
+  it('rounds an estimate to two significant figures', () => {
+    expect(formatNetworkSol(0.0105)).toBe('0.011');
+    expect(formatNetworkSol(0.0557)).toBe('0.056');
+    expect(formatNetworkSol(0.000005)).toBe('0.000005');
+  });
+
+  it('says 0 for nothing, or a value that is not a number', () => {
+    expect(formatNetworkSol(0)).toBe('0');
+    expect(formatNetworkSol(Number.NaN)).toBe('0');
   });
 });
 
@@ -631,7 +655,7 @@ describe('ARIO priced all-in on its row', () => {
   const sol = sources.find((x) => x.token === 'solana')!;
 
   it('names the SOL it adds when known, and says so when not', () => {
-    expect(extraCostLabel(ario, { ario: 0.0557 })).toBe('+ 0.0557 SOL');
+    expect(extraCostLabel(ario, { ario: 0.0557 })).toBe('+ 0.056 SOL');
     expect(extraCostLabel(ario, { ario: undefined })).toBe('+ SOL network costs');
     expect(extraCostLabel(ario)).toBe('+ SOL network costs');
   });
@@ -651,36 +675,36 @@ describe('applyBestPriceBadge', () => {
   it('keeps it when ARIO all-in is the cheapest known way to pay', () => {
     // $2 of ARIO + $1 of SOL = $3, under $5 of USDC and a $9 card.
     expect(
-      badge(applyBestPriceBadge(priced, { arioUsdRate: 0.02, extraUsd: { ario: 1 }, cardUsd: 9 })),
+      badge(applyBestPriceBadge(priced, { usdRates: { ario: 0.02 }, extraUsd: { ario: 1 }, cardUsd: 9 })),
     ).toBe('Best price');
   });
 
   it('drops it when a token is cheaper all-in', () => {
     // $2 + $4 of SOL = $6, over $5 of USDC.
     expect(
-      badge(applyBestPriceBadge(priced, { arioUsdRate: 0.02, extraUsd: { ario: 4 }, cardUsd: 9 })),
+      badge(applyBestPriceBadge(priced, { usdRates: { ario: 0.02 }, extraUsd: { ario: 4 }, cardUsd: 9 })),
     ).toBeUndefined();
   });
 
   it('drops it when the card is cheaper', () => {
     expect(
-      badge(applyBestPriceBadge(priced, { arioUsdRate: 0.02, extraUsd: { ario: 1 }, cardUsd: 2.5 })),
+      badge(applyBestPriceBadge(priced, { usdRates: { ario: 0.02 }, extraUsd: { ario: 1 }, cardUsd: 2.5 })),
     ).toBeUndefined();
   });
 
   it('drops it when ARIO\'s all-in price is unknown', () => {
     expect(
-      badge(applyBestPriceBadge(priced, { arioUsdRate: 0.02, extraUsd: {}, cardUsd: 9 })),
+      badge(applyBestPriceBadge(priced, { usdRates: { ario: 0.02 }, extraUsd: {}, cardUsd: 9 })),
     ).toBeUndefined();
     expect(
-      badge(applyBestPriceBadge(priced, { arioUsdRate: undefined, extraUsd: { ario: 1 }, cardUsd: 9 })),
+      badge(applyBestPriceBadge(priced, { usdRates: {}, extraUsd: { ario: 1 }, cardUsd: 9 })),
     ).toBeUndefined();
   });
 
   it('keeps it when nothing else has a known price to beat it', () => {
     const onlyArio = nameCheckout('solana', { prices: { ario: 100 } }).sources;
     expect(
-      badge(applyBestPriceBadge(onlyArio, { arioUsdRate: 0.02, extraUsd: { ario: 1 } })),
+      badge(applyBestPriceBadge(onlyArio, { usdRates: { ario: 0.02 }, extraUsd: { ario: 1 } })),
     ).toBe('Best price');
   });
 
@@ -690,7 +714,7 @@ describe('applyBestPriceBadge', () => {
       balances: { ario: 1 },
     }).sources;
     expect(
-      badge(applyBestPriceBadge(blocked, { arioUsdRate: 0.02, extraUsd: { ario: 1 } })),
+      badge(applyBestPriceBadge(blocked, { usdRates: { ario: 0.02 }, extraUsd: { ario: 1 } })),
     ).toBeUndefined();
   });
 
@@ -700,7 +724,7 @@ describe('applyBestPriceBadge', () => {
       balances: { 'solana-usdc': 0 },
     }).sources;
     expect(
-      badge(applyBestPriceBadge(cheapBlocked, { arioUsdRate: 0.02, extraUsd: { ario: 1 }, cardUsd: 9 })),
+      badge(applyBestPriceBadge(cheapBlocked, { usdRates: { ario: 0.02 }, extraUsd: { ario: 1 }, cardUsd: 9 })),
     ).toBe('Best price');
   });
 });
