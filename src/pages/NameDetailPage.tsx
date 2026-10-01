@@ -8,11 +8,8 @@ import {
   Globe,
   Layers,
   Loader2,
-  Shuffle,
-  Send,
   Star,
   Tag,
-  Trash2,
   Users,
 } from 'lucide-react';
 
@@ -98,19 +95,29 @@ function SectionCard({
   );
 }
 
-/** A section's action: small, quiet, in the brand's accent. */
+/**
+ * A section's action: small and quiet. `danger` marks the owner's
+ * irreversible ones in red; each opens a modal with its own warning and
+ * confirmation, so the link itself need not be loud.
+ */
 function SectionAction({
   label,
   onClick,
+  danger,
+  className = '-mr-2',
 }: {
   label: string;
   onClick: () => void;
+  danger?: boolean;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="-mr-2 flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+      className={`${className} flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
+        danger ? 'text-error hover:bg-error/10' : 'text-primary hover:bg-primary/10'
+      }`}
     >
       {label}
     </button>
@@ -495,11 +502,12 @@ export default function NameDetailPage() {
               )}
               {ownerOnly && (
                 // The last row's own divider already separates these.
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <ActionBtn icon={Send} label="Transfer" danger onClick={() => setOpen('transfer')} />
-                  <ActionBtn icon={Shuffle} label="Reassign" danger onClick={() => openOwnerAction('reassign')} />
+                // -ml-2 lines the first label's text up with the row labels.
+                <div className="-ml-2 mt-2 flex flex-wrap gap-1">
+                  <SectionAction danger className="" label="Transfer" onClick={() => setOpen('transfer')} />
+                  <SectionAction danger className="" label="Reassign" onClick={() => openOwnerAction('reassign')} />
                   {record.type === 'permabuy' && (
-                    <ActionBtn icon={Trash2} label="Release" danger onClick={() => openOwnerAction('release')} />
+                    <SectionAction danger className="" label="Release" onClick={() => openOwnerAction('release')} />
                   )}
                 </div>
               )}
@@ -590,33 +598,5 @@ export default function NameDetailPage() {
         </>
       ) : null}
     </div>
-  );
-}
-
-function ActionBtn({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-  disabled,
-}: {
-  icon: typeof Globe;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-        danger
-          ? 'border-error/30 text-error enabled:hover:bg-error/10'
-          : 'border-border/20 bg-background text-foreground enabled:hover:border-primary/40'
-      }`}
-    >
-      <Icon className="h-4 w-4" /> {label}
-    </button>
   );
 }

@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  Crosshair,
   Globe,
   Loader2,
   Pencil,
@@ -101,12 +100,6 @@ export default function RecordsTable({
   undernameLimit,
   onSuccess,
 }: RecordsTableProps) {
-  /*
-    Bumped by the header's "Edit target": opens the `@` row's editor and
-    scrolls it into view. Waits for the record to load, so the editor is never
-    seeded with an empty target that a save would then write.
-  */
-  const [editApexRequest, setEditApexRequest] = useState(0);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(0);
   /** Row key currently expanded for editing, or '__new__' for the add form. */
@@ -242,41 +235,6 @@ export default function RecordsTable({
     setOriginal(undefined);
     setEditKey('__new__');
   };
-  /*
-    The "Edit target" shortcut. Seeded with the current request so a
-    remount never replays an old click. It waits while a save is in flight (a
-    row pencil is disabled then too) and until the record loads, so the editor
-    is never seeded with an empty target. An editor already open on `@` keeps
-    what the user typed: the shortcut then only brings it back into view.
-  */
-  const handledApexRequest = useRef(editApexRequest);
-  const [focusApexTarget, setFocusApexTarget] = useState(0);
-  useEffect(() => {
-    if (editApexRequest === handledApexRequest.current) return;
-    if (!canManage || !ant || busy) return;
-    const apex = allRows.find((r) => r.kind === 'apex');
-    if (!apex) return;
-    handledApexRequest.current = editApexRequest;
-    setQ('');
-    setPage(0);
-    if (editKey !== APEX) openEdit(apex);
-    setFocusApexTarget(editApexRequest);
-    // openEdit only sets state, and editKey is read, not reacted to.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editApexRequest, canManage, ant, busy, allRows]);
-  // Runs after the editor has rendered, so the target field exists. Focus
-  // moves with the view, so keyboard and screen-reader users land in the field
-  // rather than on a button far below it.
-  useEffect(() => {
-    if (!focusApexTarget || editKey !== APEX) return;
-    setFocusApexTarget(0);
-    const field = document.getElementById(`rec-${APEX}-target`);
-    if (!field) return;
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    field.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
-    field.focus({ preventScroll: true });
-  }, [focusApexTarget, editKey]);
-
   const close = () => {
     setEditKey(null);
     setRowError(null);
@@ -470,22 +428,6 @@ export default function RecordsTable({
               className="w-full rounded-full border border-border/20 bg-background py-1.5 pl-8 pr-3 text-sm focus:border-primary sm:w-52"
             />
           </div>
-          {/*
-            The `@` record's target, under the name people coming from
-            arns.ar.io look for ("Target ID"). It sat in a Manage row at the
-            foot of the page, away from the record it edits; here it is beside
-            it. Disabled until the record loads, since it opens that editor.
-          */}
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => setEditApexRequest((n) => n + 1)}
-              disabled={!ant || busy}
-              className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border border-border/20 bg-background px-3 py-1.5 text-sm font-medium text-foreground transition-colors enabled:hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Crosshair className="h-3.5 w-3.5" /> Edit target
-            </button>
-          )}
           {canManage && (
             <button
               onClick={openAdd}
