@@ -130,13 +130,11 @@ export function createsAccounts(action: string): boolean {
  * fraction of a SOL has no way to know that from the sentence.
  */
 export function selfSignedCostNote(action: string): string {
-  const base = 'Your wallet signs this and pays the Solana costs directly, not credits.';
-  if (!createsAccounts(action)) return base;
-  return (
-    `${base} Budget around ${MIN_SOL_FOR_ACCOUNT_CREATION} SOL rather than a bare ` +
-    'signature fee: sending to a wallet that has never held an ArNS name also ' +
-    'creates accounts on chain, and those owe rent.'
-  );
+  if (!createsAccounts(action)) {
+    return 'Your wallet pays the Solana fee in SOL, not credits.';
+  }
+  // The figure, not the reason: rent on accounts it may create is why.
+  return `Your wallet pays up to about ${MIN_SOL_FOR_ACCOUNT_CREATION} SOL, not credits.`;
 }
 
 /**
@@ -176,7 +174,7 @@ export function solRailRequirementNote(
   );
   const need =
     creating.length > 0 ? MIN_SOL_FOR_ACCOUNT_CREATION : MIN_SOL_FOR_RECORD_WRITE;
-  const base = `To sign it yourself instead, the owning wallet needs about ${need} SOL`;
+  const base = `To pay with SOL instead, the owning wallet needs about ${need} SOL`;
   if (creating.length === 0) return `${base}.`;
 
   // Name the culprit when only one of the two creates anything, so the other
@@ -185,7 +183,7 @@ export function solRailRequirementNote(
     creating.length === 1 && secondaryAction
       ? (ACTION_GERUND[creating[0]] ?? 'that')
       : 'this';
-  return `${base} — ${which} creates accounts on chain, which owe rent.`;
+  return `${base}, because ${which} creates accounts on chain.`;
 }
 
 /**
@@ -211,8 +209,6 @@ export function chooseWriter(
   funds?: WriterFunds,
   preference?: WriterPreference,
   rail: {
-    /** Credits stay the default; SOL is only the offered alternative. */
-    creditsFirst?: boolean;
     /** SOL the owner must hold for the SOL rail to count as payable. */
     minSol?: number;
   } = {},
@@ -245,10 +241,7 @@ export function chooseWriter(
     credits === undefined || price === undefined || credits >= price;
 
   if (solOk && creditsOk) {
-    const useCredits = rail.creditsFirst
-      ? preference !== 'sol'
-      : preference === 'credits';
-    return useCredits
+    return preference === 'credits'
       ? { kind: 'sponsored', reason: 'owner', alternative: 'self-signed' }
       : { kind: 'self-signed', reason: 'owner-sol', alternative: 'sponsored' };
   }
@@ -357,17 +350,16 @@ export function chooseOwnerActionWriter(
   /*
     A transfer can create rent-exempt accounts for up to four ACL entries in
     one transaction, and adding a controller two: each far more than the fee
-    `MIN_SOL_FOR_RECORD_WRITE` budgets for. Defaulting those to SOL at that
-    threshold would hand a wallet holding 0.003 SOL a transaction it cannot
-    fund, where credits used to just work. So they stay on credits, and SOL is
-    offered only with a clear margin.
+    `MIN_SOL_FOR_RECORD_WRITE` budgets for. So SOL is the default for them
+    too, but only above the account-creation threshold; below it a wallet
+    would be handed a transaction it might not fund, and credits stay.
   */
   return chooseWriter(
     'owner',
     funds,
     preference,
     action && createsAccounts(action)
-      ? { creditsFirst: true, minSol: MIN_SOL_FOR_ACCOUNT_CREATION }
+      ? { minSol: MIN_SOL_FOR_ACCOUNT_CREATION }
       : {},
   );
 }

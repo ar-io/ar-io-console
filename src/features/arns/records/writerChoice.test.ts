@@ -284,7 +284,6 @@ describe('what the SOL rail actually costs', () => {
     // owner's — up to four rent-exempt accounts, not a signature fee.
     for (const action of ['transfer', 'add-controller']) {
       expect(createsAccounts(action)).toBe(true);
-      expect(selfSignedCostNote(action)).toMatch(/creates accounts on chain/);
       // Budgeted at the account-creation figure, not the bare record write.
       expect(selfSignedCostNote(action)).toContain(String(MIN_SOL_FOR_ACCOUNT_CREATION));
     }
@@ -292,12 +291,14 @@ describe('what the SOL rail actually costs', () => {
 
   it('does not invent a rent cost for actions that create nothing', () => {
     expect(createsAccounts('remove-controller')).toBe(false);
-    expect(selfSignedCostNote('remove-controller')).not.toMatch(/creates accounts/);
+    expect(selfSignedCostNote('remove-controller')).not.toContain(
+      String(MIN_SOL_FOR_ACCOUNT_CREATION),
+    );
   });
 
   it('always says the rail is SOL, not credits', () => {
     for (const action of ['transfer', 'remove-controller']) {
-      expect(selfSignedCostNote(action)).toMatch(/pays the Solana costs directly, not credits/);
+      expect(selfSignedCostNote(action)).toMatch(/SOL, not credits/);
     }
   });
 
