@@ -4,7 +4,6 @@ import {
   Globe,
   Loader2,
   Pencil,
-  Plus,
   Search,
   Trash2,
   X,
@@ -433,9 +432,11 @@ export default function RecordsTable({
               onClick={openAdd}
               disabled={atLimit || isAdding}
               title={atLimit ? 'Undername limit reached. Add slots from Overview.' : undefined}
-              className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              // The page's section-action style ("Edit", "Manage"), not a
+              // filled button: one primary action per page, and this isn't it.
+              className="-mr-2 flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-primary transition-colors enabled:hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Plus className="h-3.5 w-3.5" /> Add
+              Add record
             </button>
           )}
         </div>

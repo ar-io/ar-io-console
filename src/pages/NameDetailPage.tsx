@@ -81,7 +81,8 @@ function SectionCard({
 }) {
   return (
     <div className="rounded-2xl border border-border/20 bg-card p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      {/* Wraps so a card with several actions (Ownership) never crowds its title. */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <div className="flex min-w-0 items-center gap-2">
           <Icon className="h-4 w-4 flex-shrink-0 text-primary" />
           <h2 className="truncate font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
@@ -469,7 +470,21 @@ export default function NameDetailPage() {
             {/* Ownership: who holds the name, and the owner's actions that
                 change that. Set apart in red because none of them is undone
                 by the same button. */}
-            <SectionCard title="Ownership" icon={Layers}>
+            <SectionCard
+              title="Ownership"
+              icon={Layers}
+              action={
+                ownerOnly && (
+                  <div className="-mr-2 flex flex-wrap justify-end gap-x-1">
+                    <SectionAction danger className="" label="Transfer" onClick={() => setOpen('transfer')} />
+                    <SectionAction danger className="" label="Reassign" onClick={() => openOwnerAction('reassign')} />
+                    {record.type === 'permabuy' && (
+                      <SectionAction danger className="" label="Release" onClick={() => openOwnerAction('release')} />
+                    )}
+                  </div>
+                )
+              }
+            >
               <InfoRow label="Name token (ANT)">
                 <div className="flex min-w-0 items-center justify-end gap-1">
                   <span className="truncate font-mono text-xs">
@@ -499,17 +514,6 @@ export default function NameDetailPage() {
                     View <ExternalLink className="h-3 w-3" />
                   </a>
                 </InfoRow>
-              )}
-              {ownerOnly && (
-                // The last row's own divider already separates these.
-                // -ml-2 lines the first label's text up with the row labels.
-                <div className="-ml-2 mt-2 flex flex-wrap gap-1">
-                  <SectionAction danger className="" label="Transfer" onClick={() => setOpen('transfer')} />
-                  <SectionAction danger className="" label="Reassign" onClick={() => openOwnerAction('reassign')} />
-                  {record.type === 'permabuy' && (
-                    <SectionAction danger className="" label="Release" onClick={() => openOwnerAction('release')} />
-                  )}
-                </div>
               )}
             </SectionCard>
 
