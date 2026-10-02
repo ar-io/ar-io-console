@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MIN_SOL_FOR_ACCOUNT_CREATION,
   MIN_SOL_FOR_RECORD_WRITE as MIN_SOL,
   chooseWriter,
   createsAccounts,
@@ -284,7 +285,8 @@ describe('what the SOL rail actually costs', () => {
     for (const action of ['transfer', 'add-controller']) {
       expect(createsAccounts(action)).toBe(true);
       expect(selfSignedCostNote(action)).toMatch(/creates accounts on chain/);
-      expect(selfSignedCostNote(action)).toContain(String(MIN_SOL));
+      // Budgeted at the account-creation figure, not the bare record write.
+      expect(selfSignedCostNote(action)).toContain(String(MIN_SOL_FOR_ACCOUNT_CREATION));
     }
   });
 
@@ -301,8 +303,9 @@ describe('what the SOL rail actually costs', () => {
 
   it('names what the SOL rail would need, so its absence has a reason', () => {
     expect(solRailRequirementNote('transfer')).toContain(
-      String(MIN_SOL),
+      String(MIN_SOL_FOR_ACCOUNT_CREATION),
     );
+    expect(solRailRequirementNote('remove-controller')).toContain(String(MIN_SOL));
     expect(solRailRequirementNote('transfer')).toMatch(/creates accounts on chain/);
     expect(solRailRequirementNote('remove-controller')).not.toMatch(/create accounts/);
   });

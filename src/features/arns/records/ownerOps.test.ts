@@ -75,6 +75,33 @@ describe('chooseOwnerActionWriter', () => {
     });
   });
 
+  /*
+    A transfer can create up to four rent-exempt accounts. An owner with
+    0.003 SOL used to get a sponsored transfer that worked; defaulting them to
+    SOL at the record-write threshold would hand them one they cannot fund.
+  */
+  it('keeps credits as the default for actions that create accounts', () => {
+    expect(chooseOwnerActionWriter('owner', RICH, undefined, 'transfer')).toEqual({
+      kind: 'sponsored',
+      reason: 'owner',
+      alternative: 'self-signed',
+    });
+    expect(
+      chooseOwnerActionWriter('owner', RICH, 'sol', 'add-controller').kind,
+    ).toBe('self-signed');
+  });
+
+  it('offers SOL for a transfer only with a clear margin', () => {
+    const thin = { credits: 10, priceCredits: 0.2, sol: 0.003 };
+    expect(chooseOwnerActionWriter('owner', thin, undefined, 'transfer')).toEqual({
+      kind: 'sponsored',
+      reason: 'owner',
+    });
+    expect(chooseOwnerActionWriter('owner', thin, 'sol', 'transfer').kind).toBe(
+      'sponsored',
+    );
+  });
+
   it('uses credits for an owner with no SOL', () => {
     expect(
       chooseOwnerActionWriter('owner', { ...RICH, sol: 0 }),

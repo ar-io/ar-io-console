@@ -268,6 +268,16 @@ unreadable SOL balance falls back to credits. A credits shortfall still counts
 only when **known**. Role-only callers (`writerForRole`, used mid-deploy by
 `useOwnedArNSNames`) stay on credits, since they cannot wait on a balance.
 
+Two exceptions to the SOL default. **Transfer and add-controller keep
+credits as the default** (`chooseOwnerActionWriter(…, action)`): they can
+create rent-exempt ACL accounts, so SOL is only offered, and only above
+`MIN_SOL_FOR_ACCOUNT_CREATION`. **An IPFS target or a record priority always
+signs with the wallet** (`requiresSelfSigned`): Turbo's `setArNSRecord` carries
+neither, so on credits the protocol or priority would be dropped after the
+charge. Without the SOL to sign, that save is refused before anything is
+created. And the credits rail always writes the record before any metadata,
+so a metadata-only save there is quoted both prices.
+
 The `@` record goes through the same writer as every undername
 (`useUndernameWrites.saveUndername(processId, '@', …)`). It used to call the
 ANT directly, which always paid SOL while the editor quoted credits, and left

@@ -27,9 +27,11 @@ import {
  * These ran self-signed only — `getWritableANT`, the owner paying SOL — while
  * the UI quoted a credits price for them. Turbo lists all three among its
  * actions and takes the same `ArNSOwnerSigner` as `setArNSRecord`, so the
- * records ladder applies unchanged: the wallet's own signature by default when
- * it holds SOL (a fraction of a cent, against a credits price of tens of cents),
- * credits when it does not, and a visible switch when both would work.
+ * records ladder applies: the wallet's own signature by default when it holds
+ * SOL (a fraction of a cent, against a credits price of tens of cents), credits
+ * when it does not, and a visible switch when both would work. Transfer and
+ * add-controller are the exception: they can create accounts on chain, so they
+ * keep credits as the default and offer SOL only with a clear margin.
  *
  * Owner-only, unlike records. A controller can edit records but cannot transfer
  * a name or change who controls it, so an unresolved or non-owner role blocks
@@ -59,7 +61,7 @@ export function useOwnerOpWriter(
   */
   const balances = useArNSPaymentBalances(signer.address ?? undefined);
 
-  // The owner's choice of rail, shared across this page's editors.
+  // The owner's choice of rail: every editor follows it, for this wallet and session.
   const preference = useStore((st) => st.arnsWriterPreference);
   const setPreference = useStore((st) => st.setArnsWriterPreference);
 
@@ -72,6 +74,7 @@ export function useOwnerOpWriter(
       solLoading: balances.loading,
     },
     preference ?? undefined,
+    action,
   );
 
   const getWriter = useCallback(
@@ -118,6 +121,8 @@ export function useOwnerOpWriter(
     getWriter,
     canWrite: signer.isReady && kind !== 'blocked',
     isResolving: kind === 'blocked' && (role === 'unknown' || role === 'owner'),
+    /** Still reading the owner's SOL balance: say so, don't quote a rail. */
+    pending: kind === 'blocked' && role === 'owner',
     /**
      * True when this wallet signs the Solana transaction and pays the network
      * itself — so the surface must not quote a credits price.

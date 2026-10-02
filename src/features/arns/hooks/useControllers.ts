@@ -155,6 +155,7 @@ export function useControllerWrites(processId?: string) {
     paysNetworkDirectly: writer.paysNetworkDirectly,
     alternative: writer.alternative,
     switchRail: writer.switchRail,
+    pending: writer.pending,
     isBusy: phase === 'submitting',
   };
 }

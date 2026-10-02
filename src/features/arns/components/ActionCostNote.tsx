@@ -40,6 +40,7 @@ export default function ActionCostNote({
   alternative,
   onSwitchRail,
   disabled,
+  pending,
 }: {
   /** The sponsored action, typed against the SDK so a typo cannot compile. */
   action: ArNSAction;
@@ -77,6 +78,8 @@ export default function ActionCostNote({
   alternative?: WriterChoice['alternative'];
   onSwitchRail?: () => void;
   disabled?: boolean;
+  /** Still reading the owner's SOL balance: no rail to quote yet. */
+  pending?: boolean;
 }) {
   const railSwitch =
     alternative && onSwitchRail ? (
@@ -94,6 +97,14 @@ export default function ActionCostNote({
   const secondary = useArNSActionPrice(
     paysNetworkDirectly ? undefined : secondaryAction,
   );
+
+  if (pending) {
+    return (
+      <p className={`text-xs text-foreground/60 ${className}`}>
+        Checking your wallet balance…
+      </p>
+    );
+  }
 
   if (paysNetworkDirectly) {
     /*

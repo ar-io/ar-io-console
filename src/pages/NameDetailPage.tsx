@@ -180,7 +180,7 @@ export default function NameDetailPage() {
   const summaries = useAntSummaries(processId ? [processId] : []);
   const summary = processId ? summaries.get(processId) : undefined;
   const owner = summary?.owner ?? controllers?.owner;
-  const { data: primary } = usePrimaryName(owner, !!owner);
+  const { data: primary, isFetched: primaryFetched } = usePrimaryName(owner, !!owner);
 
   // STRICT role — the name may be one you don't own or control (public view),
   // so there is NO optimistic "assume controller" fallback here.
@@ -355,8 +355,13 @@ export default function NameDetailPage() {
                       You: {role}
                     </span>
                   )}
-                  {/* Beside the Primary badge it would earn. */}
-                  {canManage && !isPrimary && (
+                  {/*
+                    Beside the Primary badge it would earn. `isPrimary` is the
+                    OWNER's primary name, so it hides this only for the owner; a
+                    controller sets their own. Waits for the lookup so it never
+                    flashes in on a name that is already primary.
+                  */}
+                  {canManage && primaryFetched && (role === 'controller' || !isPrimary) && (
                     <button
                       type="button"
                       onClick={() => openOwnerAction('primary')}

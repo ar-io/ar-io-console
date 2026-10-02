@@ -17,6 +17,7 @@ import RailSwitch from './RailSwitch';
 import {
   blankRecordFields,
   RecordFieldsState,
+  requiresSelfSigned,
   toRecordChange,
   withoutClears,
   validateRecordFields,
@@ -26,6 +27,7 @@ import { useStore } from '@/store/useStore';
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
 import { hasMetadataChange } from '../records/recordWriter';
 import { recordCostNote, recordSaveCost } from '../records/recordCost';
+import { SELF_SIGNED_ONLY_NOTE } from '../records/writerChoice';
 import { useUndernameWrites, type UndernameRecord } from '../hooks/useUndernames';
 import type { ANTDetails } from '../hooks/useANTDetails';
 
@@ -204,17 +206,35 @@ export default function RecordsTable({
     draft.protocol !== original.protocol ||
     draft.priority.trim() !== original.priority.trim();
 
+  /*
+    An IPFS target or a priority can only be written by the wallet's own
+    transaction (`requiresSelfSigned`), so such a save signs with SOL whatever
+    the default rail, and cannot be saved at all without it.
+  */
+  const forcedSelfSigned = requiresSelfSigned(pendingChange);
+  const selfSigned = undernameWrites.paysNetworkDirectly || forcedSelfSigned;
+  const blockedForSol = forcedSelfSigned && !undernameWrites.canSelfSign;
   const cost = recordSaveCost({
     actionPrice: recordPrice.credits,
     metadataPrice: metadataPrice.credits,
-    changesRecord,
+    /*
+      The credits rail always writes the record (`setArNSRecord`) before any
+      metadata, so a metadata-only save there is billed both actions. Quoting
+      the metadata price alone understated it and hid the second approval.
+    */
+    changesRecord: selfSigned ? changesRecord : true,
     changesMetadata: hasMetadataChange(pendingChange),
     creditBalance,
-    billed: !undernameWrites.paysNetworkDirectly,
+    billed: !selfSigned,
   });
   const costLine = recordCostNote(cost);
 
-  const canSave = validation.allValid && nameValid && !cost.insufficient;
+  const canSave =
+    validation.allValid &&
+    nameValid &&
+    !cost.insufficient &&
+    !blockedForSol &&
+    !undernameWrites.pending;
   const busyKey = undernameWrites.busyKey;
   const busy = undernameWrites.isBusy;
 
@@ -324,20 +344,37 @@ export default function RecordsTable({
         and it cannot know what THIS change will cost. Owners see credits;
         a controller sees the Solana fee they pay instead.
       */}
-      {undernameWrites.paysNetworkDirectly ? (
+      {undernameWrites.pending ? (
+        <p className="mt-2 text-xs text-foreground/60">
+          Checking your wallet balance…
+        </p>
+      ) : blockedForSol ? (
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-error">
+          <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+          {SELF_SIGNED_ONLY_NOTE}
+        </p>
+      ) : forcedSelfSigned && !undernameWrites.paysNetworkDirectly ? (
+        <p className="mt-2 text-xs text-foreground/60">
+          IPFS targets and record priority are signed by your wallet, which
+          pays the Solana fee in SOL.
+        </p>
+      ) : undernameWrites.paysNetworkDirectly ? (
         <p className="mt-2 text-xs text-foreground/60">
           {undernameWrites.costNote}
         </p>
       ) : (
         costLine && <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
       )}
-      <RailSwitch
-        alternative={undernameWrites.alternative}
-        onSwitch={undernameWrites.switchRail}
-        disabled={busy}
-        className="mt-1"
-      />
-      {cost.insufficient && (
+      {/* No choice to offer when only the wallet can write this save. */}
+      {!forcedSelfSigned && !undernameWrites.pending && (
+        <RailSwitch
+          alternative={undernameWrites.alternative}
+          onSwitch={undernameWrites.switchRail}
+          disabled={busy}
+          className="mt-1"
+        />
+      )}
+      {cost.insufficient && !undernameWrites.pending && (
         <p className="mt-1 flex items-start gap-1.5 text-xs text-error">
           <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
           {undernameWrites.writerReason === 'insufficient-both'
@@ -389,6 +426,7 @@ export default function RecordsTable({
           displayName={name}
           busy={undernameWrites.busyKey === confirmRemove.key}
           paysNetworkDirectly={undernameWrites.paysNetworkDirectly}
+          pending={undernameWrites.pending}
           alternative={undernameWrites.alternative}
           onSwitchRail={undernameWrites.switchRail}
           onConfirm={() => void remove(confirmRemove)}
@@ -429,9 +467,10 @@ export default function RecordsTable({
           </div>
           {canManage && (
             <button
+              type="button"
               onClick={openAdd}
               disabled={atLimit || isAdding}
-              title={atLimit ? 'Undername limit reached. Add slots from Overview.' : undefined}
+              title={atLimit ? 'Undername limit reached. Add slots from the Overview card.' : undefined}
               // The page's section-action style ("Edit", "Manage"), not a
               // filled button: one primary action per page, and this isn't it.
               className="-mr-2 flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-primary transition-colors enabled:hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"

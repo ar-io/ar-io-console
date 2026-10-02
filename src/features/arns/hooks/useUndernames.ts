@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getANT, getWritableANT } from '../../../utils';
 import { useRecordWriter } from './useRecordWriter';
 import { mapRecordWriteError } from '../records/recordWriter';
+import { requiresSelfSigned } from '../recordFields';
 import { useArNSConfigKey } from './useArNSConfigKey';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 
@@ -126,6 +127,8 @@ export function useUndernameWrites(_name?: string, processId?: string) {
     alternative,
     switchRail,
     writerReason,
+    canSelfSign,
+    pending,
   } = useRecordWriter(processId);
   const [phase, setPhase] = useState<UndernameWritePhase>('idle');
   /** The undername currently being written (for per-row busy state). */
@@ -154,7 +157,9 @@ export function useUndernameWrites(_name?: string, processId?: string) {
       setPhase('submitting');
       setBusyKey(undername);
       try {
-        const writer = await getWriter(processId);
+        const writer = await getWriter(processId, {
+          requireSelfSigned: requiresSelfSigned(record),
+        });
         /*
           Forward the WHOLE change. This used to pass three fields, so every
           metadata edit on an undername was silently discarded — the apex was
@@ -260,6 +265,10 @@ export function useUndernameWrites(_name?: string, processId?: string) {
     switchRail,
     /** Why this rail, so the editor can name both ways out when neither pays. */
     writerReason,
+    /** This wallet could sign a save itself (IPFS targets, priority). */
+    canSelfSign,
+    /** Still reading the owner's SOL balance: say so, don't quote a rail. */
+    pending,
     reset,
     phase,
     busyKey,

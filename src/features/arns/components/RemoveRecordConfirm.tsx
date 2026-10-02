@@ -27,6 +27,7 @@ export default function RemoveRecordConfirm({
   displayName,
   busy,
   paysNetworkDirectly,
+  pending,
   alternative,
   onSwitchRail,
   onConfirm,
@@ -53,6 +54,8 @@ export default function RemoveRecordConfirm({
    * fee payer and bills the fee back in credits.
    */
   paysNetworkDirectly?: boolean;
+  /** Still reading the owner's SOL balance: no rail to quote yet. */
+  pending?: boolean;
   /** The other rail, when it would also work, and a way to take it. */
   alternative?: WriterChoice['alternative'];
   onSwitchRail?: () => void;
@@ -64,7 +67,9 @@ export default function RemoveRecordConfirm({
     paysNetworkDirectly ? undefined : 'remove-record',
   );
 
-  const cost = paysNetworkDirectly
+  const cost = pending
+    ? 'a small fee (checking your wallet balance)'
+    : paysNetworkDirectly
     ? 'a small Solana network fee, paid by your wallet'
     : credits === undefined
       ? 'a small amount of credits'
@@ -124,7 +129,7 @@ export default function RemoveRecordConfirm({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={busy}
+            disabled={busy || pending}
             className="inline-flex items-center justify-center gap-2 rounded-full bg-error px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {busy ? (

@@ -85,6 +85,21 @@ export interface WriterFunds {
 export const MIN_SOL_FOR_RECORD_WRITE = 0.002;
 
 /**
+ * SOL an owner must hold before the SOL rail is OFFERED for an action that
+ * creates accounts (`ACCOUNT_CREATING_ACTIONS`): up to four rent-exempt ACL
+ * accounts at roughly 0.001 SOL each, with room for the fee.
+ */
+export const MIN_SOL_FOR_ACCOUNT_CREATION = 0.005;
+
+/**
+ * Why a save cannot go through credits, and what would let it through: an
+ * IPFS target or a priority is written only by the wallet's own transaction
+ * (see `requiresSelfSigned` in recordFields).
+ */
+export const SELF_SIGNED_ONLY_NOTE =
+  `IPFS targets and record priority are signed by your wallet, which pays the Solana fee. Add about ${MIN_SOL_FOR_RECORD_WRITE} SOL to the wallet that owns this name to save this.`;
+
+/**
  * Owner-only actions that CREATE on-chain accounts, not merely pay a fee.
  *
  * `@ar.io/sdk`'s Solana `transfer` resolves the new owner's ACL accounts and
@@ -118,7 +133,7 @@ export function selfSignedCostNote(action: string): string {
   const base = 'Your wallet signs this and pays the Solana costs directly, not credits.';
   if (!createsAccounts(action)) return base;
   return (
-    `${base} Budget around ${MIN_SOL_FOR_RECORD_WRITE} SOL rather than a bare ` +
+    `${base} Budget around ${MIN_SOL_FOR_ACCOUNT_CREATION} SOL rather than a bare ` +
     'signature fee: sending to a wallet that has never held an ArNS name also ' +
     'creates accounts on chain, and those owe rent.'
   );
@@ -156,11 +171,12 @@ export function solRailRequirementNote(
     don't need SOL" with "paying in SOL needs SOL" read as the line arguing
     with itself; "to sign it yourself instead" makes it the other option.
   */
-  const base = `To sign it yourself instead, the owning wallet needs about ${MIN_SOL_FOR_RECORD_WRITE} SOL`;
-
   const creating = [action, secondaryAction].filter(
     (a): a is string => !!a && createsAccounts(a),
   );
+  const need =
+    creating.length > 0 ? MIN_SOL_FOR_ACCOUNT_CREATION : MIN_SOL_FOR_RECORD_WRITE;
+  const base = `To sign it yourself instead, the owning wallet needs about ${need} SOL`;
   if (creating.length === 0) return `${base}.`;
 
   // Name the culprit when only one of the two creates anything, so the other
@@ -194,6 +210,12 @@ export function chooseWriter(
   role: StrictAntRole,
   funds?: WriterFunds,
   preference?: WriterPreference,
+  rail: {
+    /** Credits stay the default; SOL is only the offered alternative. */
+    creditsFirst?: boolean;
+    /** SOL the owner must hold for the SOL rail to count as payable. */
+    minSol?: number;
+  } = {},
 ): WriterChoice {
   switch (role) {
     case 'controller':
@@ -212,7 +234,8 @@ export function chooseWriter(
 
   const { credits, priceCredits: price, sol } = funds;
   // An unread SOL balance is not SOL: it never routes anyone onto that rail.
-  const solOk = sol !== undefined && sol >= MIN_SOL_FOR_RECORD_WRITE;
+  const solOk =
+    sol !== undefined && sol >= (rail.minSol ?? MIN_SOL_FOR_RECORD_WRITE);
   /*
     Only a KNOWN shortfall rules credits out. Both figures load
     asynchronously, and treating "not yet" as "can't afford it" would flip
@@ -222,7 +245,10 @@ export function chooseWriter(
     credits === undefined || price === undefined || credits >= price;
 
   if (solOk && creditsOk) {
-    return preference === 'credits'
+    const useCredits = rail.creditsFirst
+      ? preference !== 'sol'
+      : preference === 'credits';
+    return useCredits
       ? { kind: 'sponsored', reason: 'owner', alternative: 'self-signed' }
       : { kind: 'self-signed', reason: 'owner-sol', alternative: 'sponsored' };
   }
@@ -322,9 +348,26 @@ export function chooseOwnerActionWriter(
   role: StrictAntRole,
   funds?: WriterFunds,
   preference?: WriterPreference,
+  /** The action, so one that creates accounts keeps credits as its default. */
+  action?: string,
 ): WriterChoice {
   if (role !== 'owner') {
     return { kind: 'blocked', reason: 'unresolved' };
   }
-  return chooseWriter('owner', funds, preference);
+  /*
+    A transfer can create rent-exempt accounts for up to four ACL entries in
+    one transaction, and adding a controller two: each far more than the fee
+    `MIN_SOL_FOR_RECORD_WRITE` budgets for. Defaulting those to SOL at that
+    threshold would hand a wallet holding 0.003 SOL a transaction it cannot
+    fund, where credits used to just work. So they stay on credits, and SOL is
+    offered only with a clear margin.
+  */
+  return chooseWriter(
+    'owner',
+    funds,
+    preference,
+    action && createsAccounts(action)
+      ? { creditsFirst: true, minSol: MIN_SOL_FOR_ACCOUNT_CREATION }
+      : {},
+  );
 }

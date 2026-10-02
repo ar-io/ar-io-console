@@ -78,6 +78,7 @@ export function useTransferArNSName(processId?: string) {
     paysNetworkDirectly: writer.paysNetworkDirectly,
     alternative: writer.alternative,
     switchRail: writer.switchRail,
+    pending: writer.pending,
     txId,
     isBusy: phase === 'submitting',
   };

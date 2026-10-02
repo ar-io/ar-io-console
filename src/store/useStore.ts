@@ -583,6 +583,9 @@ export const useStore = create<StoreState>()(
           */
           creditBalance:
             state.address === address ? state.creditBalance : 0,
+          // A rail chosen for one wallet is not a choice for the next.
+          arnsWriterPreference:
+            state.address === address ? state.arnsWriterPreference : null,
           // Keep the existing name when re-setting the same Solana session
           // (the listener calls this without a name on reconnect).
           solanaWalletName:
@@ -598,21 +601,27 @@ export const useStore = create<StoreState>()(
           creditBalance: 0,
           arnsNamesCache: {},
           ownedArnsCache: {},
+          arnsWriterPreference: null,
           // linkedSolanaAddress and linkedSolanaWalletName are intentionally
           // preserved so users don't have to re-link every session. Use
           // clearLinkedSolanaWallet() to explicitly unlink.
         }),
       setLinkedSolanaWallet: (address, walletName) =>
-        set({ linkedSolanaAddress: address, linkedSolanaWalletName: walletName }),
+        set((state) => ({
+          linkedSolanaAddress: address,
+          linkedSolanaWalletName: walletName,
+          arnsWriterPreference:
+            state.linkedSolanaAddress === address ? state.arnsWriterPreference : null,
+        })),
       clearLinkedSolanaWallet: () => {
         const { linkedSolanaAddress: addr, ownedArnsCache } = get();
         // Remove cached ArNS names for the linked address to avoid stale data
         if (addr && ownedArnsCache[addr]) {
           const rest = { ...ownedArnsCache };
           delete rest[addr];
-          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest });
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest, arnsWriterPreference: null });
         } else {
-          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null });
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, arnsWriterPreference: null });
         }
       },
       getArNSAddress: () => {

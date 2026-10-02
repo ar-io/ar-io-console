@@ -42,6 +42,7 @@ export default function TransferDomainModal({
     paysNetworkDirectly,
     alternative,
     switchRail,
+    pending,
     txId,
     isBusy,
   } = useTransferArNSName(domain.processId);
@@ -123,6 +124,7 @@ export default function TransferDomainModal({
               paysNetworkDirectly={paysNetworkDirectly}
               alternative={alternative}
               onSwitchRail={switchRail}
+              pending={pending}
               disabled={isBusy}
               className="mb-4"
             />
@@ -168,7 +170,7 @@ export default function TransferDomainModal({
 
             <SolanaGateButton
               onAction={handleTransfer}
-              disabled={!canTransfer}
+              disabled={!canTransfer || pending}
               busy={isBusy}
               busyLabel={
                 <>
