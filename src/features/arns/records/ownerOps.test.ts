@@ -88,6 +88,13 @@ describe('chooseOwnerActionWriter', () => {
     expect(
       chooseOwnerActionWriter('owner', RICH, 'credits', 'add-controller').kind,
     ).toBe('sponsored');
+    expect(
+      chooseOwnerActionWriter('owner', RICH, undefined, 'add-controller'),
+    ).toEqual({
+      kind: 'self-signed',
+      reason: 'owner-sol',
+      alternative: 'sponsored',
+    });
   });
 
   it('keeps a transfer on credits when SOL is short of that margin', () => {
