@@ -327,6 +327,14 @@ interface StoreState {
   // X402-only mode (disables payment service features)
   x402OnlyMode: boolean;
 
+  /**
+   * Which rail an ArNS owner chose for record and owner actions, when both
+   * would work (`chooseWriter`'s `alternative`). Session-only, deliberately
+   * not persisted: a balance changes between visits, and a remembered
+   * "credits" would silently keep charging someone who now holds SOL.
+   */
+  arnsWriterPreference: 'sol' | 'credits' | null;
+
   // Smart Deploy state (file deduplication)
   fileHashCache: Record<string, FileHashEntry>;
   smartDeployEnabled: boolean;
@@ -451,6 +459,7 @@ interface StoreState {
 
   // X402-only mode actions
   setX402OnlyMode: (enabled: boolean) => void;
+  setArnsWriterPreference: (preference: 'sol' | 'credits' | null) => void;
   isPaymentServiceAvailable: () => boolean;
 
   // Smart Deploy actions
@@ -506,6 +515,8 @@ export const useStore = create<StoreState>()(
 
       // X402-only mode (disabled by default)
       x402OnlyMode: false,
+
+      arnsWriterPreference: null,
 
       // Smart Deploy state (file deduplication)
       fileHashCache: {},
@@ -572,6 +583,9 @@ export const useStore = create<StoreState>()(
           */
           creditBalance:
             state.address === address ? state.creditBalance : 0,
+          // A rail chosen for one wallet is not a choice for the next.
+          arnsWriterPreference:
+            state.address === address ? state.arnsWriterPreference : null,
           // Keep the existing name when re-setting the same Solana session
           // (the listener calls this without a name on reconnect).
           solanaWalletName:
@@ -587,21 +601,27 @@ export const useStore = create<StoreState>()(
           creditBalance: 0,
           arnsNamesCache: {},
           ownedArnsCache: {},
+          arnsWriterPreference: null,
           // linkedSolanaAddress and linkedSolanaWalletName are intentionally
           // preserved so users don't have to re-link every session. Use
           // clearLinkedSolanaWallet() to explicitly unlink.
         }),
       setLinkedSolanaWallet: (address, walletName) =>
-        set({ linkedSolanaAddress: address, linkedSolanaWalletName: walletName }),
+        set((state) => ({
+          linkedSolanaAddress: address,
+          linkedSolanaWalletName: walletName,
+          arnsWriterPreference:
+            state.linkedSolanaAddress === address ? state.arnsWriterPreference : null,
+        })),
       clearLinkedSolanaWallet: () => {
         const { linkedSolanaAddress: addr, ownedArnsCache } = get();
         // Remove cached ArNS names for the linked address to avoid stale data
         if (addr && ownedArnsCache[addr]) {
           const rest = { ...ownedArnsCache };
           delete rest[addr];
-          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest });
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest, arnsWriterPreference: null });
         } else {
-          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null });
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, arnsWriterPreference: null });
         }
       },
       getArNSAddress: () => {
@@ -943,6 +963,7 @@ export const useStore = create<StoreState>()(
 
       // X402-only mode actions
       setX402OnlyMode: (enabled) => set({ x402OnlyMode: enabled }),
+      setArnsWriterPreference: (preference) => set({ arnsWriterPreference: preference }),
       isPaymentServiceAvailable: () => !get().x402OnlyMode,
 
       // Smart Deploy actions

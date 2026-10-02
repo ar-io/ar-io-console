@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+
+import { useStore } from '../../../store/useStore';
 import type { ArNSAction } from '@ardrive/turbo-sdk/web';
 
 import { useArNSTurboSigner } from './useArNSTurboSigner';
@@ -25,9 +27,11 @@ import {
  * These ran self-signed only — `getWritableANT`, the owner paying SOL — while
  * the UI quoted a credits price for them. Turbo lists all three among its
  * actions and takes the same `ArNSOwnerSigner` as `setArNSRecord`, so the
- * records ladder applies unchanged: credits by default, because that price can
- * be quoted exactly and needs no SOL, and the wallet's own signature when
- * credits are short.
+ * records ladder applies: the wallet's own signature by default when it holds
+ * SOL (a fraction of a cent, against a credits price of tens of cents), credits
+ * when it does not, and a visible switch when both would work. Transfer and
+ * add-controller are the exception: they can create accounts on chain, so they
+ * keep credits as the default and offer SOL only with a clear margin.
  *
  * Owner-only, unlike records. A controller can edit records but cannot transfer
  * a name or change who controls it, so an unresolved or non-owner role blocks
@@ -57,11 +61,21 @@ export function useOwnerOpWriter(
   */
   const balances = useArNSPaymentBalances(signer.address ?? undefined);
 
-  const { kind, reason } = chooseOwnerActionWriter(role, {
-    credits: balances.credits,
-    priceCredits,
-    sol: balances.sol,
-  });
+  // The owner's choice of rail: every editor follows it, for this wallet and session.
+  const preference = useStore((st) => st.arnsWriterPreference);
+  const setPreference = useStore((st) => st.setArnsWriterPreference);
+
+  const { kind, reason, alternative } = chooseOwnerActionWriter(
+    role,
+    {
+      credits: balances.credits,
+      priceCredits,
+      sol: balances.sol,
+      solLoading: balances.loading,
+    },
+    preference ?? undefined,
+    action,
+  );
 
   const getWriter = useCallback(
     async (antId?: string): Promise<OwnerOpWriter> => {
@@ -73,8 +87,11 @@ export function useOwnerOpWriter(
         );
       }
       if (kind === 'blocked') {
+        // An owner is blocked only while their SOL balance is read.
         throw new Error(
-          'Only the owner of this name can make this change. If you just became the owner, give the index a moment to catch up.',
+          role === 'owner'
+            ? 'Still checking your wallet balance. Try again in a moment.'
+            : 'Only the owner of this name can make this change. If you just became the owner, give the index a moment to catch up.',
         );
       }
 
@@ -97,19 +114,31 @@ export function useOwnerOpWriter(
         }),
       );
     },
-    [getClient, signer, processId, kind],
+    [getClient, signer, processId, kind, role],
   );
 
   return {
     getWriter,
     canWrite: signer.isReady && kind !== 'blocked',
-    isResolving: kind === 'blocked' && role === 'unknown',
+    isResolving: kind === 'blocked' && (role === 'unknown' || role === 'owner'),
+    /** Still reading the owner's SOL balance: say so, don't quote a rail. */
+    pending: kind === 'blocked' && role === 'owner',
     /**
      * True when this wallet signs the Solana transaction and pays the network
      * itself — so the surface must not quote a credits price.
      */
     paysNetworkDirectly: kind === 'self-signed',
     writerReason: reason,
+    /**
+     * The other rail, when it would also work, and a way to take it. The
+     * surface offers it in one line ("Pay with credits instead"), so the
+     * default is never the only option on screen.
+     */
+    alternative,
+    switchRail: () =>
+      setPreference(alternative === 'sponsored' ? 'credits' : 'sol'),
+    /** The credits rail's price, for the switch's own label. */
+    alternativeCredits: alternative === 'sponsored' ? priceCredits : undefined,
     /** The price of the sponsored rail, when that is the one being used. */
     priceCredits: kind === 'sponsored' ? priceCredits : undefined,
   };

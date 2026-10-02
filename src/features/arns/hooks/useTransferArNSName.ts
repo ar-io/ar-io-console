@@ -76,6 +76,9 @@ export function useTransferArNSName(processId?: string) {
     error,
     /** True when the wallet signs and pays SOL — the modal must not quote credits. */
     paysNetworkDirectly: writer.paysNetworkDirectly,
+    alternative: writer.alternative,
+    switchRail: writer.switchRail,
+    pending: writer.pending,
     txId,
     isBusy: phase === 'submitting',
   };
