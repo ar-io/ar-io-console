@@ -16,9 +16,8 @@ All notable changes to the ar.io Console are documented in this file.
   is a different address from MetaMask on Ethereum, with its own credits.
 - **A purchase that did not finish is shown on My domains.** If you close the
   wallet prompt, approve too late, or leave mid-purchase, My domains says what
-  happened to that attempt and to its credits: still waiting on your wallet,
-  with the time the credits return, or not finished, with the credits back and
-  a Try again button. It reads the purchase's status from Turbo, and shows in
+  happened to that attempt and to its credits: when they return to your
+  balance, or that they are already back, with a Try again button. It reads the purchase's status from Turbo, and shows in
   the browser the purchase was started in, for 30 minutes.
 
 ### Changed
