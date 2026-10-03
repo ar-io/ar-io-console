@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { useStore } from '../../../store/useStore';
 import { APP_NAME } from '../../../constants';
 import { getWritableARIO } from '../../../utils';
 import { ArNSSettlementResult } from '../services/TurboArNSClient';
@@ -223,6 +224,8 @@ export function useManageArNSName(): UseManageArNSNameResult {
           receipt: {},
         };
         setResult(settlement);
+        // Which names this wallet holds, or what they are, just changed.
+        useStore.getState().invalidateOwnedArNSNames();
         setPhase('success');
         setStatusMessage(`Done — '${lowered}' updated!`);
         window.dispatchEvent(new CustomEvent('refresh-balance'));

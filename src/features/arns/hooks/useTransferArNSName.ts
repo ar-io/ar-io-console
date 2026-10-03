@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useStore } from '../../../store/useStore';
 import { mapActionExpiryMessage } from '../purchase/actionFailure';
 
 
@@ -49,6 +50,8 @@ export function useTransferArNSName(processId?: string) {
           await writer.getWriter(processId)
         ).transfer({ target: target.trim() });
         setTxId(res?.id);
+        // Which names this wallet holds, or what they are, just changed.
+        useStore.getState().invalidateOwnedArNSNames();
         setPhase('success');
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return res?.id;

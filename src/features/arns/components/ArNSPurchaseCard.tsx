@@ -62,6 +62,7 @@ import {
   failureAdvice,
   stepLabel,
   waitingNotice,
+  APPROVE_PROMPT_NOTICE,
 } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
@@ -72,7 +73,7 @@ interface ArNSPurchaseCardProps {
   /**
    * The owner's wallet is showing the registration prompt right now
    * (`useBuyArNSName().awaitingApproval`). Only then does the screen say to
-   * approve: the transaction is valid for about 30 seconds.
+   * approve: the transaction is valid for under a minute.
    */
   awaitingApproval?: boolean;
   onBuy: (input: BuyArNSNameInput) => void | Promise<unknown>;
@@ -1400,7 +1401,7 @@ export function ArNSPurchaseCard({
               {/* Name the step: two wallet popups with one spinner between
                   them is indistinguishable from a stuck app. */}
               {/* "Approve now" only while the prompt is actually open: the
-                  transaction it signs is valid for about 30 seconds. No
+                  transaction it signs is valid for under a minute. No
                   countdown; the wallet sets the pace. */}
               {tokenStepLabel ?? (awaitingApproval ? 'Approve in your wallet now' : 'Registering…')}
             </>
@@ -1420,6 +1421,16 @@ export function ArNSPurchaseCard({
         (tokenTopUp.step.phase !== 'registering' || awaitingApproval) && (
         <p className="mt-2 text-center text-xs text-foreground/70">
           {waitingNotice(tokenTopUp.step, promptSource)}
+        </p>
+      )}
+      {/*
+        Paying from the balance runs no top-up step, so the notice above never
+        showed and a buyer had no idea the prompt expires. Same rule: only
+        while the prompt is open.
+      */}
+      {!waitingNotice(tokenTopUp.step, promptSource) && awaitingApproval && (
+        <p className="mt-2 text-center text-xs text-foreground/70">
+          {APPROVE_PROMPT_NOTICE}
         </p>
       )}
 
