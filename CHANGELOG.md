@@ -2,6 +2,114 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.10.0] - 2026-10-03
+
+### Added
+- **Top up with ARIO from a Solana wallet.** Buy Credits offers ARIO beside
+  SOL and USDC, with a lower fee than the other tokens (25% against 35%). Each
+  ARIO top-up is limited to $200 at the day's ARIO rate.
+- **MetaMask's Solana wallet works here.** It could manage a name on
+  arns.ar.io but never appeared in the console: both Solana wallet pickers
+  hid anything called "MetaMask", a filter meant for the old MetaMask Snap,
+  which shares the name. You can now sign in with it or link it, and update
+  your names from it. It is listed as "Solana account in MetaMask", because it
+  is a different address from MetaMask on Ethereum, with its own credits.
+- **A purchase that did not finish is shown on My domains.** If you close the
+  wallet prompt, approve too late, or leave mid-purchase, My domains says what
+  happened to that attempt and to its credits: when they return to your
+  balance, or that they are already back, with a Try again button. It reads the purchase's status from Turbo, and shows in
+  the browser the purchase was started in, for 30 minutes.
+
+### Changed
+- **Managing a name uses your SOL when you have it.** Editing or removing a
+  record, transferring a name and changing its controllers used to bill
+  credits even when your wallet held SOL: tens of cents a change, against a
+  network fee of a fraction of a cent. With enough SOL in the owning wallet
+  your wallet now signs and pays the fee, and a "Pay with credits instead" link
+  is there when both would work. Without SOL, credits are used as before, so
+  email accounts are unchanged. Transfers and controller changes need a little
+  more SOL to qualify (0.005), as they can create accounts on chain.
+- **A name's page puts each action where it applies.** The row of buttons at
+  the foot of the page is gone: Renew or upgrade sits on Overview, Edit on
+  Details, Manage on Controllers, Add record on Records, Set as primary beside
+  the badges, and Transfer, Reassign and Release on Ownership. The root
+  record's target is edited from the pencil on its row.
+- **The transfer window is shorter.** One short warning, a one-line cost and
+  a one-line confirmation.
+- **One way to choose how you pay.** The name checkout and Top Up offer
+  Credits, Card and Crypto, with every token you can pay with in one dropdown,
+  grouped by the wallet it comes from and showing your balance and the price.
+  A token you cannot use stays listed with the reason. The checkout starts on
+  credits when they cover the price, then on ARIO when your wallet can pay with
+  it, and waits for your balances before choosing so the button never acts on
+  something the screen is not showing.
+- **The homepage domain price says which price it is.** The figure is the
+  registry price when paying in ARIO, the cheapest route. By card or credits
+  the same 8-character name cost $49.51 against the $29.44 shown (checked
+  2026-09-23), so the line now says it is the ARIO price and that the name is
+  owned permanently. The three pricing actions share one colour.
+- **Every page uses the same width.** A name's page and the Pages builder were
+  capped narrower than every other screen on wide monitors. Phones were
+  already the same.
+- **USDC options in the name checkout show the USDC logo.**
+
+### Fixed
+- **Gateway operators get their 20% ArNS discount.** The price shown to an
+  operator already included it, but the purchase never claimed it, so they
+  paid full price. Buying, renewing, upgrading and adding undernames with ARIO
+  now apply it, and the cost breakdown shows it as its own line. A gateway's
+  operations wallet qualifies too. The discount applies when paying with ARIO;
+  with credits, a card or another token, Turbo pays the registry and the line
+  says so.
+- **A name you just bought appears under My domains.** The list was cached for
+  six hours and never refreshed after a purchase, so a first-time buyer could
+  pay, get the name, and still see "No domains yet". Buying, transferring,
+  releasing, reassigning and renewing now refresh it, and it waits for a new
+  name to reach the index.
+- **Saving the root record works without SOL.** Changing where a name points
+  always went through your wallet and paid SOL while the screen quoted credits,
+  so an email account could not change it at all. It now follows the same rule
+  as every other record. IPFS targets and record priority still need your
+  wallet, and the editor says so before you save.
+- **Removing an undername names it correctly.** The confirmation showed
+  `undername.name.ar.io`; it is `undername_name.ar.io`.
+- **"View transaction" no longer overlaps Close** on the transfer, reassign
+  and primary-name success screens.
+- **A renewal opened from a name's page shows the right expiry date.** It
+  could read as 1970.
+- **A name purchase that runs out of time says what happened to your
+  credits.** Solana accepts the approval for under a minute. If it lapsed,
+  or you rejected the wallet prompt, the console said "Not enough Turbo
+  Credits" and offered to sell you more, because the first attempt's credits
+  were still reserved. It now says whether they are already back or when they
+  return, and a card or token buyer's "Finish registering" waits until they
+  have. Buying also asks for one fewer wallet approval, the screen tells you to
+  approve only while the prompt is open and that it expires in under a
+  minute, and you can no longer switch names mid-purchase.
+- **Smart-contract wallets are no longer offered, and are signed out with an
+  explanation.** Base Account and Safe could connect and pay, by card or
+  crypto, but could never upload or spend what they bought: Turbo needs a
+  signature that a contract wallet cannot give. A top-up bought for another
+  account from one also credited the wallet itself. They are gone from the
+  connect list, and a contract wallet that connects another way, such as
+  through WalletConnect, is signed out before it can pay.
+- **The domain price table loads again.** It priced ARIO with a keyless call
+  to CoinGecko from your browser, which CoinGecko no longer answers, so anyone
+  without a recent cached copy saw no prices on the pricing page, in name
+  search or at checkout. It now uses Turbo's own ARIO rate, the one every other
+  ARIO price in the console already shows.
+- **Paying with USDC on Solana works from a browser wallet.** From Phantom,
+  Solflare, MetaMask's Solana account or an email account it failed before the
+  wallet opened, on top-ups, name purchases and pay-at-upload alike.
+- **A token payment that falls short names the token and the wallet.** It
+  always said "Not enough SOL", even when the payment was in USDC from another
+  wallet. It now says which token, in which wallet, how much it holds and how
+  much the name needs.
+- **Solana wallets stay listed after you sign out of an email account.** A bug
+  in a wallet library left only the email account's wallet in the Solana
+  pickers, with Phantom, Solflare and MetaMask missing until the page was
+  reloaded.
+
 ## [4.9.0] - 2026-09-23
 
 ### Added
@@ -15,8 +123,8 @@ All notable changes to the ar.io Console are documented in this file.
 ### Changed
 - **Settings and Buy Credits say what Turbo is.** The name appeared across the
   console, on credits, name actions and the pricing panel, without ever being
-  introduced. Each page now says it once: the upload and payment service behind
-  ar.io and ArDrive, which issues the credits you spend here.
+  introduced. Each page now says it once: an ar.io gateway run by the ArDrive
+  team, which issues the credits you spend here.
 - **KYVE is no longer offered as a payment token.** The upload service can no
   longer settle a KYVE payment, so offering it would start something that
   cannot finish. Existing KYVE history still displays, and a transfer already
