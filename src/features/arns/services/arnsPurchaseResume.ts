@@ -35,7 +35,7 @@ const STORAGE_KEY = 'turbo:pending-arns-purchase';
 // Guard against a stale nonce lingering forever if terminal polling never lands
 // (the server is durable; this is just UI hygiene). Slightly over the poll
 // ceiling used by `executeArNSIntent`.
-const MAX_AGE_MS = 30 * 60 * 1000;
+export const MAX_AGE_MS = 30 * 60 * 1000;
 
 function safeStorage(): Storage | undefined {
   try {
