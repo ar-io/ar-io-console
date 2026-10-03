@@ -3,11 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
-import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable } from '../../constants';
+import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable, ARIO_TOPUP_MAX_USD } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Loader2, Lock, CreditCard, DollarSign, Wallet, Info, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
+import { Loader2, Lock, CreditCard, DollarSign, Wallet, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
-import { useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
+import { useArioUsdRate, useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
 import CryptoConfirmationPanel from './crypto/CryptoConfirmationPanel';
 import CryptoManualPaymentPanel from './crypto/CryptoManualPaymentPanel';
 import PaymentDetailsPanel from './fiat/PaymentDetailsPanel';
@@ -19,7 +19,20 @@ import { parseTopUpDeepLink, formatDeepLinkSource } from '../../utils/topupDeepL
 import WalletSelectionModal from '../modals/WalletSelectionModal';
 import PendingTxRecoveryBanner from './crypto/PendingTxRecoveryBanner';
 import { getTurboBalance } from '../../utils';
-import { availableTokensForWallet } from '../../utils/walletTokens';
+import { topUpTokensForWallet } from '../../utils/walletTokens';
+import { useTokenBalance } from '../../hooks/useTokenBalance';
+import { useBalanceRead } from '../../features/payments/useBalanceRead';
+import {
+  CryptoSourceListbox,
+  PaymentPicker,
+  type MethodChoice,
+} from '../../features/payments/components/PaymentPicker';
+import {
+  buildSources,
+  groupSources,
+  preselectSource,
+  type PaymentMethod,
+} from '../../features/payments/paymentSources';
 
 
 import {
@@ -374,11 +387,45 @@ export default function TopUpPanel({
     setCryptoAmountInput(String(cryptoForTarget));
   }, [targetedTopUp, cryptoForTarget]);
 
+  /*
+    The $200 ARIO cap, in ARIO at Turbo's live rate (the same rate every other
+    ARIO price here uses). Undefined until the rate loads: an ARIO top-up then
+    waits rather than going ahead unbounded.
+  */
+  const arioUsdRate = useArioUsdRate();
+  const arioMaxTokens =
+    arioUsdRate && arioUsdRate > 0
+      ? Math.floor(ARIO_TOPUP_MAX_USD / arioUsdRate)
+      : undefined;
+  const arioPresets =
+    arioMaxTokens === undefined
+      ? [10_000, 25_000, 50_000, 100_000]
+      : [
+          ...[10_000, 25_000, 50_000, 100_000].filter((a) => a < arioMaxTokens),
+          arioMaxTokens,
+        ].slice(-4);
+  const arioAmount =
+    inputType === 'storage' && cryptoForStorage !== undefined
+      ? cryptoForStorage
+      : cryptoAmount;
+  const arioOverCap =
+    selectedTokenType === 'ario' &&
+    (arioMaxTokens === undefined || arioAmount > arioMaxTokens);
+  const arioCapNote =
+    selectedTokenType === 'ario'
+      ? arioMaxTokens === undefined
+        ? 'Loading the ARIO rate for the $200 limit…'
+        : `Up to $${ARIO_TOPUP_MAX_USD} in ARIO per top-up (${arioMaxTokens.toLocaleString()} ARIO at today's rate).`
+      : undefined;
+
   // Crypto preset amounts based on token type (from reference app)
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
     switch (tokenType) {
       case 'arweave': return [0.5, 1, 5, 10];
-      case 'ario': return [50, 100, 500, 1000];
+      // Sized to the $200 cap rather than to a round number of tokens: at
+      // ARIO's price, 1,000 ARIO was a dollar and a half. Presets above the
+      // cap are dropped; the cap is always offered.
+      case 'ario': return arioPresets;
       case 'base-ario': return [50, 100, 500, 1000]; // Same presets as ARIO
       case 'ethereum': return [0.01, 0.05, 0.1, 0.25];
       case 'base-eth': return [0.01, 0.05, 0.1, 0.25];
@@ -388,6 +435,7 @@ export default function TopUpPanel({
       case 'usdc': return [10, 25, 50, 100];
       case 'base-usdc': return [10, 25, 50, 100];
       case 'polygon-usdc': return [10, 25, 50, 100];
+      case 'solana-usdc': return [10, 25, 50, 100];
       default: return [0.01, 0.05, 0.1, 0.25];
     }
   };
@@ -426,6 +474,7 @@ export default function TopUpPanel({
   };
 
   const handleCheckout = async () => {
+    markTokenSettled();
     const effectiveAmount = getEffectiveUsdAmount();
 
     // Validate recipient address - block if there's a visible validation error
@@ -594,20 +643,10 @@ export default function TopUpPanel({
     onComplete?.();
   };
 
-  // Stablecoin options actually offered, after the availability gate. Derived
-  // once so the grid's column count and its contents can never disagree.
-  const stablecoinTokens = useMemo(
-    () =>
-      (['usdc', 'base-usdc', 'polygon-usdc'] as SupportedTokenType[]).filter(
-        isTokenSelectable,
-      ),
-    [],
-  );
-
   // Get available tokens based on wallet type (ordered by priority - first token is default)
   const getAvailableTokens = useCallback(
     (): SupportedTokenType[] =>
-      availableTokensForWallet(walletType, isTokenSelectable),
+      topUpTokensForWallet(walletType, isTokenSelectable),
     [walletType],
   );
 
@@ -621,12 +660,141 @@ export default function TopUpPanel({
    */
   useEffect(() => {
     if (!walletType) return;
-    const available = availableTokensForWallet(walletType, isTokenSelectable);
+    const available = topUpTokensForWallet(walletType, isTokenSelectable);
     if (available.length === 0) return;
     if (!available.includes(selectedTokenType)) {
       setSelectedTokenType(available[0]);
     }
   }, [walletType, selectedTokenType]);
+
+  /*
+    Balances for the crypto dropdown's rows. Display, plus the one-time
+    preselection below; the payment itself still reads its balance in
+    CryptoConfirmationPanel, exactly as before.
+
+    Solana and Arweave only. `useTokenBalance` switches an Ethereum wallet to
+    the token's chain before it reads, so reading every EVM row would bounce
+    the user's wallet between Base, Ethereum and Polygon just for opening this
+    page. Those rows show no amount and stay enabled: an unknown balance never
+    reads as empty.
+  */
+  const rowToken: SupportedTokenType | null =
+    walletType === 'solana' ? 'solana' : walletType === 'arweave' ? 'arweave' : null;
+  const rowToken2: SupportedTokenType | null =
+    walletType === 'solana' ? 'solana-usdc' : null;
+  // Not when a host opened this panel on the card: no token is shown, so
+  // nothing should be read.
+  const readRows = initialPaymentMethod !== 'fiat' && !!address;
+  const rowKey = rowToken && readRows ? `${address}:${rowToken}` : null;
+  const rowKey2 = rowToken2 && readRows ? `${address}:${rowToken2}` : null;
+  // `undefined` until read, and after a failed read: unknown, never zero.
+  const row1 = useBalanceRead(useTokenBalance(rowToken, walletType, address, !!rowKey), rowKey);
+  const row2 = useBalanceRead(useTokenBalance(rowToken2, walletType, address, !!rowKey2), rowKey2);
+  const rowToken3: SupportedTokenType | null = walletType === 'solana' ? 'ario' : null;
+  const rowKey3 = rowToken3 && readRows ? `${address}:${rowToken3}` : null;
+  const row3 = useBalanceRead(useTokenBalance(rowToken3, walletType, address, !!rowKey3), rowKey3);
+  const rowHeld = row1.balance;
+  const rowHeld2 = row2.balance;
+  const rowHeld3 = row3.balance;
+
+  const topUpSources = useMemo(
+    () =>
+      buildSources({
+        // Exactly the tokens this wallet could pay with before the dropdown.
+        tokens: topUpTokensForWallet(walletType, isTokenSelectable).map((token) => ({
+          token,
+          // ARIO top-ups carry a 25% infrastructure fee against 35% for the
+          // rest. Said as a small tag and nothing more: it is never preselected.
+          ...(token === 'ario' ? { badge: 'Lower fee' } : {}),
+        })),
+        balances: {
+          ...(rowToken ? { [rowToken]: rowHeld } : {}),
+          ...(rowToken2 ? { [rowToken2]: rowHeld2 } : {}),
+          ...(rowToken3 ? { [rowToken3]: rowHeld3 } : {}),
+        },
+        loadingTokens: [
+          ...(rowToken && row1.loading ? [rowToken] : []),
+          ...(rowToken2 && row2.loading ? [rowToken2] : []),
+          ...(rowToken3 && row3.loading ? [rowToken3] : []),
+        ],
+        // The SOL that pays a USDC transfer's network fee (§ 7.9).
+        solBalance: walletType === 'solana' ? rowHeld : undefined,
+      }),
+    [
+      walletType, rowToken, rowToken2, rowToken3, rowHeld, rowHeld2, rowHeld3,
+      row1.loading, row2.loading, row3.loading,
+    ],
+  );
+
+  /*
+    Open on the best token once its balance is known, then leave it alone.
+
+    The first fast-chain token that holds something, then the wallet's own
+    (§ 7.2). Runs once per wallet: after that the "keep the selected token
+    payable" effect above is the only thing that moves the selection, and only
+    when the current pick stops being offered. A token the host or a deep link
+    asked for is never overridden.
+  */
+  const preselectedForRef = useRef<string | null>(null);
+  /*
+    Once the user has touched anything on this screen, the token is theirs:
+    a balance landing late must not swap it under an amount they are typing,
+    or under a payment already under way.
+  */
+  const markTokenSettled = useCallback(() => {
+    if (address) preselectedForRef.current = address;
+  }, [address]);
+  const rowsLoading = row1.loading || row2.loading;
+  useEffect(() => {
+    if (!address || !walletType || initialToken || deepLink.token) return;
+    if (cryptoFlowStep !== 'selection') return;
+    if (preselectedForRef.current === address || rowsLoading) return;
+    const pick = preselectSource(topUpSources, 'top-up');
+    if (!pick) return;
+    preselectedForRef.current = address;
+    setSelectedTokenType(pick.token);
+  }, [address, walletType, initialToken, deepLink.token, cryptoFlowStep, rowsLoading, topUpSources]);
+
+  const selectedSource = topUpSources.find((src) => src.token === selectedTokenType);
+  const cryptoSourcesProps = {
+    groups: groupSources(topUpSources, walletType),
+    selectedId: selectedSource?.id,
+    onSelect: (id: string) => {
+      const src = topUpSources.find((x) => x.id === id);
+      if (!src) return;
+      // A token the user chose is theirs: the one-time preselection must not
+      // land on top of it if a balance arrives late.
+      markTokenSettled();
+      setSelectedTokenType(src.token);
+      setPaymentMethod('crypto');
+      setErrorMessage('');
+    },
+  };
+
+  // Two segments and no prices: the amount is chosen after the method here.
+  const payChoices: MethodChoice[] = [
+    { value: 'card', label: 'Card', status: 'via Stripe' },
+    {
+      value: 'crypto',
+      label: 'Crypto',
+      // Signed out there is nothing to list; choosing Crypto opens the wallet
+      // picker, as the tab did. Said on the segment itself, not only on
+      // hover: it is what the click will do.
+      sub: !address || !walletType ? 'Connect a wallet' : undefined,
+    },
+  ];
+
+  const onPayMethodChange = (method: PaymentMethod) => {
+    markTokenSettled();
+    setErrorMessage('');
+    if (method === 'card') {
+      setPaymentMethod('fiat');
+    } else if (!address || !walletType) {
+      setShowWalletModal(true);
+    } else {
+      setPaymentMethod('crypto');
+    }
+  };
 
   // Check if selected token is compatible with connected wallet
   const isTokenCompatibleWithWallet = (tokenType: SupportedTokenType): boolean => {
@@ -641,7 +809,7 @@ export default function TopUpPanel({
       case 'arweave':
         return 'Connect an Arweave wallet (like Wander) to pay with AR tokens on Arweave';
       case 'ario':
-        return 'Connect an Arweave or Ethereum wallet (like Wander or MetaMask) to pay with ARIO tokens';
+        return 'Connect a Solana wallet (like Phantom or Solflare) to pay with ARIO';
       case 'base-ario':
         return 'Connect an Ethereum wallet (like MetaMask) to pay with ARIO on Base L2 (fast & low fees)';
       case 'ethereum':
@@ -658,6 +826,8 @@ export default function TopUpPanel({
         return 'Connect an Ethereum wallet (like MetaMask) to pay with USDC on Polygon network';
       case 'solana':
         return 'Connect a Solana wallet (like Phantom) to pay with SOL tokens';
+      case 'solana-usdc':
+        return 'Connect a Solana wallet (like Phantom) to pay with USDC on Solana';
       default:
         return 'Connect a compatible wallet to use this token';
     }
@@ -693,13 +863,11 @@ export default function TopUpPanel({
     fetchTargetBalance();
   }, [paymentTargetAddress, paymentTargetType]);
 
-  // Auto-select token based on wallet type
-  useEffect(() => {
-    const availableTokens = getAvailableTokens();
-    if (availableTokens.length > 0) {
-      setSelectedTokenType(availableTokens[0]);
-    }
-  }, [walletType, getAvailableTokens]);
+  // No unconditional "pick the first token" effect here. The one above already
+  // snaps to the wallet's first choice whenever the current pick is not
+  // something it can sign; this one reset even a valid pick, so choosing USDC
+  // on Solana was undone by any wallet change, including to another Solana
+  // wallet that can pay in it just as well.
 
 
   // Set the initial credit destination. A deep-link destinationAddress (e.g.
@@ -921,7 +1089,13 @@ export default function TopUpPanel({
   }
 
   return (
-    <div className={embedded ? '' : 'px-4 sm:px-6'}>
+    <div
+      className={embedded ? '' : 'px-4 sm:px-6'}
+      // Any click or edit on this screen (amount, presets, storage units)
+      // counts as the user taking over; see `markTokenSettled`.
+      onClickCapture={markTokenSettled}
+      onChangeCapture={markTokenSettled}
+    >
       {/* Inline Header with Description — hidden when embedded (the host modal
           provides its own header). */}
       {!embedded && (
@@ -931,7 +1105,15 @@ export default function TopUpPanel({
           </div>
           <div>
             <h3 className="text-2xl font-heading font-extrabold text-foreground mb-1">Buy Credits</h3>
-            <p className="text-sm text-foreground/80">Purchase credits for permanent storage and domains on Arweave</p>
+            {/* Names Turbo once, where the money moves and where "what am I
+                actually buying" gets asked. The payment surfaces deliberately
+                don't: the ArNS selector calls this option "Balance" because
+                Turbo is how we settle, not a thing to choose. */}
+            <p className="text-sm text-foreground/80">
+              Purchase credits for permanent storage and domains on Arweave.
+              Credits are issued by Turbo, an ar.io gateway run by the ArDrive
+              team.
+            </p>
           </div>
         </div>
       )}
@@ -960,53 +1142,26 @@ export default function TopUpPanel({
         )}
 
         {/*
-          Payment-method tabs, unless the host already asked.
+          "Pay with": Card or Crypto, unless the host already asked.
 
-          The ArNS checkout presents card and each payable token as one flat
-          row up front, so by the time this panel opens the user has already
-          answered "how do you want to pay". Showing the tabs again would ask
-          it a second time and let the two answers disagree.
+          The ArNS checkout asks "how do you want to pay" once, up front, so by
+          the time this panel opens there the question is answered. Showing the
+          picker again would ask it a second time and let the two answers
+          disagree.
+
+          Crypto carries its token dropdown with it (SPEC-payment-sources § 7.1),
+          so the token is chosen here rather than in a grid further down. No
+          Credits choice: this page is where credits are bought.
         */}
         {!initialPaymentMethod && (
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-foreground/80 mb-3">Choose Payment Method</label>
-          <div className="inline-flex bg-card rounded-2xl p-1 border border-border/20 w-full">
-            <button
-              onClick={() => {
-                setPaymentMethod('fiat');
-                setErrorMessage('');
-              }}
-              className={`flex-1 px-4 py-3 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                paymentMethod === 'fiat'
-                  ? 'bg-foreground text-card'
-                  : 'text-foreground/80 hover:text-foreground'
-              }`}
-            >
-              <CreditCard className="w-4 h-4" />
-              Credit/Debit Card
-            </button>
-            <button
-              onClick={() => {
-                // If no wallet connected, show wallet modal
-                if (!address || !walletType) {
-                  setShowWalletModal(true);
-                  setErrorMessage('');
-                } else {
-                  setPaymentMethod('crypto');
-                  setErrorMessage('');
-                }
-              }}
-              className={`flex-1 px-4 py-3 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                paymentMethod === 'crypto'
-                  ? 'bg-foreground text-card'
-                  : 'text-foreground/80 hover:text-foreground'
-              }`}
-            >
-              <Wallet className="w-4 h-4" />
-              Crypto
-            </button>
+          <div className="mb-6">
+            <PaymentPicker
+              choices={payChoices}
+              value={paymentMethod === 'fiat' ? 'card' : 'crypto'}
+              onChange={onPayMethodChange}
+              crypto={cryptoSourcesProps}
+            />
           </div>
-        </div>
         )}
 
         {/* Recipient Wallet Address - Only show for fiat payments */}
@@ -1189,184 +1344,14 @@ export default function TopUpPanel({
           </div>
         )}
 
-        {/* Crypto Token Selection - Show immediately after selecting crypto */}
-        {/* Hide selector if only one token available (e.g., Solana wallet only has SOL) */}
-        {paymentMethod === 'crypto' && getAvailableTokens().length > 1 && (
+        {/*
+          A host that opened this panel on crypto (a name renewal paid in a
+          token) skips the picker above, but the token stays changeable here,
+          as it was in the grid this replaced.
+        */}
+        {initialPaymentMethod === 'crypto' && paymentMethod === 'crypto' && topUpSources.length > 1 && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-foreground/80 mb-3">Select Cryptocurrency</label>
-
-            {!walletType ? (
-              <div className="bg-info/10 border border-info/20 rounded-2xl p-4">
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-info mb-2">Wallet Required for Crypto Payments</p>
-                    <p className="text-info/80 text-sm mb-3">
-                      Connect a wallet that supports the cryptocurrency you want to use:
-                    </p>
-                    <div className="space-y-2 text-sm text-info/80">
-                      <div>• <strong>AR or ARIO tokens:</strong> Connect Wander wallet</div>
-                      <div>• <strong>ETH (L1) or ETH (Base):</strong> Connect MetaMask or Ethereum wallet</div>
-                      <div>• <strong>SOL tokens:</strong> Connect Phantom or Solana wallet</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : getAvailableTokens().length === 0 ? (
-              <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-warning mb-2">No Compatible Crypto Tokens</p>
-                    <p className="text-warning/80 text-sm">
-                      Your current {walletType} wallet doesn't support our crypto payment tokens.
-                      Please use fiat payment or connect a different wallet.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : walletType === 'ethereum' ? (
-              // Compact layout for Ethereum wallet with all token options
-              <div className="space-y-3">
-                {/* Native Tokens Row - ETH options, POL. Base-ARIO and ARIO (AO)
-                    are intentionally not offered to Ethereum wallets: Base-ARIO
-                    top-ups are deprecated, and neither is selectable at checkout
-                    (getAvailableTokens omits both), so showing them was a promoted
-                    dead-end. */}
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(['ethereum', 'base-eth', 'pol'] as const).map((tokenType) => {
-                    const tokenName = tokenType === 'ethereum' ? 'ETH'
-                      : tokenType === 'base-eth' ? 'ETH'
-                      : 'POL';
-                    const networkName = tokenType === 'ethereum' ? 'Ethereum'
-                      : tokenType === 'base-eth' ? 'Base'
-                      : 'Polygon';
-                    const isFast = tokenType === 'base-eth' || tokenType === 'pol';
-
-                    return (
-                      <button
-                        key={tokenType}
-                        onClick={() => {
-                          setSelectedTokenType(tokenType);
-                          setErrorMessage('');
-                        }}
-                        className={`p-2 rounded-2xl border transition-all text-left ${
-                          selectedTokenType === tokenType
-                            ? 'border-foreground bg-foreground/10 text-foreground'
-                            : 'border-border/20 text-foreground/80 hover:bg-card hover:text-foreground'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-bold text-sm">{tokenName}</div>
-                            <div className="text-[10px] opacity-75">{networkName}</div>
-                          </div>
-                          {selectedTokenType === tokenType && (
-                            <Check className="w-3.5 h-3.5 flex-shrink-0" />
-                          )}
-                        </div>
-                        {isFast && (
-                          <div className="flex gap-1 mt-1">
-                            <span className="text-[9px] text-success font-medium">Fast</span>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* USDC Stablecoins Row */}
-                <div>
-                  <div className="text-[10px] font-medium text-foreground/80 mb-1.5 px-1 uppercase tracking-wider">Stablecoins</div>
-                  <div className={`grid gap-1.5 ${stablecoinTokens.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                    {stablecoinTokens.map((tokenType) => {
-                      const networkName = tokenType === 'usdc' ? 'Ethereum'
-                        : tokenType === 'base-usdc' ? 'Base'
-                        : 'Polygon';
-                      const isFast = tokenType === 'base-usdc' || tokenType === 'polygon-usdc';
-
-                      return (
-                        <button
-                          key={tokenType}
-                          onClick={() => {
-                            setSelectedTokenType(tokenType);
-                            setErrorMessage('');
-                          }}
-                          className={`p-2 rounded-2xl border transition-all text-left ${
-                            selectedTokenType === tokenType
-                              ? 'border-foreground bg-foreground/10 text-foreground'
-                              : 'border-border/20 text-foreground/80 hover:bg-card hover:text-foreground'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-bold text-sm">USDC</div>
-                              <div className="text-[10px] opacity-75">{networkName}</div>
-                            </div>
-                            {selectedTokenType === tokenType && (
-                              <Check className="w-3.5 h-3.5 flex-shrink-0" />
-                            )}
-                          </div>
-                          {isFast && (
-                            <div className="mt-1">
-                              <span className="text-[9px] text-success font-medium">Fast</span>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              // Compact layout for other wallet types (Arweave, Solana)
-              <div className={`grid gap-1.5 ${getAvailableTokens().length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                {getAvailableTokens().map((tokenType) => {
-                  const tokenName = tokenType === 'ario' ? 'ARIO'
-                    : tokenType === 'arweave' ? 'AR'
-                    : tokenType === 'solana' ? 'SOL'
-                    : tokenLabels[tokenType];
-                  const networkName = tokenType === 'ario' ? 'AO Network'
-                    : tokenType === 'arweave' ? 'Arweave'
-                    : tokenType === 'solana' ? 'Solana'
-                    : '';
-                  const isFast = tokenType === 'ario' || tokenType === 'solana';
-                  // No "No Fee" badge: ARIO now carries a 25% fee, and a
-                  // hardcoded fee claim is exactly what goes stale when the
-                  // service's fee changes. Fees belong to the live quote.
-
-                  return (
-                    <button
-                      key={tokenType}
-                      onClick={() => {
-                        setSelectedTokenType(tokenType);
-                        setErrorMessage('');
-                      }}
-                      className={`p-3 rounded-2xl border transition-all text-left ${
-                        selectedTokenType === tokenType
-                          ? 'border-foreground bg-foreground/10 text-foreground'
-                          : 'border-border/20 text-foreground/80 hover:bg-card hover:text-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-base">{tokenName}</div>
-                          <div className="text-xs opacity-75">{networkName}</div>
-                        </div>
-                        {selectedTokenType === tokenType && (
-                          <Check className="w-4 h-4 flex-shrink-0" />
-                        )}
-                      </div>
-                      {isFast && (
-                        <div className="flex gap-2 mt-1.5">
-                          <span className="text-[10px] text-success font-medium">Fast</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <CryptoSourceListbox {...cryptoSourcesProps} label="Pay with" />
           </div>
         )}
 
@@ -1893,6 +1878,17 @@ export default function TopUpPanel({
                     <div className="mt-2 text-xs text-foreground/80">
                       Min: ${minUSDAmount} • Max: ${maxUSDAmount.toLocaleString()}
                     </div>
+                    {/* The ARIO cap applies to storage too; say it where the
+                        blocked Continue would otherwise be unexplained. */}
+                    {arioCapNote && (
+                      <div
+                        className={`mt-1 text-xs ${
+                          arioOverCap && arioMaxTokens !== undefined ? 'text-error' : 'text-foreground/70'
+                        }`}
+                      >
+                        {arioCapNote}
+                      </div>
+                    )}
                   </div>
 
                 </>
@@ -1914,7 +1910,7 @@ export default function TopUpPanel({
                             : 'border-border/20 text-foreground/80 hover:bg-card hover:text-foreground'
                         }`}
                       >
-                        {amount} {tokenLabels[selectedTokenType].replace(/\s*\([^)]*\)/, '')}
+                        {amount.toLocaleString()} {tokenLabels[selectedTokenType].replace(/\s*\([^)]*\)/, '')}
                       </button>
                     ))}
                   </div>
@@ -1943,6 +1939,15 @@ export default function TopUpPanel({
                     <div className="mt-2 text-xs text-foreground/80">
                       Enter the amount of {tokenLabels[selectedTokenType]} you want to spend
                     </div>
+                    {arioCapNote && (
+                      <div
+                        className={`mt-1 text-xs ${
+                          arioOverCap && arioMaxTokens !== undefined ? 'text-error' : 'text-foreground/70'
+                        }`}
+                      >
+                        {arioCapNote}
+                      </div>
+                    )}
 
                     {/* Token Pricing Status */}
                     {tokenPricingLoading && (
@@ -2159,6 +2164,7 @@ export default function TopUpPanel({
             )) ||
             (paymentMethod === 'crypto' && (
               !!targetAddressError || // Block checkout if recipient address validation failed
+              arioOverCap || // ARIO: at most $200 per top-up, and not before the rate loads
               (inputType === 'dollars' && (cryptoAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || !!tokenPricingError)) ||
               (inputType === 'storage' && (!wincForOneGiB || !creditsForOneUSD || storageAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || cryptoForStorage === undefined))
             )) ||

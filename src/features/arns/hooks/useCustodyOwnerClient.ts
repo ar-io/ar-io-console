@@ -7,6 +7,7 @@ import { useStore } from '../../../store/useStore';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import { useEthereumTurboClient } from '../../../hooks/useEthereumTurboClient';
 import type { SupportedTokenType } from '../../../constants';
+import { solanaClientToken } from '../../../utils/solanaToken';
 
 /**
  * An authenticated Turbo client that signs as the name's OWNER.
@@ -50,10 +51,12 @@ export function useCustodyOwnerClient() {
     /*
      * Which token this client will move, when that matters.
      *
-     * Only the Ethereum branch cares: one wallet signs for base-usdc, base-eth,
-     * pol and the rest, and `topUpWithTokens` needs the client built for the
-     * token actually being sent. Arweave and Solana each have exactly one, so
-     * the override is inert there. Omitted, everything behaves as before.
+     * `topUpWithTokens` spends whatever token the client was built with, so a
+     * client built for the wrong one sends the wrong asset and reads the
+     * amount in the wrong units. Ethereum has always had several. Solana now
+     * has two, SOL and USDC, and this branch ignoring the override is what
+     * would have funded a name purchase with SOL after the buyer picked USDC.
+     * Arweave has exactly one, so the override stays inert there.
      */
     tokenOverride?: SupportedTokenType,
   ): Promise<TurboAuthenticatedClient> => {
@@ -83,7 +86,7 @@ export function useCustodyOwnerClient() {
           );
         }
         return TurboFactory.authenticated({
-          token: 'solana',
+          token: solanaClientToken(tokenOverride),
           walletAdapter: { publicKey, signMessage, signTransaction },
           ...turboConfig,
         });

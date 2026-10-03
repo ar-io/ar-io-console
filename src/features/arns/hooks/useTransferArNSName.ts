@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import { useStore } from '../../../store/useStore';
+import { mapActionExpiryMessage } from '../purchase/actionFailure';
 
 
 import { useArNSTurboSigner } from './useArNSTurboSigner';
@@ -48,11 +50,20 @@ export function useTransferArNSName(processId?: string) {
           await writer.getWriter(processId)
         ).transfer({ target: target.trim() });
         setTxId(res?.id);
+        // Which names this wallet holds, or what they are, just changed.
+        useStore.getState().invalidateOwnedArNSNames();
         setPhase('success');
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return res?.id;
       } catch (err) {
-        const normalized = err instanceof Error ? err : new Error(String(err));
+        // An approval that expired before submission changed nothing: say so,
+        // and what happened to the credits, rather than the raw service error.
+        const expiry = mapActionExpiryMessage(err);
+        const normalized = expiry
+          ? new Error(expiry)
+          : err instanceof Error
+            ? err
+            : new Error(String(err));
         setPhase('error');
         setError(normalized);
         throw normalized;
@@ -68,6 +79,9 @@ export function useTransferArNSName(processId?: string) {
     error,
     /** True when the wallet signs and pays SOL — the modal must not quote credits. */
     paysNetworkDirectly: writer.paysNetworkDirectly,
+    alternative: writer.alternative,
+    switchRail: writer.switchRail,
+    pending: writer.pending,
     txId,
     isBusy: phase === 'submitting',
   };

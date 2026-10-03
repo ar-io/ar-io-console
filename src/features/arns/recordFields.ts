@@ -226,3 +226,23 @@ export function withoutClears(
     ...(Array.isArray(keywords) ? { keywords } : {}),
   };
 }
+
+/**
+ * A change only the wallet's own transaction can write.
+ *
+ * Turbo's `setArNSRecord` carries a target, an undername and a TTL, and nothing
+ * else: no protocol and no priority (turbo-sdk 2.1.0-alpha.3). Sent on the
+ * credits rail, an IPFS target would be written without its protocol, or
+ * rejected after the action was created and charged, and a priority would be
+ * dropped. The ANT program takes both, so such a save signs with the wallet.
+ */
+export function requiresSelfSigned(change: {
+  targetProtocol?: number;
+  priority?: number;
+}): boolean {
+  return (
+    (change.targetProtocol !== undefined &&
+      change.targetProtocol !== TARGET_PROTOCOL.arweave) ||
+    change.priority !== undefined
+  );
+}

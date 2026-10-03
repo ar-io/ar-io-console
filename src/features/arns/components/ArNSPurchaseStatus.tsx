@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
+  Clock,
   CreditCard,
   ExternalLink,
   Rocket,
@@ -11,13 +13,41 @@ import { useNavigate } from 'react-router-dom';
 import type { ArNSSettlementResult } from '../services/TurboArNSClient';
 import TransactionReceipt from './TransactionReceipt';
 import { toUnicodeName } from '@/utils/punycode';
-import type { BuyPhase } from '../hooks/useBuyArNSName';
+import type { BuyFailure, BuyPhase } from '../hooks/useBuyArNSName';
+import { heldByPhrase, heldMessage } from '../purchase/actionFailure';
+
+/**
+ * Whether `until` has passed, re-checked every 15 s until it has.
+ *
+ * Readiness is computed from `Date.now()` at render; the interval only forces
+ * the re-render. Storing "now" and deriving from that left a time that was
+ * already past on entry reading as not-yet forever, since nothing set it.
+ */
+function useReachedAt(until: number | undefined): boolean {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (until === undefined) return;
+    tick((n) => n + 1);
+    if (Date.now() >= until) return;
+    const id = window.setInterval(() => {
+      tick((n) => n + 1);
+      if (Date.now() >= until) window.clearInterval(id);
+    }, 15_000);
+    return () => window.clearInterval(id);
+  }, [until]);
+  return until !== undefined && Date.now() >= until;
+}
 
 interface ArNSPurchaseStatusProps {
   phase: BuyPhase;
   result: ArNSSettlementResult | undefined;
   error: Error | undefined;
   insufficientCredits: boolean;
+  /**
+   * What the failure did with the credits: already back ('released'), or
+   * held until a refund ('held'). Absent for every other failure.
+   */
+  failure?: BuyFailure;
   /**
    * The user already paid — a token top-up landed and only the registration
    * failed. Changes the whole message: they hold spendable credits and need no
@@ -53,6 +83,7 @@ export function ArNSPurchaseStatus({
   result,
   error,
   insufficientCredits,
+  failure,
   alreadyFunded = false,
   targetId,
   targetLabel,
@@ -61,6 +92,9 @@ export function ArNSPurchaseStatus({
   onRetry,
 }: ArNSPurchaseStatusProps) {
   const navigate = useNavigate();
+  // `heldUntil` already includes the refund reconciler's cadence.
+  const heldUntil = failure?.kind === 'held' ? failure.held.heldUntil : undefined;
+  const ready = useReachedAt(heldUntil);
 
   if (phase === 'idle') return null;
 
@@ -171,6 +205,45 @@ export function ArNSPurchaseStatus({
   }
 
   // phase === 'error'
+  /*
+    Paid by card or token, and the registration's credits are now held.
+    "Finish registering" would only hit the hold and come back here, so it
+    waits for the refund and says when, instead of looping silently.
+  */
+  if (alreadyFunded && failure?.kind === 'held') {
+    return (
+      <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">
+        <div className="flex items-start gap-3">
+          <Clock className="w-6 h-6 text-warning flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-foreground">
+              {failure.held.unconfirmed
+                ? <>Paid, but we couldn&apos;t confirm &quot;{name}&quot; yet</>
+                : <>Paid, but &quot;{name}&quot; isn&apos;t registered yet</>}
+            </p>
+            <p className="text-sm text-foreground/70 mt-1">
+              Your payment went through and you don&apos;t need to pay again.{' '}
+              {/* They DID pay, for the credits: never "nothing was charged". */}
+              {heldMessage(failure.held, { paid: true })}
+            </p>
+            <button
+              onClick={onRetry}
+              disabled={!ready}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            >
+              Finish registering
+            </button>
+            {!ready && (
+              <p className="mt-2 text-xs text-foreground/60">
+                You can finish {heldByPhrase(failure.held)}, once the credits are back.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (alreadyFunded) {
     return (
       <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">
@@ -193,6 +266,34 @@ export function ArNSPurchaseStatus({
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Finish registering
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+    Not charged, credits held until a refund. Neutral, not an error: nothing
+    was lost, and the buyer should not reach for "Buy Turbo Credits".
+  */
+  if (failure?.kind === 'held') {
+    return (
+      <div className="mt-4 bg-warning/10 rounded-2xl border border-warning/30 p-5">
+        <div className="flex items-start gap-3">
+          <Clock className="w-6 h-6 text-warning flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-foreground">
+              {failure.held.unconfirmed
+                ? <>We couldn&apos;t confirm &quot;{name}&quot;</>
+                : <>&quot;{name}&quot; wasn&apos;t registered</>}
+            </p>
+            <p className="text-sm text-foreground/70 mt-1">{heldMessage(failure.held)}</p>
+            <button
+              onClick={onRetry ?? onDone}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Try again
             </button>
           </div>
         </div>

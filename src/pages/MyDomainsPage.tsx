@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Globe, RefreshCw, AlertTriangle, Download, Search, X } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import DomainsTable from '@/components/account/DomainsTable';
 import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
+import IncompletePurchaseBanner from '@/features/arns/components/IncompletePurchaseBanner';
 import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
 import ManageDomainModal from '@/features/arns/components/ManageDomainModal';
 
@@ -35,6 +36,10 @@ export default function MyDomainsPage() {
     loading: loadingDomains,
     fetchOwnedNames,
   } = useOwnedArNSNames();
+  // Stable, so the banner reports a completed purchase once.
+  const refreshAfterPurchase = useCallback(() => {
+    void fetchOwnedNames(true);
+  }, [fetchOwnedNames]);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showAllDomains, setShowAllDomains] = useState(false);
   /*
@@ -202,6 +207,14 @@ export default function MyDomainsPage() {
           <SyncOwnershipBanner
             address={arnsAddress}
             onSynced={() => fetchOwnedNames(true)}
+          />
+
+          {/* A purchase started here that did not finish: what happened to
+              it, and to its credits, read live from the payment service. */}
+          <IncompletePurchaseBanner
+            address={arnsAddress ?? undefined}
+            ownedNames={ownedNames}
+            onCompleted={refreshAfterPurchase}
           />
 
           {loadingDomains ? (

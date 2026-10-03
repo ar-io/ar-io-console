@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 
+import { useStore } from '../../../store/useStore';
+
 import { useArNSTurboSigner } from './useArNSTurboSigner';
 import { useCustodyOwnerClient } from './useCustodyOwnerClient';
 import { useAntSummaries } from './useAntLogos';
@@ -16,7 +18,12 @@ import {
   sponsoredRecordWriter,
   type SponsoredRecordClient,
 } from '../records/sponsoredWriter';
-import { chooseWriter, writerCostNote } from '../records/writerChoice';
+import {
+  chooseWriter,
+  MIN_SOL_FOR_RECORD_WRITE,
+  SELF_SIGNED_ONLY_NOTE,
+  writerCostNote,
+} from '../records/writerChoice';
 import { useArNSPaymentBalances } from './useArNSPaymentBalances';
 
 /**
@@ -61,14 +68,44 @@ export function useRecordWriter(processId: string | undefined) {
   */
   const balances = useArNSPaymentBalances(signer.address ?? undefined);
 
-  const { kind, reason } = chooseWriter(role, {
-    credits: balances.credits,
-    priceCredits,
-    sol: balances.sol,
-  });
+  // The owner's choice of rail: every editor follows it, for this wallet and session.
+  const preference = useStore((st) => st.arnsWriterPreference);
+  const setPreference = useStore((st) => st.setArnsWriterPreference);
+
+  const { kind, reason, alternative } = chooseWriter(
+    role,
+    {
+      credits: balances.credits,
+      priceCredits,
+      sol: balances.sol,
+      solLoading: balances.loading,
+    },
+    preference ?? undefined,
+  );
+
+  /*
+    Whether this wallet could sign a write itself right now: a controller
+    always does, an owner when they hold enough SOL. Needed for the saves only
+    the wallet can make (`requiresSelfSigned`: an IPFS target or a priority).
+  */
+  const canSelfSign =
+    role === 'controller' ||
+    (role === 'owner' &&
+      balances.sol !== undefined &&
+      balances.sol >= MIN_SOL_FOR_RECORD_WRITE);
 
   const getWriter = useCallback(
-    async (antId?: string): Promise<RecordWriter> => {
+    async (
+      antId?: string,
+      opts?: {
+        /**
+         * This save can only be written by the wallet's own transaction, so
+         * it never goes through Turbo whatever the default rail. Without the
+         * SOL to sign it, it stops here, before anything is created or charged.
+         */
+        requireSelfSigned?: boolean;
+      },
+    ): Promise<RecordWriter> => {
       const id = antId ?? processId;
       if (!id) {
         throw new Error('This name has no record to edit yet.');
@@ -86,11 +123,16 @@ export function useRecordWriter(processId: string | undefined) {
       */
       if (kind === 'blocked') {
         throw new Error(
-          'Still checking what this wallet can do with this name. Try again in a moment.',
+          role === 'owner'
+            ? 'Still checking your wallet balance. Try again in a moment.'
+            : 'Still checking what this wallet can do with this name. Try again in a moment.',
         );
       }
+      if (opts?.requireSelfSigned && kind === 'sponsored' && !canSelfSign) {
+        throw new Error(SELF_SIGNED_ONLY_NOTE);
+      }
 
-      if (kind === 'self-signed') {
+      if (kind === 'self-signed' || opts?.requireSelfSigned) {
         const ant = (await getWritableANT(
           id,
           signer.getSolanaSigner(),
@@ -109,7 +151,7 @@ export function useRecordWriter(processId: string | undefined) {
         }),
       );
     },
-    [getClient, signer, processId, kind],
+    [getClient, signer, processId, kind, role, canSelfSign],
   );
 
   return {
@@ -117,7 +159,7 @@ export function useRecordWriter(processId: string | undefined) {
     /** True when a wallet is present and able to approve a write. */
     canWrite: signer.isReady && kind !== 'blocked',
     /** True while the role is still resolving — writes must wait, not guess. */
-    isResolving: kind === 'blocked' && role === 'unknown',
+    isResolving: kind === 'blocked' && (role === 'unknown' || role === 'owner'),
     /** What this wallet's edits cost, for the note above the editor. */
     costNote: writerCostNote(kind, priceCredits, reason),
     /**
@@ -129,5 +171,22 @@ export function useRecordWriter(processId: string | undefined) {
     paysNetworkDirectly: kind === 'self-signed',
     /** Why, so a surface can explain an unexpected route. */
     writerReason: reason,
+    /** This wallet could sign a write itself (see `requiresSelfSigned`). */
+    canSelfSign,
+    /**
+     * An owner whose SOL balance is still being read. Surfaces say they are
+     * checking rather than quoting a rail that is about to change.
+     */
+    pending: kind === 'blocked' && role === 'owner',
+    /**
+     * The other rail, when it would also work, and a way to take it. The
+     * surface offers it in one line ("Pay with credits instead"), so the
+     * default is never the only option on screen.
+     */
+    alternative,
+    switchRail: () =>
+      setPreference(alternative === 'sponsored' ? 'credits' : 'sol'),
+    /** The credits rail's price, for the switch's own label. */
+    alternativeCredits: alternative === 'sponsored' ? priceCredits : undefined,
   };
 }

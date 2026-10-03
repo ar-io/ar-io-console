@@ -25,3 +25,14 @@ describe('getExplorerTxUrl', () => {
     expect(getExplorerTxUrl('', 'solana')).toBeNull();
   });
 });
+
+describe('solana-usdc', () => {
+  it('links to Solscan, like every other payment on that chain', () => {
+    // An SPL transfer is a Solana transaction. Before this, a USDC-on-Solana
+    // top-up rendered its id as plain text while the SOL top-up beside it
+    // linked out.
+    expect(getExplorerTxUrl('abc123', 'solana-usdc')).toBe(
+      'https://solscan.io/tx/abc123',
+    );
+  });
+});

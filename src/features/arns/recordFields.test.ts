@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   blankRecordFields,
   RecordFieldsState,
+  requiresSelfSigned,
   toRecordChange,
   withoutClears,
   validateRecordFields,
@@ -257,5 +258,21 @@ describe('withoutClears', () => {
   it('leaves the non-metadata fields alone', () => {
     const out = withoutClears({ ...base, priority: 3, displayName: null });
     expect(out).toMatchObject({ ...base, priority: 3 });
+  });
+});
+
+describe('requiresSelfSigned', () => {
+  /*
+    Turbo's setArNSRecord has no protocol or priority. On the credits rail an
+    IPFS target would be written without its protocol, after the charge.
+  */
+  it('keeps an Arweave target with no priority on either rail', () => {
+    expect(requiresSelfSigned(toRecordChange(base({ target: 'x'.repeat(43) })))).toBe(false);
+  });
+
+  it('sends an IPFS target or a priority through the wallet', () => {
+    expect(requiresSelfSigned({ targetProtocol: 1 })).toBe(true);
+    expect(requiresSelfSigned({ targetProtocol: 0, priority: 2 })).toBe(true);
+    expect(requiresSelfSigned(toRecordChange(base({ priority: '3' })))).toBe(true);
   });
 });

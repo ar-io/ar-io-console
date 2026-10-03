@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { useStore } from '../../../store/useStore';
 import { APP_NAME } from '../../../constants';
 import { getWritableARIO } from '../../../utils';
 import { ArNSSettlementResult } from '../services/TurboArNSClient';
@@ -50,17 +51,20 @@ type ARIOManageWriteable = {
     years: number;
     fundFrom?: ArioFundFrom;
     referrer?: string;
+    discountGatewayAddress?: string;
   }): Promise<{ id: string }>;
   upgradeRecord(p: {
     name: string;
     fundFrom?: ArioFundFrom;
     referrer?: string;
+    discountGatewayAddress?: string;
   }): Promise<{ id: string }>;
   increaseUndernameLimit(p: {
     name: string;
     increaseCount: number;
     fundFrom?: ArioFundFrom;
     referrer?: string;
+    discountGatewayAddress?: string;
   }): Promise<{ id: string }>;
 };
 
@@ -177,6 +181,12 @@ export function useManageArNSName(): UseManageArNSNameResult {
           // reaches this hook — it settles through the quote route.
           const fundFrom =
             mechanism.kind === 'ario-direct' ? mechanism.fundFrom : 'balance';
+          // An operations wallet's gateway, when the quote honoured it; absent,
+          // the SDK tries the signer's own gateway.
+          const discount =
+            mechanism.kind === 'ario-direct' && mechanism.discountGatewayAddress
+              ? { discountGatewayAddress: mechanism.discountGatewayAddress }
+              : {};
 
           switch (intent) {
           case 'Extend-Lease':
@@ -185,6 +195,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
               years: years ?? 1,
               fundFrom,
               referrer: APP_NAME,
+              ...discount,
             });
             break;
           case 'Upgrade-Name':
@@ -192,6 +203,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
               name: lowered,
               fundFrom,
               referrer: APP_NAME,
+              ...discount,
             });
             break;
           case 'Increase-Undername-Limit':
@@ -200,6 +212,7 @@ export function useManageArNSName(): UseManageArNSNameResult {
               increaseCount: increaseQty ?? 1,
               fundFrom,
               referrer: APP_NAME,
+              ...discount,
             });
               break;
           }
@@ -211,6 +224,8 @@ export function useManageArNSName(): UseManageArNSNameResult {
           receipt: {},
         };
         setResult(settlement);
+        // Which names this wallet holds, or what they are, just changed.
+        useStore.getState().invalidateOwnedArNSNames();
         setPhase('success');
         setStatusMessage(`Done — '${lowered}' updated!`);
         window.dispatchEvent(new CustomEvent('refresh-balance'));

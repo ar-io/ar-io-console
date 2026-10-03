@@ -15,6 +15,7 @@ import { APP_NAME, APP_VERSION, SupportedTokenType } from '../constants';
 import { useEthereumTurboClient } from './useEthereumTurboClient';
 import { useFreeUploadLimit, useFreeStatus, isFileFree } from './useFreeUploadLimit';
 import { hashFilesAsync } from '../utils/fileHash';
+import { solanaClientToken } from '../utils/solanaToken';
 import {
   awaitCreditSettlement,
   BALANCE_UNREADABLE_MESSAGE,
@@ -351,7 +352,9 @@ export function useFolderUpload() {
           throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
         }
         return TurboFactory.authenticated({
-          token: "solana",
+          // The requested token, not a hardcoded 'solana': a client spends
+          // whatever token it was built with, and JIT now offers USDC here.
+          token: solanaClientToken(tokenTypeOverride),
           walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...dynamicTurboConfig,
         });

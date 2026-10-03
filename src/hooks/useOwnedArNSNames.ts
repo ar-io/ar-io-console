@@ -11,6 +11,12 @@ import { ArNSName } from '@/types';
 // Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
 // URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
 import { toUnicodeName as decodePunycode } from '../utils/punycode';
+import {
+  EXPECTED_NAME_RETRY_MS,
+  UNMET_EXPECTATION_TTL_MS,
+  expiredUnmetNames,
+  missingExpectedNames,
+} from '../utils/expectedOwnedNames';
 import { useCustodyOwnerClient } from '../features/arns/hooks/useCustodyOwnerClient';
 import { browserArNSOwnerSigner } from '../features/arns/actions/browserOwnerSigner';
 import { useAntSummaries } from '../features/arns/hooks/useAntLogos';
@@ -43,6 +49,35 @@ export function useOwnedArNSNames() {
   // Monotonic request counter — only the latest fetchOwnedNames call may
   // update state, preventing a slow earlier request from overwriting a newer one.
   const fetchSeqRef = useRef(0);
+  /** The pending re-read while a just-bought name is missing from the list. */
+  const retryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** The latest `fetchOwnedNames`, so the re-read never calls a stale one. */
+  const fetchOwnedNamesRef = useRef<
+    ((force?: boolean, background?: boolean) => Promise<ArNSName[]>) | undefined
+  >(undefined);
+  /** Re-read shortly, in the background, unless a re-read is already due. */
+  const scheduleRetry = useCallback(() => {
+    if (retryRef.current) return;
+    retryRef.current = setTimeout(() => {
+      retryRef.current = undefined;
+      void fetchOwnedNamesRef.current?.(true, true);
+    }, EXPECTED_NAME_RETRY_MS);
+  }, []);
+  /*
+    On unmount or a wallet switch, stop the re-read and retire any read still
+    in flight, so it can neither schedule another re-read on a dead instance
+    nor paint the previous wallet's names over the new one's.
+  */
+  useEffect(
+    () => () => {
+      if (retryRef.current) clearTimeout(retryRef.current);
+      retryRef.current = undefined;
+      fetchSeqRef.current++;
+      // The retired read will not clear its spinner; the next one sets it.
+      setLoading(false);
+    },
+    [arnsAddress],
+  );
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const { getClient: getOwnerClient } = useCustodyOwnerClient();
   const { connection: solanaConnection } = useConnection();
@@ -65,13 +100,40 @@ export function useOwnedArNSNames() {
 
   // Fetch names owned by the ArNS address (primary Solana or linked Solana)
   const fetchOwnedNames = useCallback(
-    async (forceRefresh: boolean = false): Promise<ArNSName[]> => {
+    async (
+      forceRefresh: boolean = false,
+      /**
+       * A re-read while waiting on a just-bought name: refresh the list
+       * without the loading state, so the page does not flash a spinner
+       * every few seconds.
+       */
+      background: boolean = false,
+    ): Promise<ArNSName[]> => {
       if (!arnsAddress) return [];
 
       // Check cache first (unless forcing refresh)
       if (!forceRefresh) {
         const cached = getOwnedArNSNames(arnsAddress!);
         if (cached) {
+          // Supersedes any read still in flight, as a fresh read would; that
+          // read no longer clears the spinner, so this does.
+          fetchSeqRef.current++;
+          setLoading(false);
+          /*
+            A short-lived list missing a just-bought name: this instance must
+            re-read too. Another instance started the timer that wrote it, and
+            that instance's read does not update this one's names.
+          */
+          if (
+            missingExpectedNames(
+              useStore.getState().expectedOwnedNames,
+              arnsAddress!,
+              cached,
+              Date.now(),
+            ).length > 0
+          ) {
+            scheduleRetry();
+          }
           const arnsNames: ArNSName[] = cached.map((cached) => ({
             name: cached.name,
             displayName: decodePunycode(cached.name),
@@ -90,7 +152,7 @@ export function useOwnedArNSNames() {
       const seq = ++fetchSeqRef.current;
       const isCurrent = () => seq === fetchSeqRef.current;
 
-      setLoading(true);
+      if (!background) setLoading(true);
       setFetchError(false);
       try {
         // Use AR.IO SDK to get owned names with custom CU
@@ -139,14 +201,70 @@ export function useOwnedArNSNames() {
           endTimestamp: name.endTimestamp,
         }));
 
-        // Cache the results — only if this is still the latest request
+        // Cache the results, only if this is still the latest request.
         if (isCurrent()) {
-          setOwnedArNSNames(arnsAddress!, cacheData);
+          /*
+            A name this wallet just bought that the read does not include yet
+            means the index has not caught up. That list is shown but not
+            cached, and read again shortly; once the name is there the list is
+            cached and the expectation dropped. See utils/expectedOwnedNames.
+          */
+          const expected = useStore.getState().expectedOwnedNames;
+          const now = Date.now();
+          const missing = missingExpectedNames(expected, arnsAddress!, processedNames, now);
           setNames(processedNames);
+          if (missing.length > 0) {
+            /*
+              Cached for one retry interval, not left uncached. Consumers that
+              fetch whenever the list is empty and idle (the Deploy and Assign
+              Domain pickers) would otherwise re-fetch back to back; a short
+              cache hit stops them, and the timer below does the re-read.
+            */
+            setOwnedArNSNames(arnsAddress!, cacheData, { ttlMs: EXPECTED_NAME_RETRY_MS });
+            scheduleRetry();
+          } else {
+            // Ran out without the name ever appearing: trust this read briefly.
+            const unmet = expiredUnmetNames(expected, arnsAddress!, processedNames, now);
+            setOwnedArNSNames(
+              arnsAddress!,
+              cacheData,
+              unmet.length > 0 ? { ttlMs: UNMET_EXPECTATION_TTL_MS } : undefined,
+            );
+            /*
+              Drop only the expectations this read satisfied. One that ran out
+              unmet stays (pruned on the next invalidation), so another
+              instance's pending re-read still caches briefly rather than for
+              six hours.
+            */
+            const held = new Set(processedNames.map((n) => n.name.toLowerCase()));
+            const rest = expected.filter(
+              (e) => !(e.address === arnsAddress && held.has(e.name.toLowerCase())),
+            );
+            if (rest.length !== expected.length) {
+              useStore.setState({ expectedOwnedNames: rest });
+            }
+          }
         }
         return processedNames;
       } catch (error) {
         console.error('Failed to fetch owned ArNS names:', error);
+        /*
+          A background re-read that fails keeps waiting for the bought name
+          (one failure must not end the wait) and shows no error, since the
+          list on screen is still the last good one.
+        */
+        const stillWaiting =
+          missingExpectedNames(
+            useStore.getState().expectedOwnedNames,
+            arnsAddress!,
+            [],
+            Date.now(),
+          ).length > 0;
+        if (background && stillWaiting) {
+          if (isCurrent()) scheduleRetry();
+          // The timer ignores the result; the list on screen is untouched.
+          return [];
+        }
         if (isCurrent()) setFetchError(true);
 
         // If fetch fails, still try to use any cached data
@@ -171,8 +289,9 @@ export function useOwnedArNSNames() {
         if (isCurrent()) setLoading(false);
       }
     },
-    [arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
+    [arnsAddress, getOwnedArNSNames, setOwnedArNSNames, scheduleRetry]
   );
+  fetchOwnedNamesRef.current = fetchOwnedNames;
 
   // Update ArNS name to point to new manifest
   const updateArNSRecord = useCallback(
@@ -310,28 +429,33 @@ export function useOwnedArNSNames() {
                 );
 
                 // Also update the cache with the refreshed data
-                const cachedNames = getOwnedArNSNames(arnsAddress!) || [];
-                const updatedCacheNames = cachedNames.map((cachedName) =>
-                  cachedName.name === name
-                    ? {
-                        ...cachedName,
-                        currentTarget: updatedTarget,
-                        undernames: updatedUndernames,
-                      }
-                    : cachedName
-                );
-
-                // If the name wasn't in cache (shouldn't happen), add it
-                if (!cachedNames.find((n) => n.name === name)) {
-                  updatedCacheNames.push({
-                    name: nameRecord.name,
-                    processId: nameRecord.processId,
-                    currentTarget: updatedTarget,
-                    undernames: updatedUndernames,
-                  });
+                /*
+                  Only an existing list is updated, in place. With no list
+                  cached (just invalidated, or expired), writing this one name
+                  back would stand in for the whole list until it expired.
+                */
+                const cachedNames = getOwnedArNSNames(arnsAddress!);
+                if (cachedNames) {
+                  const updatedCacheNames = cachedNames.map((cachedName) =>
+                    cachedName.name === name
+                      ? {
+                          ...cachedName,
+                          currentTarget: updatedTarget,
+                          undernames: updatedUndernames,
+                        }
+                      : cachedName
+                  );
+                  // If the name wasn't in cache (shouldn't happen), add it
+                  if (!cachedNames.find((n) => n.name === name)) {
+                    updatedCacheNames.push({
+                      name: nameRecord.name,
+                      processId: nameRecord.processId,
+                      currentTarget: updatedTarget,
+                      undernames: updatedUndernames,
+                    });
+                  }
+                  setOwnedArNSNames(arnsAddress!, updatedCacheNames, { keepAge: true });
                 }
-
-                setOwnedArNSNames(arnsAddress!, updatedCacheNames);
                 console.log('Refreshed ANT state and cache for', name, ':', freshState);
               }
             } catch (error) {
@@ -415,8 +539,9 @@ export function useOwnedArNSNames() {
         setNames((prevNames) => prevNames.map((n) => (n.name === name ? updatedName : n)));
 
         // Update cache with the new details
-        if (arnsAddress) {
-          const cachedNames = getOwnedArNSNames(arnsAddress!) || [];
+        // Only an existing list, updated in place (see updateArNSRecord).
+        const cachedNames = arnsAddress ? getOwnedArNSNames(arnsAddress) : null;
+        if (arnsAddress && cachedNames) {
           let updatedCache;
 
           // Check if this name is already in cache
@@ -453,7 +578,7 @@ export function useOwnedArNSNames() {
             ];
           }
 
-          setOwnedArNSNames(arnsAddress!, updatedCache);
+          setOwnedArNSNames(arnsAddress!, updatedCache, { keepAge: true });
           console.log('Updated cache with ANT details for:', name);
         }
 
@@ -527,33 +652,35 @@ export function useOwnedArNSNames() {
           )
         );
 
-        // Update cache
-        const cachedNames = getOwnedArNSNames(arnsAddress!) || [];
-        const updatedCacheNames = cachedNames.map((cachedName) =>
-          cachedName.name === name
-            ? {
-                ...cachedName,
-                currentTarget: updatedTarget,
-                ttl: updatedTTL || 600,
-                undernames: updatedUndernames,
-                undernameTTLs: updatedUndernameTTLs,
-              }
-            : cachedName
-        );
+        // Update cache: only an existing list, in place (see updateArNSRecord).
+        const cachedNames = getOwnedArNSNames(arnsAddress!);
+        if (cachedNames) {
+          const updatedCacheNames = cachedNames.map((cachedName) =>
+            cachedName.name === name
+              ? {
+                  ...cachedName,
+                  currentTarget: updatedTarget,
+                  ttl: updatedTTL || 600,
+                  undernames: updatedUndernames,
+                  undernameTTLs: updatedUndernameTTLs,
+                }
+              : cachedName
+          );
 
-        // If the name wasn't in cache, add it
-        if (!cachedNames.find((n) => n.name === name)) {
-          updatedCacheNames.push({
-            name: nameRecord.name,
-            processId: nameRecord.processId,
-            currentTarget: updatedTarget,
-            ttl: updatedTTL || 600,
-            undernames: updatedUndernames,
-            undernameTTLs: updatedUndernameTTLs,
-          });
+          // If the name wasn't in cache, add it
+          if (!cachedNames.find((n) => n.name === name)) {
+            updatedCacheNames.push({
+              name: nameRecord.name,
+              processId: nameRecord.processId,
+              currentTarget: updatedTarget,
+              ttl: updatedTTL || 600,
+              undernames: updatedUndernames,
+              undernameTTLs: updatedUndernameTTLs,
+            });
+          }
+
+          setOwnedArNSNames(arnsAddress!, updatedCacheNames, { keepAge: true });
         }
-
-        setOwnedArNSNames(arnsAddress!, updatedCacheNames);
         console.log('Successfully refreshed ArNS name:', name, freshState);
         return true;
       } catch (error) {

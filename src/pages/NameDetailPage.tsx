@@ -4,17 +4,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
-  CalendarPlus,
   ExternalLink,
   Globe,
   Layers,
   Loader2,
-  Pencil,
-  Shuffle,
-  Send,
   Star,
   Tag,
-  Trash2,
   Users,
 } from 'lucide-react';
 
@@ -71,22 +66,62 @@ function shorten(id: string, head = 6, tail = 4) {
 function SectionCard({
   title,
   icon: Icon,
+  action,
   children,
 }: {
   title: string;
   icon: typeof Globe;
+  /**
+   * The section's own action, beside its title. Actions live with what they
+   * change: they used to be one row of eight buttons at the foot of the page,
+   * below a records table that can run long.
+   */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-border/20 bg-card p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-primary" />
-        <h2 className="font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
-          {title}
-        </h2>
+      {/* Wraps so a card with several actions (Ownership) never crowds its title. */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon className="h-4 w-4 flex-shrink-0 text-primary" />
+          <h2 className="truncate font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
+            {title}
+          </h2>
+        </div>
+        {action}
       </div>
       {children}
     </div>
+  );
+}
+
+/**
+ * A section's action: small and quiet. `danger` marks the owner's
+ * irreversible ones in red; each opens a modal with its own warning and
+ * confirmation, so the link itself need not be loud.
+ */
+function SectionAction({
+  label,
+  onClick,
+  danger,
+  className = '-mr-2',
+}: {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${className} flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
+        danger ? 'text-error hover:bg-error/10' : 'text-primary hover:bg-primary/10'
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -145,7 +180,7 @@ export default function NameDetailPage() {
   const summaries = useAntSummaries(processId ? [processId] : []);
   const summary = processId ? summaries.get(processId) : undefined;
   const owner = summary?.owner ?? controllers?.owner;
-  const { data: primary } = usePrimaryName(owner, !!owner);
+  const { data: primary, isFetched: primaryFetched } = usePrimaryName(owner, !!owner);
 
   // STRICT role — the name may be one you don't own or control (public view),
   // so there is NO optimistic "assume controller" fallback here.
@@ -212,7 +247,7 @@ export default function NameDetailPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6">
+    <div className="px-4 sm:px-6">
       {/* Back goes where you came FROM. This page is reachable from My Domains,
           from Browse, and from a deep link, and a hardcoded "/domains" dumped
           portfolio users into the public browse-all table. Falls back to
@@ -320,6 +355,21 @@ export default function NameDetailPage() {
                       You: {role}
                     </span>
                   )}
+                  {/*
+                    Beside the Primary badge it would earn. `isPrimary` is the
+                    OWNER's primary name, so it hides this only for the owner; a
+                    controller sets their own. Waits for the lookup so it never
+                    flashes in on a name that is already primary.
+                  */}
+                  {canManage && primaryFetched && (role === 'controller' || !isPrimary) && (
+                    <button
+                      type="button"
+                      onClick={() => openOwnerAction('primary')}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <Star className="h-3 w-3" /> Set as primary
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -335,7 +385,20 @@ export default function NameDetailPage() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {/* Overview */}
-            <SectionCard title="Overview" icon={Globe}>
+            {/* Renewing and upgrading are registry payments, settled through
+                the payment picker; the same modal adds undername slots. */}
+            <SectionCard
+              title="Overview"
+              icon={Globe}
+              action={
+                canManage && (
+                  <SectionAction
+                    label={record.type === 'lease' ? 'Renew or upgrade' : 'Add undername slots'}
+                    onClick={() => setOpen('manage')}
+                  />
+                )
+              }
+            >
               <InfoRow label="Registered">{fmtDate(record.startTimestamp)}</InfoRow>
               <InfoRow label="Expires">
                 {record.type === 'permabuy' ? (
@@ -359,7 +422,15 @@ export default function NameDetailPage() {
             </SectionCard>
 
             {/* Details (ANT metadata) */}
-            <SectionCard title="Details" icon={Tag}>
+            <SectionCard
+              title="Details"
+              icon={Tag}
+              action={
+                canManage && (
+                  <SectionAction label="Edit" onClick={() => openOwnerAction('edit')} />
+                )
+              }
+            >
               {ant &&
               (ant.name ||
                 ant.ticker ||
@@ -401,8 +472,24 @@ export default function NameDetailPage() {
               )}
             </SectionCard>
 
-            {/* On-chain */}
-            <SectionCard title="On-chain" icon={Layers}>
+            {/* Ownership: who holds the name, and the owner's actions that
+                change that. Set apart in red because none of them is undone
+                by the same button. */}
+            <SectionCard
+              title="Ownership"
+              icon={Layers}
+              action={
+                ownerOnly && (
+                  <div className="-mr-2 flex flex-wrap justify-end gap-x-1">
+                    <SectionAction danger className="" label="Transfer" onClick={() => setOpen('transfer')} />
+                    <SectionAction danger className="" label="Reassign" onClick={() => openOwnerAction('reassign')} />
+                    {record.type === 'permabuy' && (
+                      <SectionAction danger className="" label="Release" onClick={() => openOwnerAction('release')} />
+                    )}
+                  </div>
+                )
+              }
+            >
               <InfoRow label="Name token (ANT)">
                 <div className="flex min-w-0 items-center justify-end gap-1">
                   <span className="truncate font-mono text-xs">
@@ -436,7 +523,15 @@ export default function NameDetailPage() {
             </SectionCard>
 
             {/* Controllers */}
-            <SectionCard title="Controllers" icon={Users}>
+            <SectionCard
+              title="Controllers"
+              icon={Users}
+              action={
+                ownerOnly && (
+                  <SectionAction label="Manage" onClick={() => openOwnerAction('controllers')} />
+                )
+              }
+            >
               {controllers ? (
                 controllers.controllers.length > 0 ? (
                   controllers.controllers.map((c) => (
@@ -473,32 +568,6 @@ export default function NameDetailPage() {
             undernameLimit={record.undernameLimit}
             onSuccess={refresh}
           />
-
-          {/* Actions for names you own or control. */}
-          {canManage && (
-            <div className="mt-3 rounded-2xl border border-border/20 bg-card p-4">
-              <h2 className="mb-2 font-heading text-sm font-extrabold uppercase tracking-wide text-foreground/70">
-                Manage
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {/* Renewing and upgrading are registry payments Turbo settles
-                    from credits — no wallet approval, and no SOL. */}
-                <ActionBtn icon={CalendarPlus} label="Renew / upgrade" onClick={() => setOpen('manage')} />
-                <ActionBtn icon={Pencil} label="Edit details" onClick={() => openOwnerAction('edit')} />
-                <ActionBtn icon={Star} label="Set as primary" onClick={() => openOwnerAction('primary')} />
-                {ownerOnly && (
-                  <>
-                    <ActionBtn icon={Users} label="Controllers" onClick={() => openOwnerAction('controllers')} />
-                    <ActionBtn icon={Send} label="Transfer" danger onClick={() => setOpen('transfer')} />
-                    <ActionBtn icon={Shuffle} label="Reassign" danger onClick={() => openOwnerAction('reassign')} />
-                    {record.type === 'permabuy' && (
-                      <ActionBtn icon={Trash2} label="Release" danger onClick={() => openOwnerAction('release')} />
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Action modals — each reuses the existing component, refetches on success */}
           {open === 'manage' && (
@@ -538,30 +607,5 @@ export default function NameDetailPage() {
         </>
       ) : null}
     </div>
-  );
-}
-
-function ActionBtn({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: typeof Globe;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
-        danger
-          ? 'border-error/30 text-error hover:bg-error/10'
-          : 'border-border/20 bg-background text-foreground hover:border-primary/40'
-      }`}
-    >
-      <Icon className="h-4 w-4" /> {label}
-    </button>
   );
 }

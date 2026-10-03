@@ -26,8 +26,14 @@ export interface ArNSCostDetails {
   arioCost: number;
   /** Raw protocol price in mARIO. */
   mARIO: number;
-  /** Total operator/discount applied, in ARIO. */
+  /** Total operator/discount applied, in ARIO. `arioCost` is already net of it. */
   discountArio: number;
+  /**
+   * The gateway this quote claimed the operator discount through, when one
+   * was named and the quote honoured it. Writes pass exactly this, so a
+   * purchase names a gateway only if the quote just accepted it.
+   */
+  discountGatewayAddress?: string;
   /**
    * mARIO the chosen funding source can't cover. > 0 ⇒ insufficient ARIO for
    * this source. Always 0 for 'turbo' (credits are gated separately).
@@ -35,7 +41,11 @@ export interface ArNSCostDetails {
   shortfallMARIO: number;
   /** SOL the wallet must hold for this action (rent + fees). Same for all sources. */
   gasTotalSol: number;
-  /** Rent-exempt deposit portion (SOL) — dominates; partly reclaimable. */
+  /**
+   * Solana account rent (SOL); dominates. Not refunded to the buyer: on lease
+   * expiry it goes to whoever prunes the record, on release to the releasing
+   * owner (ar-io-solana-contracts prune.rs / manage.rs).
+   */
   gasRentSol: number;
   /** Transaction-fee portion (SOL). */
   gasFeeSol: number;
@@ -62,6 +72,7 @@ export function useArNSCostDetails({
   payWithCredits = false,
   fromAddress,
   refreshTick,
+  discountGatewayAddress,
   enabled = true,
 }: {
   intent: ArNSCostIntent;
@@ -86,6 +97,12 @@ export function useArNSCostDetails({
    * for fixed-price intents — the key then stays stable and nothing re-fetches.
    */
   refreshTick?: number | string;
+  /**
+   * Gateway (its operator's address) to claim the operator discount through,
+   * for an operations wallet (`useOperatorDiscountGateway`). Omit otherwise:
+   * the SDK tries the signer's own gateway by itself.
+   */
+  discountGatewayAddress?: string;
   enabled?: boolean;
 }) {
   const configKey = useArNSConfigKey();
@@ -103,6 +120,7 @@ export function useArNSCostDetails({
       fundFrom,
       fromAddress ?? '',
       refreshTick ?? '',
+      discountGatewayAddress ?? '',
       configKey,
     ],
     enabled: active,
@@ -121,7 +139,7 @@ export function useArNSCostDetails({
         would have shown an ARIO shortfall to someone paying with credits.
       */
       const sdkFundFrom = payWithCredits ? 'balance' : fundFrom;
-      const cd = await ario.getCostDetails({
+      const base = {
         intent,
         name: normalized,
         ...(type ? { type } : {}),
@@ -131,7 +149,27 @@ export function useArNSCostDetails({
           : {}),
         fundFrom: sdkFundFrom,
         ...(fromAddress ? { fromAddress } : {}),
-      });
+      };
+      /*
+        A named gateway that does not qualify THROWS rather than quoting full
+        price. It was checked before being named, but the gateway can change
+        between that read and this one (a missed epoch), and a failed quote
+        would take the whole checkout down with it, credits route included,
+        since every route reads its SOL estimate from here. So a refusal falls
+        back to the plain quote, and the write is told no gateway was honoured.
+      */
+      let cd: Awaited<ReturnType<typeof ario.getCostDetails>>;
+      let honoured: string | undefined;
+      if (discountGatewayAddress && fromAddress) {
+        try {
+          cd = await ario.getCostDetails({ ...base, discountGatewayAddress });
+          honoured = discountGatewayAddress;
+        } catch {
+          cd = await ario.getCostDetails(base);
+        }
+      } else {
+        cd = await ario.getCostDetails(base);
+      }
 
       const mARIO = cd.tokenCost ?? 0;
       const discountMARIO = (cd.discounts ?? []).reduce(
@@ -143,6 +181,7 @@ export function useArNSCostDetails({
         arioCost: mARIO / M_ARIO_PER_ARIO,
         mARIO,
         discountArio: discountMARIO / M_ARIO_PER_ARIO,
+        ...(honoured && discountMARIO > 0 ? { discountGatewayAddress: honoured } : {}),
         // On the credits path the wallet-ARIO shortfall never gates the buy
         // (credits pay the ARIO), so don't surface the SDK's balance shortfall.
         shortfallMARIO: payWithCredits ? 0 : (cd.fundingPlan?.shortfall ?? 0),

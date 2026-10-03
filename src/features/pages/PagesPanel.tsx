@@ -468,7 +468,7 @@ export default function PagesPanel() {
   const successIsArns = Boolean(successArns || (publishResult?.arnsUpdated && arnsName));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <div className="px-4 sm:px-6">
       {/* Service panel header — only on the dashboard; sub-views (gallery, editor,
           success, versions) lead with their own back link so it sits consistently. */}
       {view === 'dashboard' && (

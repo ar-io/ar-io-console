@@ -26,7 +26,7 @@ const getFaqData = (freeLimit: number, lifetimeBytes: number) => [
   },
   {
     question: "What wallets are supported?",
-    answer: "Ar.io supports Wander for Arweave wallets, MetaMask for Ethereum wallets, and Phantom for Solana wallets. You can connect any of these to manage your credits and uploads."
+    answer: "Ar.io supports Wander for Arweave wallets, MetaMask for Ethereum wallets, and Phantom, Solflare or MetaMask for Solana wallets. You can connect any of these to manage your credits and uploads."
   },
   {
     question: "Is my data permanent?",

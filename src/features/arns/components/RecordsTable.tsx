@@ -4,7 +4,6 @@ import {
   Globe,
   Loader2,
   Pencil,
-  Plus,
   Search,
   Trash2,
   X,
@@ -14,9 +13,11 @@ import CopyButton from '@/components/CopyButton';
 import SolanaGateButton from '@/components/SolanaGateButton';
 import RecordFieldsEditor from './RecordFieldsEditor';
 import RemoveRecordConfirm from './RemoveRecordConfirm';
+import RailSwitch from './RailSwitch';
 import {
   blankRecordFields,
   RecordFieldsState,
+  requiresSelfSigned,
   toRecordChange,
   withoutClears,
   validateRecordFields,
@@ -26,8 +27,8 @@ import { useStore } from '@/store/useStore';
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
 import { hasMetadataChange } from '../records/recordWriter';
 import { recordCostNote, recordSaveCost } from '../records/recordCost';
+import { SELF_SIGNED_ONLY_NOTE } from '../records/writerChoice';
 import { useUndernameWrites, type UndernameRecord } from '../hooks/useUndernames';
-import { useSetArNSMetadata } from '../hooks/useSetArNSMetadata';
 import type { ANTDetails } from '../hooks/useANTDetails';
 
 /** Local mirror of the page's id shortener — keeps this component self-contained. */
@@ -124,9 +125,8 @@ export default function RecordsTable({
   const [confirmRemove, setConfirmRemove] = useState<Row | null>(null);
 
   const undernameWrites = useUndernameWrites(name, processId);
-  const metadata = useSetArNSMetadata();
 
-  const rows = useMemo<Row[]>(() => {
+  const allRows = useMemo<Row[]>(() => {
     const apex: Row = {
       key: APEX,
       label: APEX,
@@ -161,15 +161,17 @@ export default function RecordsTable({
         keywordsRaw: (u.keywords ?? []).join(', '),
       }),
     }));
-    const all = [apex, ...rest];
+    return [apex, ...rest];
+  }, [ant, undernames]);
+  const rows = useMemo<Row[]>(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return all;
-    return all.filter(
+    if (!needle) return allRows;
+    return allRows.filter(
       (r) =>
         r.label.toLowerCase().includes(needle) ||
         (r.target ?? '').toLowerCase().includes(needle),
     );
-  }, [ant, undernames, q]);
+  }, [allRows, q]);
 
   const used = undernames?.length ?? 0;
   const atLimit = undernameLimit != null && used >= undernameLimit;
@@ -204,19 +206,37 @@ export default function RecordsTable({
     draft.protocol !== original.protocol ||
     draft.priority.trim() !== original.priority.trim();
 
+  /*
+    An IPFS target or a priority can only be written by the wallet's own
+    transaction (`requiresSelfSigned`), so such a save signs with SOL whatever
+    the default rail, and cannot be saved at all without it.
+  */
+  const forcedSelfSigned = requiresSelfSigned(pendingChange);
+  const selfSigned = undernameWrites.paysNetworkDirectly || forcedSelfSigned;
+  const blockedForSol = forcedSelfSigned && !undernameWrites.canSelfSign;
   const cost = recordSaveCost({
     actionPrice: recordPrice.credits,
     metadataPrice: metadataPrice.credits,
-    changesRecord,
+    /*
+      The credits rail always writes the record (`setArNSRecord`) before any
+      metadata, so a metadata-only save there is billed both actions. Quoting
+      the metadata price alone understated it and hid the second approval.
+    */
+    changesRecord: selfSigned ? changesRecord : true,
     changesMetadata: hasMetadataChange(pendingChange),
     creditBalance,
-    billed: !undernameWrites.paysNetworkDirectly,
+    billed: !selfSigned,
   });
   const costLine = recordCostNote(cost);
 
-  const canSave = validation.allValid && nameValid && !cost.insufficient;
+  const canSave =
+    validation.allValid &&
+    nameValid &&
+    !cost.insufficient &&
+    !blockedForSol &&
+    !undernameWrites.pending;
   const busyKey = undernameWrites.busyKey;
-  const busy = undernameWrites.isBusy || metadata.isBusy;
+  const busy = undernameWrites.isBusy;
 
   const openEdit = (r: Row) => {
     setRowError(null);
@@ -242,21 +262,19 @@ export default function RecordsTable({
   const save = async (r: Row | null) => {
     setRowError(null);
     try {
-      if (r?.kind === 'apex') {
-        // One bundled setBaseNameRecord write.
-        // `withoutClears` until the sponsored record actions land — the ANT
-        // write has no way to clear a field, only to overwrite one.
-        await metadata.apply(processId, {
-          baseRecord: withoutClears(toRecordChange(draft, original)),
-        });
-      } else {
-        const key = r ? r.key : newName;
-        await undernameWrites.saveUndername(
-          processId,
-          key,
-          withoutClears(toRecordChange(draft, original)),
-        );
-      }
+      /*
+        The apex goes through the same writer as every undername. It used to
+        call the ANT directly (`metadata.apply`), so it always signed and paid
+        SOL while the line above it quoted credits, and an owner with no SOL
+        (every email sign-in) could not change where their name points.
+        `withoutClears`: the ANT rail cannot clear a field, only overwrite it.
+      */
+      const key = r?.kind === 'apex' ? APEX : r ? r.key : newName;
+      await undernameWrites.saveUndername(
+        processId,
+        key,
+        withoutClears(toRecordChange(draft, original)),
+      );
       close();
       onSuccess();
     } catch (err) {
@@ -326,17 +344,42 @@ export default function RecordsTable({
         and it cannot know what THIS change will cost. Owners see credits;
         a controller sees the Solana fee they pay instead.
       */}
-      {undernameWrites.paysNetworkDirectly ? (
+      {undernameWrites.pending ? (
+        <p className="mt-2 text-xs text-foreground/60">
+          Checking your wallet balance…
+        </p>
+      ) : blockedForSol ? (
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-error">
+          <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+          {SELF_SIGNED_ONLY_NOTE}
+        </p>
+      ) : forcedSelfSigned && !undernameWrites.paysNetworkDirectly ? (
+        <p className="mt-2 text-xs text-foreground/60">
+          IPFS targets and record priority are signed by your wallet, which
+          pays the Solana fee in SOL.
+        </p>
+      ) : undernameWrites.paysNetworkDirectly ? (
         <p className="mt-2 text-xs text-foreground/60">
           {undernameWrites.costNote}
         </p>
       ) : (
         costLine && <p className="mt-2 text-xs text-foreground/60">{costLine}</p>
       )}
-      {cost.insufficient && (
+      {/* No choice to offer when only the wallet can write this save. */}
+      {!forcedSelfSigned && !undernameWrites.pending && (
+        <RailSwitch
+          alternative={undernameWrites.alternative}
+          onSwitch={undernameWrites.switchRail}
+          disabled={busy}
+          className="mt-1"
+        />
+      )}
+      {cost.insufficient && !undernameWrites.pending && (
         <p className="mt-1 flex items-start gap-1.5 text-xs text-error">
           <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
-          Not enough credits for this change. Add credits and try again.
+          {undernameWrites.writerReason === 'insufficient-both'
+            ? 'Not enough credits or SOL for this change. Add credits, or add a little SOL to the wallet that owns this name.'
+            : 'Not enough credits for this change. Add credits and try again.'}
         </p>
       )}
 
@@ -383,6 +426,9 @@ export default function RecordsTable({
           displayName={name}
           busy={undernameWrites.busyKey === confirmRemove.key}
           paysNetworkDirectly={undernameWrites.paysNetworkDirectly}
+          pending={undernameWrites.pending}
+          alternative={undernameWrites.alternative}
+          onSwitchRail={undernameWrites.switchRail}
           onConfirm={() => void remove(confirmRemove)}
           onCancel={() => setConfirmRemove(null)}
         />
@@ -421,12 +467,15 @@ export default function RecordsTable({
           </div>
           {canManage && (
             <button
+              type="button"
               onClick={openAdd}
               disabled={atLimit || isAdding}
-              title={atLimit ? 'Undername limit reached. Increase it under Renew / upgrade.' : undefined}
-              className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              title={atLimit ? 'Undername limit reached. Add slots from the Overview card.' : undefined}
+              // The page's section-action style ("Edit", "Manage"), not a
+              // filled button: one primary action per page, and this isn't it.
+              className="-mr-2 flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-primary transition-colors enabled:hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Plus className="h-3.5 w-3.5" /> Add
+              Add record
             </button>
           )}
         </div>

@@ -75,7 +75,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
   const canRollback = hasDomain && hasArNSAccess && isSolanaConnected;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       {/* Toolbar */}
       <button
         type="button"

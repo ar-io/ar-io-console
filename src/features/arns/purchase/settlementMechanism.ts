@@ -20,8 +20,16 @@ import type { SettlementRoute } from './settlementRoute';
  * turbo-sdk's per-action methods (`buyArNSName`, `extendArNSLease`, …).
  */
 export type SettlementMechanism =
-  /** `@ar.io/sdk` write, drawn from the wallet's ARIO. */
-  | { kind: 'ario-direct'; fundFrom: 'balance' | 'stakes' | 'any' }
+  /**
+   * `@ar.io/sdk` write, drawn from the wallet's ARIO. `discountGatewayAddress`
+   * names the gateway (its operator) to claim the operator discount through;
+   * set only by `withDiscountGateway`, for an operations wallet.
+   */
+  | {
+      kind: 'ario-direct';
+      fundFrom: 'balance' | 'stakes' | 'any';
+      discountGatewayAddress?: string;
+    }
   /** turbo-sdk purchase, debiting the signer's credit balance. */
   | { kind: 'turbo-credits' };
 

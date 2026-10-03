@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { useStore } from '../../../store/useStore';
 import { getWritableARIO } from '../../../utils';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
@@ -56,6 +57,8 @@ export function useReassignArNSName() {
           processId: targetProcessId.trim(),
         });
         setTxId(res?.id);
+        // Which names this wallet holds, or what they are, just changed.
+        useStore.getState().invalidateOwnedArNSNames();
         setPhase('success');
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return res?.id;

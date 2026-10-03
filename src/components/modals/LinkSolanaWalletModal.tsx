@@ -3,6 +3,7 @@ import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import BaseModal from './BaseModal';
 import ModalHeader from './ModalHeader';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
+import { selectableSolanaWallets } from '../../utils/selectableSolanaWallets';
 
 interface LinkSolanaWalletModalProps {
   onClose: () => void;
@@ -26,9 +27,7 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
     }
   }, [linkedAddress, initialAddress, isReconnect, isSolanaConnected, onClose]);
 
-  const installedWallets = solanaWallets.filter(
-    (w) => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')
-  );
+  const installedWallets = selectableSolanaWallets(solanaWallets);
 
   return (
     <BaseModal onClose={onClose}>

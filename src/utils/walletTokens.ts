@@ -21,10 +21,34 @@ export function availableTokensForWallet(
         ['base-usdc', 'base-eth', 'usdc', 'polygon-usdc', 'pol', 'ethereum'] as SupportedTokenType[]
       ).filter(isTokenSelectable);
     case 'solana':
-      return ['solana'];
+      // USDC on Solana is an SPL token held by the same wallet — no second
+      // wallet, no bridging, just USDC plus a little SOL for the fee.
+      return (['solana', 'solana-usdc'] as SupportedTokenType[]).filter(
+        isTokenSelectable,
+      );
     default:
       return [];
   }
+}
+
+/**
+ * The tokens Top Up offers a wallet: what it can pay with anywhere, plus ARIO
+ * for a Solana wallet.
+ *
+ * ARIO buys credits here only. It is an SPL token on the Solana wallet's own
+ * key, so the top-up credits that same wallet, and it carries a lower fee than
+ * the others. It stays out of `availableTokensForWallet` because that list also
+ * drives pay-at-upload and the name checkout, which treat ARIO their own way.
+ * Last in the list, so it is never the default.
+ */
+export function topUpTokensForWallet(
+  walletType: WalletKind,
+  isTokenSelectable: (t: SupportedTokenType) => boolean,
+): SupportedTokenType[] {
+  const tokens = availableTokensForWallet(walletType, isTokenSelectable);
+  return walletType === 'solana' && isTokenSelectable('ario')
+    ? [...tokens, 'ario']
+    : tokens;
 }
 
 /**

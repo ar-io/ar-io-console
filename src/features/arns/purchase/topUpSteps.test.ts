@@ -5,6 +5,7 @@ import {
   isMoneyAtRisk,
   stepLabel,
   waitingNotice,
+  APPROVE_PROMPT_NOTICE,
   type TopUpStep,
 } from './topUpSteps';
 
@@ -73,6 +74,20 @@ describe('funding source changes how many prompts remain', () => {
     expect(stepLabel({ phase: 'registering' }, 'wallet')).toBe(
       'Step 2 of 2 — approve the registration to claim the name',
     );
+  });
+
+  /*
+    The signed transaction expires 60 to 90 seconds after it is built, and a
+    support ticket came from a buyer who approved after ~110 seconds. Every
+    "approve" notice says to approve now, and that it expires.
+  */
+  it('says how long the wallet prompt stays valid', () => {
+    for (const funding of ['card', 'wallet'] as const) {
+      expect(waitingNotice({ phase: 'registering' }, funding)).toMatch(
+        /under a minute/,
+      );
+    }
+    expect(APPROVE_PROMPT_NOTICE).toMatch(/under a minute/);
   });
 
   it('never promises a card buyer a second prompt', () => {

@@ -1,9 +1,11 @@
 import type { ArNSAction } from '@ardrive/turbo-sdk/web';
 
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
+import RailSwitch from './RailSwitch';
 import {
   selfSignedCostNote,
   solRailRequirementNote,
+  type WriterChoice,
 } from '../records/writerChoice';
 
 /**
@@ -35,6 +37,10 @@ export default function ActionCostNote({
   primaryVerb,
   className = '',
   paysNetworkDirectly,
+  alternative,
+  onSwitchRail,
+  disabled,
+  pending,
 }: {
   /** The sponsored action, typed against the SDK so a typo cannot compile. */
   action: ArNSAction;
@@ -64,7 +70,26 @@ export default function ActionCostNote({
    * where nobody had checked which rail the action actually runs on.
    */
   paysNetworkDirectly?: boolean;
+  /**
+   * The other rail, when it would also work. Offered as a link, and in place
+   * of the "to sign it yourself, you need SOL" requirement line, which is
+   * moot when they already hold it.
+   */
+  alternative?: WriterChoice['alternative'];
+  onSwitchRail?: () => void;
+  disabled?: boolean;
+  /** Still reading the owner's SOL balance: no rail to quote yet. */
+  pending?: boolean;
 }) {
+  const railSwitch =
+    alternative && onSwitchRail ? (
+      <RailSwitch
+        alternative={alternative}
+        onSwitch={onSwitchRail}
+        disabled={disabled}
+        className="mt-1"
+      />
+    ) : null;
   // Priced only when Turbo is the one being paid.
   const primary = useArNSActionPrice(paysNetworkDirectly ? undefined : action);
   // Called unconditionally — hooks cannot be conditional, and the query is
@@ -73,6 +98,14 @@ export default function ActionCostNote({
     paysNetworkDirectly ? undefined : secondaryAction,
   );
 
+  if (pending) {
+    return (
+      <p className={`text-xs text-foreground/60 ${className}`}>
+        Checking your wallet balance…
+      </p>
+    );
+  }
+
   if (paysNetworkDirectly) {
     /*
       "Pays the Solana network fee" was true and useless — it reads as a
@@ -80,9 +113,10 @@ export default function ActionCostNote({
       `selfSignedCostNote` says which of the two this actually is.
     */
     return (
-      <p className={`text-xs text-foreground/60 ${className}`}>
-        {selfSignedCostNote(action)}
-      </p>
+      <div className={className}>
+        <p className="text-xs text-foreground/60">{selfSignedCostNote(action)}</p>
+        {railSwitch}
+      </div>
     );
   }
 
@@ -106,9 +140,11 @@ export default function ActionCostNote({
           nearly 200 characters of 12px grey — and the alternative is secondary
           information, not part of the price.
         */}
-        <p className="mt-1 text-xs text-foreground/50">
-          {solRailRequirementNote(action)}
-        </p>
+        {railSwitch ?? (
+          <p className="mt-1 text-xs text-foreground/50">
+            {solRailRequirementNote(action)}
+          </p>
+        )}
       </div>
     );
   }
@@ -127,9 +163,11 @@ export default function ActionCostNote({
           : `${primaryVerb ?? 'This'} costs ${amountText(primary.credits)}; ${secondaryVerb ?? 'undoing it'} costs ${amountText(secondary.credits)}.`}{' '}
         {solLine}
       </p>
-      <p className="mt-1 text-xs text-foreground/50">
-        {solRailRequirementNote(action, secondaryAction)}
-      </p>
+      {railSwitch ?? (
+        <p className="mt-1 text-xs text-foreground/50">
+          {solRailRequirementNote(action, secondaryAction)}
+        </p>
+      )}
     </div>
   );
 }
