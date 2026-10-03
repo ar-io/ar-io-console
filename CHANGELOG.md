@@ -2,7 +2,7 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [4.10.0] - 2026-09-30
+## [4.10.0] - 2026-10-03
 
 ### Added
 - **Top up with ARIO from a Solana wallet.** Buy Credits offers ARIO beside
@@ -14,12 +14,29 @@ All notable changes to the ar.io Console are documented in this file.
   which shares the name. You can now sign in with it or link it, and update
   your names from it. It is listed as "Solana account in MetaMask", because it
   is a different address from MetaMask on Ethereum, with its own credits.
-- **Edit target, on a name's page.** Pointing a name at a transaction is now
-  one click under Manage, which opens the name's record with the target field
-  ready. It used to sit behind a pencil icon on the `@` row of the Records
-  table, where people used to arns.ar.io's "Target ID" did not look for it.
+- **A purchase that did not finish is shown on My domains.** If you close the
+  wallet prompt, approve too late, or leave mid-purchase, My domains says what
+  happened to that attempt and to its credits: still waiting on your wallet,
+  with the time the credits return, or not finished, with the credits back and
+  a Try again button. It reads the purchase's status from Turbo, and shows in
+  the browser the purchase was started in, for 30 minutes.
 
 ### Changed
+- **Managing a name uses your SOL when you have it.** Editing or removing a
+  record, transferring a name and changing its controllers used to bill
+  credits even when your wallet held SOL: tens of cents a change, against a
+  network fee of a fraction of a cent. With enough SOL in the owning wallet
+  your wallet now signs and pays the fee, and a "Pay with credits instead" link
+  is there when both would work. Without SOL, credits are used as before, so
+  email accounts are unchanged. Transfers and controller changes need a little
+  more SOL to qualify (0.005), as they can create accounts on chain.
+- **A name's page puts each action where it applies.** The row of buttons at
+  the foot of the page is gone: Renew or upgrade sits on Overview, Edit on
+  Details, Manage on Controllers, Add record on Records, Set as primary beside
+  the badges, and Transfer, Reassign and Release on Ownership. The root
+  record's target is edited from the pencil on its row.
+- **The transfer window is shorter.** One short warning, a one-line cost and
+  a one-line confirmation.
 - **One way to choose how you pay.** The name checkout and Top Up offer
   Credits, Card and Crypto, with every token you can pay with in one dropdown,
   grouped by the wallet it comes from and showing your balance and the price.
@@ -45,17 +62,31 @@ All notable changes to the ar.io Console are documented in this file.
   operations wallet qualifies too. The discount applies when paying with ARIO;
   with credits, a card or another token, Turbo pays the registry and the line
   says so.
+- **A name you just bought appears under My domains.** The list was cached for
+  six hours and never refreshed after a purchase, so a first-time buyer could
+  pay, get the name, and still see "No domains yet". Buying, transferring,
+  releasing, reassigning and renewing now refresh it, and it waits for a new
+  name to reach the index.
+- **Saving the root record works without SOL.** Changing where a name points
+  always went through your wallet and paid SOL while the screen quoted credits,
+  so an email account could not change it at all. It now follows the same rule
+  as every other record. IPFS targets and record priority still need your
+  wallet, and the editor says so before you save.
+- **Removing an undername names it correctly.** The confirmation showed
+  `undername.name.ar.io`; it is `undername_name.ar.io`.
+- **"View transaction" no longer overlaps Close** on the transfer, reassign
+  and primary-name success screens.
 - **A renewal opened from a name's page shows the right expiry date.** It
   could read as 1970.
 - **A name purchase that runs out of time says what happened to your
-  credits.** Solana accepts the approval for about 30 seconds. If it lapsed,
+  credits.** Solana accepts the approval for under a minute. If it lapsed,
   or you rejected the wallet prompt, the console said "Not enough Turbo
   Credits" and offered to sell you more, because the first attempt's credits
   were still reserved. It now says whether they are already back or when they
   return, and a card or token buyer's "Finish registering" waits until they
   have. Buying also asks for one fewer wallet approval, the screen tells you to
-  approve only while the prompt is open, and you can no longer switch names
-  mid-purchase.
+  approve only while the prompt is open and that it expires in under a
+  minute, and you can no longer switch names mid-purchase.
 - **Smart-contract wallets are no longer offered, and are signed out with an
   explanation.** Base Account and Safe could connect and pay, by card or
   crypto, but could never upload or spend what they bought: Turbo needs a
