@@ -263,6 +263,12 @@ interface StoreState {
         endTimestamp?: number;
       }>;
       timestamp: number;
+      /**
+       * How long this entry stays fresh, when not the default (six hours,
+       * five minutes for an empty list). Short for a list known to be
+       * incomplete: one read before the index had a name just bought.
+       */
+      ttlMs?: number;
     }
   >;
   /**
@@ -380,7 +386,17 @@ interface StoreState {
       undernameTTLs?: Record<string, number>;
       type?: 'lease' | 'permabuy';
       endTimestamp?: number;
-    }>
+    }>,
+    options?: {
+      /** Freshness for this entry instead of the default. */
+      ttlMs?: number;
+      /**
+       * Update the names in place, keeping the entry's age and freshness.
+       * For edits to one name's details: they must not turn a short-lived,
+       * incomplete list into one trusted for six hours.
+       */
+      keepAge?: boolean;
+    },
   ) => void;
   getOwnedArNSNames: (address: string) => Array<{
     name: string;
@@ -661,14 +677,18 @@ export const useStore = create<StoreState>()(
         }
         return null;
       },
-      setOwnedArNSNames: (address, names) => {
+      setOwnedArNSNames: (address, names, options) => {
         const cache = get().ownedArnsCache;
-        set({
-          ownedArnsCache: {
-            ...cache,
-            [address]: { names, timestamp: Date.now() },
-          },
-        });
+        const prev = cache[address];
+        const entry =
+          options?.keepAge && prev
+            ? { ...prev, names }
+            : {
+                names,
+                timestamp: Date.now(),
+                ...(options?.ttlMs !== undefined ? { ttlMs: options.ttlMs } : {}),
+              };
+        set({ ownedArnsCache: { ...cache, [address]: entry } });
       },
       getOwnedArNSNames: (address) => {
         const cache = get().ownedArnsCache;
@@ -679,7 +699,9 @@ export const useStore = create<StoreState>()(
           domains yet" for the rest of the day after paying: the empty list
           from before the purchase was still being served.
         */
-        const ttl = entry && entry.names.length === 0 ? 5 * 60 * 1000 : 21600000;
+        const ttl = !entry
+          ? 0
+          : (entry.ttlMs ?? (entry.names.length === 0 ? 5 * 60 * 1000 : 21600000));
         if (entry && Date.now() - entry.timestamp < ttl) {
           return entry.names;
         }

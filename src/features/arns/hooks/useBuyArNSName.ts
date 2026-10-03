@@ -93,8 +93,6 @@ export interface BuyArNSNameInput {
 }
 
 export interface UseBuyArNSNameResult {
-  /** Record a purchase settled outside `buy()` (the card path). */
-  markExternalSuccess: (settlement: ArNSSettlementResult) => void;
   buy: (input: BuyArNSNameInput) => Promise<ArNSSettlementResult | undefined>;
   reset: () => void;
   phase: BuyPhase;
@@ -107,7 +105,7 @@ export interface UseBuyArNSNameResult {
   failure: BuyFailure | undefined;
   /**
    * The owner's wallet is showing the approval prompt right now. The
-   * transaction it signs is only valid for about 30 seconds, so this is when
+   * transaction it signs is only valid for under a minute, so this is when
    * the screen says "approve now", and only then.
    */
   awaitingApproval: boolean;
@@ -188,26 +186,6 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [creditsPending]);
-
-  /**
-   * Record a purchase that settled somewhere else.
-   *
-   * The card path is settled by the payment service, not by `buy()` — but it
-   * produces the same thing (a name and an on-chain tx), and users deserve the
-   * same receipt. Without this the modal closes and drops them back on the
-   * configurator with no confirmation that anything happened.
-   */
-  const markExternalSuccess = useCallback(
-    (settlement: ArNSSettlementResult) => {
-      setError(undefined);
-      setInsufficientCredits(false);
-      setResult(settlement);
-      setPhase('success');
-      window.dispatchEvent(new CustomEvent('refresh-balance'));
-      useStore.getState().invalidateOwnedArNSNames();
-    },
-    [],
-  );
 
   const reset = useCallback(() => {
     // Anything still in flight now reports to nobody.
@@ -493,6 +471,12 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
                     ...heldUntilFrom(undefined, Date.now()),
                     unconfirmed: true,
                   };
+            /*
+              Unconfirmed tells the buyer to check My domains, so that list
+              must read fresh. No expectation is recorded: this is not proof
+              the name was bought.
+            */
+            if (held.unconfirmed) useStore.getState().invalidateOwnedArNSNames();
             const e = new Error(heldMessage(held));
             setFailure({ kind: 'held', held });
             setPhase('error');
@@ -558,7 +542,6 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
 
   return {
     buy,
-    markExternalSuccess,
     reset,
     phase,
     statusMessage,

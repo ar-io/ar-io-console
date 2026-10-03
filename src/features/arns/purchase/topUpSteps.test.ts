@@ -77,17 +77,17 @@ describe('funding source changes how many prompts remain', () => {
   });
 
   /*
-    The signed transaction expires about a minute after it is built, and a
+    The signed transaction expires 60 to 90 seconds after it is built, and a
     support ticket came from a buyer who approved after ~110 seconds. Every
-    "approve" notice says how long they have.
+    "approve" notice says to approve now, and that it expires.
   */
   it('says how long the wallet prompt stays valid', () => {
     for (const funding of ['card', 'wallet'] as const) {
       expect(waitingNotice({ phase: 'registering' }, funding)).toMatch(
-        /within about a minute/,
+        /under a minute/,
       );
     }
-    expect(APPROVE_PROMPT_NOTICE).toMatch(/within about a minute/);
+    expect(APPROVE_PROMPT_NOTICE).toMatch(/under a minute/);
   });
 
   it('never promises a card buyer a second prompt', () => {

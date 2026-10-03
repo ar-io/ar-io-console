@@ -34,5 +34,25 @@ export function missingExpectedNames(
   );
 }
 
+/**
+ * Expectations for `address` that ran out without the name ever appearing.
+ * The read that finds them is cached briefly rather than for six hours: an
+ * index lagging past the window must not bring the original symptom back.
+ */
+export function expiredUnmetNames(
+  expected: readonly ExpectedOwnedName[],
+  address: string,
+  names: readonly { name: string }[],
+  now: number,
+): ExpectedOwnedName[] {
+  const held = new Set(names.map((n) => n.name.toLowerCase()));
+  return expected.filter(
+    (e) => e.address === address && e.until <= now && !held.has(e.name.toLowerCase()),
+  );
+}
+
 /** How long to wait before reading the list again while a name is missing. */
 export const EXPECTED_NAME_RETRY_MS = 3_000;
+
+/** Freshness for a list read after an expected name ran out unmet. */
+export const UNMET_EXPECTATION_TTL_MS = 5 * 60 * 1000;

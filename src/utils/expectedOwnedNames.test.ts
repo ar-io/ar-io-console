@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { missingExpectedNames } from './expectedOwnedNames';
+import { expiredUnmetNames, missingExpectedNames } from './expectedOwnedNames';
 
 const A = 'OwnerAddress111';
 const now = 1_000_000;
@@ -28,5 +28,17 @@ describe('missingExpectedNames', () => {
         now,
       ),
     ).toEqual([]);
+  });
+});
+
+describe('expiredUnmetNames', () => {
+  it('finds a bought name the index never showed within the window', () => {
+    const expired = [{ address: A, name: 'late', until: now - 1 }];
+    expect(expiredUnmetNames(expired, A, [], now)).toEqual(expired);
+    expect(expiredUnmetNames(expired, A, [{ name: 'late' }], now)).toEqual([]);
+    // Still inside the window: that is missingExpectedNames' job, not this.
+    expect(expiredUnmetNames([{ address: A, name: 'x', until: now + 1 }], A, [], now)).toEqual(
+      [],
+    );
   });
 });

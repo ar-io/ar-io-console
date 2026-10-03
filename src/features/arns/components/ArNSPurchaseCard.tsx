@@ -73,7 +73,7 @@ interface ArNSPurchaseCardProps {
   /**
    * The owner's wallet is showing the registration prompt right now
    * (`useBuyArNSName().awaitingApproval`). Only then does the screen say to
-   * approve: the transaction is valid for about 30 seconds.
+   * approve: the transaction is valid for under a minute.
    */
   awaitingApproval?: boolean;
   onBuy: (input: BuyArNSNameInput) => void | Promise<unknown>;
@@ -1401,7 +1401,7 @@ export function ArNSPurchaseCard({
               {/* Name the step: two wallet popups with one spinner between
                   them is indistinguishable from a stuck app. */}
               {/* "Approve now" only while the prompt is actually open: the
-                  transaction it signs is valid for about 30 seconds. No
+                  transaction it signs is valid for under a minute. No
                   countdown; the wallet sets the pace. */}
               {tokenStepLabel ?? (awaitingApproval ? 'Approve in your wallet now' : 'Registering…')}
             </>
