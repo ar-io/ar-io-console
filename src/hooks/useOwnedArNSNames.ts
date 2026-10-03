@@ -248,6 +248,23 @@ export function useOwnedArNSNames() {
         return processedNames;
       } catch (error) {
         console.error('Failed to fetch owned ArNS names:', error);
+        /*
+          A background re-read that fails keeps waiting for the bought name
+          (one failure must not end the wait) and shows no error, since the
+          list on screen is still the last good one.
+        */
+        const stillWaiting =
+          missingExpectedNames(
+            useStore.getState().expectedOwnedNames,
+            arnsAddress!,
+            [],
+            Date.now(),
+          ).length > 0;
+        if (background && stillWaiting) {
+          if (isCurrent()) scheduleRetry();
+          // The timer ignores the result; the list on screen is untouched.
+          return [];
+        }
         if (isCurrent()) setFetchError(true);
 
         // If fetch fails, still try to use any cached data
