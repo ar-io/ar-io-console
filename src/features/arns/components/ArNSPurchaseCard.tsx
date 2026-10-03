@@ -62,6 +62,7 @@ import {
   failureAdvice,
   stepLabel,
   waitingNotice,
+  APPROVE_PROMPT_NOTICE,
 } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
@@ -1420,6 +1421,16 @@ export function ArNSPurchaseCard({
         (tokenTopUp.step.phase !== 'registering' || awaitingApproval) && (
         <p className="mt-2 text-center text-xs text-foreground/70">
           {waitingNotice(tokenTopUp.step, promptSource)}
+        </p>
+      )}
+      {/*
+        Paying from the balance runs no top-up step, so the notice above never
+        showed and a buyer had no idea the prompt expires. Same rule: only
+        while the prompt is open.
+      */}
+      {!waitingNotice(tokenTopUp.step, promptSource) && awaitingApproval && (
+        <p className="mt-2 text-center text-xs text-foreground/70">
+          {APPROVE_PROMPT_NOTICE}
         </p>
       )}
 

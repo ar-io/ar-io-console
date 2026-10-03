@@ -221,6 +221,12 @@ export function useBuyReturnedName() {
         };
         setResult(settlement);
         setProgress({ done: 2, total: 2, label: '' });
+        // The name is theirs: "your names" reads fresh and waits for it.
+        if (owner) {
+          useStore
+            .getState()
+            .invalidateOwnedArNSNames({ address: owner, name: lowered });
+        }
         setPhase('success');
         // Purchase settled — clear resume state and refresh balances.
         clearSpawn();

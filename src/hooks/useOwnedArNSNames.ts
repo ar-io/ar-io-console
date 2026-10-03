@@ -11,6 +11,10 @@ import { ArNSName } from '@/types';
 // Decode ArNS punycode (xn--) names to their Unicode form for display. The browser
 // URL/hostname APIs do NOT decode xn--, so we use a proper RFC 3492 decoder.
 import { toUnicodeName as decodePunycode } from '../utils/punycode';
+import {
+  EXPECTED_NAME_RETRY_MS,
+  missingExpectedNames,
+} from '../utils/expectedOwnedNames';
 import { useCustodyOwnerClient } from '../features/arns/hooks/useCustodyOwnerClient';
 import { browserArNSOwnerSigner } from '../features/arns/actions/browserOwnerSigner';
 import { useAntSummaries } from '../features/arns/hooks/useAntLogos';
@@ -43,6 +47,18 @@ export function useOwnedArNSNames() {
   // Monotonic request counter — only the latest fetchOwnedNames call may
   // update state, preventing a slow earlier request from overwriting a newer one.
   const fetchSeqRef = useRef(0);
+  /** The pending re-read while a just-bought name is missing from the list. */
+  const retryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** The latest `fetchOwnedNames`, so the re-read never calls a stale one. */
+  const fetchOwnedNamesRef = useRef<((force?: boolean) => Promise<ArNSName[]>) | undefined>(
+    undefined,
+  );
+  useEffect(
+    () => () => {
+      if (retryRef.current) clearTimeout(retryRef.current);
+    },
+    [],
+  );
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const { getClient: getOwnerClient } = useCustodyOwnerClient();
   const { connection: solanaConnection } = useConnection();
@@ -139,10 +155,36 @@ export function useOwnedArNSNames() {
           endTimestamp: name.endTimestamp,
         }));
 
-        // Cache the results — only if this is still the latest request
+        // Cache the results, only if this is still the latest request.
         if (isCurrent()) {
-          setOwnedArNSNames(arnsAddress!, cacheData);
+          /*
+            A name this wallet just bought that the read does not include yet
+            means the index has not caught up. That list is shown but not
+            cached, and read again shortly; once the name is there the list is
+            cached and the expectation dropped. See utils/expectedOwnedNames.
+          */
+          const missing = missingExpectedNames(
+            useStore.getState().expectedOwnedNames,
+            arnsAddress!,
+            processedNames,
+            Date.now(),
+          );
           setNames(processedNames);
+          if (missing.length === 0) {
+            setOwnedArNSNames(arnsAddress!, cacheData);
+            const settled = useStore
+              .getState()
+              .expectedOwnedNames.filter((e) => e.address !== arnsAddress);
+            if (settled.length !== useStore.getState().expectedOwnedNames.length) {
+              useStore.setState({ expectedOwnedNames: settled });
+            }
+          } else {
+            if (retryRef.current) clearTimeout(retryRef.current);
+            retryRef.current = setTimeout(() => {
+              retryRef.current = undefined;
+              void fetchOwnedNamesRef.current?.(true);
+            }, EXPECTED_NAME_RETRY_MS);
+          }
         }
         return processedNames;
       } catch (error) {
@@ -173,6 +215,7 @@ export function useOwnedArNSNames() {
     },
     [arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
   );
+  fetchOwnedNamesRef.current = fetchOwnedNames;
 
   // Update ArNS name to point to new manifest
   const updateArNSRecord = useCallback(

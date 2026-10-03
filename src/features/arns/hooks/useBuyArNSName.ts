@@ -204,6 +204,7 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
       setResult(settlement);
       setPhase('success');
       window.dispatchEvent(new CustomEvent('refresh-balance'));
+      useStore.getState().invalidateOwnedArNSNames();
     },
     [],
   );
@@ -379,6 +380,8 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
         // The name price was debited (credits or ARIO), whatever the screen is
         // showing now, so the balance refreshes before the staleness check.
         window.dispatchEvent(new CustomEvent('refresh-balance'));
+        // And the name is theirs: "your names" reads fresh and waits for it.
+        useStore.getState().invalidateOwnedArNSNames({ address: owner, name: lowered });
         // Superseded (reset, or another buy started): the screen has moved on.
         if (!current()) return undefined;
         setResult(settlement);
@@ -459,6 +462,9 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
                 : undefined;
             if (landed) {
               clearPendingArNSPurchase();
+              useStore
+                .getState()
+                .invalidateOwnedArNSNames({ address: owner, name: lowered });
               const stored = readHeldAttempt(heldStorage(), Date.now());
               if (stored && stored.payer === payer) clearHeldAttempt(heldStorage());
               window.dispatchEvent(new CustomEvent('refresh-balance'));

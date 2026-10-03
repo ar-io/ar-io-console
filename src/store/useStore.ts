@@ -265,6 +265,13 @@ interface StoreState {
       timestamp: number;
     }
   >;
+  /**
+   * Names just bought, which "your names" must show once the index has them.
+   * Session-only. Until a fresh read includes the name, that read is not
+   * cached and is retried (`useOwnedArNSNames`), so a list fetched a moment
+   * before the index caught up cannot stand in for the real one for hours.
+   */
+  expectedOwnedNames: Array<{ address: string; name: string; until: number }>;
 
   // Upload history state
   uploadHistory: UploadResult[];
@@ -385,6 +392,12 @@ interface StoreState {
     type?: 'lease' | 'permabuy';
     endTimestamp?: number;
   }> | null;
+  /**
+   * Drop every cached "your names" list, after a write that changes which
+   * names a wallet holds or what they are (buy, transfer, release, reassign,
+   * renew). With `expect`, also wait for that bought name to appear.
+   */
+  invalidateOwnedArNSNames: (expect?: { address: string; name: string }) => void;
   addUploadResults: (results: UploadResult[]) => void;
   updateUploadWithArNS: (uploadId: string, arnsName: string, undername?: string, arnsTransactionId?: string) => void;
   clearUploadHistory: () => void;
@@ -501,6 +514,7 @@ export const useStore = create<StoreState>()(
 
       arnsNamesCache: {},
       ownedArnsCache: {},
+      expectedOwnedNames: [],
       uploadHistory: [],
       deployHistory: [],
       pages: [],
@@ -659,11 +673,34 @@ export const useStore = create<StoreState>()(
       getOwnedArNSNames: (address) => {
         const cache = get().ownedArnsCache;
         const entry = cache[address];
-        // Cache for 6 hours
-        if (entry && Date.now() - entry.timestamp < 21600000) {
+        /*
+          Six hours for a list with names in it, five minutes for an empty one.
+          An empty list cached for six hours is how a first-time buyer saw "No
+          domains yet" for the rest of the day after paying: the empty list
+          from before the purchase was still being served.
+        */
+        const ttl = entry && entry.names.length === 0 ? 5 * 60 * 1000 : 21600000;
+        if (entry && Date.now() - entry.timestamp < ttl) {
           return entry.names;
         }
         return null;
+      },
+      invalidateOwnedArNSNames: (expect) => {
+        const now = Date.now();
+        set((state) => ({
+          ownedArnsCache: {},
+          expectedOwnedNames: [
+            // Keep other live expectations; drop expired ones and a duplicate.
+            ...state.expectedOwnedNames.filter(
+              (e) =>
+                e.until > now &&
+                !(expect && e.address === expect.address && e.name === expect.name),
+            ),
+            // Two minutes: Turbo reports the name on chain about 3 seconds
+            // after `/sign` returns, so this is a generous bound, not a wait.
+            ...(expect ? [{ ...expect, until: now + 2 * 60 * 1000 }] : []),
+          ],
+        }));
       },
       addUploadResults: (results) => {
         const currentHistory = get().uploadHistory;

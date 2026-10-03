@@ -96,12 +96,21 @@ export function waitingNotice(
         they are refunded. So: now.
       */
       return funding === 'card'
-        ? 'Approve the prompt in your Solana wallet now to claim the name.'
-        : 'Approve the second prompt in your wallet now to claim the name.';
+        ? 'Approve the prompt in your Solana wallet within about a minute to claim the name.'
+        : 'Approve the second prompt in your wallet within about a minute to claim the name.';
     default:
       return undefined;
   }
 }
+
+/**
+ * The notice while a credits purchase waits on the wallet, when no top-up
+ * step is running (paying from the balance). The transaction it signs expires
+ * about a minute after it was built, and a late approval sends the buyer back
+ * to start again, so the time is stated rather than left to be discovered.
+ */
+export const APPROVE_PROMPT_NOTICE =
+  'Approve in your wallet within about a minute to claim the name.';
 
 /** Money is committed from the moment the transfer is signed. */
 export function isMoneyAtRisk(step: TopUpStep): boolean {

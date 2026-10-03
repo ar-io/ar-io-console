@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { useStore } from '../../../store/useStore';
 import { getWritableARIO } from '../../../utils';
 import { lowerCaseDomain } from '../utils';
 import { useArNSTurboSigner } from './useArNSTurboSigner';
@@ -50,6 +51,8 @@ export function useReleaseName() {
         ) as unknown as ARIOReleaseWriteable;
         const res = await ario.releaseName({ name: lowerCaseDomain(name) });
         setTxId(res?.id);
+        // Which names this wallet holds, or what they are, just changed.
+        useStore.getState().invalidateOwnedArNSNames();
         setPhase('success');
         // Release spends SOL gas — refresh balance-dependent UI.
         window.dispatchEvent(new CustomEvent('refresh-balance'));
