@@ -28,8 +28,30 @@ describe('incompletePurchase', () => {
     expect(v.kind).toBe('waiting');
     if (v.kind !== 'waiting') return;
     expect(v.name).toBe('nnn270');
-    expect(v.message).toMatch(/nnn270\.ar\.io wasn't approved/);
+    expect(v.message).toMatch(/nnn270\.ar\.io didn't finish/);
     expect(v.message).toMatch(/21:25/);
+    // Turbo reports awaiting-signature even after the wallet approved, so the
+    // copy never claims the wallet did not.
+    expect(v.message).not.toMatch(/approved/);
+  });
+
+  it('says a purchase it could not confirm may still land', () => {
+    const v = incompletePurchase({
+      ...base,
+      held: { nonce: 'n-1', unconfirmed: true },
+      status: { status: 'awaiting-signature', expiresAt: now + 10 * 60_000 },
+    });
+    expect(v.kind).toBe('waiting');
+    if (v.kind !== 'waiting') return;
+    expect(v.message).toMatch(/couldn't confirm/);
+    expect(v.message).toMatch(/If it didn't go through/);
+    // Another attempt's flag does not apply to this one.
+    const other = incompletePurchase({
+      ...base,
+      held: { nonce: 'n-other', unconfirmed: true },
+      status: { status: 'awaiting-signature' },
+    });
+    expect(other.kind === 'waiting' && other.message).toMatch(/didn't finish/);
   });
 
   it('says an expired attempt was refunded', () => {
