@@ -76,22 +76,28 @@ describe('chooseOwnerActionWriter', () => {
   });
 
   /*
-    A transfer can create up to four rent-exempt accounts. An owner with
-    0.003 SOL used to get a sponsored transfer that worked; defaulting them to
-    SOL at the record-write threshold would hand them one they cannot fund.
+    A transfer can create up to four rent-exempt accounts, so it defaults to
+    SOL only above the account-creation threshold, not the record-write one.
   */
-  it('keeps credits as the default for actions that create accounts', () => {
+  it('defaults an account-creating action to SOL when the owner holds enough', () => {
     expect(chooseOwnerActionWriter('owner', RICH, undefined, 'transfer')).toEqual({
-      kind: 'sponsored',
-      reason: 'owner',
-      alternative: 'self-signed',
+      kind: 'self-signed',
+      reason: 'owner-sol',
+      alternative: 'sponsored',
     });
     expect(
-      chooseOwnerActionWriter('owner', RICH, 'sol', 'add-controller').kind,
-    ).toBe('self-signed');
+      chooseOwnerActionWriter('owner', RICH, 'credits', 'add-controller').kind,
+    ).toBe('sponsored');
+    expect(
+      chooseOwnerActionWriter('owner', RICH, undefined, 'add-controller'),
+    ).toEqual({
+      kind: 'self-signed',
+      reason: 'owner-sol',
+      alternative: 'sponsored',
+    });
   });
 
-  it('offers SOL for a transfer only with a clear margin', () => {
+  it('keeps a transfer on credits when SOL is short of that margin', () => {
     const thin = { credits: 10, priceCredits: 0.2, sol: 0.003 };
     expect(chooseOwnerActionWriter('owner', thin, undefined, 'transfer')).toEqual({
       kind: 'sponsored',

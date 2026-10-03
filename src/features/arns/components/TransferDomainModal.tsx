@@ -70,7 +70,7 @@ export default function TransferDomainModal({
           title={
             <>
               Transfer{' '}
-              <span className="break-all font-mono text-primary">
+              <span className="font-mono text-primary [overflow-wrap:anywhere]">
                 {domain.displayName}.ar.io
               </span>
             </>
@@ -100,20 +100,17 @@ export default function TransferDomainModal({
             <div className="mb-4 rounded-2xl border border-error/30 bg-error/10 p-4 text-sm">
               <div className="mb-1 flex items-center gap-2 font-semibold text-error">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                Irreversible — transfer with care
+                This can&apos;t be undone
               </div>
               <p className="text-foreground/80">
-                {/* "and its ANT" is jargon on the one screen where the user
-                    most needs to understand exactly what leaves their control.
-                    Say what goes: the name and everything on it. */}
-                This sends full ownership of {domain.displayName}.ar.io to the
-                wallet below — the name and every record on it. You&apos;ll
-                permanently lose control of it, and it cannot be undone.{' '}
+                {/* Say what goes, the name and everything on it, rather than
+                    "its ANT", and keep it to the two facts that matter. */}
+                This permanently gives {domain.displayName}.ar.io and all its
+                records to the wallet below.{' '}
                 <span className="font-medium text-foreground">
-                  Double-check the address
+                  Check the address:
                 </span>{' '}
-                — sending to a wrong or inaccessible wallet loses the name for
-                good.
+                a wrong one loses the name for good.
               </p>
             </div>
 
@@ -155,8 +152,7 @@ export default function TransferDomainModal({
                 disabled={isBusy}
                 className="mt-0.5"
               />
-              I&apos;ve verified the recipient address and understand this
-              permanently transfers the name and cannot be undone.
+              I&apos;ve checked the address. This transfer is permanent.
             </label>
 
             {phase === 'error' && error && (
