@@ -98,6 +98,13 @@ All notable changes to the ar.io Console are documented in this file.
   without a recent cached copy saw no prices on the pricing page, in name
   search or at checkout. It now uses Turbo's own ARIO rate, the one every other
   ARIO price in the console already shows.
+- **Paying with USDC on Solana works from a browser wallet.** From Phantom,
+  Solflare, MetaMask's Solana account or an email account it failed before the
+  wallet opened, on top-ups, name purchases and pay-at-upload alike.
+- **A token payment that falls short names the token and the wallet.** It
+  always said "Not enough SOL", even when the payment was in USDC from another
+  wallet. It now says which token, in which wallet, how much it holds and how
+  much the name needs.
 - **Solana wallets stay listed after you sign out of an email account.** A bug
   in a wallet library left only the email account's wallet in the Solana
   pickers, with Phantom, Solflare and MetaMask missing until the page was
