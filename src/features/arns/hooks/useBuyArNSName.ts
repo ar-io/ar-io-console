@@ -473,10 +473,15 @@ export function useBuyArNSName(): UseBuyArNSNameResult {
                   };
             /*
               Unconfirmed tells the buyer to check My domains, so that list
-              must read fresh. No expectation is recorded: this is not proof
-              the name was bought.
+              reads fresh and briefly waits for the name: a "blockhash not
+              found" can still land seconds later. If it never does, the cost
+              is a few re-reads and a five-minute cache, not a wrong list.
             */
-            if (held.unconfirmed) useStore.getState().invalidateOwnedArNSNames();
+            if (held.unconfirmed) {
+              useStore
+                .getState()
+                .invalidateOwnedArNSNames({ address: owner, name: lowered });
+            }
             const e = new Error(heldMessage(held));
             setFailure({ kind: 'held', held });
             setPhase('error');

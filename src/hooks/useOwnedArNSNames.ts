@@ -52,9 +52,17 @@ export function useOwnedArNSNames() {
   /** The pending re-read while a just-bought name is missing from the list. */
   const retryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   /** The latest `fetchOwnedNames`, so the re-read never calls a stale one. */
-  const fetchOwnedNamesRef = useRef<((force?: boolean) => Promise<ArNSName[]>) | undefined>(
-    undefined,
-  );
+  const fetchOwnedNamesRef = useRef<
+    ((force?: boolean, background?: boolean) => Promise<ArNSName[]>) | undefined
+  >(undefined);
+  /** Re-read shortly, in the background, unless a re-read is already due. */
+  const scheduleRetry = useCallback(() => {
+    if (retryRef.current) return;
+    retryRef.current = setTimeout(() => {
+      retryRef.current = undefined;
+      void fetchOwnedNamesRef.current?.(true, true);
+    }, EXPECTED_NAME_RETRY_MS);
+  }, []);
   /*
     On unmount or a wallet switch, stop the re-read and retire any read still
     in flight, so it can neither schedule another re-read on a dead instance
@@ -92,7 +100,15 @@ export function useOwnedArNSNames() {
 
   // Fetch names owned by the ArNS address (primary Solana or linked Solana)
   const fetchOwnedNames = useCallback(
-    async (forceRefresh: boolean = false): Promise<ArNSName[]> => {
+    async (
+      forceRefresh: boolean = false,
+      /**
+       * A re-read while waiting on a just-bought name: refresh the list
+       * without the loading state, so the page does not flash a spinner
+       * every few seconds.
+       */
+      background: boolean = false,
+    ): Promise<ArNSName[]> => {
       if (!arnsAddress) return [];
 
       // Check cache first (unless forcing refresh)
@@ -103,6 +119,21 @@ export function useOwnedArNSNames() {
           // read no longer clears the spinner, so this does.
           fetchSeqRef.current++;
           setLoading(false);
+          /*
+            A short-lived list missing a just-bought name: this instance must
+            re-read too. Another instance started the timer that wrote it, and
+            that instance's read does not update this one's names.
+          */
+          if (
+            missingExpectedNames(
+              useStore.getState().expectedOwnedNames,
+              arnsAddress!,
+              cached,
+              Date.now(),
+            ).length > 0
+          ) {
+            scheduleRetry();
+          }
           const arnsNames: ArNSName[] = cached.map((cached) => ({
             name: cached.name,
             displayName: decodePunycode(cached.name),
@@ -121,7 +152,7 @@ export function useOwnedArNSNames() {
       const seq = ++fetchSeqRef.current;
       const isCurrent = () => seq === fetchSeqRef.current;
 
-      setLoading(true);
+      if (!background) setLoading(true);
       setFetchError(false);
       try {
         // Use AR.IO SDK to get owned names with custom CU
@@ -190,11 +221,7 @@ export function useOwnedArNSNames() {
               cache hit stops them, and the timer below does the re-read.
             */
             setOwnedArNSNames(arnsAddress!, cacheData, { ttlMs: EXPECTED_NAME_RETRY_MS });
-            if (retryRef.current) clearTimeout(retryRef.current);
-            retryRef.current = setTimeout(() => {
-              retryRef.current = undefined;
-              void fetchOwnedNamesRef.current?.(true);
-            }, EXPECTED_NAME_RETRY_MS);
+            scheduleRetry();
           } else {
             // Ran out without the name ever appearing: trust this read briefly.
             const unmet = expiredUnmetNames(expected, arnsAddress!, processedNames, now);
@@ -203,8 +230,16 @@ export function useOwnedArNSNames() {
               cacheData,
               unmet.length > 0 ? { ttlMs: UNMET_EXPECTATION_TTL_MS } : undefined,
             );
-            // This wallet's expectations are settled either way.
-            const rest = expected.filter((e) => e.address !== arnsAddress);
+            /*
+              Drop only the expectations this read satisfied. One that ran out
+              unmet stays (pruned on the next invalidation), so another
+              instance's pending re-read still caches briefly rather than for
+              six hours.
+            */
+            const held = new Set(processedNames.map((n) => n.name.toLowerCase()));
+            const rest = expected.filter(
+              (e) => !(e.address === arnsAddress && held.has(e.name.toLowerCase())),
+            );
             if (rest.length !== expected.length) {
               useStore.setState({ expectedOwnedNames: rest });
             }
@@ -237,7 +272,7 @@ export function useOwnedArNSNames() {
         if (isCurrent()) setLoading(false);
       }
     },
-    [arnsAddress, getOwnedArNSNames, setOwnedArNSNames]
+    [arnsAddress, getOwnedArNSNames, setOwnedArNSNames, scheduleRetry]
   );
   fetchOwnedNamesRef.current = fetchOwnedNames;
 
