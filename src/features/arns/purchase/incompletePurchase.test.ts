@@ -74,6 +74,16 @@ describe('incompletePurchase', () => {
     ).toBe('completed');
   });
 
+  it('stops reporting a purchase once it is past the age limit', () => {
+    expect(
+      incompletePurchase({
+        ...base,
+        pending: { ...pending, savedAt: now - 31 * 60_000 },
+        status: { status: 'expired' },
+      }).kind,
+    ).toBe('none');
+  });
+
   it('says nothing it cannot back up', () => {
     // Status unknown (read failed), or not a credits purchase, or another wallet.
     expect(incompletePurchase({ ...base, status: undefined }).kind).toBe('none');

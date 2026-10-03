@@ -1,4 +1,4 @@
-import type { PendingArNSPurchase } from '../services/arnsPurchaseResume';
+import { MAX_AGE_MS, type PendingArNSPurchase } from '../services/arnsPurchaseResume';
 import { heldByPhrase, heldUntilFrom, type HeldAttempt } from './actionFailure';
 
 /**
@@ -62,6 +62,9 @@ export function incompletePurchase({
     return { kind: 'none' };
   }
   if (pending.owner !== address) return { kind: 'none' };
+  // The same age limit the store applies on read, checked on every render so
+  // a page left open does not keep reporting a purchase past it.
+  if (now - pending.savedAt > MAX_AGE_MS) return { kind: 'none' };
 
   const name = pending.name;
   if (ownedNames.some((n) => n.name.toLowerCase() === name.toLowerCase())) {
