@@ -4,6 +4,7 @@ import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
 import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable, ARIO_TOPUP_MAX_USD } from '../../constants';
+import { arioPresetsFor } from '../../utils/arioPresets';
 import { useStore } from '../../store/useStore';
 import { Loader2, Lock, CreditCard, DollarSign, Wallet, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
@@ -397,18 +398,7 @@ export default function TopUpPanel({
     arioUsdRate && arioUsdRate > 0
       ? Math.floor(ARIO_TOPUP_MAX_USD / arioUsdRate)
       : undefined;
-  /*
-    Small amounts first: at ~$0.0015 per ARIO these are about $1.50, $7, $15
-    and $36. Any preset at or above the cap is dropped and the cap offered in
-    its place, so a button can never ask for more than the limit.
-  */
-  const ARIO_PRESETS = [1_000, 5_000, 10_000, 25_000];
-  const arioPresets =
-    arioMaxTokens === undefined
-      ? ARIO_PRESETS
-      : ARIO_PRESETS.every((a) => a < arioMaxTokens)
-        ? ARIO_PRESETS
-        : [...ARIO_PRESETS.filter((a) => a < arioMaxTokens), arioMaxTokens];
+  const arioPresets = arioPresetsFor(arioMaxTokens);
   const arioAmount =
     inputType === 'storage' && cryptoForStorage !== undefined
       ? cryptoForStorage
@@ -2168,7 +2158,7 @@ export default function TopUpPanel({
             )) ||
             (paymentMethod === 'crypto' && (
               !!targetAddressError || // Block checkout if recipient address validation failed
-              arioOverCap || // ARIO: at most $200 per top-up, and not before the rate loads
+              arioOverCap || // ARIO: at most ARIO_TOPUP_MAX_USD per top-up, and not before the rate loads
               (inputType === 'dollars' && (cryptoAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || !!tokenPricingError)) ||
               (inputType === 'storage' && (!wincForOneGiB || !creditsForOneUSD || storageAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || cryptoForStorage === undefined))
             )) ||

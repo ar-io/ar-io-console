@@ -105,8 +105,12 @@ function AppRoutes() {
     reconnected it: the session showed as signed in, and paying failed with
     "Wallet not available for direct payment". The hook attempts once per
     instance and pages that mount it themselves are unaffected.
+
+    Primary sessions only: a linked wallet serves ArNS writes, whose pages
+    reconnect it themselves, and reconnecting it everywhere would open a
+    locked wallet's unlock window on pages that never use Solana.
   */
-  useLinkedSolanaWallet();
+  useLinkedSolanaWallet({ autoReconnect: 'primary-only' });
 
   // Initialize bundler's free upload limit on app startup
   useFreeUploadLimit();

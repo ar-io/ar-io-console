@@ -518,7 +518,7 @@ export default function CryptoConfirmationPanel({
           // The payment is a transaction the wallet must sign. Wallet Standard
           // makes transaction signing optional, so check for it here rather
           // than let the SDK fail with a message about adapters.
-          // Top Up's $200 ARIO cap, checked again where the money moves. The
+          // Top Up's ARIO_TOPUP_MAX_USD cap, checked again where the money moves. The
           // panel already blocks it; this stops any other caller from going
           // over, and an unknown rate never lets an ARIO payment through.
           if (tokenType === 'ario') {

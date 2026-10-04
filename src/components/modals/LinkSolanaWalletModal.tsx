@@ -41,7 +41,7 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
           title={isReconnect ? 'Reconnect Solana Wallet' : 'Link Solana Wallet'}
           description={
             isReconnect
-              ? 'Reconnect to sign ArNS transactions'
+              ? 'Reconnect your Solana wallet to continue'
               : 'Connect a Solana wallet to manage your ArNS domains'
           }
         />
