@@ -69,8 +69,12 @@ export function useLinkedSolanaWallet(
    * address is acceptable.
    *
    * The connect effect below serves two callers with different consent:
-   *  - `linkWallet()` — the user explicitly picked a wallet, so whatever address
-   *    it returns is the one they meant. Expectation is null.
+   *  - `linkWallet()` — the user explicitly picked a wallet. When LINKING,
+   *    whatever address it returns is the one they meant: expectation is null.
+   *    When reconnecting a PRIMARY session it is the signed-in address, so this
+   *    hook never writes a different account into the session itself. (If the
+   *    wallet does connect another account, useWalletAccountListener switches
+   *    the session and clears payment state, as for any in-wallet switch.)
    *  - auto-reconnect — the user chose nothing; we are silently restoring a
    *    previously linked wallet. If the adapter's ACTIVE ACCOUNT changed in the
    *    extension since then, connecting returns a different pubkey, and
@@ -216,9 +220,10 @@ export function useLinkedSolanaWallet(
       intended. Reconnecting a PRIMARY session is different: it restores the
       wallet as the session itself, not as a linked one (which would outlive
       sign-out and be inherited by the next Arweave or Ethereum session), and
-      only the same account is accepted. Switching accounts here would change
-      who receives a top-up's credits mid-checkout without clearing it;
-      changing identity is sign out and sign in.
+      this hook writes only the same account. Writing another one here ran
+      before useWalletAccountListener could clear payment state, so a top-up
+      mid-checkout credited the old account; an account switch is left to
+      that listener, which clears it.
     */
     expectedAddressRef.current = isPrimarySolana ? address : null;
     autoTargetRef.current = null;
@@ -260,6 +265,12 @@ export function useLinkedSolanaWallet(
     promptReconnect,
     // UI state
     isLinking,
+    /**
+     * True while any connect is under way, including another instance's
+     * silent reconnect. A second connect() started now is ignored by the
+     * provider and would read as "cancelled".
+     */
+    isConnectBusy: isLinking || solanaConnecting || connectInFlight(),
     linkError,
     showLinkModal,
     setShowLinkModal,
