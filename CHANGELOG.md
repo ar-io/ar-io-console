@@ -7,15 +7,15 @@ All notable changes to the ar.io Console are documented in this file.
 ### Changed
 - **ARIO top-ups are smaller.** Each ARIO top-up is limited to $100 at the
   day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
-  5,000, 10,000 and 25,000 ARIO. A preset above the limit is replaced by the
-  limit itself.
+  5,000, 10,000 and 25,000 ARIO. A preset at or above the limit is replaced by
+  the limit itself.
 
 ### Fixed
 - **Paying from a Solana wallet after a reload.** With Solflare, reloading Buy
   Credits and paying with ARIO, SOL or USDC failed with "Wallet not available
   for direct payment", because the wallet was only reconnected on the domain
-  pages. It now reconnects on every page, and if it still is not connected the
-  Pay button becomes "Reconnect wallet to pay".
+  pages. A wallet you signed in with now reconnects on every page, and if it
+  still is not connected the Pay button becomes "Reconnect wallet to pay".
 
 ## [4.10.0] - 2026-10-03
 

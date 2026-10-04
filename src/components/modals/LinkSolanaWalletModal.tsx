@@ -11,7 +11,7 @@ interface LinkSolanaWalletModalProps {
 }
 
 export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: LinkSolanaWalletModalProps) {
-  const { solanaWallets, linkWallet, isLinking, linkError, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet();
+  const { solanaWallets, linkWallet, isLinking, linkError, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet({ autoReconnect: 'none' });
   const [initialAddress] = useState(linkedAddress);
   const [linkingAdapter, setLinkingAdapter] = useState<string | null>(null);
   const hasAutoClosedRef = useRef(false);
