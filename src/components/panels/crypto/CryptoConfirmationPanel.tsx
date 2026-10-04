@@ -28,6 +28,7 @@ import { formatTokenAmount } from '../../../utils/jitPayment';
 import { savePendingTopUpTx, removePendingTopUpTx } from '../../../utils/pendingTopUp';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useArioUsdRate } from '../../../hooks/useCryptoPrice';
+import LinkSolanaWalletModal from '../../modals/LinkSolanaWalletModal';
 import {
   CONTRACT_WALLET_DESTINATION_ERROR,
   CONTRACT_WALLET_PAYMENT_ERROR,
@@ -54,6 +55,7 @@ export default function CryptoConfirmationPanel({
   const { wallets } = useWallets(); // Get Privy wallets
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSolanaReconnect, setShowSolanaReconnect] = useState(false);
   const [paymentError, setPaymentError] = useState<string>();
   const [failedTxId, setFailedTxId] = useState<string>();
   const [isRetrying, setIsRetrying] = useState(false);
@@ -123,6 +125,15 @@ export default function CryptoConfirmationPanel({
         tokenType === 'polygon-usdc')) ||
     (walletType === 'solana' &&
       (tokenType === 'solana' || tokenType === 'solana-usdc' || tokenType === 'ario'));
+
+  /*
+    A Solana session whose wallet is not connected to the page right now: the
+    session survives a reload, or a wallet that auto-locks, but the adapter
+    does not. Paying needs the live wallet, so the button offers to reconnect
+    instead of failing with "Wallet not available for direct payment".
+  */
+  const solanaWalletDisconnected =
+    canPayDirectly && walletType === 'solana' && !solanaPublicKey;
 
   const handlePayment = async () => {
     if (!address || !quote) return;
@@ -502,7 +513,6 @@ export default function CryptoConfirmationPanel({
         } else if (
           walletType === 'solana' &&
           solanaPublicKey &&
-          solanaSignMessage &&
           (tokenType === 'solana' || tokenType === 'solana-usdc' || tokenType === 'ario')
         ) {
           // The payment is a transaction the wallet must sign. Wallet Standard
@@ -528,7 +538,24 @@ export default function CryptoConfirmationPanel({
             paymentServiceConfig: {
               url: turboConfig.paymentServiceUrl || 'https://payment.ardrive.io',
             },
-            walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction },
+            /*
+              A token transfer is a signed transaction; it does not need a
+              signed message. Requiring `signMessage` up front turned away a
+              wallet that cannot sign messages (a hardware-backed account, for
+              one) with "Wallet not available". If the SDK ever does ask, the
+              wallet's inability is said plainly instead.
+            */
+            walletAdapter: {
+              publicKey: solanaPublicKey,
+              signMessage:
+                solanaSignMessage ??
+                (async () => {
+                  throw new Error(
+                    "This Solana wallet can't sign messages. Connect a wallet that can, such as Phantom or Solflare.",
+                  );
+                }),
+              signTransaction: solanaSignTransaction,
+            },
             // Same RPC for both: USDC on Solana is an SPL token on the very
             // same chain, so there is no second endpoint to configure.
             gatewayUrl: turboConfig.tokenMap.solana,
@@ -560,6 +587,10 @@ export default function CryptoConfirmationPanel({
             tokenType,
             transactionId: result.id,
           });
+        } else if (walletType === 'solana' && !solanaPublicKey) {
+          throw new Error(
+            'Your Solana wallet is not connected. Reconnect it and try again.',
+          );
         } else {
           throw new Error('Wallet not available for direct payment');
         }
@@ -971,6 +1002,15 @@ export default function CryptoConfirmationPanel({
                 Back
               </button>
 
+              {solanaWalletDisconnected ? (
+                <button
+                  onClick={() => setShowSolanaReconnect(true)}
+                  className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 flex items-center gap-2"
+                >
+                  <Wallet className="w-4 h-4" />
+                  Reconnect wallet to pay
+                </button>
+              ) : (
               <button
                 onClick={handlePayment}
                 disabled={!quote || isProcessing || (!hasSufficientBalance && !balanceLoading)}
@@ -988,7 +1028,14 @@ export default function CryptoConfirmationPanel({
                   </>
                 )}
               </button>
+              )}
             </div>
+            {showSolanaReconnect && (
+              <LinkSolanaWalletModal
+                isReconnect
+                onClose={() => setShowSolanaReconnect(false)}
+              />
+            )}
           </>
         ) : (
           <div className="text-center py-8">
