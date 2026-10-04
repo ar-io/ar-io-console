@@ -187,10 +187,32 @@ wallet that signs (`actions/browserOwnerSigner.ts`, which implements the SDK's
 `ArNSOwnerSigner` against a Wallet Standard adapter) and honest copy about what
 is sponsored (`actions/sponsorship.ts`).
 
-**Pin turbo-sdk EXACTLY** (currently `1.43.0-alpha.5`). A stable release sorts
-*above* the `alpha.x` line it precedes in semver, and the stable line carries
-**no ArNS surface at all**, so a caret range or a routine `npm update` silently
-deletes this feature and nothing fails until someone tries to buy a name.
+**Pin turbo-sdk EXACTLY** (currently `2.1.0-alpha.3`). That alpha is 2.1.0 plus
+two fixes. turbo-sdk#524: without it a browser Solana wallet cannot pay with
+USDC or ARIO (the SDK built a wallet signer for `solana` alone, and signed SPL
+transfers through `signMessage`, which wallets refuse). turbo-sdk#525: `/sign`
+sends no payer signature (the route is authorised by the owner's signature
+inside the transaction), so the only prompt inside the ~30 second signing
+window is the owner's, and `/sign` failures map to `ArNSActionExpiredError`
+(`creditsReleased`) and `InsufficientCreditsError`. Its version sorts *below*
+2.1.0 in semver, which is one more reason the pin must stay exact. Move to the
+next stable release once it carries both. The
+long-standing reason for this rule has now expired: the ArNS surface and
+`solana-usdc` used to exist only on the `alpha` line, so a caret range silently
+resolved to a stable release carrying neither, and nothing failed until someone
+tried to buy a name. 2.1.0 carries both, with a type surface identical to the
+`2.1.0-alpha.1` this app was built against.
+
+The pin stays exact anyway, for a smaller reason: this app narrows the SDK's
+`TokenType` itself (`SdkTokenType`), so a minor release that adds or removes a
+token changes what compiles here. Check `npm view @ardrive/turbo-sdk dist-tags`
+and the `tokenTypes` array before moving it.
+
+**`@ar.io/sdk` and `@ar.io/solana-contracts` are pinned exactly too** (`4.5.0`
+and `1.4.0`). The SDK pins contracts exactly, and the console also imports
+contracts directly for its instruction builders, so a range here could install
+a second, nested copy whose types and builders disagree with the SDK's. Move
+them together, and check `npm ls @ar.io/solana-contracts` shows one copy.
 
 **Every action costs credits, and the SDK says otherwise.** The eight
 non-purchase actions were free at launch and now carry a small margin
@@ -233,12 +255,33 @@ Not sponsored, each still costing the user SOL:
 **Two rails, and the choice is by funds** (`records/writerChoice.ts`). Every
 write Turbo lists in `arNSActions` can go either way: Turbo as fee payer,
 billed in credits, or the wallet signing the Solana transaction and paying the
-network. `chooseWriter` prefers **credits** — that price can be quoted exactly
-before the click, and the route is one message signature with no transaction to
-confirm or fail — and falls back to the wallet only on a **known** shortfall.
-Unknown balances never reroute: both figures load asynchronously, and treating
-"not yet" as "can't afford it" would swap the route, and the cost sentence with
-it, under someone already reading it.
+network. An owner holding SOL (at least `MIN_SOL_FOR_RECORD_WRITE`) **signs
+with SOL by default**: a record save was 0.108 credits on production when this
+changed, tens of cents, against a Solana fee of a fraction of a cent. Credits
+are the rail for a wallet without SOL (every email sign-in starts there) and
+for an owner who switches. When both rails would work, `chooseWriter` returns
+an `alternative` and the surface shows `RailSwitch` ("Pay with credits
+instead"); the choice is `arnsWriterPreference` in the store, session-only and
+deliberately not persisted. While the SOL balance loads the choice is
+`blocked` rather than defaulting to credits and switching under the reader; an
+unreadable SOL balance falls back to credits. A credits shortfall still counts
+only when **known**. Role-only callers (`writerForRole`, used mid-deploy by
+`useOwnedArNSNames`) stay on credits, since they cannot wait on a balance.
+
+Two refinements to the SOL default. **Transfer and add-controller need more
+SOL to qualify** (`chooseOwnerActionWriter(…, action)`): they can create
+rent-exempt ACL accounts, so SOL is their default only above
+`MIN_SOL_FOR_ACCOUNT_CREATION`; below it they stay on credits. **An IPFS target or a record priority always
+signs with the wallet** (`requiresSelfSigned`): Turbo's `setArNSRecord` carries
+neither, so on credits the protocol or priority would be dropped after the
+charge. Without the SOL to sign, that save is refused before anything is
+created. And the credits rail always writes the record before any metadata,
+so a metadata-only save there is quoted both prices.
+
+The `@` record goes through the same writer as every undername
+(`useUndernameWrites.saveUndername(processId, '@', …)`). It used to call the
+ANT directly, which always paid SOL while the editor quoted credits, and left
+an owner with no SOL unable to change where their name points.
 
 `chooseOwnerActionWriter` is the same ladder for transfer and controller
 changes, minus the controller branch — a controller may edit records but cannot
@@ -340,13 +383,30 @@ only — both `ANT.spawn` and `buyRecord` accept `targetProtocol: 1` (IPFS), but
 no ar.io gateway resolves one, so offering it would sell a name pointing at
 nothing.
 
-**Purchases are resumable and must not be repeated** (`services/arnsPurchaseResume.ts`): **credits are debited when the action is CREATED**, not when it is signed, so an abandoned wallet prompt has already been charged (Turbo refunds it on TTL expiry). The nonce is persisted via the SDK's `onNonce`, which fires *before* the wallet opens — that is the only route back to a paid-for purchase if the page reloads mid-approval. Resuming by nonce is a pure read (`GET /v1/arns/actions/:nonce`) and can never double-debit; **re-creating an action always can.** `processId` persistence now serves the auction path only, where a client spawn still happens and a retry must reuse it rather than bleed another ~0.02 SOL.
+**A sponsored buy reserves credits at create, and is not resumed** (`purchase/actionFailure.ts`). `POST /v1/arns/actions/<action>` reserves the credits and returns a transaction that Solana only accepts for about 30 seconds after it is built (its blockhash); `expiresAt`, about 5 minutes after the action is created, is the refund deadline, not a signing deadline. The nonce is still saved through the SDK's `onNonce` (`services/arnsPurchaseResume.ts`), but nothing reads it back for a buy: `getPendingArNSPurchase` serves only the auction path, which reuses a spawned `processId` so a retry does not bleed another ~0.02 SOL. So a reload or a late approval abandons the attempt, and what the buyer is told depends on how `/sign` failed. The credits are back only when the service says so: a 409 whose body says "Your credits have been returned", or a 400 "Action <nonce> expired and was refunded". A 409 without that wording, a 400 "Action <nonce> expired at ...", or a wallet rejection after create means they stay held until the reconciler refunds them; it runs about every 5 minutes, so the refund lands by `expiresAt` plus up to 5 more. The console reads `expiresAt` (and `wincQty`) from the open `GET /v1/arns/actions/:nonce`, so it follows whatever window the service sets; when the time cannot be read it says "within about 10 minutes". A 503 "Blockhash not found" proves nothing: the service could not confirm expiry and the transaction may still land, so the copy sends the buyer to check My domains and never says nothing was charged. Only a 400 naming this action is an expiry; the program's own "Lease has expired" style 400s are ordinary errors. Every failure after create records the hold (per payer, localStorage with an in-memory fallback), and a success clears it. A new attempt that meets 402 during the hold is told about the hold only when the credits on hand plus the held ones would cover it; otherwise it is a real shortfall and gets the usual "Buy Turbo Credits". Record, transfer and controller writes get the same wording only for sponsored failures, which carry an HTTP status; a self-signed write reserved no credits and is never told about them. Never re-create an action to retry a failure the buyer did not ask to retry: each create reserves again.
 
 **Owner vs. controller gating** (`antRole.ts`): `getArNSRecordsForAddress` returns `Owned ∪ Controlled`, so a name in "your names" may be one the wallet only *controls*. Controllers can edit records/metadata/undernames; **transfer, reassign, release, and controller changes are owner-only**. Use `deriveAntRole` (optimistic — `unknown` treated leniently) only on owned-name surfaces where every row is in the ACL; use `deriveAntRoleStrict` (`none` is a real answer) anywhere a name isn't guaranteed to be the wallet's, such as the public Name Detail page. `isOwnerOnlyAllowed` denies both `unknown` and `controller` so destructive actions never flash before ownership is confirmed.
 
 **ACL drift** (`services/aclDrift.ts`): the on-chain ANT ACL is an eventually-consistent index powering "your names". A **raw Metaplex Core transfer** (direct send or NFT-marketplace sale) moves the asset but does *not* update the ACL, so a newly-owned name goes missing until `syncAcl` is called. Drift is detected by scanning MPL Core assets by owner and diffing against the ACL owner set.
 
 **Service layer** (`services/TurboArNSClient.ts`): framework-agnostic (plain `fetch` + turbo-sdk), holds no React state, and takes **signers injected per call** rather than reading `window.solana`. Intents: `Buy-Name`, `Extend-Lease`, `Increase-Undername-Limit`, `Upgrade-Name`. `purchaseWithCredits` dispatches to the SDK's per-action methods; `Buy-Name` is the only one needing an `owner` signer, and the only one that opens a wallet.
+
+**The gateway-operator discount** (`purchase/operatorDiscount.ts`,
+`hooks/useOperatorDiscountGateway.ts`): 20% off buying, extending, adding
+undernames and upgrading, never primary names, and on the **ARIO route only**.
+Credits, card and token routes are Turbo actions: Turbo pays the registry, so
+there is no operator signer for the program to check. `@ar.io/sdk` >= 4.4
+attaches an operator's own gateway implicitly and skips it silently when it
+does not qualify. An operations wallet has no gateway of its own and must name
+one with `discountGatewayAddress` (the operator's address), and a named gateway
+that fails the program's checks THROWS, in the quote and in the write. So the
+console names a gateway only for an operations wallet, and only the one the
+quote just honoured (`useArNSCostDetails` returns it; `withDiscountGateway` puts
+it on the `ario-direct` mechanism). `operatorDiscountIneligibility` mirrors
+pricing.rs `try_apply_gateway_discount` (joined, 180 days, 90% pass rate with
+the program's integer rule). The operations lookup is a full registry scan, so
+it runs only while the ARIO route is selected; the signer's own gateway is one
+account and is read on every route.
 
 `features/arns/index.ts` is the public surface — import from there, not via deep relative paths.
 
@@ -364,19 +424,34 @@ Access via `useTurboConfig(tokenType)` hook or `getCurrentConfig()` from store.
 ## Token Support
 
 **Supported tokens** (from `constants.ts`):
-`arweave`, `ario`, `ethereum`, `base-eth`, `solana`, `kyve`, `pol`, `usdc`, `base-usdc`
+`arweave`, `ario`, `ethereum`, `base-eth`, `solana`, `solana-usdc`, `kyve`, `pol`, `usdc`, `base-usdc`
 
-**Withdrawn from selection** (`unavailableCryptoTokens` in `constants.ts`):
-`base-ario` — turbo-sdk drops it as of 1.42.0-alpha.8, so a payment could be
-started that the SDK cannot settle — and `polygon-usdc`. Both keep their types
-and formatting tables so existing history still renders, and
-`PendingTxRecoveryBanner` deliberately ignores the list so a user mid-transfer
-on a retired network can still recover their funds. Retire a token by adding it
-there, not by deleting it.
+**Withdrawn from selection** (`unavailableCryptoTokens` in `constants.ts`), three of them, each because turbo-sdk can no longer settle the payment:
+
+- `kyve` — turbo-sdk 2.0.0 removed the TokenType outright, dropping the `@cosmjs` dependencies with it.
+- `base-ario` — dropped as of 1.42.0-alpha.8.
+- `polygon-usdc` — the payment service answers `The currency type 'polygon-usdc' is currently not supported by this API!` (HTTP 400).
+
+All three keep their types and formatting tables so existing history still
+renders, and `PendingTxRecoveryBanner` deliberately ignores the list so a user
+mid-transfer on a retired network can still recover their funds. Retire a token
+by adding it there, not by deleting it.
+
+**`solana-usdc`** is USDC as an SPL token on the same chain as SOL, signed by
+the same key: no second wallet and no bridging, just USDC plus a little SOL for
+the fee. The mint is chosen by the **genesis hash** of the cluster the read RPC
+is actually on (`SOLANA_USDC_CONFIG.mintsByGenesisHash`), never by `configMode`:
+custom mode can point at any RPC, and the mainnet mint read off devnet finds no
+accounts and shows a funded wallet as empty. An unknown cluster says USDC is
+unavailable rather than guessing. Balances sum **every** token account for the
+mint, because a wallet can legitimately hold more than one and showing part of a
+balance reads as funds missing.
 
 **Network detection:** `getTokenTypeFromChainId()` in `utils/index.ts`
 
-**JIT payments supported:** `solana`, `base-eth`, `base-usdc` — the authority is `supportsJitPayment()` in `utils/jitPayment.ts`, which has never included `ario` or `base-ario` despite earlier docs saying so
+**JIT payments supported:** `solana`, `solana-usdc`, `base-eth`, `base-usdc` — the authority is `supportsJitPayment()` in `utils/jitPayment.ts`, which has never included `ario` or `base-ario` despite earlier docs saying so. The bar is confirmation speed, which is why the list is Solana and Base.
+
+**A Turbo client is bound to one token at construction and spends that token.** Every upload path takes a token override for this reason, and the Solana branches ignored it: selecting USDC built a `token: 'solana'` client that then received an amount converted with USDC's six decimals, so a 25 USDC cap became 25,000,000 lamports (0.025 SOL). Wrong asset, wrong amount, nothing thrown. `utils/solanaToken.ts` (`solanaClientToken`) is now the one place that decision is made — use it rather than a literal in any new Solana client.
 
 **EVM token transfer types** (require network switching): `base-ario`, `base-eth`, `base-usdc`, `polygon-usdc`, `pol`, `usdc`
 
@@ -529,7 +604,7 @@ Network-specific settings in `constants.ts`:
 | Feature | Arweave | Ethereum/Base/Polygon | Solana |
 |---------|---------|----------------------|--------|
 | Buy Credits (Fiat) | ✅ | ✅ | ✅ |
-| Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL |
+| Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL/USDC |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
 | Update ArNS Records | ❌ | ❌ | ✅ (no SOL needed) |
@@ -554,6 +629,19 @@ VITE_POLYGON_RPC=...            # Optional — defaults to polygon-bor-rpc.publi
 both the `tokenMap` and wagmi's transports read, so balance reads and wallet
 operations always hit the same provider per chain. Add a new chain there, not in
 two places.
+
+Both `tokenMap` presets end in `satisfies Record<SupportedTokenType, string>`,
+**not** `as`. The cast silenced a missing key, and `solana-usdc` shipped without
+an endpoint because of it: `useTurboConfig(token)` then returns no `gatewayUrl`
+and the SDK quietly falls back to its own default. Keep `satisfies` so the next
+token is a compile error instead.
+
+**A token on another token's chain has no endpoint of its own.** `solana-usdc`
+is derived from `solana` (`utils/tokenEndpoints.ts`), applied in
+`getCurrentConfig()` rather than in the editor, because editing is not the only
+way a map arrives: custom mode merged `tokenMap` shallowly, so a config saved
+before the token existed had no key for it at all. The Settings editor shows a
+derived key read-only, since an input there would accept a value and ignore it.
 
 The three EVM vars are optional and each falls back to the public endpoint it
 replaced. They exist because those defaults are free public RPCs that rate-limit
@@ -697,6 +785,8 @@ All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It 
 
 `rounded-2xl` is redefined to **20px** (brand cards are 20–24px), plus `rounded-3xl` (24px), `rounded-panel` (2rem), `rounded-hero` (2.5rem). Page containers use the `max-w-site` token (**1400px**) — not `max-w-7xl` (1280px) and not a hard-coded `max-w-[1400px]`.
 
+**Every routed screen has the same body width, on every device.** `Layout` wraps the outlet in `max-w-site`, and each screen's outermost element is `px-4 sm:px-6`, which also gives phones the same side gutter everywhere. **A screen must not add its own `mx-auto max-w-*` cap.** Name Detail (`max-w-5xl`), Pages (`max-w-6xl`) and two views inside Pages (`max-w-3xl`, `max-w-xl`) each had one, so they read as narrower than Upload or Deploy for no reason. Narrow measures are still right *inside* a screen: a centred empty-state sentence (`max-w-md`), prose (`max-w-prose`), modals, and the Pages live preview, which is a phone-sized frame on purpose. Browse is the one deliberate exception: it reclaims the layout padding to give its viewer more room.
+
 ### Key Files
 
 - `src/styles/globals.css` - CSS custom properties
@@ -753,7 +843,8 @@ if (privyWallet) {
 - `wagmi` + `ethers`: Ethereum wallets
 - `@solana/wallet-adapter-*`: Solana wallets
 - `@wallet-standard/app`: `getWallets().register()` — how `PrivySolanaBridge` makes the embedded wallet visible
-- `arbundles`, `x402-fetch`: still declared in `package.json` but imported nowhere in `src/` since the x402 upload hook was removed — candidates for removal, not something to build on
+- `x402-fetch`: **keep it.** Nothing in `src/` imports it, which reads like dead weight, but it is turbo-sdk's `optional: true` peer for x402 payments (`peerDependencies: { "x402-fetch": "^1.0.0" }`, matching what we declare). As of 2.1.0 the SDK loads it through a dynamic `import()` rather than at module top level, precisely because it drags in wagmi, WalletConnect and AppKit that a credit-paying user never touches: a missing install then fails only on an actual x402 payment, with a message naming the package. Removing it would silently disable that path and leave the build with an import it cannot resolve.
+- `arbundles`: declared but imported nowhere in `src/`. The Ethereum signer comes from `@dha-team/arbundles` (see above), which is a different package, so this one is a genuine removal candidate
 - `zustand`: State management
 - `@tanstack/react-query`: Server state
 - `@stripe/react-stripe-js`: Fiat payments

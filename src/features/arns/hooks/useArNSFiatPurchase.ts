@@ -13,6 +13,7 @@ import {
   purchaseReducer, type PurchaseState,
 } from '../purchase/purchaseMachine';
 import type { TurboArNSIntent } from '../services/TurboArNSClient';
+import { useStore } from '../../../store/useStore';
 
 /** How long to watch settlement before calling it indeterminate. */
 const POLL_INTERVAL_MS = 2_500;
@@ -199,6 +200,9 @@ export function useArNSFiatPurchase(): UseArNSFiatPurchaseResult {
       // 5-minute cache means the detail page shows no custodial panel, no
       // transfer, and mis-gated records for minutes after paying.
       void queryClient.invalidateQueries({ queryKey: ['turbo-arns-names'] });
+      // A renewal or upgrade by card changes the name's expiry: "your names"
+      // reads fresh rather than keeping a stale expiry warning for hours.
+      useStore.getState().invalidateOwnedArNSNames();
     } else if (outcome.kind === 'failed') {
       // Settlement failed after the card cleared — the service refunds it.
       dispatch({ type: 'SETTLE_FAILED' });

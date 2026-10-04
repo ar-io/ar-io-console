@@ -20,6 +20,7 @@ import BaseModal from '../../../components/modals/BaseModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import type { ArNSRegistrationType } from '../hooks/useArNSPrice';
 import { useArNSCostDetails } from '../hooks/useArNSCostDetails';
+import { useOperatorDiscountGateway } from '../hooks/useOperatorDiscountGateway';
 import { useArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 import { useArNSTurboSigner } from '../hooks/useArNSTurboSigner';
 import { useBuyReturnedName } from '../hooks/useBuyReturnedName';
@@ -80,6 +81,10 @@ export default function ReturnedNameBuyModal({
 
   const signerAddress = signer.address ?? undefined;
   const balances = useArNSPaymentBalances(signerAddress);
+  // An operations wallet names its gateway; an operator's own is tried by the
+  // SDK. Auctions are ARIO-only, so the operations scan may run here.
+  const { discount: operatorDiscount, checking: operatorDiscountChecking } =
+    useOperatorDiscountGateway(signerAddress, { scanOperations: true });
   const buyState = useBuyReturnedName();
 
   // Freshness re-check — a soft, non-blocking signal. Its rejection can't be told
@@ -104,6 +109,7 @@ export default function ReturnedNameBuyModal({
     years,
     fundFrom,
     fromAddress: signerAddress,
+    discountGatewayAddress: operatorDiscount?.discountGatewayAddress,
     // Re-price the (premium-decaying) auction quote on a coarse ~20s cadence so
     // it doesn't stay frozen for the full 60s staleTime while the displayed
     // multiplier keeps falling every second. Conservative by design — the quote
@@ -145,6 +151,8 @@ export default function ReturnedNameBuyModal({
         type,
         years: type === 'lease' ? years : undefined,
         fundFrom,
+        // Only the gateway the quote just honoured.
+        discountGatewayAddress: cost?.discountGatewayAddress,
       })
       .catch(() => undefined);
   };
@@ -337,6 +345,8 @@ export default function ReturnedNameBuyModal({
             {/* Cost breakdown */}
             <div className="mb-4">
               <ArNSCostBreakdown
+                operatorDiscountArio={cost?.discountArio}
+                operatorDiscountChecking={operatorDiscountChecking}
                 priceUnit="ario"
                 arioPrice={cost?.arioCost}
                 priceLoading={costLoading}

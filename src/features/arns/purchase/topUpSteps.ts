@@ -89,13 +89,30 @@ export function waitingNotice(
       */
       return 'Checking every few seconds for your credits. Your payment is safe — if this takes too long you can finish registering later without paying again.';
     case 'registering':
+      /*
+        Shown only while the prompt is open (ArNSPurchaseCard gates it on
+        `awaitingApproval`). The transaction it signs is valid for under a
+        minute, and a late approval leaves the attempt's credits held until
+        they are refunded. So: now.
+      */
       return funding === 'card'
-        ? 'Keep this tab open — approve the prompt in your Solana wallet to claim the name.'
-        : 'Keep this tab open — approve the second prompt to claim the name.';
+        ? 'Approve the prompt in your Solana wallet now to claim the name. It expires in under a minute.'
+        : 'Approve the second prompt in your wallet now to claim the name. It expires in under a minute.';
     default:
       return undefined;
   }
 }
+
+/**
+ * The notice while a credits purchase waits on the wallet, when no top-up
+ * step is running (paying from the balance). The transaction it signs expires
+ * 60 to 90 seconds after it was BUILT (Turbo), not after the prompt opened,
+ * so the copy says "now" and "under a minute" rather than handing out the
+ * whole window. A late approval fails, and that attempt's credits are held
+ * until Turbo refunds them.
+ */
+export const APPROVE_PROMPT_NOTICE =
+  'Approve in your wallet now to claim the name. It expires in under a minute.';
 
 /** Money is committed from the moment the transfer is signed. */
 export function isMoneyAtRisk(step: TopUpStep): boolean {

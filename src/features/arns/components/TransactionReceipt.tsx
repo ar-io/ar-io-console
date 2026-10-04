@@ -26,15 +26,22 @@ export default function TransactionReceipt({
   // ArNS writes settle on Solana, whatever the user paid with.
   const url = getExplorerTxUrl(txId, 'solana');
 
+  /*
+    The link sits in its own block. As a bare inline element it shared a line
+    with whatever followed it, and on the success screens that is a Close
+    button: the two ran into each other.
+  */
   return url ? (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`inline-block text-xs font-medium text-primary hover:underline ${className}`}
-    >
-      View transaction
-    </a>
+    <p className={className}>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs font-medium text-primary hover:underline"
+      >
+        View transaction
+      </a>
+    </p>
   ) : (
     <div
       className={`break-all font-mono text-xs text-foreground/50 ${className}`}

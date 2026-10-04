@@ -14,14 +14,38 @@ const TOKEN_DECIMALS: Record<SupportedTokenType, number> = {
   usdc: 6, // USDC uses 6 decimals
   'base-usdc': 6, // USDC uses 6 decimals
   'polygon-usdc': 6, // USDC uses 6 decimals
+  'solana-usdc': 6, // USDC uses 6 decimals on Solana too
 };
 
 /**
+ * Decimal places of a token's smallest unit.
+ *
+ * Exported so a component never keeps its own copy of this table again. The
+ * pricing calculator did, with no case for any USDC, so every USDC fell to a
+ * default of 12 and a Base USDC budget was read a million times too large.
+ * This table is a `Record<SupportedTokenType, number>`, so a new token without
+ * an entry fails to compile instead of falling through to a guess.
+ */
+export function getTokenDecimals(tokenType: SupportedTokenType): number {
+  return TOKEN_DECIMALS[tokenType];
+}
+
+/**
  * Check if a wallet type supports just-in-time (on-demand) payments
- * Currently supported: SOL, Base-ETH, Base-USDC
+ * Currently supported: SOL, USDC on Solana, Base-ETH, Base-USDC
+ *
+ * The bar is confirmation speed, which is why the list is Solana and Base: an
+ * upload cannot wait on Ethereum L1 finality. USDC on Solana settles on the
+ * same chain as SOL, so it clears the same bar, and turbo-sdk enables it for
+ * on-demand top-ups.
  */
 export function supportsJitPayment(tokenType: SupportedTokenType | null): boolean {
-  return tokenType === 'solana' || tokenType === 'base-eth' || tokenType === 'base-usdc';
+  return (
+    tokenType === 'solana' ||
+    tokenType === 'solana-usdc' ||
+    tokenType === 'base-eth' ||
+    tokenType === 'base-usdc'
+  );
 }
 
 /**
@@ -85,6 +109,7 @@ export function formatTokenAmount(amount: number, tokenType: SupportedTokenType)
     'usdc': 2,        // 10.50 USDC (stablecoin, dollars and cents)
     'base-usdc': 3,   // 10.500 USDC (one extra decimal for precision)
     'polygon-usdc': 2, // 10.50 USDC (stablecoin, dollars and cents)
+    'solana-usdc': 2,  // 10.50 USDC (stablecoin, dollars and cents)
   };
 
   return amount.toFixed(precision[tokenType]);
@@ -299,6 +324,7 @@ export function getDefaultMaxTokenAmount(tokenType: SupportedTokenType): number 
     solana: 0.15,   // 0.15 SOL ≈ $22.50 at $150/SOL
     'base-eth': 0.01, // 0.01 ETH ≈ $25 at $2500/ETH
     'base-usdc': 25,  // 25 USDC = $25 (stablecoin)
+    'solana-usdc': 25, // 25 USDC = $25 (stablecoin)
     arweave: 0,
     ethereum: 0,
     kyve: 0,

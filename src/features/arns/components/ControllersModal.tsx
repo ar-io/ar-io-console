@@ -42,6 +42,9 @@ export default function ControllersModal({
     busyKey,
     error,
     paysNetworkDirectly,
+    alternative,
+    switchRail,
+    pending,
     isBusy,
   } =
     useControllerWrites(domain.processId);
@@ -139,6 +142,10 @@ export default function ControllersModal({
             buttons is right on prod and wrong where we test. */}
         <ActionCostNote
           paysNetworkDirectly={paysNetworkDirectly}
+          alternative={alternative}
+          onSwitchRail={switchRail}
+          pending={pending}
+          disabled={isBusy}
           action="add-controller"
           secondaryAction="remove-controller"
           primaryVerb="Adding a controller"
@@ -235,7 +242,7 @@ export default function ControllersModal({
             <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={handleAdd}
-                disabled={!canAdd}
+                disabled={!canAdd || pending}
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busyKey === newController.trim() ? (

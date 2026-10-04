@@ -11,6 +11,7 @@ import {
   DEVNET_PROGRAM_IDS,
 } from '@ar.io/sdk/solana';
 import { SupportedTokenType } from '../constants';
+import { withDerivedEndpoints } from '../utils/tokenEndpoints';
 import { DEFAULT_BROWSE_CONFIG } from '../features/browse/utils/constants';
 import { migratePageDef, type PageDef, type TemplateId } from '@/features/pages/schema';
 
@@ -72,7 +73,13 @@ const PRESET_CONFIGS = {
       usdc: RPC_ENDPOINTS.ethereum,
       'base-usdc': RPC_ENDPOINTS.base,
       'polygon-usdc': RPC_ENDPOINTS.polygon,
-    } as Record<SupportedTokenType, string>,
+      // USDC on Solana is an SPL token on the same chain as SOL, so it reads
+      // and writes through the same endpoint.
+      'solana-usdc': RPC_ENDPOINTS.solana,
+      // No cast. `satisfies` makes a missing token a compile error instead of
+      // an `undefined` gatewayUrl at runtime: `as` silenced exactly that, and
+      // solana-usdc shipped without an entry because of it.
+    } satisfies Record<SupportedTokenType, string>,
   },
   development: {
     paymentServiceUrl: 'https://payment.services.ar-io.dev',
@@ -98,7 +105,9 @@ const PRESET_CONFIGS = {
       usdc: 'https://eth-sepolia.public.blastapi.io',
       'base-usdc': 'https://sepolia.base.org',
       'polygon-usdc': 'https://rpc-amoy.polygon.technology',
-    } as Record<SupportedTokenType, string>,
+      // Devnet, matching the devnet USDC mint in SOLANA_USDC_CONFIG.
+      'solana-usdc': 'https://api.devnet.solana.com',
+    } satisfies Record<SupportedTokenType, string>,
   },
 } as const;
 
@@ -254,8 +263,21 @@ interface StoreState {
         endTimestamp?: number;
       }>;
       timestamp: number;
+      /**
+       * How long this entry stays fresh, when not the default (six hours,
+       * five minutes for an empty list). Short for a list known to be
+       * incomplete: one read before the index had a name just bought.
+       */
+      ttlMs?: number;
     }
   >;
+  /**
+   * Names just bought, which "your names" must show once the index has them.
+   * Session-only. Until a fresh read includes the name, that read is not
+   * cached and is retried (`useOwnedArNSNames`), so a list fetched a moment
+   * before the index caught up cannot stand in for the real one for hours.
+   */
+  expectedOwnedNames: Array<{ address: string; name: string; until: number }>;
 
   // Upload history state
   uploadHistory: UploadResult[];
@@ -318,6 +340,14 @@ interface StoreState {
   // X402-only mode (disables payment service features)
   x402OnlyMode: boolean;
 
+  /**
+   * Which rail an ArNS owner chose for record and owner actions, when both
+   * would work (`chooseWriter`'s `alternative`). Session-only, deliberately
+   * not persisted: a balance changes between visits, and a remembered
+   * "credits" would silently keep charging someone who now holds SOL.
+   */
+  arnsWriterPreference: 'sol' | 'credits' | null;
+
   // Smart Deploy state (file deduplication)
   fileHashCache: Record<string, FileHashEntry>;
   smartDeployEnabled: boolean;
@@ -356,7 +386,17 @@ interface StoreState {
       undernameTTLs?: Record<string, number>;
       type?: 'lease' | 'permabuy';
       endTimestamp?: number;
-    }>
+    }>,
+    options?: {
+      /** Freshness for this entry instead of the default. */
+      ttlMs?: number;
+      /**
+       * Update the names in place, keeping the entry's age and freshness.
+       * For edits to one name's details: they must not turn a short-lived,
+       * incomplete list into one trusted for six hours.
+       */
+      keepAge?: boolean;
+    },
   ) => void;
   getOwnedArNSNames: (address: string) => Array<{
     name: string;
@@ -368,6 +408,12 @@ interface StoreState {
     type?: 'lease' | 'permabuy';
     endTimestamp?: number;
   }> | null;
+  /**
+   * Drop every cached "your names" list, after a write that changes which
+   * names a wallet holds or what they are (buy, transfer, release, reassign,
+   * renew). With `expect`, also wait for that bought name to appear.
+   */
+  invalidateOwnedArNSNames: (expect?: { address: string; name: string }) => void;
   addUploadResults: (results: UploadResult[]) => void;
   updateUploadWithArNS: (uploadId: string, arnsName: string, undername?: string, arnsTransactionId?: string) => void;
   clearUploadHistory: () => void;
@@ -442,6 +488,7 @@ interface StoreState {
 
   // X402-only mode actions
   setX402OnlyMode: (enabled: boolean) => void;
+  setArnsWriterPreference: (preference: 'sol' | 'credits' | null) => void;
   isPaymentServiceAvailable: () => boolean;
 
   // Smart Deploy actions
@@ -483,6 +530,7 @@ export const useStore = create<StoreState>()(
 
       arnsNamesCache: {},
       ownedArnsCache: {},
+      expectedOwnedNames: [],
       uploadHistory: [],
       deployHistory: [],
       pages: [],
@@ -497,6 +545,8 @@ export const useStore = create<StoreState>()(
 
       // X402-only mode (disabled by default)
       x402OnlyMode: false,
+
+      arnsWriterPreference: null,
 
       // Smart Deploy state (file deduplication)
       fileHashCache: {},
@@ -534,6 +584,7 @@ export const useStore = create<StoreState>()(
         solana: 0.15, // 0.15 SOL ≈ $22.50
         'base-eth': 0.01, // 0.01 ETH ≈ $25
         'base-usdc': 25, // 25 USDC = $25 (stablecoin)
+        'solana-usdc': 25, // 25 USDC = $25 (stablecoin)
         arweave: 0,
         ethereum: 0,
         kyve: 0,
@@ -562,6 +613,9 @@ export const useStore = create<StoreState>()(
           */
           creditBalance:
             state.address === address ? state.creditBalance : 0,
+          // A rail chosen for one wallet is not a choice for the next.
+          arnsWriterPreference:
+            state.address === address ? state.arnsWriterPreference : null,
           // Keep the existing name when re-setting the same Solana session
           // (the listener calls this without a name on reconnect).
           solanaWalletName:
@@ -577,21 +631,27 @@ export const useStore = create<StoreState>()(
           creditBalance: 0,
           arnsNamesCache: {},
           ownedArnsCache: {},
+          arnsWriterPreference: null,
           // linkedSolanaAddress and linkedSolanaWalletName are intentionally
           // preserved so users don't have to re-link every session. Use
           // clearLinkedSolanaWallet() to explicitly unlink.
         }),
       setLinkedSolanaWallet: (address, walletName) =>
-        set({ linkedSolanaAddress: address, linkedSolanaWalletName: walletName }),
+        set((state) => ({
+          linkedSolanaAddress: address,
+          linkedSolanaWalletName: walletName,
+          arnsWriterPreference:
+            state.linkedSolanaAddress === address ? state.arnsWriterPreference : null,
+        })),
       clearLinkedSolanaWallet: () => {
         const { linkedSolanaAddress: addr, ownedArnsCache } = get();
         // Remove cached ArNS names for the linked address to avoid stale data
         if (addr && ownedArnsCache[addr]) {
           const rest = { ...ownedArnsCache };
           delete rest[addr];
-          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest });
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, ownedArnsCache: rest, arnsWriterPreference: null });
         } else {
-          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null });
+          set({ linkedSolanaAddress: null, linkedSolanaWalletName: null, arnsWriterPreference: null });
         }
       },
       getArNSAddress: () => {
@@ -617,23 +677,52 @@ export const useStore = create<StoreState>()(
         }
         return null;
       },
-      setOwnedArNSNames: (address, names) => {
+      setOwnedArNSNames: (address, names, options) => {
         const cache = get().ownedArnsCache;
-        set({
-          ownedArnsCache: {
-            ...cache,
-            [address]: { names, timestamp: Date.now() },
-          },
-        });
+        const prev = cache[address];
+        const entry =
+          options?.keepAge && prev
+            ? { ...prev, names }
+            : {
+                names,
+                timestamp: Date.now(),
+                ...(options?.ttlMs !== undefined ? { ttlMs: options.ttlMs } : {}),
+              };
+        set({ ownedArnsCache: { ...cache, [address]: entry } });
       },
       getOwnedArNSNames: (address) => {
         const cache = get().ownedArnsCache;
         const entry = cache[address];
-        // Cache for 6 hours
-        if (entry && Date.now() - entry.timestamp < 21600000) {
+        /*
+          Six hours for a list with names in it, five minutes for an empty one.
+          An empty list cached for six hours is how a first-time buyer saw "No
+          domains yet" for the rest of the day after paying: the empty list
+          from before the purchase was still being served.
+        */
+        const ttl = !entry
+          ? 0
+          : (entry.ttlMs ?? (entry.names.length === 0 ? 5 * 60 * 1000 : 21600000));
+        if (entry && Date.now() - entry.timestamp < ttl) {
           return entry.names;
         }
         return null;
+      },
+      invalidateOwnedArNSNames: (expect) => {
+        const now = Date.now();
+        set((state) => ({
+          ownedArnsCache: {},
+          expectedOwnedNames: [
+            // Keep other live expectations; drop expired ones and a duplicate.
+            ...state.expectedOwnedNames.filter(
+              (e) =>
+                e.until > now &&
+                !(expect && e.address === expect.address && e.name === expect.name),
+            ),
+            // Two minutes: Turbo reports the name on chain about 3 seconds
+            // after `/sign` returns, so this is a generous bound, not a wait.
+            ...(expect ? [{ ...expect, until: now + 2 * 60 * 1000 }] : []),
+          ],
+        }));
       },
       addUploadResults: (results) => {
         const currentHistory = get().uploadHistory;
@@ -907,7 +996,17 @@ export const useStore = create<StoreState>()(
         if (configMode === 'custom') {
           // Merge over production defaults so stale localStorage entries
           // never leave fields undefined after a schema migration.
-          return { ...PRESET_CONFIGS.production, ...customConfig };
+          const merged = { ...PRESET_CONFIGS.production, ...customConfig };
+          return {
+            ...merged,
+            // The top-level spread replaces tokenMap wholesale, so a config
+            // saved before a token existed would have no key for it. Merge
+            // per key, then derive the tokens that share another's chain.
+            tokenMap: withDerivedEndpoints({
+              ...PRESET_CONFIGS.production.tokenMap,
+              ...merged.tokenMap,
+            }),
+          };
         }
         return PRESET_CONFIGS[configMode];
       },
@@ -923,6 +1022,7 @@ export const useStore = create<StoreState>()(
 
       // X402-only mode actions
       setX402OnlyMode: (enabled) => set({ x402OnlyMode: enabled }),
+      setArnsWriterPreference: (preference) => set({ arnsWriterPreference: preference }),
       isPaymentServiceAvailable: () => !get().x402OnlyMode,
 
       // Smart Deploy actions

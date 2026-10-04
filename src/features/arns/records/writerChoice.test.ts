@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MIN_SOL_FOR_ACCOUNT_CREATION,
   MIN_SOL_FOR_RECORD_WRITE as MIN_SOL,
   chooseWriter,
   createsAccounts,
@@ -101,11 +102,60 @@ describe('what an unresolved role means, per surface', () => {
 describe('chooseWriter — the funds-aware fallback', () => {
   const RICH = { credits: 10, priceCredits: 0.17, sol: 1 };
 
-  it('keeps an owner who can pay on the credits route', () => {
+  /*
+    The user report that changed the default: an owner holding SOL was billed
+    credits for a remove, tens of cents against a fee of a fraction of one.
+  */
+  it('has an owner holding SOL sign and pay the network by default', () => {
     expect(chooseWriter('owner', RICH)).toEqual({
+      kind: 'self-signed',
+      reason: 'owner-sol',
+      alternative: 'sponsored',
+    });
+  });
+
+  it('lets that owner choose credits instead, and offers SOL back', () => {
+    expect(chooseWriter('owner', RICH, 'credits')).toEqual({
       kind: 'sponsored',
       reason: 'owner',
+      alternative: 'self-signed',
     });
+    expect(chooseWriter('owner', RICH, 'sol').kind).toBe('self-signed');
+  });
+
+  it('keeps an owner without SOL on credits, with no switch to offer', () => {
+    expect(
+      chooseWriter('owner', { credits: 10, priceCredits: 0.17, sol: 0 }),
+    ).toEqual({ kind: 'sponsored', reason: 'owner' });
+  });
+
+  it('ignores a preference for a rail that cannot pay', () => {
+    // No SOL: asking for SOL still lands on credits rather than a doomed tx.
+    expect(
+      chooseWriter('owner', { credits: 10, priceCredits: 0.17, sol: 0 }, 'sol')
+        .kind,
+    ).toBe('sponsored');
+    // Short on credits: asking for credits still signs with SOL.
+    expect(
+      chooseWriter(
+        'owner',
+        { credits: 0, priceCredits: 0.17, sol: 1 },
+        'credits',
+      ).kind,
+    ).toBe('self-signed');
+  });
+
+  it('waits for the SOL balance rather than switching rail under the reader', () => {
+    expect(
+      chooseWriter('owner', { ...RICH, sol: undefined, solLoading: true }),
+    ).toEqual({ kind: 'blocked', reason: 'unresolved' });
+  });
+
+  it('falls back to credits when the SOL balance cannot be read', () => {
+    expect(
+      chooseWriter('owner', { ...RICH, sol: undefined, solLoading: false })
+        .kind,
+    ).toBe('sponsored');
   });
 
   /*
@@ -166,10 +216,10 @@ describe('chooseWriter — the funds-aware fallback', () => {
     afford it" would swap the route, and the cost sentence with it, under a
     user who is already reading it.
   */
-  it('never reroutes on a figure that has not loaded', () => {
+  it('never reads an unloaded credits figure as a shortfall', () => {
     for (const funds of [
-      { credits: undefined, priceCredits: 0.17, sol: 1 },
-      { credits: 0, priceCredits: undefined, sol: 1 },
+      { credits: undefined, priceCredits: 0.17, sol: 0 },
+      { credits: 0, priceCredits: undefined, sol: 0 },
       { credits: 0, priceCredits: 0.17, sol: undefined },
       undefined,
     ]) {
@@ -179,7 +229,7 @@ describe('chooseWriter — the funds-aware fallback', () => {
 
   it('does not reroute when credits exactly cover the price', () => {
     expect(
-      chooseWriter('owner', { credits: 0.17, priceCredits: 0.17, sol: 1 }).kind,
+      chooseWriter('owner', { credits: 0.17, priceCredits: 0.17, sol: 0 }).kind,
     ).toBe('sponsored');
   });
 
@@ -234,26 +284,29 @@ describe('what the SOL rail actually costs', () => {
     // owner's — up to four rent-exempt accounts, not a signature fee.
     for (const action of ['transfer', 'add-controller']) {
       expect(createsAccounts(action)).toBe(true);
-      expect(selfSignedCostNote(action)).toMatch(/creates accounts on chain/);
-      expect(selfSignedCostNote(action)).toContain(String(MIN_SOL));
+      // Budgeted at the account-creation figure, not the bare record write.
+      expect(selfSignedCostNote(action)).toContain(String(MIN_SOL_FOR_ACCOUNT_CREATION));
     }
   });
 
   it('does not invent a rent cost for actions that create nothing', () => {
     expect(createsAccounts('remove-controller')).toBe(false);
-    expect(selfSignedCostNote('remove-controller')).not.toMatch(/creates accounts/);
+    expect(selfSignedCostNote('remove-controller')).not.toContain(
+      String(MIN_SOL_FOR_ACCOUNT_CREATION),
+    );
   });
 
   it('always says the rail is SOL, not credits', () => {
     for (const action of ['transfer', 'remove-controller']) {
-      expect(selfSignedCostNote(action)).toMatch(/pays the Solana costs directly, not credits/);
+      expect(selfSignedCostNote(action)).toMatch(/SOL, not credits/);
     }
   });
 
   it('names what the SOL rail would need, so its absence has a reason', () => {
     expect(solRailRequirementNote('transfer')).toContain(
-      String(MIN_SOL),
+      String(MIN_SOL_FOR_ACCOUNT_CREATION),
     );
+    expect(solRailRequirementNote('remove-controller')).toContain(String(MIN_SOL));
     expect(solRailRequirementNote('transfer')).toMatch(/creates accounts on chain/);
     expect(solRailRequirementNote('remove-controller')).not.toMatch(/create accounts/);
   });

@@ -3,6 +3,26 @@ import { ethers } from 'ethers';
 import { address as toSolanaAddress } from '@solana/kit';
 
 import { getSolanaReadRpc } from '../utils/arIOConfig';
+import { solanaUsdcMintForGenesis } from '../utils/solanaToken';
+
+/**
+ * The genesis hash of the cluster an RPC client is on, fetched once per client.
+ *
+ * The read client is a singleton per config, so this is one call per session
+ * rather than one per balance refresh. A failed lookup is dropped from the
+ * cache instead of kept, or a single network blip would pin the error for the
+ * life of the tab.
+ */
+const genesisHashes = new WeakMap<object, Promise<string>>();
+function genesisHashFor(rpc: ReturnType<typeof getSolanaReadRpc>): Promise<string> {
+  let hash = genesisHashes.get(rpc);
+  if (!hash) {
+    hash = rpc.getGenesisHash().send().then(String);
+    hash.catch(() => genesisHashes.delete(rpc));
+    genesisHashes.set(rpc, hash);
+  }
+  return hash;
+}
 
 /** Lamports per SOL — previously from the deprecated @solana/web3.js. */
 const LAMPORTS_PER_SOL = 1_000_000_000;
@@ -14,6 +34,7 @@ import {
   ETHEREUM_CONFIG,
   POLYGON_CONFIG,
   BASE_ARIO_CONFIG,
+  SOLANA_USDC_CONFIG,
 } from '../constants';
 import { getARIO } from '../utils';
 import { useAccount, useConfig } from 'wagmi';
@@ -453,6 +474,67 @@ export function useTokenBalance(
   );
 
   /**
+   * Fetch the wallet's USDC balance on Solana.
+   *
+   * USDC is an SPL token, so the balance is not on the wallet account itself —
+   * it lives in token accounts owned by it. Reads through the same memoised
+   * client as the SOL balance above, so both Solana surfaces agree about
+   * whether the user has money.
+   *
+   * Sums every account for the mint rather than taking the first: a wallet can
+   * legitimately hold more than one (an associated token account plus an older
+   * auxiliary one), and showing only part of someone's balance reads as funds
+   * missing. No token account at all simply means zero — a wallet that has
+   * never held USDC is not an error.
+   */
+  const fetchSolanaUsdcBalance = useCallback(
+    async (solanaAddress: string): Promise<{ readable: number; smallest: number }> => {
+      // The mint follows the cluster this RPC is actually on, not configMode:
+      // custom mode can point anywhere, and the mainnet mint read off devnet
+      // finds no accounts and shows a funded wallet as empty.
+      const rpc = getSolanaReadRpc();
+      let mint: string | undefined;
+      try {
+        mint = solanaUsdcMintForGenesis(await genesisHashFor(rpc));
+      } catch (err) {
+        console.error('Failed to identify the Solana cluster:', err);
+        throw new Error('Unable to fetch USDC balance on Solana. Please try again.');
+      }
+      // Outside the try below so it is not rewritten as "please try again": no
+      // retry helps on a cluster with no known USDC mint.
+      if (!mint) {
+        throw new Error('USDC is not available on the connected Solana network.');
+      }
+
+      try {
+        const { value: accounts } = await rpc
+          .getTokenAccountsByOwner(
+            toSolanaAddress(solanaAddress),
+            { mint: toSolanaAddress(mint) },
+            { encoding: 'jsonParsed' },
+          )
+          .send();
+
+        const smallest = (accounts ?? []).reduce((total, account) => {
+          const parsed = account.account.data.parsed as
+            | { info?: { tokenAmount?: { amount?: string } } }
+            | undefined;
+          return total + Number(parsed?.info?.tokenAmount?.amount ?? 0);
+        }, 0);
+
+        return {
+          readable: smallest / 10 ** SOLANA_USDC_CONFIG.decimals,
+          smallest,
+        };
+      } catch (err) {
+        console.error('Failed to fetch Solana USDC balance:', err);
+        throw new Error('Unable to fetch USDC balance on Solana. Please try again.');
+      }
+    },
+    [],
+  );
+
+  /**
    * Fetch BASE-ETH balance using ethers.js
    * Automatically switches network if needed
    */
@@ -756,6 +838,10 @@ export function useTokenBalance(
           result = await fetchSolBalance(address);
           break;
 
+        case 'solana-usdc':
+          result = await fetchSolanaUsdcBalance(address);
+          break;
+
         case 'ethereum':
           result = await fetchEthereumBalance(address);
           break;
@@ -813,6 +899,7 @@ export function useTokenBalance(
     fetchArBalance,
     fetchArioBalance,
     fetchSolBalance,
+    fetchSolanaUsdcBalance,
     fetchEthereumBalance,
     fetchBaseEthBalance,
     fetchPolBalance,

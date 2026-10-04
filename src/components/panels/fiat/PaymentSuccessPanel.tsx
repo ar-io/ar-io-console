@@ -2,6 +2,7 @@ import { CheckCircle, ExternalLink, Upload, Zap, Globe, Share2, Mail, Users, Loa
 import { useEffect, useRef } from 'react';
 import { useStore } from '../../../store/useStore';
 import { tokenLabels, SupportedTokenType } from '../../../constants';
+import { getExplorerTxUrl } from '../../../utils/getExplorerTxUrl';
 import { useNavigate } from 'react-router-dom';
 import CopyButton from '../../CopyButton';
 
@@ -42,25 +43,14 @@ const PaymentSuccessPanel: React.FC<PaymentSuccessPanelProps> = ({
   const { paymentIntentResult, creditBalance, address } = useStore();
   const navigate = useNavigate();
 
-  // Get appropriate blockchain explorer URL
-  const getExplorerUrl = (txId: string, tokenType?: SupportedTokenType): string | null => {
-    if (!tokenType) return null;
-
-    switch (tokenType) {
-      case 'ethereum':
-        return `https://etherscan.io/tx/${txId}`;
-      case 'base-eth':
-        return `https://basescan.org/tx/${txId}`;
-      case 'arweave':
-        return `https://viewblock.io/arweave/tx/${txId}`;
-      case 'ario':
-        return `https://solscan.io/tx/${txId}`;
-      case 'solana':
-        return `https://solscan.io/tx/${txId}`;
-      default:
-        return null;
-    }
-  };
+  /*
+    Delegates to the shared map rather than keeping a private one. This file
+    was the divergence `getExplorerTxUrl` was written to end and got missed:
+    its copy knew five fewer tokens, so a USDC or POL payment linked nowhere
+    while the same payment linked correctly from the history page.
+  */
+  const getExplorerUrl = (txId: string, tokenType?: SupportedTokenType): string | null =>
+    tokenType ? getExplorerTxUrl(txId, tokenType) : null;
 
   // Format transaction ID for display (mobile-friendly)
   const formatTxId = (txId: string, mobile: boolean = false): string => {

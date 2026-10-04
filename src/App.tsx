@@ -6,6 +6,7 @@ import { useTheme } from './hooks/useTheme';
 import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
+import ContractWalletGuard from './components/ContractWalletGuard';
 
 // The homepage is eagerly loaded — it's the primary entry point, so lazy-loading
 // it just trades a smaller bundle for a visible spinner on every first visit.
@@ -103,6 +104,7 @@ function AppRoutes() {
   return (
     <>
       <PaymentCallbackHandler />
+      <ContractWalletGuard />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<LandingPage />} />

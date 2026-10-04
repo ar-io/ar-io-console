@@ -10,6 +10,7 @@ import { useWallets } from '@privy-io/react-auth';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { supportsJitPayment } from '../utils/jitPayment';
+import { solanaClientToken } from '../utils/solanaToken';
 import {
   awaitCreditSettlement,
   BALANCE_UNREADABLE_MESSAGE,
@@ -252,7 +253,9 @@ export function useFileUpload() {
         }
 
         const solanaClient = TurboFactory.authenticated({
-          token: "solana",
+          // The requested token, not a hardcoded 'solana': a client spends
+          // whatever token it was built with, and JIT now offers USDC here.
+          token: solanaClientToken(tokenTypeOverride),
           walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
           ...fullTurboConfig,
         });

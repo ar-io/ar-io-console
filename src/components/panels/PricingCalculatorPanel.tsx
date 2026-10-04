@@ -10,6 +10,7 @@ import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/
 import { useStore } from '../../store/useStore';
 import { SupportedTokenType, tokenLabels } from '../../constants';
 import { promptSignIn } from '../../utils';
+import { getTokenDecimals } from '../../utils/jitPayment';
 
 export default function PricingCalculatorPanel() {
   const { address, creditBalance, x402OnlyMode } = useStore();
@@ -40,6 +41,7 @@ export default function PricingCalculatorPanel() {
     { value: 'solana', label: tokenLabels.solana, symbol: 'SOL' },
     { value: 'pol', label: tokenLabels.pol, symbol: 'POL' },
     { value: 'base-usdc', label: 'USDC (Base)', symbol: 'USDC' },
+    { value: 'solana-usdc', label: 'USDC (Solana)', symbol: 'USDC' },
   ];
   // In x402-only mode, ONLY show USDC (x402)
   const currencies = x402OnlyMode
@@ -68,29 +70,10 @@ export default function PricingCalculatorPanel() {
 
   // Helper to convert crypto display amount to smallest unit (bigint)
   const getTokenSmallestUnit = (tokenType: SupportedTokenType, amount: number): bigint => {
-    let decimals: number;
-    switch (tokenType) {
-      case 'arweave':
-        decimals = 12; // winston
-        break;
-      case 'ario':
-      case 'base-ario':
-        decimals = 6; // mARIO - 1 ARIO = 1,000,000 mARIO (same for AO and Base)
-        break;
-      case 'ethereum':
-      case 'base-eth':
-      case 'pol':
-        decimals = 18; // wei
-        break;
-      case 'solana':
-        decimals = 9; // lamports
-        break;
-      case 'kyve':
-        decimals = 6; // ukyve
-        break;
-      default:
-        decimals = 12;
-    }
+    // The shared table, not a private switch: the switch this replaces had no
+    // case for any USDC, so each fell to 12 decimals and a USDC budget was read
+    // a million times too large.
+    const decimals = getTokenDecimals(tokenType);
     // Convert to smallest unit: amount * 10^decimals
     const multiplier = BigInt(10 ** decimals);
     const wholePart = BigInt(Math.floor(amount));

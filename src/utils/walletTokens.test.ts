@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { availableTokensForWallet, defaultTokenForWallet } from './walletTokens';
+import {
+  availableTokensForWallet,
+  defaultTokenForWallet,
+  topUpTokensForWallet,
+} from './walletTokens';
 
 const all = () => true;
 const none = () => false;
@@ -33,12 +37,53 @@ describe('defaultTokenForWallet', () => {
 
 describe('availableTokensForWallet', () => {
   it('never offers a token the wallet cannot sign for', () => {
-    expect(availableTokensForWallet('solana', all)).toEqual(['solana']);
+    // Both Solana options are signed by the same ed25519 key: SOL natively,
+    // USDC as an SPL transfer from a token account the wallet owns.
+    expect(availableTokensForWallet('solana', all)).toEqual([
+      'solana',
+      'solana-usdc',
+    ]);
     expect(availableTokensForWallet('arweave', all)).toEqual(['arweave']);
     expect(availableTokensForWallet('arweave', all)).not.toContain('solana');
+    // The invariant that matters: a Solana key cannot sign an EVM transfer.
+    expect(availableTokensForWallet('solana', all)).not.toContain('base-usdc');
+    expect(availableTokensForWallet('ethereum', all)).not.toContain(
+      'solana-usdc',
+    );
+  });
+
+  it('drops a Solana token the deny-list withdraws', () => {
+    const noSolanaUsdc = ((t: string) => t !== 'solana-usdc') as never;
+    expect(availableTokensForWallet('solana', noSolanaUsdc)).toEqual(['solana']);
   });
 
   it('is empty with no wallet', () => {
     expect(availableTokensForWallet(null, all)).toEqual([]);
   });
 });
+
+describe('topUpTokensForWallet', () => {
+  it('adds ARIO for a Solana wallet, last so it is never the default', () => {
+    expect(topUpTokensForWallet('solana', all)).toEqual([
+      'solana',
+      'solana-usdc',
+      'ario',
+    ]);
+  });
+
+  it('adds nothing for other wallets', () => {
+    expect(topUpTokensForWallet('arweave', all)).toEqual(['arweave']);
+    expect(topUpTokensForWallet('ethereum', all)).not.toContain('ario');
+    expect(topUpTokensForWallet(null, all)).toEqual([]);
+  });
+
+  it('respects the deny-list', () => {
+    const noArio = ((t: string) => t !== 'ario') as never;
+    expect(topUpTokensForWallet('solana', noArio)).not.toContain('ario');
+  });
+
+  it('leaves the shared list alone', () => {
+    expect(availableTokensForWallet('solana', all)).not.toContain('ario');
+  });
+});
+

@@ -62,11 +62,56 @@ describe('antOwnerOpWriter', () => {
 describe('chooseOwnerActionWriter', () => {
   const RICH = { credits: 10, priceCredits: 0.2, sol: 1 };
 
-  it('uses credits by default, so the price can be quoted exactly', () => {
+  it('signs with SOL by default when the owner holds it, credits on request', () => {
     expect(chooseOwnerActionWriter('owner', RICH)).toEqual({
+      kind: 'self-signed',
+      reason: 'owner-sol',
+      alternative: 'sponsored',
+    });
+    expect(chooseOwnerActionWriter('owner', RICH, 'credits')).toEqual({
+      kind: 'sponsored',
+      reason: 'owner',
+      alternative: 'self-signed',
+    });
+  });
+
+  /*
+    A transfer can create up to four rent-exempt accounts, so it defaults to
+    SOL only above the account-creation threshold, not the record-write one.
+  */
+  it('defaults an account-creating action to SOL when the owner holds enough', () => {
+    expect(chooseOwnerActionWriter('owner', RICH, undefined, 'transfer')).toEqual({
+      kind: 'self-signed',
+      reason: 'owner-sol',
+      alternative: 'sponsored',
+    });
+    expect(
+      chooseOwnerActionWriter('owner', RICH, 'credits', 'add-controller').kind,
+    ).toBe('sponsored');
+    expect(
+      chooseOwnerActionWriter('owner', RICH, undefined, 'add-controller'),
+    ).toEqual({
+      kind: 'self-signed',
+      reason: 'owner-sol',
+      alternative: 'sponsored',
+    });
+  });
+
+  it('keeps a transfer on credits when SOL is short of that margin', () => {
+    const thin = { credits: 10, priceCredits: 0.2, sol: 0.003 };
+    expect(chooseOwnerActionWriter('owner', thin, undefined, 'transfer')).toEqual({
       kind: 'sponsored',
       reason: 'owner',
     });
+    expect(chooseOwnerActionWriter('owner', thin, 'sol', 'transfer').kind).toBe(
+      'sponsored',
+    );
+  });
+
+  it('uses credits for an owner with no SOL', () => {
+    expect(
+      chooseOwnerActionWriter('owner', { ...RICH, sol: 0 }),
+    ).toEqual({ kind: 'sponsored', reason: 'owner' });
   });
 
   it('falls back to the wallet when credits are short but SOL is not', () => {

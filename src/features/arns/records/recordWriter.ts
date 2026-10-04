@@ -1,3 +1,5 @@
+import { mapActionExpiryMessage } from '../purchase/actionFailure';
+
 /**
  * Setting and removing a name's records, behind one shape.
  *
@@ -133,6 +135,16 @@ interface Httpish {
  * plumbing, not their problem.
  */
 export function mapRecordWriteError(err: unknown): string {
+  /*
+    The signing window closed before the approved transaction was submitted
+    (409 "signed transaction expired", 400 "... expired", 503 "Blockhash not
+    found"). Nothing changed on the name; what differs is whether the credits
+    for it are already back. Checked first: a 503 or 400 of this kind is not
+    an outage or a bad field.
+  */
+  const expiry = mapActionExpiryMessage(err);
+  if (expiry) return expiry;
+
   const e = (err ?? {}) as Httpish;
   const status = e.status ?? e.response?.status;
   const message = typeof e.message === 'string' ? e.message : String(err ?? '');

@@ -1,5 +1,5 @@
 import { SupportedTokenType, tokenLabels } from '../constants';
-import { Check } from 'lucide-react';
+import { TokenCoin } from '../features/payments/components/TokenCoin';
 
 interface JitTokenSelectorProps {
   walletType: 'arweave' | 'ethereum' | 'solana' | null;
@@ -34,7 +34,11 @@ export function JitTokenSelector({
     } else if (walletType === 'arweave') {
       return []; // Arweave wallets don't support JIT payments
     } else if (walletType === 'solana') {
-      return ['solana'];
+      // USDC is an SPL token held by the same wallet, so a Solana user pays in
+      // it with no extra setup — they just need a little SOL for the fee. Two
+      // options here also means the selector actually renders for Solana
+      // wallets for the first time (it hides itself at one).
+      return ['solana', 'solana-usdc'];
     }
     return [];
   };
@@ -54,6 +58,7 @@ export function JitTokenSelector({
       case 'base-eth': return 'ETH';
       case 'ario': return 'ARIO';
       case 'solana': return 'SOL';
+      case 'solana-usdc': return 'USDC';
       default: return tokenLabels[token];
     }
   };
@@ -65,6 +70,10 @@ export function JitTokenSelector({
       case 'base-ario': return 'Base';
       case 'base-eth': return 'Base';
       case 'ario': return 'AO';
+      // USDC exists on several chains, so its chip has to say which one. SOL
+      // does not, and labelling it would change how an existing chip renders
+      // for no information gained.
+      case 'solana-usdc': return 'Solana';
       default: return '';
     }
   };
@@ -78,28 +87,30 @@ export function JitTokenSelector({
             key={token}
             type="button"
             onClick={() => onTokenSelect(token)}
-            className={`
-              p-2 rounded-2xl border transition-all text-left
-              ${
-                selectedToken === token
-                  ? 'border-foreground bg-foreground/10'
-                  : 'border-border/20 hover:border-foreground/50 bg-card'
-              }
-            `}
+            aria-pressed={selectedToken === token}
+            /*
+              Selected in the same style as the payment picker's segments
+              (primary border, lavender tint), so the two read as one family.
+            */
+            className={`flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-foreground transition-colors ${
+              selectedToken === token
+                ? 'border-primary bg-primary/10'
+                : 'border-border/20 bg-card hover:border-primary/40'
+            }`}
           >
-            <div className="flex items-center justify-between gap-1">
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-foreground">{getShortLabel(token)}</span>
-                  {getNetworkLabel(token) && (
-                    <span className="text-[10px] text-foreground/80">({getNetworkLabel(token)})</span>
-                  )}
-                </div>
-              </div>
-              {selectedToken === token && (
-                <Check className="w-3.5 h-3.5 text-foreground flex-shrink-0" />
+            <TokenCoin token={token} size="sm" />
+            <span className="flex min-w-0 items-baseline gap-1">
+              <span className="text-xs font-semibold">{getShortLabel(token)}</span>
+              {getNetworkLabel(token) && (
+                <span
+                  className={`truncate text-[10px] ${
+                    selectedToken === token ? 'text-foreground/70' : 'text-foreground/60'
+                  }`}
+                >
+                  {getNetworkLabel(token)}
+                </span>
               )}
-            </div>
+            </span>
           </button>
         ))}
       </div>

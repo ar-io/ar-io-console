@@ -1,9 +1,33 @@
-import { CheckCircle2, Circle, CreditCard, Coins, Wallet } from 'lucide-react';
-
-import type { SupportedTokenType } from '../../../constants';
+import { useId, useState } from 'react';
 
 import type { PaymentOption } from '../purchase/paymentOptions';
 import type { ArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
+import type { WalletKind } from '../../../utils/walletTokens';
+import type { SupportedTokenType } from '../../../constants';
+import { formatHeldBalance } from '../purchase/formatBalance';
+import {
+  PaymentPicker,
+  SegmentedControl,
+  type MethodChoice,
+} from '../../payments/components/PaymentPicker';
+import {
+  applyBestPriceBadge,
+  buildSources,
+  cheapestUsd,
+  extraCostLabel,
+  sourceUsd,
+  creditsShortReason,
+  formatSourceAmount,
+  groupSources,
+  isSelectable,
+  methodForOption,
+  paidFromPhrase,
+  preselectSource,
+  resolveSourceSelection,
+  sourceInputsFromOptions,
+  type PaymentMethod,
+  type PaymentSource,
+} from '../../payments/paymentSources';
 
 /**
  * Which unit the price is quoted in. Not a payment method — several methods
@@ -12,11 +36,12 @@ import type { ArNSPaymentBalances } from '../hooks/useArNSPaymentBalances';
 export type ArNSPriceUnit = 'credits' | 'ario';
 export type ArNSFundingSource = 'balance' | 'any' | 'stakes';
 
-const fmt = (n: number) =>
-  n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+const usd = (n: number): string =>
+  `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 interface Props {
   options: PaymentOption[];
+  /** Empty while the checkout is still choosing its default: nothing is shown selected. */
   selectedId: string;
   fundingSource: ArNSFundingSource;
   balances: ArNSPaymentBalances;
@@ -29,196 +54,38 @@ interface Props {
    * wallet's ARIO at the premium price — see ReturnedNameBuyModal).
    */
   arioOnly?: boolean;
-  /** Optional line explaining the choice, rendered under the heading. */
-  note?: React.ReactNode;
+  /** The wallet note, folded into the picker's status line. */
+  note?: string;
+  /**
+   * The crypto dropdown's rows, from `buildSources`. Built by the host because
+   * it holds the balances and quotes, and because the checkout's preselection
+   * reads the same rows. Absent, they are derived from `options` with nothing
+   * known about them.
+   */
+  sources?: PaymentSource[];
+  /** The session wallet, so its group leads and a foreign source says where it pays from. */
+  sessionWalletType?: WalletKind;
+  /** What this purchase costs as credits, and as a card charge in dollars. */
+  prices?: { credits?: number; cardUsd?: number };
+  /** Dollars per ARIO, to put ARIO's saving next to the card's dollar price. */
+  arioUsdRate?: number;
+  /**
+   * Dollars a route costs beyond its own price: ARIO's SOL for the name's
+   * accounts and fee. ARIO counts toward "from $X" only when this is known.
+   */
+  extraUsd?: Partial<Record<SupportedTokenType, number | undefined>>;
+  /** The same extra cost in SOL, stated on ARIO's row ("+ 0.056 SOL"). */
+  extraSol?: Partial<Record<SupportedTokenType, number | undefined>>;
 }
 
 /**
- * Brand coins for the tokens people recognise by their mark.
+ * How you want to pay for a name: Credits, Card or Crypto, with every token in
+ * one select (SPEC-payment-sources § 7.1, § 7.2).
  *
- * Both are drawn on the same dark disc at the same size, so ARIO and SOL read
- * as a matched set rather than two logos that happen to share a row. Anything
- * without its own mark (a card, a credit balance) keeps a line icon — those are
- * categories, not brands, and inventing a logo for them would be noise.
- */
-const TOKEN_COIN: Partial<Record<SupportedTokenType, string>> = {
-  ario: 'brand/ario-token-logo.svg',
-  solana: 'brand/solana-token-logo.svg',
-};
-
-function OptionIcon({ option, active }: { option: PaymentOption; active: boolean }) {
-  const coin = option.token ? TOKEN_COIN[option.token] : undefined;
-  if (coin) {
-    return (
-      <img
-        src={`${import.meta.env.BASE_URL}${coin}`}
-        alt=""
-        aria-hidden="true"
-        // Sized to sit on the same baseline as the 16px line icons beside it.
-        className={`h-5 w-5 rounded-full transition-opacity ${
-          active ? '' : 'opacity-80'
-        }`}
-      />
-    );
-  }
-  const Icon =
-    option.kind === 'card' ? CreditCard : option.kind === 'balance' ? Coins : Wallet;
-  return <Icon className="h-4 w-4" />;
-}
-
-function OptionCard({
-  option,
-  active,
-  disabled,
-  onClick,
-}: {
-  option: PaymentOption;
-  active: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      disabled={disabled || !!option.blockedReason}
-      /*
-        Stacked, not side-by-side.
-
-        The icon used to sit BESIDE the label and amount, which made each card
-        as wide as its longest line plus an icon. Four of those in one row
-        overflowed the modal and clipped the last option — you cannot choose a
-        payment method you cannot see. Stacking drops the intrinsic width to
-        the widest single line, so all four fit without the modal growing.
-
-        `min-w-0` is what lets the amount truncate instead of forcing the card
-        wider; without it `truncate` silently does nothing inside a flex child.
-      */
-      className={`flex min-w-0 flex-1 flex-col gap-2 rounded-2xl border p-3 text-left transition-colors disabled:opacity-50 sm:basis-0 ${
-        active
-          ? 'border-primary bg-primary/10'
-          : 'border-border/20 bg-card hover:border-primary/40'
-      }`}
-    >
-      {/*
-        A fixed three-slot rhythm: icon, name, one detail line. Every card
-        reserves the same vertical space whether or not it has a badge or a
-        detail, so four of them sit on a shared baseline instead of each being
-        as tall as its own content — which is what made the row look ragged.
-      */}
-      <span
-        className={`flex h-5 w-5 items-center justify-center ${
-          active ? 'text-primary' : 'text-foreground/60'
-        }`}
-      >
-        <OptionIcon option={option} active={active} />
-      </span>
-
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate font-medium leading-tight text-foreground">
-            {option.label}
-          </span>
-          {option.badge && (
-            /*
-              Inline and small. On its own line it pushed the detail down and
-              made this card taller than its neighbours, so the row lost its
-              baseline for the sake of one word.
-            */
-            <span className="flex-none rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide text-primary">
-              {option.badge}
-            </span>
-          )}
-        </span>
-
-        {/*
-          Reserved even when empty, so a card without a detail does not shrink
-          and pull the row out of alignment.
-        */}
-        <span
-          className="block min-w-0 truncate text-xs leading-tight text-foreground/60"
-          title={option.detail}
-        >
-          {option.detail ?? '\u00A0'}
-        </span>
-      </span>
-
-      {/*
-        Say why it cannot be used, here rather than on submit. A blocked reason
-        outranks "Not enough": running out of SOL for network costs is a
-        different problem from not holding enough of this asset, and needs a
-        different remedy. Allowed to wrap — a truncated reason is no reason.
-      */}
-      {option.blockedReason ? (
-        <span className="block text-xs leading-snug text-error/80">
-          {option.blockedReason}
-        </span>
-      ) : !option.sufficient ? (
-        <span className="block text-xs leading-tight text-error/80">
-          Not enough
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
-function SourceRow({
-  active,
-  disabled,
-  onClick,
-  label,
-  amount,
-}: {
-  active: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  label: string;
-  amount: number;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      disabled={disabled}
-      /*
-        One row on desktop, matching the payment picker directly above. Three
-        stacked full-width rows made a sub-choice look like a second decision of
-        equal weight to "how do you want to pay", when it only refines the ARIO
-        option.
-      */
-      className={`flex flex-1 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors disabled:opacity-50 sm:basis-0 sm:flex-col sm:items-start sm:gap-0.5 ${
-        active
-          ? 'border-primary bg-primary/10'
-          : 'border-border/20 bg-card hover:border-primary/40'
-      }`}
-    >
-      <span className="flex items-center gap-2">
-        {active ? (
-          <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-primary" />
-        ) : (
-          <Circle className="h-4 w-4 flex-shrink-0 text-foreground/40" />
-        )}
-        <span className="font-medium text-foreground">{label}</span>
-      </span>
-      {/* Stacked under the label on desktop so a long balance can't squeeze
-          the label in a third-width column. */}
-      <span className="ml-auto font-mono text-xs text-foreground/60 sm:ml-6">
-        {fmt(amount)} ARIO
-      </span>
-    </button>
-  );
-}
-
-/**
- * How you want to pay for a name — one flat row of equals: a card, whichever
- * tokens this wallet can sign, and your existing balance when you have one.
- *
- * It used to lead with "Turbo Credits vs ARIO tokens", which asked the user to
- * pick our billing subsystem before picking a payment. Choosing credits with an
- * empty balance then opened a modal asking the *same* question again — card or
- * crypto? — one layer down. Turbo is how we settle, not a thing to choose.
+ * The options are still `buildPaymentOptions`' and the ids the host routes on
+ * are unchanged ('balance', 'card', 'token:<token>'). This component only
+ * regroups them: which option is selected, and so how the purchase settles, is
+ * decided exactly as before.
  */
 export function ArNSPaymentSelector({
   options,
@@ -230,69 +97,207 @@ export function ArNSPaymentSelector({
   disabled,
   arioOnly = false,
   note,
+  sources: sourcesProp,
+  sessionWalletType,
+  prices,
+  arioUsdRate,
+  extraUsd,
+  extraSol,
 }: Props) {
-  const showSources =
-    arioOnly || options.find((o) => o.id === selectedId)?.token === 'ario';
+  const fundingHeadingId = useId();
+  /*
+    Crypto with nothing payable in it still opens its list, so the reasons can
+    be read, without touching what the purchase is routed on.
+  */
+  const [previewCrypto, setPreviewCrypto] = useState(false);
+  const selected = options.find((o) => o.id === selectedId);
+  const showSources = arioOnly || selected?.token === 'ario';
+
+  /*
+    "Best price" only when it is true for this purchase: ARIO's all-in price
+    (its SOL included) is known and nothing payable, card included, is
+    cheaper. The option still carries the badge; this decides whether it shows.
+  */
+  const sources = applyBestPriceBadge(
+    sourcesProp ?? buildSources({ tokens: sourceInputsFromOptions(options) }),
+    { arioUsdRate, extraUsd: extraUsd ?? {}, cardUsd: prices?.cardUsd },
+  );
+  const session = sessionWalletType ?? 'solana';
+  // ARIO's group first: it is the best price, and on an Ethereum session it
+  // would otherwise open below five EVM rows.
+  const groups = groupSources(sources, session, { leadToken: 'ario' });
+
+  /*
+    The token Crypto opens on: the last one the user picked, kept while it is
+    still offered, else the preselection.
+  */
+  const [lastCryptoId, setLastCryptoId] = useState<string | undefined>();
+  const cryptoSource = resolveSourceSelection(
+    sources,
+    selected?.kind === 'token' ? selected.id : lastCryptoId,
+    'name-checkout',
+  );
+
+  const credits = options.find((o) => o.kind === 'balance');
+  const card = options.find((o) => o.kind === 'card');
+  const choices: MethodChoice[] = [];
+  if (credits) {
+    // Still selectable when short, as it always has been; dimmed, with the
+    // shortfall on hover and in the status line once chosen.
+    const shortBy =
+      !credits.sufficient
+        ? prices?.credits !== undefined
+          ? creditsShortReason(balances.credits, prices.credits)
+          : 'Not enough credits'
+        : undefined;
+    choices.push({
+      value: 'credits',
+      label: 'Credits',
+      sub:
+        prices?.credits !== undefined
+          ? `${formatSourceAmount(prices.credits)} credits`
+          : undefined,
+      hint: shortBy,
+      status: shortBy ?? `You have ${formatSourceAmount(balances.credits)} credits`,
+      statusTone: shortBy ? 'error' : 'muted',
+    });
+  }
+  if (card) {
+    choices.push({
+      value: 'card',
+      label: 'Card',
+      sub: prices?.cardUsd !== undefined ? usd(prices.cardUsd) : undefined,
+      status: card.detail,
+    });
+  }
+  if (sources.length > 0) {
+    /*
+      "from $X": the cheapest dollar figure known without a new lookup (ARIO
+      through its rate, USDC at face value). Failing that, the token Crypto
+      would open on, in its own unit. Never a guessed conversion.
+    */
+    const fromUsd = cheapestUsd(sources, arioUsdRate, extraUsd);
+    const payable = sources.some(isSelectable);
+    choices.push({
+      value: 'crypto',
+      label: 'Crypto',
+      sub: !payable
+        ? // Never a silent dead control: say why, and the click opens the
+          // list with each token's reason.
+          'No token can pay this'
+        : fromUsd !== undefined
+          ? `from ${usd(fromUsd)}`
+          : cryptoSource && isSelectable(cryptoSource) && cryptoSource.price !== undefined
+            ? `${formatSourceAmount(cryptoSource.price)} ${cryptoSource.label}`
+            : undefined,
+      hint: payable ? undefined : 'No token in your wallet can pay for this',
+    });
+  }
+
+  const onMethodChange = (method: PaymentMethod) => {
+    setPreviewCrypto(false);
+    if (method === 'credits' && credits) onSelect(credits.id);
+    else if (method === 'card' && card) onSelect(card.id);
+    else if (method === 'crypto') {
+      /*
+        One click: the token the select already holds, or, if that one cannot
+        pay, the best one that can (it shows in the select, so nothing is
+        swapped out of sight). If none can, the list opens to show why, and
+        the purchase stays routed where it was.
+      */
+      const target =
+        cryptoSource && isSelectable(cryptoSource)
+          ? cryptoSource
+          : preselectSource(sources.filter(isSelectable), 'name-checkout');
+      if (target) {
+        setLastCryptoId(target.id);
+        onSelect(target.id);
+      } else {
+        setPreviewCrypto(true);
+      }
+    }
+  };
+
+  /*
+    Said only when the wallet that pays is not the one signed in, which today
+    means ARIO on an Arweave or Ethereum session: it comes from the linked
+    Solana wallet. Not when the host's wallet note is shown, though: that note
+    already names the paying wallet, and one screen says it once.
+  */
+  const paidFrom =
+    cryptoSource && cryptoSource.wallet !== session && !note
+      ? paidFromPhrase(cryptoSource.wallet)
+      : undefined;
+
+  /*
+    ARIO's "≈ $" is its ALL-IN price, SOL included, so it sits beside the
+    other rows' prices and the card's charge on equal terms. With the SOL cost
+    unknown there is no dollar figure at all rather than a partial one.
+  */
+  const usdFor = (s: PaymentSource) => {
+    if (s.token !== 'ario') return undefined;
+    const allIn = sourceUsd(s, arioUsdRate, extraUsd ?? {});
+    return allIn !== undefined ? `≈ ${usd(allIn)}` : undefined;
+  };
 
   return (
     <div>
       {!arioOnly && (
-        <>
-          <label className="mb-1 block text-sm font-medium">Pay with</label>
-          {/*
-            Under the heading, not above it. This explains the choice being
-            offered, so floating it above "Pay with" read as a loose sentence
-            belonging to whatever happened to sit above.
-          */}
-          {note && <p className="mb-2 text-xs text-foreground/70">{note}</p>}
-          {/*
-            One row on desktop whatever the count. A fixed 3-column grid wrapped
-            to two rows the moment a Balance option appeared, which made the set
-            read as two groups rather than one row of equals — the whole point
-            of flattening it.
-          */}
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-stretch">
-            {options.map((option) => (
-              <OptionCard
-                key={option.id}
-                option={option}
-                active={option.id === selectedId}
-                disabled={disabled}
-                onClick={() => onSelect(option.id)}
-              />
-            ))}
-          </div>
-        </>
+        <div>
+          <PaymentPicker
+            choices={choices}
+            value={selected ? methodForOption(selected) : undefined}
+            // The segments keep showing what the purchase is routed on; the
+            // list opens beside it only to explain why no token can pay.
+            cryptoPreview={previewCrypto}
+            onChange={onMethodChange}
+            disabled={disabled}
+            note={note}
+            crypto={{
+              groups,
+              selectedId: cryptoSource?.id,
+              onSelect: (id) => {
+                setLastCryptoId(id);
+                onSelect(id);
+              },
+              note: paidFrom,
+              usdFor,
+              extraFor: (s) => extraCostLabel(s, extraSol),
+            }}
+          />
+        </div>
       )}
 
       {showSources && (
-        <div className="mb-3">
-          <p className="mb-2 text-xs font-medium text-foreground/70">
+        // Auction modal (arioOnly): the same bottom margin it always had.
+        <div className={arioOnly ? 'mb-3' : 'mt-3'}>
+          <p id={fundingHeadingId} className="mb-1 text-xs font-medium text-foreground/70">
             Funding source
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-          <SourceRow
-            active={fundingSource === 'balance'}
+          <SegmentedControl
+            labelledBy={fundingHeadingId}
+            value={fundingSource}
+            onChange={onSourceChange}
             disabled={disabled}
-            onClick={() => onSourceChange('balance')}
-            label="Liquid"
-            amount={balances.liquidArio}
+            segments={[
+              {
+                value: 'balance',
+                label: 'Liquid',
+                sub: `${formatHeldBalance(balances.liquidArio)} ARIO`,
+              },
+              {
+                value: 'any',
+                label: 'Liquid + Staked',
+                shortLabel: 'Both',
+                sub: `${formatHeldBalance(balances.totalArio)} ARIO`,
+              },
+              {
+                value: 'stakes',
+                label: 'Staked',
+                sub: `${formatHeldBalance(balances.stakedArio)} ARIO`,
+              },
+            ]}
           />
-          <SourceRow
-            active={fundingSource === 'any'}
-            disabled={disabled}
-            onClick={() => onSourceChange('any')}
-            label="Liquid + Staked"
-            amount={balances.totalArio}
-          />
-          <SourceRow
-            active={fundingSource === 'stakes'}
-            disabled={disabled}
-            onClick={() => onSourceChange('stakes')}
-            label="Staked"
-            amount={balances.stakedArio}
-          />
-          </div>
         </div>
       )}
     </div>

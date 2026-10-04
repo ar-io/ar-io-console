@@ -10,6 +10,7 @@ import { useStore } from '../../store/useStore';
 import { getTurboBalance, resolveEthereumAddress } from '../../utils';
 import { clearEthereumTurboClientCache } from '../../hooks/useEthereumTurboClient';
 import { Mail } from 'lucide-react';
+import { selectableSolanaWallets } from '../../utils/selectableSolanaWallets';
 
 const WalletSelectionModal = ({
   onClose,
@@ -368,7 +369,7 @@ const WalletSelectionModal = ({
               Back
             </button>
 
-            {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).map((w) => (
+            {selectableSolanaWallets(solanaWallets).map((w) => (
               <button
                 key={w.adapter.name}
                 className="w-full bg-card border border-border/20 p-3 sm:p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group"
@@ -377,11 +378,15 @@ const WalletSelectionModal = ({
                 <img src={w.adapter.icon} alt={w.adapter.name} className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-lg" />
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold mb-1 text-base">{w.adapter.name}</div>
-                  <div className="text-xs sm:text-sm text-foreground/70">Solana wallet</div>
+                  {/* MetaMask is also offered under Ethereum; its Solana
+                      account is a different address with its own credits. */}
+                  <div className="text-xs sm:text-sm text-foreground/70">
+                    {w.adapter.name === 'MetaMask' ? 'Solana account in MetaMask' : 'Solana wallet'}
+                  </div>
                 </div>
               </button>
             ))}
-            {solanaWallets.filter(w => w.readyState === 'Installed' && !w.adapter.name.toLowerCase().includes('metamask')).length === 0 && (
+            {selectableSolanaWallets(solanaWallets).length === 0 && (
               <div className="text-center py-6 text-sm text-foreground/60">
                 <p className="mb-3">No Solana wallets detected</p>
                 <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Install Phantom</a>

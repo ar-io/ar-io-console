@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { mapActionExpiryMessage } from '../purchase/actionFailure';
 
 import { useQuery } from '@tanstack/react-query';
 
@@ -91,7 +92,13 @@ export function useControllerWrites(processId?: string) {
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
-        const normalized = err instanceof Error ? err : new Error(String(err));
+        // Same as a record write: an expired approval changed nothing.
+        const expiry = mapActionExpiryMessage(err);
+        const normalized = expiry
+          ? new Error(expiry)
+          : err instanceof Error
+            ? err
+            : new Error(String(err));
         setPhase('error');
         setError(normalized);
         throw normalized;
@@ -114,7 +121,13 @@ export function useControllerWrites(processId?: string) {
         window.dispatchEvent(new CustomEvent('refresh-balance'));
         return true;
       } catch (err) {
-        const normalized = err instanceof Error ? err : new Error(String(err));
+        // Same as a record write: an expired approval changed nothing.
+        const expiry = mapActionExpiryMessage(err);
+        const normalized = expiry
+          ? new Error(expiry)
+          : err instanceof Error
+            ? err
+            : new Error(String(err));
         setPhase('error');
         setError(normalized);
         throw normalized;
@@ -140,6 +153,9 @@ export function useControllerWrites(processId?: string) {
     error,
     /** True when the wallet signs and pays SOL — the modal must not quote credits. */
     paysNetworkDirectly: writer.paysNetworkDirectly,
+    alternative: writer.alternative,
+    switchRail: writer.switchRail,
+    pending: writer.pending,
     isBusy: phase === 'submitting',
   };
 }

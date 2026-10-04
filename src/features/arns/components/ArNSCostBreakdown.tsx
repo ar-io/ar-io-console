@@ -10,9 +10,10 @@ import {
 import type { ArNSPriceUnit } from './ArNSPaymentSelector';
 import PriceAmount from './PriceAmount';
 import { splitNameAndSetup } from '../purchase/priceTotals';
+import { OPERATOR_DISCOUNT_PERCENT } from '../purchase/operatorDiscount';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
 
-/** Where to send users who need SOL for the network deposit. Configurable. */
+/** Where to send users who need SOL for account rent and fees. Configurable. */
 const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
 
 /**
@@ -101,7 +102,7 @@ interface Props {
    * True for registration, renewal, upgrade and undername actions, where the
    * buyer's wallet needs no SOL at all. False for a returned-name auction,
    * which still runs through the buyer's own wallet — the one purchase in the
-   * app that costs real SOL, so it keeps the deposit and fee rows below.
+   * app that costs real SOL, so it keeps the rent and fee rows below.
    */
   sponsored?: boolean;
   /**
@@ -121,6 +122,24 @@ interface Props {
    * to sign 0.02. The figure was never wrong, it was simply never shown.
    */
   tokenForName?: { amount: number; label: string };
+  /**
+   * ARIO taken off the name by the gateway-operator discount, on the ARIO
+   * route. The name price above is already net of it (the SDK quotes the
+   * discounted cost); this row says why it is lower.
+   */
+  operatorDiscountArio?: number;
+  /**
+   * The signer qualifies for the operator discount, but the chosen route is
+   * not ARIO. Credits, card and token routes are Turbo actions that cannot
+   * carry it, so one quiet line says where it applies.
+   */
+  operatorDiscountHint?: boolean;
+  /**
+   * The operator-discount lookup is still running. On the ARIO route this
+   * says so in one muted line; it never holds up Buy, since almost nobody is
+   * an operator and nobody else should wait for the answer.
+   */
+  operatorDiscountChecking?: boolean;
 }
 
 /**
@@ -178,8 +197,11 @@ function Row({
 
 /**
  * Itemized cost for an ArNS action: the name price (Credits or ARIO) plus the
- * Solana network cost the wallet pays in SOL — the account-rent deposit (which
- * dominates) and the transaction fee. The SOL line is shown for BOTH payment
+ * Solana network cost the wallet pays in SOL: rent for the accounts that hold
+ * the name (which dominates) and the transaction fee. The rent is not a
+ * deposit: when a lease ends it goes to whoever prunes the record, and on
+ * release to the releasing owner, who pays rent for the returned-name account
+ * in the same transaction (ar-io-solana-contracts, prune.rs / manage.rs). The SOL line is shown for BOTH payment
  * methods because every on-chain purchase creates accounts the wallet must fund
  * rent for, even when the name itself is paid with credits.
  */
@@ -202,6 +224,9 @@ export function ArNSCostBreakdown({
   sponsored = false,
   setupCredits,
   tokenForName,
+  operatorDiscountArio,
+  operatorDiscountHint = false,
+  operatorDiscountChecking = false,
 }: Props) {
   // Credits per $1, inverted. Shown with "~" because this is an indicative
   // rate, not the amount that will be charged — minimums and rounding apply.
@@ -381,10 +406,26 @@ export function ArNSCostBreakdown({
         >
           {priceNode}
         </Row>
+        {priceUnit === 'ario' && operatorDiscountArio != null && operatorDiscountArio > 0 && (
+          <Row
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                Gateway operator discount
+                <InfoTip
+                  text={`Your gateway earns ${OPERATOR_DISCOUNT_PERCENT}% off ArNS names paid with ARIO. It is already taken off the name price above.`}
+                />
+              </span>
+            }
+          >
+            <span className="text-sm font-medium text-primary">
+              {`−${OPERATOR_DISCOUNT_PERCENT}% (−${fmtNum(operatorDiscountArio)} ARIO)`}
+            </span>
+          </Row>
+        )}
         <div className="my-2 border-t border-border/10" />
 
         {/*
-          Turbo pays the Solana costs, so there is no deposit to hold and no
+          Turbo pays the Solana costs, so there is no rent to fund and no
           balance to be short of. What remains is the one-time setup charge —
           the rent Turbo fronts to register the name — and the total.
         */}
@@ -395,7 +436,7 @@ export function ArNSCostBreakdown({
                 label={
                   <span className="inline-flex items-center gap-1.5">
                     One-time setup
-                    <InfoTip text="Registers your name on Solana. This charge covers the network deposit, so you don't need SOL of your own for it. Charged once, when you buy." />
+                    <InfoTip text="Registers your name on Solana. This charge covers the Solana account rent, so you don't need SOL of your own for it. Charged once, when you buy." />
                   </span>
                 }
               >
@@ -436,7 +477,7 @@ export function ArNSCostBreakdown({
               — you don't need SOL": extra text answering a question nobody asks
               while paying, and plainly false on the token route, where the
               figure above IS the SOL leaving their wallet. The setup row's own
-              tooltip already says who covers the network deposit, at the line
+              tooltip already says who covers the account rent, at the line
               where that actually matters.
             */}
             <Row label="Total" strong>
@@ -462,8 +503,8 @@ export function ArNSCostBreakdown({
             <Row
               label={
                 <span className="inline-flex items-center gap-1.5">
-                  Network deposit
-                  <InfoTip text="Solana account rent, held on-chain while the name is registered. The figure is an upper bound — the network usually charges less, so your wallet may quote a smaller amount." />
+                  Solana account rent
+                  <InfoTip text="Rent for the Solana accounts that hold your name. It isn't refunded to you when a lease ends. The figure is an upper bound: the network usually charges less, so your wallet may quote a smaller amount." />
                 </span>
               }
             >
@@ -537,10 +578,10 @@ export function ArNSCostBreakdown({
                   */}
                   <span className="flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> You have{' '}
-                    {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL —
+                    {solBalance === undefined ? '—' : fmtSol(solBalance)} SOL,
                     {solShortfallText
                       ? ` need ${solShortfallText} more`
-                      : ' add more to cover the deposit'}
+                      : ' add more to cover the rent and fee'}
                   </span>
                   <a
                     href={GET_SOL_URL}
@@ -613,6 +654,21 @@ export function ArNSCostBreakdown({
       total. It is help text about the card, so it belongs beside it, quiet and
       left-aligned.
     */}
+      {/*
+        Only off the ARIO route: Turbo pays the registry on every other route,
+        so there is no operator signer for the discount to check.
+      */}
+      {priceUnit === 'ario' &&
+        operatorDiscountChecking &&
+        !(operatorDiscountArio != null && operatorDiscountArio > 0) && (
+          <p className="mt-2 text-xs text-foreground/60">Checking operator discount…</p>
+        )}
+      {operatorDiscountHint && priceUnit !== 'ario' && (
+        <p className="mt-2 text-xs text-foreground/60">
+          Your gateway&apos;s {OPERATOR_DISCOUNT_PERCENT}% operator discount applies when
+          you pay with ARIO.
+        </p>
+      )}
       <a
         href="https://docs.ar.io/build/upload/turbo-credits#pricing--fees"
         target="_blank"

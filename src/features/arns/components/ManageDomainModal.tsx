@@ -27,12 +27,17 @@ import {
 } from './ArNSPaymentSelector';
 import { isTokenSelectable, tokenLabels, type SupportedTokenType } from '../../../constants';
 import { useStore } from '../../../store/useStore';
-import { walletSplitNote } from '../purchase/walletRoles';
+import { walletSplitPhrase } from '../purchase/walletRoles';
 import {
   getTokenSmallestUnit,
+  useArioUsdRate,
   useSmallestUnitForWinc,
+  useTokenPricesForWinc,
 } from '../../../hooks/useCryptoPrice';
 import { buildPaymentOptions, defaultPaymentOption } from '../purchase/paymentOptions';
+import { useOperatorDiscountGateway } from '../hooks/useOperatorDiscountGateway';
+import { withDiscountGateway } from '../purchase/operatorDiscount';
+import { buildSources, sourceInputsFromOptions } from '../../payments/paymentSources';
 import { resolveSettlementRoute } from '../purchase/settlementRoute';
 import { settlementMechanismFor } from '../purchase/settlementMechanism';
 import { ArNSCostBreakdown } from './ArNSCostBreakdown';
@@ -113,11 +118,6 @@ export default function ManageDomainModal({
     balance reading empty is just as confusing here.
   */
   const sessionAddress = useStore((s) => s.address);
-  const walletSplit = walletSplitNote({
-    sessionWalletType,
-    sessionAddress,
-    ownerAddress: address,
-  });
   const creditPurchasesUnavailable = !isPaymentServiceAvailable();
   const balances = useArNSPaymentBalances(address);
 
@@ -161,6 +161,18 @@ export default function ManageDomainModal({
     ? resolveSettlementRoute(selectedOption, fundingSource)
     : ({ kind: 'credits' } as const);
   const priceUnit = route.kind === 'ario' ? 'ario' : 'credits';
+  /*
+    Named for the wallet that pays THIS route. ARIO is the owner's own
+    transaction, so on an Arweave or Ethereum session the linked Solana wallet
+    pays as well as holds, and the note says so rather than contradicting it.
+  */
+  // The short form: it joins the picker's one status line.
+  const walletSplit = walletSplitPhrase({
+    sessionWalletType,
+    sessionAddress,
+    ownerAddress: address,
+    payingWalletType: route.kind === 'ario' ? 'solana' : sessionWalletType,
+  });
   /** ARIO-only: what the cost estimate prices against. */
   const fundFrom: ArNSFundFrom =
     route.kind === 'ario' ? route.fundFrom : 'balance';
@@ -174,6 +186,11 @@ export default function ManageDomainModal({
     before this hook is ever called.
   */
   const mechanism = settlementMechanismFor(route);
+  // The operations-wallet scan only on the ARIO route, the one that can use it.
+  const { discount: operatorDiscount, checking: operatorDiscountChecking } =
+    useOperatorDiscountGateway(address, {
+      scanOperations: mechanism.kind === 'ario-direct',
+    });
 
   const { manage, phase, statusMessage, result, error, insufficientCredits, isBusy } =
     useManageArNSName();
@@ -190,7 +207,9 @@ export default function ManageDomainModal({
     intent: action,
     years: action === 'Extend-Lease' ? years : undefined,
     increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
-    enabled: active && priceUnit === 'credits',
+    // Whatever the route: the picker prices its Credits and Card rows from it
+    // even while ARIO is selected.
+    enabled: active,
   });
 
   // Cost details (ARIO price + SOL gas + affordability) for the selected source.
@@ -207,8 +226,12 @@ export default function ManageDomainModal({
     // Credits pay the name, so the wallet's ARIO shortfall is not a blocker.
     payWithCredits: mechanism.kind !== 'ario-direct',
     fromAddress: address,
+    // An operations wallet names its gateway; an operator's own is automatic.
+    discountGatewayAddress: operatorDiscount?.discountGatewayAddress,
     enabled: active,
   });
+  // The write carries the gateway only when the quote just honoured it.
+  const writeMechanism = withDiscountGateway(mechanism, cost?.discountGatewayAddress);
 
   /*
     Renewing, upgrading and adding undername slots are registry payments Turbo
@@ -282,6 +305,48 @@ export default function ManageDomainModal({
         cardEnabled,
       }),
     [cardEnabled, address, balances.credits, balances.sol, balances.totalArio, creditsPrice?.sponsoredCredits, sessionWalletType, creditPurchasesUnavailable],
+  );
+
+  // The crypto dropdown's rows, as on the registration checkout. Display only;
+  // routing reads `routingOptions`, and this modal keeps its own default.
+  const topUpTokens = useMemo(
+    () =>
+      routingOptions
+        .filter((o) => o.kind === 'token' && o.token && o.token !== 'ario')
+        .map((o) => o.token as SupportedTokenType),
+    [routingOptions],
+  );
+  const tokenPrices = useTokenPricesForWinc(
+    creditsPrice?.sponsoredCredits ? creditsPrice.sponsoredCredits * 1e12 : undefined,
+    topUpTokens,
+  );
+  const arioUsdRate = useArioUsdRate();
+  /*
+    What ARIO costs on top of its own price, in dollars: the SOL its route
+    spends on the name's accounts and fee, which the sponsored routes do not.
+    Priced from figures already here (the card rate and the SOL quote for the
+    same credits), so it needs no new lookup; unknown leaves ARIO out of the
+    Crypto segment's "from $X" rather than comparing a partial price with
+    Card's all-in charge.
+  */
+  const solUsd =
+    creditsPrice?.sponsoredCredits && creditsForOneUSD && tokenPrices.solana
+      ? creditsPrice.sponsoredCredits / creditsForOneUSD / tokenPrices.solana
+      : undefined;
+  const arioExtraUsd =
+    cost?.gasTotalSol !== undefined && solUsd !== undefined
+      ? cost.gasTotalSol * solUsd
+      : undefined;
+  const pickerSources = useMemo(
+    () =>
+      buildSources({
+        tokens: sourceInputsFromOptions(paymentOptions),
+        balances: address ? { solana: balances.sol, ario: balances.totalArio } : {},
+        loadingTokens: balances.loading ? ['solana', 'ario'] : [],
+        prices: { ...tokenPrices, ario: cost?.arioCost },
+        solBalance: balances.loading ? undefined : balances.sol,
+      }),
+    [paymentOptions, address, balances.sol, balances.totalArio, balances.loading, tokenPrices, cost?.arioCost],
   );
 
   const priceReady =
@@ -362,7 +427,7 @@ export default function ManageDomainModal({
         intent: action,
         years: action === 'Extend-Lease' ? years : undefined,
         increaseQty: action === 'Increase-Undername-Limit' ? qty : undefined,
-        mechanism,
+        mechanism: writeMechanism,
       });
       if (res) onSuccess?.();
     } catch {
@@ -515,13 +580,21 @@ export default function ManageDomainModal({
 
             {/* Payment method + source */}
             <div className="mb-4">
-              {walletSplit && (
-                <p className="mb-3 text-xs text-foreground/70">{walletSplit}</p>
-              )}
-
               <ArNSPaymentSelector
+                // Under "Pay with", as on the registration checkout, so the
+                // picker knows the paying wallet is already named.
+                note={walletSplit}
                 options={paymentOptions}
                 selectedId={selectedOption?.id ?? ''}
+                sources={pickerSources}
+                sessionWalletType={sessionWalletType ?? 'solana'}
+                prices={{
+                  credits: creditsPrice?.sponsoredCredits,
+                  cardUsd: creditsPrice?.usd,
+                }}
+                arioUsdRate={arioUsdRate}
+                extraUsd={{ ario: arioExtraUsd }}
+          extraSol={{ ario: cost?.gasTotalSol }}
                 fundingSource={fundingSource}
                 balances={balances}
                 onSelect={setSelectedId}
@@ -544,6 +617,9 @@ export default function ManageDomainModal({
                 </p>
               )}
               <ArNSCostBreakdown
+                operatorDiscountArio={cost?.discountArio}
+                operatorDiscountHint={!!operatorDiscount?.eligible}
+                operatorDiscountChecking={operatorDiscountChecking}
                 priceUnit={priceUnit}
                 creditsPrice={creditsPrice?.sponsoredCredits}
                 tokenForName={tokenForName}
