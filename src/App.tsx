@@ -6,6 +6,7 @@ import { useTheme } from './hooks/useTheme';
 import { useStore } from './store/useStore';
 import { WalletProviders } from './providers/WalletProviders';
 import { useWalletAccountListener } from './hooks/useWalletAccountListener';
+import { useLinkedSolanaWallet } from './hooks/useLinkedSolanaWallet';
 import ContractWalletGuard from './components/ContractWalletGuard';
 
 // The homepage is eagerly loaded — it's the primary entry point, so lazy-loading
@@ -94,6 +95,22 @@ function PaymentCallbackHandler() {
 function AppRoutes() {
   // Listen for wallet account changes across all wallet types
   useWalletAccountListener();
+
+  /*
+    Reconnect a remembered Solana wallet (primary or linked) on every page.
+
+    The Solana WalletProvider runs `autoConnect={false}`, and the reconnect
+    lived only in this hook, which only some pages mounted (the ArNS screens,
+    Deploy, Capture). Load Top Up or Upload with a Solana session and nothing
+    reconnected it: the session showed as signed in, and paying failed with
+    "Wallet not available for direct payment". The hook attempts once per
+    instance and pages that mount it themselves are unaffected.
+
+    Primary sessions only: a linked wallet serves ArNS writes, whose pages
+    reconnect it themselves, and reconnecting it everywhere would open a
+    locked wallet's unlock window on pages that never use Solana.
+  */
+  useLinkedSolanaWallet({ autoReconnect: 'primary-only' });
 
   // Initialize bundler's free upload limit on app startup
   useFreeUploadLimit();

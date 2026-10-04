@@ -14,9 +14,44 @@ import { useStore } from '../store/useStore';
  * On page load, if a linked wallet name is persisted the hook
  * auto-reconnects it so the signer is ready without manual intervention.
  */
-export function useLinkedSolanaWallet() {
+/*
+  Shared by every instance of the hook, because several mount at once (App,
+  the page, its cards). Per-instance state let each start its own connect in
+  the same commit; the provider ignores all but the first, and the others read
+  that as "cancelled" and released __SOLANA_SWITCHING__ mid-connect.
+*/
+let connectInFlightSince = 0;
+// Expires, so an instance that unmounts between select and connect cannot
+// block reconnects for the rest of the page load.
+const CONNECT_IN_FLIGHT_MAX_MS = 60_000;
+const connectInFlight = () =>
+  connectInFlightSince > 0 && Date.now() - connectInFlightSince < CONNECT_IN_FLIGHT_MAX_MS;
+/**
+ * Addresses whose silent reconnect failed or was declined in this page load.
+ * Every later-mounting instance would otherwise ask again, opening an unlock
+ * window right after the user dismissed one. The Reconnect button still works.
+ */
+const declinedAutoReconnect = new Set<string>();
+
+export function useLinkedSolanaWallet(
+  {
+    autoReconnect = 'all',
+  }: {
+    /**
+     * Which remembered wallet this instance reconnects on mount.
+     *
+     * `primary-only` is for the app-wide instance (App.tsx): a primary Solana
+     * session must be live on every page, since its wallet pays for top-ups
+     * and uploads. A LINKED wallet is only used for ArNS writes, whose pages
+     * mount this hook themselves; reconnecting it everywhere would open a
+     * locked wallet's unlock window on pages that never use Solana.
+     */
+    /** `none` is for the reconnect modal, where the user picks the wallet. */
+    autoReconnect?: 'all' | 'primary-only' | 'none';
+  } = {},
+) {
   const { walletType, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, setAddress, setLinkedSolanaWallet, clearLinkedSolanaWallet, getArNSAddress } = useStore();
-  const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction, select: solanaSelect, connect: solanaConnect, wallet: solanaWallet, wallets: solanaWallets } = useWallet();
+  const { publicKey: solanaPublicKey, signTransaction: solanaSignTransaction, select: solanaSelect, connect: solanaConnect, wallet: solanaWallet, wallets: solanaWallets, connecting: solanaConnecting } = useWallet();
 
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -34,8 +69,12 @@ export function useLinkedSolanaWallet() {
    * address is acceptable.
    *
    * The connect effect below serves two callers with different consent:
-   *  - `linkWallet()` — the user explicitly picked a wallet, so whatever address
-   *    it returns is the one they meant. Expectation is null.
+   *  - `linkWallet()` — the user explicitly picked a wallet. When LINKING,
+   *    whatever address it returns is the one they meant: expectation is null.
+   *    When reconnecting a PRIMARY session it is the signed-in address, so this
+   *    hook never writes a different account into the session itself. (If the
+   *    wallet does connect another account, useWalletAccountListener switches
+   *    the session and clears payment state, as for any in-wallet switch.)
    *  - auto-reconnect — the user chose nothing; we are silently restoring a
    *    previously linked wallet. If the adapter's ACTIVE ACCOUNT changed in the
    *    extension since then, connecting returns a different pubkey, and
@@ -45,6 +84,8 @@ export function useLinkedSolanaWallet() {
    *    and a mismatch is refused rather than saved.
    */
   const expectedAddressRef = useRef<string | null>(null);
+  // The address a silent reconnect is restoring; null for a user-chosen connect.
+  const autoTargetRef = useRef<string | null>(null);
 
   const isPrimarySolana = walletType === 'solana';
   const arnsAddress = getArNSAddress();
@@ -65,6 +106,11 @@ export function useLinkedSolanaWallet() {
   useEffect(() => {
     if (autoReconnectAttempted.current) return;
     if (isSolanaConnected) return;           // already live
+    // Another connect is under way. This effect re-runs when `connecting`
+    // drops, and by then the wallet is live or the attempt is recorded.
+    if (connectInFlight() || solanaConnecting) return;
+    if (autoReconnect === 'none') return;
+    if (autoReconnect === 'primary-only' && !isPrimarySolana) return;
 
     // Both identities reconnect the same way. A PRIMARY Solana session restores
     // `address`; a LINKED one restores the secondary ArNS wallet. Primary was
@@ -75,6 +121,14 @@ export function useLinkedSolanaWallet() {
       ? solanaWalletName
       : linkedSolanaWalletName;
     if (!targetAddress || !targetWalletName) return; // nothing to reconnect
+    if (declinedAutoReconnect.has(targetAddress)) return;
+    // Connected a moment ago by another instance, before this render caught up.
+    if (
+      solanaWallet?.adapter.name === targetWalletName &&
+      solanaWallet.adapter.publicKey?.toString() === targetAddress
+    ) {
+      return;
+    }
 
     // Only attempt if the adapter is present. Same rule as the stale-session
     // check in useWalletAccountListener, deliberately: if one defers to a
@@ -86,6 +140,8 @@ export function useLinkedSolanaWallet() {
     if (!adapterExists) return;
 
     autoReconnectAttempted.current = true;
+    connectInFlightSince = Date.now();
+    autoTargetRef.current = targetAddress;
     console.log('[LinkedSolana] Auto-reconnecting Solana wallet:', targetWalletName, {
       primary: isPrimarySolana,
     });
@@ -99,7 +155,7 @@ export function useLinkedSolanaWallet() {
     // persisted address and no signer.
     pendingIsPrimaryRef.current = isPrimarySolana;
     setPendingLink(true);
-  }, [isPrimarySolana, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, isSolanaConnected, solanaWallets, solanaSelect]);
+  }, [isPrimarySolana, address, solanaWalletName, linkedSolanaAddress, linkedSolanaWalletName, isSolanaConnected, solanaWallets, solanaSelect, solanaConnecting, autoReconnect, solanaWallet]);
 
   // After select(), wait for the adapter to be ready, then connect and save
   useEffect(() => {
@@ -113,6 +169,10 @@ export function useLinkedSolanaWallet() {
         // Check adapter publicKey directly (handles silent auto-approve)
         const pk = solanaWallet.adapter.publicKey;
         const expected = expectedAddressRef.current;
+        const autoTarget = autoTargetRef.current;
+        if (autoTarget && (!pk || pk.toString() !== autoTarget)) {
+          declinedAutoReconnect.add(autoTarget);
+        }
         if (!pk) {
           setLinkError('Connection was cancelled or wallet returned no address. Please try again.');
         } else if (expected && pk.toString() !== expected) {
@@ -123,7 +183,9 @@ export function useLinkedSolanaWallet() {
             '[LinkedSolana] Auto-reconnect returned a different account; keeping the linked wallet.',
           );
           setLinkError(
-            'Your wallet reconnected with a different account. Switch back to the linked account, or link the new one explicitly.',
+            pendingIsPrimaryRef.current
+              ? 'Your wallet connected a different account. Switch back to the account you signed in with, or sign out and sign in with the new one.'
+              : 'Your wallet reconnected with a different account. Switch back to the linked account, or link the new one explicitly.',
           );
         } else if (pendingIsPrimaryRef.current) {
           // Primary session: restore the wallet's own address. Writing a linked
@@ -135,9 +197,12 @@ export function useLinkedSolanaWallet() {
         }
       } catch (error) {
         console.error('[LinkedSolana] Connection failed:', error);
+        if (autoTargetRef.current) declinedAutoReconnect.add(autoTargetRef.current);
         setLinkError(error instanceof Error ? error.message : 'Failed to connect wallet. Please try again.');
       } finally {
         expectedAddressRef.current = null;
+        autoTargetRef.current = null;
+        connectInFlightSince = 0;
         pendingIsPrimaryRef.current = false;
         setIsLinking(false);
         // Always released, including on failure — leaving this set would make
@@ -150,13 +215,25 @@ export function useLinkedSolanaWallet() {
   const linkWallet = useCallback((adapterName: string) => {
     setIsLinking(true);
     setLinkError(null);
-    // Explicit user choice — whatever address this adapter returns is intended.
-    expectedAddressRef.current = null;
+    /*
+      Linking: an explicit choice, so whatever address the adapter returns is
+      intended. Reconnecting a PRIMARY session is different: it restores the
+      wallet as the session itself, not as a linked one (which would outlive
+      sign-out and be inherited by the next Arweave or Ethereum session), and
+      this hook writes only the same account. Writing another one here ran
+      before useWalletAccountListener could clear payment state, so a top-up
+      mid-checkout credited the old account; an account switch is left to
+      that listener, which clears it.
+    */
+    expectedAddressRef.current = isPrimarySolana ? address : null;
+    autoTargetRef.current = null;
+    pendingIsPrimaryRef.current = isPrimarySolana;
+    connectInFlightSince = Date.now();
     // Prevent useWalletAccountListener from treating the adapter switch as a disconnect
     (window as any).__SOLANA_SWITCHING__ = true;
     solanaSelect(adapterName as any);
     setPendingLink(true);
-  }, [solanaSelect]);
+  }, [solanaSelect, isPrimarySolana, address]);
 
   const unlinkWallet = useCallback(() => {
     clearLinkedSolanaWallet();
@@ -188,6 +265,12 @@ export function useLinkedSolanaWallet() {
     promptReconnect,
     // UI state
     isLinking,
+    /**
+     * True while any connect is under way, including another instance's
+     * silent reconnect. A second connect() started now is ignored by the
+     * provider and would read as "cancelled".
+     */
+    isConnectBusy: isLinking || solanaConnecting || connectInFlight(),
     linkError,
     showLinkModal,
     setShowLinkModal,

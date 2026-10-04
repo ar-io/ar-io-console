@@ -11,7 +11,7 @@ interface LinkSolanaWalletModalProps {
 }
 
 export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: LinkSolanaWalletModalProps) {
-  const { solanaWallets, linkWallet, isLinking, linkError, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet();
+  const { solanaWallets, linkWallet, isLinking, isConnectBusy, linkError, isSolanaConnected, linkedAddress } = useLinkedSolanaWallet({ autoReconnect: 'none' });
   const [initialAddress] = useState(linkedAddress);
   const [linkingAdapter, setLinkingAdapter] = useState<string | null>(null);
   const hasAutoClosedRef = useRef(false);
@@ -41,7 +41,7 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
           title={isReconnect ? 'Reconnect Solana Wallet' : 'Link Solana Wallet'}
           description={
             isReconnect
-              ? 'Reconnect to sign ArNS transactions'
+              ? 'Reconnect your Solana wallet to continue'
               : 'Connect a Solana wallet to manage your ArNS domains'
           }
         />
@@ -60,7 +60,7 @@ export default function LinkSolanaWalletModal({ onClose, isReconnect = false }: 
             installedWallets.map((w) => (
               <button
                 key={w.adapter.name}
-                disabled={isLinking}
+                disabled={isConnectBusy}
                 className="w-full bg-card border border-border/20 p-4 rounded-2xl hover:border-primary/50 hover:bg-card/80 transition-all text-left flex items-center gap-3 group disabled:opacity-50"
                 onClick={() => {
                   setLinkingAdapter(w.adapter.name);

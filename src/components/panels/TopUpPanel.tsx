@@ -4,6 +4,7 @@ import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
 import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable, ARIO_TOPUP_MAX_USD } from '../../constants';
+import { arioPresetsFor } from '../../utils/arioPresets';
 import { useStore } from '../../store/useStore';
 import { Loader2, Lock, CreditCard, DollarSign, Wallet, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
@@ -388,7 +389,7 @@ export default function TopUpPanel({
   }, [targetedTopUp, cryptoForTarget]);
 
   /*
-    The $200 ARIO cap, in ARIO at Turbo's live rate (the same rate every other
+    The ARIO cap (ARIO_TOPUP_MAX_USD), in ARIO at Turbo's live rate (the same rate every other
     ARIO price here uses). Undefined until the rate loads: an ARIO top-up then
     waits rather than going ahead unbounded.
   */
@@ -397,13 +398,7 @@ export default function TopUpPanel({
     arioUsdRate && arioUsdRate > 0
       ? Math.floor(ARIO_TOPUP_MAX_USD / arioUsdRate)
       : undefined;
-  const arioPresets =
-    arioMaxTokens === undefined
-      ? [10_000, 25_000, 50_000, 100_000]
-      : [
-          ...[10_000, 25_000, 50_000, 100_000].filter((a) => a < arioMaxTokens),
-          arioMaxTokens,
-        ].slice(-4);
+  const arioPresets = arioPresetsFor(arioMaxTokens);
   const arioAmount =
     inputType === 'storage' && cryptoForStorage !== undefined
       ? cryptoForStorage
@@ -414,7 +409,7 @@ export default function TopUpPanel({
   const arioCapNote =
     selectedTokenType === 'ario'
       ? arioMaxTokens === undefined
-        ? 'Loading the ARIO rate for the $200 limit…'
+        ? `Loading the ARIO rate for the $${ARIO_TOPUP_MAX_USD} limit…`
         : `Up to $${ARIO_TOPUP_MAX_USD} in ARIO per top-up (${arioMaxTokens.toLocaleString()} ARIO at today's rate).`
       : undefined;
 
@@ -422,9 +417,8 @@ export default function TopUpPanel({
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
     switch (tokenType) {
       case 'arweave': return [0.5, 1, 5, 10];
-      // Sized to the $200 cap rather than to a round number of tokens: at
-      // ARIO's price, 1,000 ARIO was a dollar and a half. Presets above the
-      // cap are dropped; the cap is always offered.
+      // Kept under the ARIO_TOPUP_MAX_USD cap: presets at or above it are
+      // dropped and the cap offered instead (see `arioPresets`).
       case 'ario': return arioPresets;
       case 'base-ario': return [50, 100, 500, 1000]; // Same presets as ARIO
       case 'ethereum': return [0.01, 0.05, 0.1, 0.25];
@@ -2164,7 +2158,7 @@ export default function TopUpPanel({
             )) ||
             (paymentMethod === 'crypto' && (
               !!targetAddressError || // Block checkout if recipient address validation failed
-              arioOverCap || // ARIO: at most $200 per top-up, and not before the rate loads
+              arioOverCap || // ARIO: at most ARIO_TOPUP_MAX_USD per top-up, and not before the rate loads
               (inputType === 'dollars' && (cryptoAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || !!tokenPricingError)) ||
               (inputType === 'storage' && (!wincForOneGiB || !creditsForOneUSD || storageAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || cryptoForStorage === undefined))
             )) ||
