@@ -26,6 +26,7 @@ import { useStore, type ConsolePage } from '@/store/useStore';
 import { useUploadStatus } from '@/hooks/useUploadStatus';
 import AssignDomainModal from '@/components/modals/AssignDomainModal';
 import PageCard from './PageCard';
+import { actionButtonClass } from '@/components/actionButton';
 
 export interface PagesDashboardProps {
   arioGatewayUrl?: string;
@@ -174,35 +175,35 @@ export default function PagesDashboard({
               type="button"
               onClick={() => checkMultipleStatuses(publishedTxIds, true)}
               disabled={anyChecking}
-              className="inline-flex items-center gap-1 rounded-full border border-border/20 bg-card px-3 py-2 text-xs text-foreground transition-colors hover:border-primary/40 disabled:opacity-50"
+              className={actionButtonClass('default')}
               title="Check status for all published pages"
             >
-              <RefreshCw className={`h-3 w-3 ${anyChecking ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Check Status</span>
+              <RefreshCw className={`h-3.5 w-3.5 ${anyChecking ? 'animate-spin' : ''}`} />
+              <span className="sr-only sm:not-sr-only">Check Status</span>
             </button>
           )}
           <button
             type="button"
             onClick={exportToCSV}
-            className="inline-flex items-center gap-1 rounded-full border border-border/20 bg-card px-3 py-2 text-xs text-foreground transition-colors hover:border-primary/40"
+            className={actionButtonClass('default')}
             title="Export pages to CSV"
           >
-            <Archive className="h-3 w-3" />
-            <span className="hidden sm:inline">Export CSV</span>
+            <Archive className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only">Export CSV</span>
           </button>
           <button
             type="button"
             onClick={onImport}
-            className="inline-flex items-center gap-1 rounded-full border border-border/20 bg-card px-3 py-2 text-xs text-foreground transition-colors hover:border-primary/40"
+            className={actionButtonClass('default')}
             title="Load a page you published elsewhere to edit it"
           >
-            <DownloadCloud className="h-3 w-3" />
-            <span className="hidden sm:inline">Edit existing</span>
+            <DownloadCloud className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only">Edit existing</span>
           </button>
           <button
             type="button"
             onClick={onCreate}
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+            className={actionButtonClass('primary')}
           >
             <Plus className="h-3.5 w-3.5" />
             Create page

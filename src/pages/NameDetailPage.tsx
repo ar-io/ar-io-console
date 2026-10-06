@@ -4,13 +4,20 @@ import { useQueryClient } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
+  CalendarPlus,
   ExternalLink,
   Globe,
   Layers,
   Loader2,
+  LogOut,
+  Pencil,
+  Plus,
+  Repeat,
+  Send,
   Star,
   Tag,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 
 import { useStore } from '@/store/useStore';
@@ -57,6 +64,8 @@ import {
 import { deriveAntRoleStrict } from '@/features/arns/antRole';
 import { isArweaveTxId, isValidArNSName } from '@/features/arns/utils';
 import { toUnicodeName } from '@/utils/punycode';
+import { actionButtonClass } from '@/components/actionButton';
+import { arnsHostFor } from '@/features/pages/publish/renderCtx';
 
 /** Which action modal is open, if any. */
 type OpenModal =
@@ -117,30 +126,21 @@ function SectionCard({
   );
 }
 
-/**
- * A section's action: small and quiet. `danger` marks the owner's
- * irreversible ones in red; each opens a modal with its own warning and
- * confirmation, so the link itself need not be loud.
- */
+/** A section's action, beside its title. See `actionButtonClass`. */
 function SectionAction({
   label,
+  icon: Icon,
   onClick,
   danger,
-  className = '-mr-2',
 }: {
   label: string;
+  icon: LucideIcon;
   onClick: () => void;
   danger?: boolean;
-  className?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${className} flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
-        danger ? 'text-error hover:bg-error/10' : 'text-primary hover:bg-primary/10'
-      }`}
-    >
+    <button type="button" onClick={onClick} className={actionButtonClass(danger ? 'danger' : 'default')}>
+      <Icon className="h-3.5 w-3.5" />
       {label}
     </button>
   );
@@ -175,6 +175,10 @@ export default function NameDetailPage() {
   const backLabel = backTo === '/my-domains' ? 'My domains' : 'All names';
   const navigate = useNavigate();
   const configMode = useStore((s) => s.configMode);
+  const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
+  // The host that serves this network's names: ar.io on mainnet, the testnet
+  // gateway on devnet, where ar.io would not resolve them.
+  const arnsHost = arnsHostFor({ configMode, arioGatewayUrl });
   const { arnsAddress } = useLinkedSolanaWallet();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
@@ -457,7 +461,7 @@ export default function NameDetailPage() {
               <div className="min-w-0">
                 <h1 className="truncate font-heading text-2xl font-extrabold text-foreground">
                   {displayName}
-                  <span className="font-normal text-foreground/50">.ar.io</span>
+                  <span className="font-normal text-foreground/50">.{arnsHost}</span>
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span
@@ -489,16 +493,16 @@ export default function NameDetailPage() {
                     <button
                       type="button"
                       onClick={() => openOwnerAction('primary')}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                      className={actionButtonClass()}
                     >
-                      <Star className="h-3 w-3" /> Set as primary
+                      <Star className="h-3.5 w-3.5" /> Set as primary
                     </button>
                   )}
                 </div>
               </div>
             </div>
             <a
-              href={`https://${name}.ar.io`}
+              href={`https://${name}.${arnsHost}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
@@ -518,6 +522,7 @@ export default function NameDetailPage() {
                 canManage && (
                   <SectionAction
                     label={record.type === 'lease' ? 'Renew or upgrade' : 'Add undername slots'}
+                    icon={record.type === 'lease' ? CalendarPlus : Plus}
                     onClick={() => setOpen('manage')}
                   />
                 )
@@ -551,7 +556,7 @@ export default function NameDetailPage() {
               icon={Tag}
               action={
                 canManage && (
-                  <SectionAction label="Edit" onClick={() => openOwnerAction('edit')} />
+                  <SectionAction label="Edit" icon={Pencil} onClick={() => openOwnerAction('edit')} />
                 )
               }
             >
@@ -604,11 +609,11 @@ export default function NameDetailPage() {
               icon={Layers}
               action={
                 ownerOnly && (
-                  <div className="-mr-2 flex flex-wrap justify-end gap-x-1">
-                    <SectionAction danger className="" label="Transfer" onClick={() => setOpen('transfer')} />
-                    <SectionAction danger className="" label="Reassign" onClick={() => openOwnerAction('reassign')} />
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    <SectionAction danger label="Transfer" icon={Send} onClick={() => setOpen('transfer')} />
+                    <SectionAction danger label="Reassign" icon={Repeat} onClick={() => openOwnerAction('reassign')} />
                     {record.type === 'permabuy' && (
-                      <SectionAction danger className="" label="Release" onClick={() => openOwnerAction('release')} />
+                      <SectionAction danger label="Release" icon={LogOut} onClick={() => openOwnerAction('release')} />
                     )}
                   </div>
                 )
@@ -652,7 +657,7 @@ export default function NameDetailPage() {
               icon={Users}
               action={
                 ownerOnly && (
-                  <SectionAction label="Manage" onClick={() => openOwnerAction('controllers')} />
+                  <SectionAction label="Manage" icon={Users} onClick={() => openOwnerAction('controllers')} />
                 )
               }
             >
@@ -690,6 +695,7 @@ export default function NameDetailPage() {
             undernames={undernames}
             canManage={canEditRecords}
             undernameLimit={record.undernameLimit}
+            arnsHost={arnsHost}
             onSuccess={onRecordWrite}
           />
 

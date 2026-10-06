@@ -16,7 +16,9 @@ import {
   ExternalLink,
   Globe,
   History,
+  Link2,
   Loader2,
+  PlugZap,
   RadioTower,
 } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
@@ -25,6 +27,7 @@ import AssignDomainModal from '@/components/modals/AssignDomainModal';
 import { getArweaveUrl } from '@/utils';
 import { useLinkedSolanaWallet } from '@/hooks/useLinkedSolanaWallet';
 import { useStore, type ConsolePage } from '@/store/useStore';
+import { actionButtonClass } from '@/components/actionButton';
 
 export interface VersionHistoryProps {
   page: ConsolePage;
@@ -109,7 +112,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
             <button
               type="button"
               onClick={() => setShowAssign(true)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+              className={`mt-2 ${actionButtonClass('primary')}`}
             >
               <Globe className="h-3.5 w-3.5" /> Assign a domain
             </button>
@@ -122,8 +125,9 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
           <button
             type="button"
             onClick={() => setShowLinkModal(true)}
-            className="flex-shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
+            className={actionButtonClass('primary')}
           >
+            <Link2 className="h-3.5 w-3.5" />
             Link Wallet
           </button>
         </div>
@@ -134,8 +138,9 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
           <button
             type="button"
             onClick={promptReconnect}
-            className="flex-shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
+            className={actionButtonClass('primary')}
           >
+            <PlugZap className="h-3.5 w-3.5" />
             Reconnect
           </button>
         </div>
@@ -203,7 +208,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
                             ? 'Link a Solana wallet to roll back'
                             : 'Point your domain at this version'
                       }
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border/20 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className={actionButtonClass('default')}
                     >
                       {busyVersion === v.version ? (
                         <>
