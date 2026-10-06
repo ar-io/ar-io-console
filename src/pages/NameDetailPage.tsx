@@ -315,7 +315,10 @@ export default function NameDetailPage() {
       queryKey,
       read: () => fetchAntSummaries(mints),
       reflects: (d) => d?.[processId]?.owner === newOwner,
-      apply: (d) => d && { ...d, [processId]: { ...d[processId], owner: newOwner } },
+      // Only over a summary already loaded: role derivation reads its
+      // controllers, so a half-built entry would break the page.
+      apply: (d) =>
+        d?.[processId] ? { ...d, [processId]: { ...d[processId], owner: newOwner } } : d,
     });
   };
 

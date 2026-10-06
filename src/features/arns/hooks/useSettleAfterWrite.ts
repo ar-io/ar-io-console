@@ -60,6 +60,7 @@ export function useSettleAfterWrite(scope: string) {
       };
 
       // A read already in flight may have started before the write landed.
+      // Its revert is safe: setQueryData below becomes the revert state.
       void queryClient.cancelQueries({ queryKey, exact: true });
       if (apply) queryClient.setQueryData<T>(queryKey, (cur) => apply(cur));
 
