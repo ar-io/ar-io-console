@@ -34,6 +34,26 @@ type ANTSummariesReadable = {
   >;
 };
 
+/** The `useAntSummaries` cache key for a set of mints: sorted and de-duplicated. */
+export function antSummariesMints(processIds: string[]): string[] {
+  return Array.from(new Set(processIds.filter(Boolean))).sort();
+}
+
+/** One bulk read of ANT summaries; see `useAntSummaries`. */
+export async function fetchAntSummaries(mints: string[]): Promise<Record<string, AntSummary>> {
+  const ant = (await getANT(mints[0])) as unknown as ANTSummariesReadable;
+  const summaries = await ant.getANTSummaries(mints);
+  const out: Record<string, AntSummary> = {};
+  for (const [processId, s] of Object.entries(summaries)) {
+    out[processId] = {
+      logo: s?.logo,
+      owner: s?.owner,
+      controllers: Array.isArray(s?.controllers) ? s.controllers : [],
+    };
+  }
+  return out;
+}
+
 /**
  * Bulk-fetch summary state (logo + owner + controllers) for a set of ANT process
  * IDs and return a `processId -> AntSummary` map. Uses the SDK's bulk
@@ -43,10 +63,7 @@ type ANTSummariesReadable = {
  */
 export function useAntSummaries(processIds: string[]): Map<string, AntSummary> {
   // Stable, de-duplicated key so identical row sets share one cache entry.
-  const mints = useMemo(
-    () => Array.from(new Set(processIds.filter(Boolean))).sort(),
-    [processIds],
-  );
+  const mints = useMemo(() => antSummariesMints(processIds), [processIds]);
 
   const configKey = useArNSConfigKey();
   const { data } = useQuery<Record<string, AntSummary>>({
@@ -56,19 +73,7 @@ export function useAntSummaries(processIds: string[]): Map<string, AntSummary> {
     // Owner/controllers/logo change rarely and this is a bulk multi-account
     // read — skip the tab-refocus refetch.
     refetchOnWindowFocus: false,
-    queryFn: async () => {
-      const ant = (await getANT(mints[0])) as unknown as ANTSummariesReadable;
-      const summaries = await ant.getANTSummaries(mints);
-      const out: Record<string, AntSummary> = {};
-      for (const [processId, s] of Object.entries(summaries)) {
-        out[processId] = {
-          logo: s?.logo,
-          owner: s?.owner,
-          controllers: Array.isArray(s?.controllers) ? s.controllers : [],
-        };
-      }
-      return out;
-    },
+    queryFn: () => fetchAntSummaries(mints),
   });
 
   return useMemo(() => new Map(Object.entries(data ?? {})), [data]);

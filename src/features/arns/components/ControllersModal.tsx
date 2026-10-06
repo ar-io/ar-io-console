@@ -14,12 +14,18 @@ import {
   useControllersState,
   useControllerWrites,
 } from '../hooks/useControllers';
+import type { ControllerWrite } from '../writeSettle';
 
 interface ControllersModalProps {
   domain: ArNSName;
   onClose: () => void;
   /** Called after any controller write settles, so the caller can refresh. */
-  onSuccess?: () => void;
+  /**
+   * Fired after each add or remove, with the change. A host that passes it
+   * owns the re-read (it can settle the change); without one the modal
+   * re-reads its own list.
+   */
+  onSuccess?: (write?: ControllerWrite) => void;
 }
 
 const inputCls =
@@ -56,9 +62,9 @@ export default function ControllersModal({
   const [addOpen, setAddOpen] = useState(false);
   const [newController, setNewController] = useState('');
 
-  const afterWrite = async () => {
-    await state.refetch();
-    onSuccess?.();
+  const afterWrite = async (write: ControllerWrite) => {
+    if (onSuccess) onSuccess(write);
+    else await state.refetch();
   };
 
   // Validate the trimmed value — the same one passed to `addController` — so the
@@ -74,9 +80,10 @@ export default function ControllersModal({
     if (atMax) return;
     try {
       await addController(domain.processId, newController.trim());
+      const address = newController.trim();
       setNewController('');
       setAddOpen(false);
-      await afterWrite();
+      await afterWrite({ kind: 'add', address });
     } catch {
       /* surfaced via error */
     }
@@ -85,7 +92,7 @@ export default function ControllersModal({
   const handleRemove = async (addr: string) => {
     try {
       await removeController(domain.processId, addr);
-      await afterWrite();
+      await afterWrite({ kind: 'remove', address: addr });
     } catch {
       /* surfaced via error */
     }

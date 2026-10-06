@@ -31,6 +31,7 @@ import { hasMetadataChange } from '../records/recordWriter';
 import { recordCostNote, recordSaveCost } from '../records/recordCost';
 import { SELF_SIGNED_ONLY_NOTE } from '../records/writerChoice';
 import { useUndernameWrites, type UndernameRecord } from '../hooks/useUndernames';
+import type { RecordWrite } from '../writeSettle';
 import type { ANTDetails } from '../hooks/useANTDetails';
 import { actionButtonClass } from '@/components/actionButton';
 
@@ -74,7 +75,8 @@ interface RecordsTableProps {
   undernameLimit?: number | null;
   /** Host that serves this network's names (`ar.io`, or the testnet gateway); rows link to it. */
   arnsHost?: string;
-  onSuccess: () => void;
+  /** The write that just landed, so the page can show it before the chain catches up. */
+  onSuccess: (write: RecordWrite) => void;
 }
 
 type RowKind = 'apex' | 'undername';
@@ -276,13 +278,10 @@ export default function RecordsTable({
         `withoutClears`: the ANT rail cannot clear a field, only overwrite it.
       */
       const key = r?.kind === 'apex' ? APEX : r ? r.key : newName;
-      await undernameWrites.saveUndername(
-        processId,
-        key,
-        withoutClears(toRecordChange(draft, original)),
-      );
+      const change = withoutClears(toRecordChange(draft, original));
+      await undernameWrites.saveUndername(processId, key, change);
       close();
-      onSuccess();
+      onSuccess({ kind: 'set', undername: key, change });
     } catch (err) {
       setRowError(err instanceof Error ? err.message : 'Save failed');
     }
@@ -293,7 +292,7 @@ export default function RecordsTable({
     try {
       await undernameWrites.removeUndername(processId, r.key);
       setConfirmRemove(null);
-      onSuccess();
+      onSuccess({ kind: 'remove', undername: r.key });
     } catch (err) {
       // Keep the dialog open on failure: closing it would hide the reason and
       // leave the row looking untouched, which is what "nothing happened" felt

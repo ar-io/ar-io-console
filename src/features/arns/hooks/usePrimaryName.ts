@@ -51,6 +51,16 @@ async function absentToUndefined<T>(p: Promise<T>): Promise<T | undefined> {
   }
 }
 
+/** One read of an address's primary name and pending request; see `usePrimaryName`. */
+export async function fetchPrimaryName(address: string): Promise<PrimaryNameState> {
+  const ario = getARIO() as unknown as ARIOPrimaryReadable;
+  const [current, request] = await Promise.all([
+    absentToUndefined(ario.getPrimaryName({ address })),
+    absentToUndefined(ario.getPrimaryNameRequest({ initiator: address })),
+  ]);
+  return { current, request };
+}
+
 /**
  * Read the reverse-resolution state for a Solana address: its current primary
  * name (`getPrimaryName`) and any pending primary-name request it initiated
@@ -69,14 +79,6 @@ export function usePrimaryName(address: string | null | undefined, enabled: bool
     queryKey: ['arns-primary-name', configKey, address],
     enabled: enabled && !!address && isValidSolanaAddress(address),
     staleTime: 60_000,
-    queryFn: async () => {
-      const ario = getARIO() as unknown as ARIOPrimaryReadable;
-      const addr = address as string;
-      const [current, request] = await Promise.all([
-        absentToUndefined(ario.getPrimaryName({ address: addr })),
-        absentToUndefined(ario.getPrimaryNameRequest({ initiator: addr })),
-      ]);
-      return { current, request };
-    },
+    queryFn: () => fetchPrimaryName(address as string),
   });
 }

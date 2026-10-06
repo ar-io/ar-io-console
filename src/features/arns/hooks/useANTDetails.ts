@@ -41,6 +41,49 @@ type ANTRecordState = {
   keywords?: string[];
 };
 
+type ANTRecordReadable = {
+  getRecord(p: { undername: string }): Promise<ANTRecordState | undefined>;
+};
+
+/** The apex fields of `ANTDetails`, as one record read returns them. */
+export type ApexRecordFields = Pick<
+  ANTDetails,
+  | 'target'
+  | 'ttlSeconds'
+  | 'targetProtocol'
+  | 'priority'
+  | 'recordOwner'
+  | 'recordDisplayName'
+  | 'recordLogo'
+  | 'recordDescription'
+  | 'recordKeywords'
+>;
+
+/**
+ * The base `@` record alone: one batch read of its two accounts, without
+ * `getState`'s program scans. Used to confirm an apex write. Undefined when
+ * the read finds no `@` record, which right after a write means a node that
+ * has not caught up, not a record to show as blank.
+ */
+export async function fetchApexRecord(
+  processId: string,
+): Promise<ApexRecordFields | undefined> {
+  const ant = (await getANT(processId)) as unknown as ANTRecordReadable;
+  const apex = await ant.getRecord({ undername: '@' });
+  if (!apex) return undefined;
+  return {
+    target: apex.transactionId,
+    ttlSeconds: apex.ttlSeconds,
+    targetProtocol: apex.targetProtocol,
+    priority: apex.priority,
+    recordOwner: apex.owner,
+    recordDisplayName: apex.displayName,
+    recordLogo: apex.logo,
+    recordDescription: apex.description,
+    recordKeywords: Array.isArray(apex.keywords) ? apex.keywords : undefined,
+  };
+}
+
 type ANTStateReadable = {
   getState(opts?: { includeMetadata?: boolean }): Promise<{
     Name?: string;
@@ -51,6 +94,29 @@ type ANTStateReadable = {
     Records?: Record<string, ANTRecordState | undefined>;
   }>;
 };
+
+/** One read of an ANT's metadata and base `@` record; see `useANTDetails`. */
+export async function fetchANTDetails(processId: string): Promise<ANTDetails> {
+  const ant = (await getANT(processId)) as unknown as ANTStateReadable;
+  const state = await ant.getState({ includeMetadata: true });
+  const apex = state.Records?.['@'];
+  return {
+    name: state.Name ?? '',
+    ticker: state.Ticker ?? '',
+    description: state.Description ?? '',
+    keywords: Array.isArray(state.Keywords) ? state.Keywords : [],
+    logo: state.Logo ?? '',
+    target: apex?.transactionId,
+    ttlSeconds: apex?.ttlSeconds,
+    targetProtocol: apex?.targetProtocol,
+    priority: apex?.priority,
+    recordOwner: apex?.owner,
+    recordDisplayName: apex?.displayName,
+    recordLogo: apex?.logo,
+    recordDescription: apex?.description,
+    recordKeywords: Array.isArray(apex?.keywords) ? apex?.keywords : undefined,
+  };
+}
 
 /**
  * Read an ANT's current metadata + base `@` record so the Details editor can
@@ -63,26 +129,6 @@ export function useANTDetails(processId: string | undefined, enabled: boolean) {
     queryKey: ['ant-details', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 30_000,
-    queryFn: async () => {
-      const ant = (await getANT(processId as string)) as unknown as ANTStateReadable;
-      const state = await ant.getState({ includeMetadata: true });
-      const apex = state.Records?.['@'];
-      return {
-        name: state.Name ?? '',
-        ticker: state.Ticker ?? '',
-        description: state.Description ?? '',
-        keywords: Array.isArray(state.Keywords) ? state.Keywords : [],
-        logo: state.Logo ?? '',
-        target: apex?.transactionId,
-        ttlSeconds: apex?.ttlSeconds,
-        targetProtocol: apex?.targetProtocol,
-        priority: apex?.priority,
-        recordOwner: apex?.owner,
-        recordDisplayName: apex?.displayName,
-        recordLogo: apex?.logo,
-        recordDescription: apex?.description,
-        recordKeywords: Array.isArray(apex?.keywords) ? apex?.keywords : undefined,
-      };
-    },
+    queryFn: () => fetchANTDetails(processId as string),
   });
 }

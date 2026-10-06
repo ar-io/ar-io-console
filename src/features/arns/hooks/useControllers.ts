@@ -21,6 +21,32 @@ type ANTControllersReadable = {
   getState(): Promise<{ Owner?: string; Controllers?: string[] }>;
 };
 
+/** Structural view of the owner and controller getters, one account each. */
+type ANTControllersLightReadable = {
+  getOwner(): Promise<string>;
+  getControllers(): Promise<string[]>;
+};
+
+/**
+ * Owner and controllers from their two accounts, without `getState`'s scan of
+ * every record. Same shape as `fetchControllersState`; used to confirm a write.
+ */
+export async function fetchControllersLight(processId: string): Promise<ControllersState> {
+  const ant = (await getANT(processId)) as unknown as ANTControllersLightReadable;
+  const [owner, controllers] = await Promise.all([ant.getOwner(), ant.getControllers()]);
+  return { owner: owner ?? '', controllers: Array.isArray(controllers) ? controllers : [] };
+}
+
+/** One read of an ANT's owner and controllers; see `useControllersState`. */
+export async function fetchControllersState(processId: string): Promise<ControllersState> {
+  const ant = (await getANT(processId)) as unknown as ANTControllersReadable;
+  const state = await ant.getState();
+  return {
+    owner: state.Owner ?? '',
+    controllers: Array.isArray(state.Controllers) ? state.Controllers : [],
+  };
+}
+
 /**
  * Read an ANT's controllers and owner from `getState()`. One read; cached
  * briefly while the editor is open. The owner is needed alongside the controller
@@ -35,16 +61,7 @@ export function useControllersState(
     queryKey: ['ant-controllers', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 15_000,
-    queryFn: async () => {
-      const ant = (await getANT(
-        processId as string,
-      )) as unknown as ANTControllersReadable;
-      const state = await ant.getState();
-      return {
-        owner: state.Owner ?? '',
-        controllers: Array.isArray(state.Controllers) ? state.Controllers : [],
-      };
-    },
+    queryFn: () => fetchControllersState(processId as string),
   });
 }
 
