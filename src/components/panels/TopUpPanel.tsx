@@ -1135,7 +1135,7 @@ export default function TopUpPanel({
             embedded={embedded}
             cryptoTopupValue={cryptoPaymentResult?.quote?.tokenAmount || 0}
             tokenType={selectedTokenType}
-            onBack={handleCryptoBackToSelection}
+            onBack={handleCryptoConfirmationBack}
             onComplete={handleManualPaymentComplete}
           />
         );
