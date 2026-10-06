@@ -349,7 +349,12 @@ export default function NameDetailPage() {
       reflects: (d) => d?.current?.name === primaryName,
       apply: (d) =>
         d && {
-          current: { ...d.current, name: primaryName } as PrimaryName,
+          // The previous primary's details belong to another name; keep only
+          // the name until the confirming read brings the full record.
+          current:
+            d.current?.name === primaryName
+              ? d.current
+              : ({ name: primaryName } as PrimaryName),
           request: d.request?.name === primaryName ? undefined : d.request,
         },
     });

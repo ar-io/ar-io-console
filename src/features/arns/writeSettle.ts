@@ -40,6 +40,41 @@ export type RecordWrite =
 /** Undernames compare case-insensitively: the program keys records by the lowercased name. */
 const sameUndername = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
+type SetChange = Extract<RecordWrite, { kind: 'set' }>['change'];
+
+/** The fields a set write is checked against: the base fields, plus whatever metadata it sent. */
+interface RecordFieldsView {
+  transactionId?: string;
+  ttlSeconds?: number;
+  targetProtocol?: number;
+  priority?: number;
+  displayName?: string;
+  logo?: string;
+  description?: string;
+  keywords?: string[];
+}
+
+const sameKeywords = (a: string[] | undefined, b: string[]) =>
+  !!a && a.length === b.length && a.every((k, i) => k === b[i]);
+
+/**
+ * True if a record shows every field the write sent. Fields the write left
+ * out are not checked, so a metadata-only edit is not mistaken for landed
+ * just because the target and TTL already matched.
+ */
+function fieldsMatch(r: RecordFieldsView, c: SetChange): boolean {
+  return (
+    r.transactionId === c.transactionId &&
+    r.ttlSeconds === c.ttlSeconds &&
+    (r.targetProtocol ?? 0) === c.targetProtocol &&
+    (c.priority === undefined || r.priority === c.priority) &&
+    (c.displayName === undefined || r.displayName === c.displayName) &&
+    (c.logo === undefined || r.logo === c.logo) &&
+    (c.description === undefined || r.description === c.description) &&
+    (c.keywords === undefined || sameKeywords(r.keywords, c.keywords))
+  );
+}
+
 /** True if the records read show the write. An unread list shows nothing. */
 export function recordsReflect(
   records: readonly UndernameRecord[] | undefined,
@@ -48,11 +83,7 @@ export function recordsReflect(
   if (!records) return false;
   const found = records.find((r) => sameUndername(r.undername, write.undername));
   if (write.kind === 'remove') return !found;
-  return (
-    !!found &&
-    found.transactionId === write.change.transactionId &&
-    found.ttlSeconds === write.change.ttlSeconds
-  );
+  return !!found && fieldsMatch(found, write.change);
 }
 
 /**
@@ -90,9 +121,18 @@ export function applyRecordWrite(
 /** True if the ANT details show the apex write. */
 export function apexReflects(ant: ANTDetails | undefined, write: RecordWrite): boolean {
   if (!ant || write.kind !== 'set') return false;
-  return (
-    ant.target === write.change.transactionId &&
-    ant.ttlSeconds === write.change.ttlSeconds
+  return fieldsMatch(
+    {
+      transactionId: ant.target,
+      ttlSeconds: ant.ttlSeconds,
+      targetProtocol: ant.targetProtocol,
+      priority: ant.priority,
+      displayName: ant.recordDisplayName,
+      logo: ant.recordLogo,
+      description: ant.recordDescription,
+      keywords: ant.recordKeywords,
+    },
+    write.change,
   );
 }
 

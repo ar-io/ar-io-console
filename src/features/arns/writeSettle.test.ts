@@ -48,6 +48,26 @@ describe('recordsReflect', () => {
     expect(recordsReflect(undefined, w)).toBe(false);
   });
 
+  it('checks the metadata the write set, and only that', () => {
+    const w: RecordWrite = {
+      kind: 'set',
+      undername: 'docs',
+      change: { transactionId: 'TX1', ttlSeconds: 3600, targetProtocol: 0, displayName: 'New', keywords: ['a', 'b'] },
+    };
+    // A metadata-only edit: target and TTL match, metadata does not yet.
+    expect(recordsReflect([rec('docs', 'TX1', { displayName: 'Old', keywords: ['a', 'b'] })], w)).toBe(false);
+    expect(recordsReflect([rec('docs', 'TX1', { displayName: 'New', keywords: ['a'] })], w)).toBe(false);
+    // Keywords compare by contents; fields the write left out are not checked.
+    expect(recordsReflect([rec('docs', 'TX1', { displayName: 'New', keywords: ['a', 'b'], description: 'any' })], w)).toBe(true);
+  });
+
+  it('checks protocol and priority when the write set them', () => {
+    const w: RecordWrite = { kind: 'set', undername: 'p', change: { transactionId: 'T', ttlSeconds: 60, targetProtocol: 1, priority: 2 } };
+    expect(recordsReflect([rec('p', 'T', { ttlSeconds: 60, targetProtocol: 0, priority: 2 })], w)).toBe(false);
+    expect(recordsReflect([rec('p', 'T', { ttlSeconds: 60, targetProtocol: 1, priority: 1 })], w)).toBe(false);
+    expect(recordsReflect([rec('p', 'T', { ttlSeconds: 60, targetProtocol: 1, priority: 2 })], w)).toBe(true);
+  });
+
   it('matches undernames case-insensitively', () => {
     expect(recordsReflect([rec('docs', 'TX1')], set('Docs', 'TX1'))).toBe(true);
     expect(recordsReflect([rec('docs', 'TX1')], { kind: 'remove', undername: 'DOCS' })).toBe(false);
@@ -106,6 +126,12 @@ describe('apex', () => {
     expect(apexReflects(ant, w)).toBe(false);
     expect(apexReflects({ ...ant, target: 'NEW', ttlSeconds: 900 }, w)).toBe(true);
     expect(apexReflects(undefined, w)).toBe(false);
+  });
+
+  it('checks the apex metadata the write set', () => {
+    const w: RecordWrite = { kind: 'set', undername: '@', change: { transactionId: 'OLD', ttlSeconds: 3600, targetProtocol: 0, description: 'new' } };
+    expect(apexReflects({ ...ant, targetProtocol: 0, recordDescription: 'old' }, w)).toBe(false);
+    expect(apexReflects({ ...ant, targetProtocol: 0, recordDescription: 'new' }, w)).toBe(true);
   });
 
   it('applies the write to the base record fields only', () => {
