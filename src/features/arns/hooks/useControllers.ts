@@ -21,6 +21,16 @@ type ANTControllersReadable = {
   getState(): Promise<{ Owner?: string; Controllers?: string[] }>;
 };
 
+/** One read of an ANT's owner and controllers; see `useControllersState`. */
+export async function fetchControllersState(processId: string): Promise<ControllersState> {
+  const ant = (await getANT(processId)) as unknown as ANTControllersReadable;
+  const state = await ant.getState();
+  return {
+    owner: state.Owner ?? '',
+    controllers: Array.isArray(state.Controllers) ? state.Controllers : [],
+  };
+}
+
 /**
  * Read an ANT's controllers and owner from `getState()`. One read; cached
  * briefly while the editor is open. The owner is needed alongside the controller
@@ -35,16 +45,7 @@ export function useControllersState(
     queryKey: ['ant-controllers', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 15_000,
-    queryFn: async () => {
-      const ant = (await getANT(
-        processId as string,
-      )) as unknown as ANTControllersReadable;
-      const state = await ant.getState();
-      return {
-        owner: state.Owner ?? '',
-        controllers: Array.isArray(state.Controllers) ? state.Controllers : [],
-      };
-    },
+    queryFn: () => fetchControllersState(processId as string),
   });
 }
 

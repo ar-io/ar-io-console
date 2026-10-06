@@ -52,6 +52,29 @@ type ANTStateReadable = {
   }>;
 };
 
+/** One read of an ANT's metadata and base `@` record; see `useANTDetails`. */
+export async function fetchANTDetails(processId: string): Promise<ANTDetails> {
+  const ant = (await getANT(processId)) as unknown as ANTStateReadable;
+  const state = await ant.getState({ includeMetadata: true });
+  const apex = state.Records?.['@'];
+  return {
+    name: state.Name ?? '',
+    ticker: state.Ticker ?? '',
+    description: state.Description ?? '',
+    keywords: Array.isArray(state.Keywords) ? state.Keywords : [],
+    logo: state.Logo ?? '',
+    target: apex?.transactionId,
+    ttlSeconds: apex?.ttlSeconds,
+    targetProtocol: apex?.targetProtocol,
+    priority: apex?.priority,
+    recordOwner: apex?.owner,
+    recordDisplayName: apex?.displayName,
+    recordLogo: apex?.logo,
+    recordDescription: apex?.description,
+    recordKeywords: Array.isArray(apex?.keywords) ? apex?.keywords : undefined,
+  };
+}
+
 /**
  * Read an ANT's current metadata + base `@` record so the Details editor can
  * prefill its form. One `getState` (a `getProgramAccounts`/`getMultipleAccounts`
@@ -63,26 +86,6 @@ export function useANTDetails(processId: string | undefined, enabled: boolean) {
     queryKey: ['ant-details', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 30_000,
-    queryFn: async () => {
-      const ant = (await getANT(processId as string)) as unknown as ANTStateReadable;
-      const state = await ant.getState({ includeMetadata: true });
-      const apex = state.Records?.['@'];
-      return {
-        name: state.Name ?? '',
-        ticker: state.Ticker ?? '',
-        description: state.Description ?? '',
-        keywords: Array.isArray(state.Keywords) ? state.Keywords : [],
-        logo: state.Logo ?? '',
-        target: apex?.transactionId,
-        ttlSeconds: apex?.ttlSeconds,
-        targetProtocol: apex?.targetProtocol,
-        priority: apex?.priority,
-        recordOwner: apex?.owner,
-        recordDisplayName: apex?.displayName,
-        recordLogo: apex?.logo,
-        recordDescription: apex?.description,
-        recordKeywords: Array.isArray(apex?.keywords) ? apex?.keywords : undefined,
-      };
-    },
+    queryFn: () => fetchANTDetails(processId as string),
   });
 }

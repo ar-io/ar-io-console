@@ -20,7 +20,8 @@ interface TransferDomainModalProps {
   domain: ArNSName;
   onClose: () => void;
   /** Called after a settled transfer so the caller can refresh its data. */
-  onSuccess?: () => void;
+  /** Fired after the transfer lands, with the new owner. */
+  onSuccess?: (newOwner?: string) => void;
 }
 
 /**
@@ -56,7 +57,7 @@ export default function TransferDomainModal({
   const handleTransfer = async () => {
     try {
       await transfer(domain.processId, trimmedRecipient);
-      onSuccess?.();
+      onSuccess?.(trimmedRecipient);
     } catch {
       // surfaced via `error`
     }

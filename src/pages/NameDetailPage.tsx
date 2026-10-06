@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
@@ -32,7 +32,28 @@ import {
   usePrimaryName,
 } from '@/features/arns';
 import { useArNSNameRecord } from '@/features/arns/hooks/useArNSNameRecord';
-import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
+import {
+  antSummariesMints,
+  fetchAntSummaries,
+  useAntSummaries,
+  type AntSummary,
+} from '@/features/arns/hooks/useAntLogos';
+import { fetchANTDetails, type ANTDetails } from '@/features/arns/hooks/useANTDetails';
+import { fetchUndernameRecords, type UndernameRecord } from '@/features/arns/hooks/useUndernames';
+import { fetchControllersState } from '@/features/arns/hooks/useControllers';
+import { fetchPrimaryName, type PrimaryName } from '@/features/arns/hooks/usePrimaryName';
+import { useArNSConfigKey } from '@/features/arns/hooks/useArNSConfigKey';
+import { useSettleAfterWrite } from '@/features/arns/hooks/useSettleAfterWrite';
+import {
+  apexReflects,
+  applyApexWrite,
+  applyControllerWrite,
+  applyRecordWrite,
+  controllersReflect,
+  recordsReflect,
+  type ControllerWrite,
+  type RecordWrite,
+} from '@/features/arns/writeSettle';
 import { deriveAntRoleStrict } from '@/features/arns/antRole';
 import { isArweaveTxId, isValidArNSName } from '@/features/arns/utils';
 import { toUnicodeName } from '@/utils/punycode';
@@ -231,18 +252,103 @@ export default function NameDetailPage() {
   // this name's processId / name / owner (ANT details, undernames, controllers,
   // ANT summaries, primary-name) — otherwise the page shows a stale target,
   // records, ownership, or primary status after Edit/Primary/Transfer/Reassign/
-  // Release (those modals only call onSuccess).
-  const refresh = () => {
+  // Release (those modals only call onSuccess). Once per write, never looped.
+  //
+  // `settled` names a query a settle (below) is confirming: it is left out,
+  // because this one immediate read is the one that can hit a lagging node and
+  // overwrite the change just shown.
+  const refresh = (settled?: QueryKey) => {
+    const skip = settled ? JSON.stringify(settled) : undefined;
     refetchRecord();
     queryClient.invalidateQueries({
       predicate: (q) => {
         const key = JSON.stringify(q.queryKey);
+        if (key === skip) return false;
         return (
           (!!processId && key.includes(processId)) ||
           (!!owner && key.includes(owner)) ||
           key.includes(name)
         );
       },
+    });
+  };
+
+  /*
+    Writes whose result the page can state show it at once and confirm it with
+    a few reads of that one query (`useSettleAfterWrite`). A single re-read
+    straight after the write could land on an RPC node a slot behind, and the
+    stale answer then stayed until the page remounted.
+  */
+  const configKey = useArNSConfigKey();
+  const settle = useSettleAfterWrite(`${configKey}:${name}`);
+
+  /*
+    A record write changes the records and nothing else on the page, so it
+    settles that one query and skips the broad refresh, which would re-read
+    the name, its summaries, controllers and primary name for no change.
+  */
+  const onRecordWrite = (write: RecordWrite) => {
+    if (!processId) return;
+    if (write.undername === '@') {
+      settle<ANTDetails>({
+        queryKey: ['ant-details', configKey, processId],
+        read: () => fetchANTDetails(processId),
+        reflects: (d) => apexReflects(d, write),
+        apply: (d) => applyApexWrite(d, write),
+      });
+    } else {
+      settle<UndernameRecord[]>({
+        queryKey: ['ant-undernames', configKey, processId],
+        read: () => fetchUndernameRecords(processId),
+        reflects: (d) => recordsReflect(d, write),
+        apply: (d) => applyRecordWrite(d, write),
+      });
+    }
+  };
+
+  const onTransferred = (newOwner?: string) => {
+    if (!processId || !newOwner) return refresh();
+    const mints = antSummariesMints([processId]);
+    const queryKey = ['ant-summaries', configKey, mints];
+    refresh(queryKey);
+    settle<Record<string, AntSummary>>({
+      queryKey,
+      read: () => fetchAntSummaries(mints),
+      reflects: (d) => d?.[processId]?.owner === newOwner,
+      apply: (d) => d && { ...d, [processId]: { ...d[processId], owner: newOwner } },
+    });
+  };
+
+  const onControllersChanged = (write?: ControllerWrite) => {
+    if (!processId || !write) return refresh();
+    const queryKey = ['ant-controllers', configKey, processId];
+    refresh(queryKey);
+    settle({
+      queryKey,
+      read: () => fetchControllersState(processId),
+      reflects: (d) => controllersReflect(d, write),
+      apply: (d) => applyControllerWrite(d, write),
+    });
+  };
+
+  /*
+    Only for the owner: the page reads the OWNER's primary name, and a
+    controller's write sets their own (or files a request), so there is nothing
+    on this page to expect.
+  */
+  const onPrimarySet = (primaryName?: string) => {
+    if (role !== 'owner' || !owner || !primaryName) return refresh();
+    const queryKey = ['arns-primary-name', configKey, owner];
+    refresh(queryKey);
+    settle({
+      queryKey,
+      read: () => fetchPrimaryName(owner),
+      reflects: (d) => d?.current?.name === primaryName,
+      apply: (d) =>
+        d && {
+          current: { ...d.current, name: primaryName } as PrimaryName,
+          request: d.request?.name === primaryName ? undefined : d.request,
+        },
     });
   };
 
@@ -566,18 +672,18 @@ export default function NameDetailPage() {
             undernames={undernames}
             canManage={canEditRecords}
             undernameLimit={record.undernameLimit}
-            onSuccess={refresh}
+            onSuccess={onRecordWrite}
           />
 
           {/* Action modals — each reuses the existing component, refetches on success */}
           {open === 'manage' && (
-            <ManageDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ManageDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
           {open === 'edit' && (
-            <EditDetailsModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <EditDetailsModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
           {open === 'controllers' && (
-            <ControllersModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ControllersModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={onControllersChanged} />
           )}
           {open === 'primary' && (
             <PrimaryNameModal
@@ -592,17 +698,17 @@ export default function NameDetailPage() {
                   : undefined
               }
               onClose={() => setOpen(null)}
-              onSuccess={refresh}
+              onSuccess={onPrimarySet}
             />
           )}
           {open === 'transfer' && (
-            <TransferDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <TransferDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={onTransferred} />
           )}
           {open === 'reassign' && (
-            <ReassignDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ReassignDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
           {open === 'release' && (
-            <ReleaseDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ReleaseDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
         </>
       ) : null}

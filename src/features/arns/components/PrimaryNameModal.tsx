@@ -34,7 +34,8 @@ interface PrimaryNameModalProps {
   pendingRequest?: { name: string; initiator: string };
   onClose: () => void;
   /** Called after any successful write, so the caller can refetch/invalidate. */
-  onSuccess?: () => void;
+  /** Fired after a write lands, with the name that is now primary. */
+  onSuccess?: (primaryName?: string) => void;
 }
 
 const TITLES: Record<PrimaryNameModalMode, string> = {
@@ -100,8 +101,8 @@ export default function PrimaryNameModal({
 
   const isPickMode = mode === 'set' || mode === 'change';
 
-  const afterWrite = () => {
-    onSuccess?.();
+  const afterWrite = (primaryName: string) => {
+    onSuccess?.(primaryName);
   };
 
   const handleSet = async () => {
@@ -111,7 +112,7 @@ export default function PrimaryNameModal({
       // land) while surfacing the error via state — mirror ManageDomainModal and
       // only fire onSuccess when we actually got a tx id back.
       const id = await setPrimaryName({ name: selected.name });
-      if (id) afterWrite();
+      if (id) afterWrite(selected.name);
     } catch {
       /* surfaced via error */
     }
@@ -124,7 +125,7 @@ export default function PrimaryNameModal({
         name: pendingRequest.name,
         address: pendingRequest.initiator,
       });
-      if (id) afterWrite();
+      if (id) afterWrite(pendingRequest.name);
     } catch {
       /* surfaced via error */
     }
