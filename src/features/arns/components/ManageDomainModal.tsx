@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarPlus,
   CheckCircle2,
@@ -133,6 +133,13 @@ export default function ManageDomainModal({
   const [years, setYears] = useState(1);
   const [qty, setQty] = useState(1);
   const [selectedId, setSelectedId] = useState<string | undefined>();
+  /*
+    Credits a finished token top-up is waiting on. A token payment lands as
+    credits later (AR in 15 to 30 minutes, SOL within a minute), and until it
+    does the route here is still "top up", so Continue would send the same
+    payment again. Held until the balance covers it.
+  */
+  const [awaitingCredits, setAwaitingCredits] = useState<number | null>(null);
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
   const [showPayment, setShowPayment] = useState(false);
@@ -375,6 +382,29 @@ export default function ManageDomainModal({
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
+  const creditsArriving =
+    awaitingCredits !== null && balances.credits < awaitingCredits - 1e-9;
+  useEffect(() => {
+    if (awaitingCredits === null) return;
+    if (!creditsArriving) {
+      setAwaitingCredits(null);
+      return;
+    }
+    // Re-read the balance from the payment service every 30s while waiting.
+    // No Solana RPC is involved, and nothing faster is needed for AR.
+    const t = setInterval(
+      () => window.dispatchEvent(new CustomEvent('refresh-balance')),
+      30_000,
+    );
+    // Release the hold after 45 minutes, past AR's slowest case, so a price
+    // that moved after payment can't lock Continue for good.
+    const release = setTimeout(() => setAwaitingCredits(null), 45 * 60_000);
+    return () => {
+      clearInterval(t);
+      clearTimeout(release);
+    };
+  }, [awaitingCredits, creditsArriving]);
+
   // Turbo pays the Solana cost on every credits-settled route, so topping up
   // credits is always enough to make the change succeed.
   const needsPaymentStep =
@@ -685,11 +715,21 @@ export default function ManageDomainModal({
               </div>
             )}
 
+            {creditsArriving && (
+              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 p-4 text-sm text-foreground/80">
+                <Loader2 className="mt-0.5 h-4 w-4 flex-shrink-0 animate-spin" />
+                <span>
+                  Payment sent. Your credits are on their way; Continue
+                  unlocks when they arrive.
+                </span>
+              </div>
+            )}
+
             {/* Confirm */}
             {needsPaymentStep ? (
               <button
                 onClick={() => setShowPayment(true)}
-                disabled={route.kind !== 'card' && !priceReady}
+                disabled={creditsArriving || (route.kind !== 'card' && !priceReady)}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {route.kind === 'card' ? (
@@ -751,7 +791,13 @@ export default function ManageDomainModal({
                 token={route.token as SupportedTokenType}
                 tokenLabel={tokenLabels[route.token as SupportedTokenType]}
                 onClose={() => setShowPayment(false)}
-                onComplete={() => setShowPayment(false)}
+                onComplete={() => {
+                  setShowPayment(false);
+                  // Back to the default route, which becomes credits once the
+                  // top-up lands, and hold Continue until then.
+                  setSelectedId(undefined);
+                  if (creditsPrice) setAwaitingCredits(creditsPrice.sponsoredCredits);
+                }}
               />
             )}
           </>

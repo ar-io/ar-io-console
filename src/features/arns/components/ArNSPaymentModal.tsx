@@ -65,6 +65,18 @@ export default function ArNSPaymentModal({
   const [step, setStep] = useState<TopUpHostStep>('details');
   const payingByCard = paymentMethod === 'fiat';
 
+  /*
+    Closing once the payment has landed IS completion. Without a purchase name
+    the success screen has no continue button, so the close button is how
+    people leave it, and treating that as a cancel let the host offer the same
+    payment again. With `arnsName` the success screen continues by itself, so
+    this would run the purchase twice.
+  */
+  const close = () => {
+    if (step === 'success' && !arnsName) onComplete();
+    else onClose();
+  };
+
   return (
     /*
       `dismissible={!busy}` blocks Escape and backdrop clicks while a payment is
@@ -76,7 +88,7 @@ export default function ArNSPaymentModal({
       inside a flow they may have good reason to abandon; the goal is to prevent
       an accident, not to remove the exit.
     */
-    <BaseModal onClose={onClose} showCloseButton dismissible={!busy}>
+    <BaseModal onClose={close} showCloseButton dismissible={!busy}>
       <div className="w-[92vw] max-w-xl p-4 sm:p-5">
         {/*
           Gone once the payment lands. "Pay for name.ar.io — you'll confirm

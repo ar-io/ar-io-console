@@ -1005,7 +1005,13 @@ export default function CryptoConfirmationPanel({
 
             {/* Action Buttons */}
             <div className="flex justify-between items-center pt-6 border-t border-border/20">
-              <button onClick={onBack} className="text-sm text-foreground/80 hover:text-foreground">
+              {/* Disabled mid-transfer: in a host modal Back closes the
+                  payment, and the result of a transfer in flight with it. */}
+              <button
+                onClick={onBack}
+                disabled={isProcessing}
+                className="text-sm text-foreground/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 Back
               </button>
 
