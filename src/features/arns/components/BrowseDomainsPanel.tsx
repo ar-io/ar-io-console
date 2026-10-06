@@ -18,6 +18,7 @@ import {
 } from '../hooks/useAllArNSNames';
 import useDebounce from '../../../hooks/useDebounce';
 import { toUnicodeName } from '@/utils/punycode';
+import { actionButtonClass } from '@/components/actionButton';
 
 const PAGE_SIZE = 25;
 const EXPIRING_WINDOW_DAYS = 60;
@@ -122,19 +123,19 @@ export default function BrowseDomainsPanel() {
           <Link
             to="/arns"
             title="Register a name"
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+            className={actionButtonClass('primary')}
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Register a name</span>
+            <Plus className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only">Register a name</span>
           </Link>
           <button
             onClick={refresh}
             disabled={loading}
             title="Refresh registry"
-            className="flex items-center gap-2 px-3 py-2 rounded-full bg-card border border-border/20 text-sm text-foreground/80 hover:bg-primary/10 transition-colors disabled:opacity-50"
+            className={actionButtonClass('default')}
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="sr-only sm:not-sr-only">Refresh</span>
           </button>
         </div>
       </div>

@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ExternalLink,
   Globe,
   Loader2,
   Pencil,
+  Plus,
   Search,
   Trash2,
   X,
@@ -30,6 +32,7 @@ import { recordCostNote, recordSaveCost } from '../records/recordCost';
 import { SELF_SIGNED_ONLY_NOTE } from '../records/writerChoice';
 import { useUndernameWrites, type UndernameRecord } from '../hooks/useUndernames';
 import type { ANTDetails } from '../hooks/useANTDetails';
+import { actionButtonClass } from '@/components/actionButton';
 
 /** Local mirror of the page's id shortener — keeps this component self-contained. */
 function shorten(id: string, head = 6, tail = 4) {
@@ -69,6 +72,8 @@ interface RecordsTableProps {
   canManage: boolean;
   /** Undernames allowed by the current limit (excludes `@`). */
   undernameLimit?: number | null;
+  /** Host that serves this network's names (`ar.io`, or the testnet gateway); rows link to it. */
+  arnsHost?: string;
   onSuccess: () => void;
 }
 
@@ -99,6 +104,7 @@ export default function RecordsTable({
   undernames,
   canManage,
   undernameLimit,
+  arnsHost,
   onSuccess,
 }: RecordsTableProps) {
   const [q, setQ] = useState('');
@@ -315,7 +321,7 @@ export default function RecordsTable({
               placeholder="blog"
               className="w-48 rounded-2xl border border-border/20 bg-card p-2 text-sm focus:border-primary"
             />
-            <span className="text-sm text-foreground/60">_{'{name}'}.ar.io</span>
+            <span className="text-sm text-foreground/60">_{'{name}'}.{arnsHost ?? 'ar.io'}</span>
           </div>
           {newName && !nameValid && (
             <p className="mt-1 text-xs text-error">
@@ -473,8 +479,9 @@ export default function RecordsTable({
               title={atLimit ? 'Undername limit reached. Add slots from the Overview card.' : undefined}
               // The page's section-action style ("Edit", "Manage"), not a
               // filled button: one primary action per page, and this isn't it.
-              className="-mr-2 flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-primary transition-colors enabled:hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className={actionButtonClass()}
             >
+              <Plus className="h-3.5 w-3.5" />
               Add record
             </button>
           )}
@@ -496,7 +503,22 @@ export default function RecordsTable({
               <div key={r.key}>
                 <div className="flex items-center justify-between gap-4 py-2.5">
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-mono text-sm text-foreground">{r.label}</span>
+                    {/* Opens what the record serves: `name.<host>` for the root,
+                        `undername_name.<host>` for the rest. */}
+                    {name && arnsHost && r.target ? (
+                      <a
+                        href={`https://${r.kind === 'apex' ? name : `${r.key}_${name}`}.${arnsHost}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Open ${r.kind === 'apex' ? name : `${r.key}_${name}`}.${arnsHost}`}
+                        className="group flex min-w-0 items-center gap-1 font-mono text-sm text-foreground hover:text-primary"
+                      >
+                        <span className="truncate group-hover:underline">{r.label}</span>
+                        <ExternalLink className="h-3 w-3 flex-shrink-0 text-foreground/40 group-hover:text-primary" />
+                      </a>
+                    ) : (
+                      <span className="truncate font-mono text-sm text-foreground">{r.label}</span>
+                    )}
                     {r.kind === 'apex' && (
                       <span className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                         root

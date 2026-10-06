@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Loader2, Star, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Pencil, Star, X, XCircle } from 'lucide-react';
 
 import type { ArNSName } from '@/types';
 import {
@@ -10,6 +10,7 @@ import {
   useArNSTurboSigner,
 } from '@/features/arns';
 import type { PrimaryNameModalMode } from '@/features/arns';
+import { actionButtonClass } from '@/components/actionButton';
 
 interface PrimaryNameCardProps {
   address: string;
@@ -119,19 +120,21 @@ export default function PrimaryNameCard({
                 <span className="font-mono text-sm text-primary">
                   {currentDisplay}.ar.io
                 </span>
-                <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setModalMode('change')}
                     disabled={removeBusy || confirmingRemove}
-                    className="text-foreground/70 hover:text-foreground hover:underline disabled:opacity-50"
+                    className={actionButtonClass()}
                   >
+                    <Pencil className="h-3.5 w-3.5" />
                     Change
                   </button>
                   <button
                     onClick={() => setConfirmingRemove(true)}
                     disabled={removeBusy || confirmingRemove}
-                    className="text-error/80 hover:text-error hover:underline disabled:opacity-50"
+                    className={actionButtonClass('danger')}
                   >
+                    <X className="h-3.5 w-3.5" />
                     Remove
                   </button>
                 </div>
@@ -201,8 +204,9 @@ export default function PrimaryNameCard({
               {canApproveRequest && (
                 <button
                   onClick={() => setModalMode('approve')}
-                  className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  className={actionButtonClass('primary')}
                 >
+                  <Check className="h-3.5 w-3.5" />
                   Approve
                 </button>
               )}
