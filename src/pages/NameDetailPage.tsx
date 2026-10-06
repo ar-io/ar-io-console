@@ -301,6 +301,8 @@ export default function NameDetailPage() {
         // details already loaded: `getState` would scan every record.
         read: async () => {
           const apex = await fetchApexRecord(processId);
+          // No `@` record read back: nothing to compare or apply this tick.
+          if (!apex) return undefined;
           const cur = queryClient.getQueryData<ANTDetails>(queryKey);
           return cur && { ...cur, ...apex };
         },

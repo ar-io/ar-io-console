@@ -61,21 +61,26 @@ export type ApexRecordFields = Pick<
 
 /**
  * The base `@` record alone: one batch read of its two accounts, without
- * `getState`'s program scans. Used to confirm an apex write.
+ * `getState`'s program scans. Used to confirm an apex write. Undefined when
+ * the read finds no `@` record, which right after a write means a node that
+ * has not caught up, not a record to show as blank.
  */
-export async function fetchApexRecord(processId: string): Promise<ApexRecordFields> {
+export async function fetchApexRecord(
+  processId: string,
+): Promise<ApexRecordFields | undefined> {
   const ant = (await getANT(processId)) as unknown as ANTRecordReadable;
   const apex = await ant.getRecord({ undername: '@' });
+  if (!apex) return undefined;
   return {
-    target: apex?.transactionId,
-    ttlSeconds: apex?.ttlSeconds,
-    targetProtocol: apex?.targetProtocol,
-    priority: apex?.priority,
-    recordOwner: apex?.owner,
-    recordDisplayName: apex?.displayName,
-    recordLogo: apex?.logo,
-    recordDescription: apex?.description,
-    recordKeywords: Array.isArray(apex?.keywords) ? apex?.keywords : undefined,
+    target: apex.transactionId,
+    ttlSeconds: apex.ttlSeconds,
+    targetProtocol: apex.targetProtocol,
+    priority: apex.priority,
+    recordOwner: apex.owner,
+    recordDisplayName: apex.displayName,
+    recordLogo: apex.logo,
+    recordDescription: apex.description,
+    recordKeywords: Array.isArray(apex.keywords) ? apex.keywords : undefined,
   };
 }
 
