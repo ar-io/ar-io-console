@@ -436,7 +436,17 @@ export default function ManageDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
+    /*
+      Suspended while a payment step is open over it: both portal to the body,
+      and this panel would otherwise show through around the smaller payment
+      modal. It comes back on cancel with the term and token as they were.
+    */
+    <BaseModal
+      onClose={onClose}
+      showCloseButton
+      dismissible={!isBusy}
+      suspended={showPayment && (route.kind === 'card' || route.kind === 'topup')}
+    >
       {/*
         Wider than the default modal: this one carries the full payment row
         (Balance, Card, ARIO, SOL) and at max-w-lg the options were clipped, so
@@ -737,7 +747,8 @@ export default function ManageDomainModal({
                 initialUsdAmount={topUpUsd}
                 shortfallCredits={creditShortfall}
                 paymentMethod="crypto"
-                      token={route.token as SupportedTokenType}
+                titleName={domain.displayName}
+                token={route.token as SupportedTokenType}
                 tokenLabel={tokenLabels[route.token as SupportedTokenType]}
                 onClose={() => setShowPayment(false)}
                 onComplete={() => setShowPayment(false)}

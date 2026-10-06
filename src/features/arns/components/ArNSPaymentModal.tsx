@@ -22,6 +22,12 @@ interface ArNSPaymentModalProps {
   tokenLabel?: string;
   /** The name being bought — makes the fiat panels speak about it, not storage. */
   arnsName?: string;
+  /**
+   * Names the header only, for a payment on a name the user already has
+   * (renew, upgrade, more undernames). `arnsName` also turns the panels'
+   * success copy into "confirm the registration", which is wrong there.
+   */
+  titleName?: string;
   onClose: () => void;
   /** Fired when payment completes (credits landed). */
   onComplete: () => void;
@@ -49,9 +55,11 @@ export default function ArNSPaymentModal({
   token,
   tokenLabel,
   arnsName,
+  titleName,
   onClose,
   onComplete,
 }: ArNSPaymentModalProps) {
+  const headerName = arnsName ?? titleName;
   const [busy, setBusy] = useState(false);
 
   const [step, setStep] = useState<TopUpHostStep>('details');
@@ -82,8 +90,8 @@ export default function ArNSPaymentModal({
         <ModalHeader
           icon={payingByCard ? CreditCard : Wallet}
           title={
-            arnsName
-              ? `Pay for ${arnsName}.ar.io`
+            headerName
+              ? `Pay for ${headerName}.ar.io`
               : payingByCard
                 ? 'Pay with card'
                 : `Pay with ${tokenLabel ?? 'crypto'}`
