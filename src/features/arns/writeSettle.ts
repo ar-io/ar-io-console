@@ -87,9 +87,11 @@ export function recordsReflect(
 }
 
 /**
- * The records with the write applied, in the order `useUndernameRecords`
- * returns them: an update keeps its place, a new record goes last, as the
- * next on-chain index would. Metadata the write leaves out is kept.
+ * The records with the write applied: an update keeps its place and a new
+ * record goes last. That is a placeholder position, not the chain's: the
+ * list's `index` is the order getProgramAccounts returned, which is not
+ * stable, so the confirming read may place it elsewhere. Metadata the write
+ * leaves out is kept.
  */
 export function applyRecordWrite(
   records: readonly UndernameRecord[] | undefined,

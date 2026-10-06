@@ -21,6 +21,22 @@ type ANTControllersReadable = {
   getState(): Promise<{ Owner?: string; Controllers?: string[] }>;
 };
 
+/** Structural view of the owner and controller getters, one account each. */
+type ANTControllersLightReadable = {
+  getOwner(): Promise<string>;
+  getControllers(): Promise<string[]>;
+};
+
+/**
+ * Owner and controllers from their two accounts, without `getState`'s scan of
+ * every record. Same shape as `fetchControllersState`; used to confirm a write.
+ */
+export async function fetchControllersLight(processId: string): Promise<ControllersState> {
+  const ant = (await getANT(processId)) as unknown as ANTControllersLightReadable;
+  const [owner, controllers] = await Promise.all([ant.getOwner(), ant.getControllers()]);
+  return { owner: owner ?? '', controllers: Array.isArray(controllers) ? controllers : [] };
+}
+
 /** One read of an ANT's owner and controllers; see `useControllersState`. */
 export async function fetchControllersState(processId: string): Promise<ControllersState> {
   const ant = (await getANT(processId)) as unknown as ANTControllersReadable;

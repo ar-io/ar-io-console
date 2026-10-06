@@ -41,6 +41,44 @@ type ANTRecordState = {
   keywords?: string[];
 };
 
+type ANTRecordReadable = {
+  getRecord(p: { undername: string }): Promise<ANTRecordState | undefined>;
+};
+
+/** The apex fields of `ANTDetails`, as one record read returns them. */
+export type ApexRecordFields = Pick<
+  ANTDetails,
+  | 'target'
+  | 'ttlSeconds'
+  | 'targetProtocol'
+  | 'priority'
+  | 'recordOwner'
+  | 'recordDisplayName'
+  | 'recordLogo'
+  | 'recordDescription'
+  | 'recordKeywords'
+>;
+
+/**
+ * The base `@` record alone: one batch read of its two accounts, without
+ * `getState`'s program scans. Used to confirm an apex write.
+ */
+export async function fetchApexRecord(processId: string): Promise<ApexRecordFields> {
+  const ant = (await getANT(processId)) as unknown as ANTRecordReadable;
+  const apex = await ant.getRecord({ undername: '@' });
+  return {
+    target: apex?.transactionId,
+    ttlSeconds: apex?.ttlSeconds,
+    targetProtocol: apex?.targetProtocol,
+    priority: apex?.priority,
+    recordOwner: apex?.owner,
+    recordDisplayName: apex?.displayName,
+    recordLogo: apex?.logo,
+    recordDescription: apex?.description,
+    recordKeywords: Array.isArray(apex?.keywords) ? apex?.keywords : undefined,
+  };
+}
+
 type ANTStateReadable = {
   getState(opts?: { includeMetadata?: boolean }): Promise<{
     Name?: string;

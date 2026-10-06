@@ -84,7 +84,7 @@ describe('recordsReflect', () => {
 });
 
 describe('applyRecordWrite', () => {
-  it('appends a new record, which sorts last like a fresh on-chain index', () => {
+  it('appends a new record last until a read places it', () => {
     const out = applyRecordWrite([rec('a', 'T1')], set('b', 'T2'));
     expect(out?.map((r) => r.undername)).toEqual(['a', 'b']);
     expect(out?.[1]).toMatchObject({ transactionId: 'T2', ttlSeconds: 3600 });

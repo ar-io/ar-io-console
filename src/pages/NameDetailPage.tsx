@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
-import { useQueryClient, type QueryKey } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
@@ -38,9 +38,9 @@ import {
   useAntSummaries,
   type AntSummary,
 } from '@/features/arns/hooks/useAntLogos';
-import { fetchANTDetails, type ANTDetails } from '@/features/arns/hooks/useANTDetails';
+import { fetchApexRecord, type ANTDetails } from '@/features/arns/hooks/useANTDetails';
 import { fetchUndernameRecords, type UndernameRecord } from '@/features/arns/hooks/useUndernames';
-import { fetchControllersState } from '@/features/arns/hooks/useControllers';
+import { fetchControllersLight } from '@/features/arns/hooks/useControllers';
 import { fetchPrimaryName, type PrimaryName } from '@/features/arns/hooks/usePrimaryName';
 import { useArNSConfigKey } from '@/features/arns/hooks/useArNSConfigKey';
 import { useSettleAfterWrite } from '@/features/arns/hooks/useSettleAfterWrite';
@@ -248,22 +248,31 @@ export default function NameDetailPage() {
       }`
     : undefined;
 
+  /*
+    Writes whose result the page can state show it at once and confirm it with
+    a few reads of that one query (`useSettleAfterWrite`). A single re-read
+    straight after the write could land on an RPC node a slot behind, and the
+    stale answer then stayed until the page remounted.
+  */
+  const configKey = useArNSConfigKey();
+  const { settle, isSettling } = useSettleAfterWrite(`${configKey}:${name}`);
+
   // After any write, refetch the record AND invalidate every query scoped to
   // this name's processId / name / owner (ANT details, undernames, controllers,
   // ANT summaries, primary-name) — otherwise the page shows a stale target,
   // records, ownership, or primary status after Edit/Primary/Transfer/Reassign/
   // Release (those modals only call onSuccess). Once per write, never looped.
   //
-  // `settled` names a query a settle (below) is confirming: it is left out,
-  // because this one immediate read is the one that can hit a lagging node and
-  // overwrite the change just shown.
-  const refresh = (settled?: QueryKey) => {
-    const skip = settled ? JSON.stringify(settled) : undefined;
+  // Any query a settle is confirming is left out, including one started by an
+  // earlier write: an immediate read there duplicates the settle's own, and
+  // can land on a lagging node and flash the old state back. So a handler
+  // starts its settle BEFORE calling this.
+  const refresh = () => {
     refetchRecord();
     queryClient.invalidateQueries({
       predicate: (q) => {
+        if (isSettling(q.queryKey)) return false;
         const key = JSON.stringify(q.queryKey);
-        if (key === skip) return false;
         return (
           (!!processId && key.includes(processId)) ||
           (!!owner && key.includes(owner)) ||
@@ -274,15 +283,6 @@ export default function NameDetailPage() {
   };
 
   /*
-    Writes whose result the page can state show it at once and confirm it with
-    a few reads of that one query (`useSettleAfterWrite`). A single re-read
-    straight after the write could land on an RPC node a slot behind, and the
-    stale answer then stayed until the page remounted.
-  */
-  const configKey = useArNSConfigKey();
-  const settle = useSettleAfterWrite(`${configKey}:${name}`);
-
-  /*
     A record write changes the records and nothing else on the page, so it
     settles that one query and skips the broad refresh, which would re-read
     the name, its summaries, controllers and primary name for no change.
@@ -290,9 +290,16 @@ export default function NameDetailPage() {
   const onRecordWrite = (write: RecordWrite) => {
     if (!processId) return;
     if (write.undername === '@') {
+      const queryKey = ['ant-details', configKey, processId];
       settle<ANTDetails>({
-        queryKey: ['ant-details', configKey, processId],
-        read: () => fetchANTDetails(processId),
+        queryKey,
+        // The apex record alone (one batch of two accounts), laid over the
+        // details already loaded: `getState` would scan every record.
+        read: async () => {
+          const apex = await fetchApexRecord(processId);
+          const cur = queryClient.getQueryData<ANTDetails>(queryKey);
+          return cur && { ...cur, ...apex };
+        },
         reflects: (d) => apexReflects(d, write),
         apply: (d) => applyApexWrite(d, write),
       });
@@ -309,29 +316,33 @@ export default function NameDetailPage() {
   const onTransferred = (newOwner?: string) => {
     if (!processId || !newOwner) return refresh();
     const mints = antSummariesMints([processId]);
-    const queryKey = ['ant-summaries', configKey, mints];
-    refresh(queryKey);
     settle<Record<string, AntSummary>>({
-      queryKey,
+      queryKey: ['ant-summaries', configKey, mints],
       read: () => fetchAntSummaries(mints),
       reflects: (d) => d?.[processId]?.owner === newOwner,
       // Only over a summary already loaded: role derivation reads its
-      // controllers, so a half-built entry would break the page.
+      // controllers, so a half-built entry would break the page. A transfer
+      // clears the controllers on chain, so they are cleared here too; left in
+      // place, the old owner's delegates would still read as controllers.
       apply: (d) =>
-        d?.[processId] ? { ...d, [processId]: { ...d[processId], owner: newOwner } } : d,
+        d?.[processId]
+          ? { ...d, [processId]: { ...d[processId], owner: newOwner, controllers: [] } }
+          : d,
     });
+    refresh();
   };
 
   const onControllersChanged = (write?: ControllerWrite) => {
     if (!processId || !write) return refresh();
-    const queryKey = ['ant-controllers', configKey, processId];
-    refresh(queryKey);
     settle({
-      queryKey,
-      read: () => fetchControllersState(processId),
+      queryKey: ['ant-controllers', configKey, processId],
+      // Owner and controllers from their two accounts; `getState` would scan
+      // every record for a change that touched none of them.
+      read: () => fetchControllersLight(processId),
       reflects: (d) => controllersReflect(d, write),
       apply: (d) => applyControllerWrite(d, write),
     });
+    refresh();
   };
 
   /*
@@ -341,10 +352,8 @@ export default function NameDetailPage() {
   */
   const onPrimarySet = (primaryName?: string) => {
     if (role !== 'owner' || !owner || !primaryName) return refresh();
-    const queryKey = ['arns-primary-name', configKey, owner];
-    refresh(queryKey);
     settle({
-      queryKey,
+      queryKey: ['arns-primary-name', configKey, owner],
       read: () => fetchPrimaryName(owner),
       reflects: (d) => d?.current?.name === primaryName,
       apply: (d) =>
@@ -358,6 +367,7 @@ export default function NameDetailPage() {
           request: d.request?.name === primaryName ? undefined : d.request,
         },
     });
+    refresh();
   };
 
   return (
