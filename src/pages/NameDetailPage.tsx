@@ -36,6 +36,8 @@ import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
 import { deriveAntRoleStrict } from '@/features/arns/antRole';
 import { isArweaveTxId, isValidArNSName } from '@/features/arns/utils';
 import { toUnicodeName } from '@/utils/punycode';
+import { actionButtonClass } from '@/components/actionButton';
+import { arnsHostFor } from '@/features/pages/publish/renderCtx';
 
 /** Which action modal is open, if any. */
 type OpenModal =
@@ -96,30 +98,18 @@ function SectionCard({
   );
 }
 
-/**
- * A section's action: small and quiet. `danger` marks the owner's
- * irreversible ones in red; each opens a modal with its own warning and
- * confirmation, so the link itself need not be loud.
- */
+/** A section's action, beside its title. See `actionButtonClass`. */
 function SectionAction({
   label,
   onClick,
   danger,
-  className = '-mr-2',
 }: {
   label: string;
   onClick: () => void;
   danger?: boolean;
-  className?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${className} flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
-        danger ? 'text-error hover:bg-error/10' : 'text-primary hover:bg-primary/10'
-      }`}
-    >
+    <button type="button" onClick={onClick} className={actionButtonClass(danger ? 'danger' : 'default')}>
       {label}
     </button>
   );
@@ -154,6 +144,10 @@ export default function NameDetailPage() {
   const backLabel = backTo === '/my-domains' ? 'My domains' : 'All names';
   const navigate = useNavigate();
   const configMode = useStore((s) => s.configMode);
+  const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
+  // The host that serves this network's names: ar.io on mainnet, the testnet
+  // gateway on devnet, where ar.io would not resolve them.
+  const arnsHost = arnsHostFor({ configMode, arioGatewayUrl });
   const { arnsAddress } = useLinkedSolanaWallet();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
@@ -374,7 +368,7 @@ export default function NameDetailPage() {
               </div>
             </div>
             <a
-              href={`https://${name}.ar.io`}
+              href={`https://${name}.${arnsHost}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
@@ -480,11 +474,11 @@ export default function NameDetailPage() {
               icon={Layers}
               action={
                 ownerOnly && (
-                  <div className="-mr-2 flex flex-wrap justify-end gap-x-1">
-                    <SectionAction danger className="" label="Transfer" onClick={() => setOpen('transfer')} />
-                    <SectionAction danger className="" label="Reassign" onClick={() => openOwnerAction('reassign')} />
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    <SectionAction danger label="Transfer" onClick={() => setOpen('transfer')} />
+                    <SectionAction danger label="Reassign" onClick={() => openOwnerAction('reassign')} />
                     {record.type === 'permabuy' && (
-                      <SectionAction danger className="" label="Release" onClick={() => openOwnerAction('release')} />
+                      <SectionAction danger label="Release" onClick={() => openOwnerAction('release')} />
                     )}
                   </div>
                 )
@@ -566,6 +560,7 @@ export default function NameDetailPage() {
             undernames={undernames}
             canManage={canEditRecords}
             undernameLimit={record.undernameLimit}
+            arnsHost={arnsHost}
             onSuccess={refresh}
           />
 

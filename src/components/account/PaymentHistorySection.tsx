@@ -22,6 +22,7 @@ import { wincPerCredit, tokenLabels, type SupportedTokenType } from '@/constants
 import { formatSmallestUnit } from '@/utils/jitPayment';
 import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
 import CopyButton from '@/components/CopyButton';
+import { actionButtonClass } from '@/components/actionButton';
 
 // ---- formatting helpers ------------------------------------------------------
 
@@ -241,7 +242,7 @@ export default function PaymentHistorySection() {
             <button
               onClick={() => downloadTopupCsv(payments)}
               title="Export loaded top-up history as CSV"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/20 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-card"
+              className={actionButtonClass('default')}
             >
               <Download className="h-3.5 w-3.5" />
               Export CSV

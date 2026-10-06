@@ -9,8 +9,22 @@ All notable changes to the ar.io Console are documented in this file.
   day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
   5,000, 10,000 and 25,000 ARIO. A preset at or above the limit is replaced by
   the limit itself.
+- **One style for small action buttons.** Export CSV, Check Status, Clear
+  History, Refresh, Edit, Manage and the other buttons beside a section or list
+  title looked different on almost every screen, and some were plain text that
+  did not read as a button on a phone. They now share one outlined style, red
+  for actions that delete or give something away, and a small dark button for
+  the one main action in a header.
+
+### Added
+- **Open a record from its name.** On a name's page, each record in the
+  Records table links to what it serves: `name.ar.io` for the root,
+  `undername_name.ar.io` for the rest.
 
 ### Fixed
+- **Visit on testnet.** The Visit button on a name's page opened
+  `name.ar.io`, which does not resolve testnet names. It now uses the testnet
+  gateway, as Pages already did.
 - **Paying from a Solana wallet after a reload.** With Solflare, reloading Buy
   Credits and paying with ARIO, SOL or USDC failed with "Wallet not available
   for direct payment", because the wallet was only reconnected on the domain

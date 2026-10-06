@@ -8,6 +8,7 @@ import { sanitizeUndername, hasInvalidCharacters } from '../utils/undernames';
 import ArNSGetNameLinks from './ArNSGetNameLinks';
 import { useStore } from '../store/useStore';
 import { promptSignIn } from '../utils';
+import { actionButtonClass } from '@/components/actionButton';
 
 interface ArNSAssociationPanelProps {
   enabled: boolean;
@@ -309,10 +310,10 @@ export default function ArNSAssociationPanel({
                   <button
                     onClick={() => fetchOwnedNames(true)}
                     disabled={loading}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-foreground hover:text-foreground/80 transition-colors disabled:opacity-50"
+                    className={actionButtonClass('default')}
                     title="Refresh ArNS names"
                   >
-                    <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                     Refresh
                   </button>
                 </div>

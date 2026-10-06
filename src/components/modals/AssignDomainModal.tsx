@@ -17,6 +17,7 @@ import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { sanitizeUndername, hasInvalidCharacters } from '../../utils/undernames';
 import ArNSGetNameLinks from '../ArNSGetNameLinks';
+import { actionButtonClass } from '@/components/actionButton';
 
 interface AssignDomainModalProps {
   onClose: () => void;
@@ -261,9 +262,9 @@ export default function AssignDomainModal({
                       {!needsLinking && (
                         <button
                           onClick={() => fetchOwnedNames(true)}
-                          className="px-3 py-1.5 border border-border/20 text-foreground/80 rounded-full text-xs hover:bg-card transition-colors flex items-center gap-1"
+                          className={actionButtonClass('default')}
                         >
-                          <RefreshCw className="w-3 h-3" />
+                          <RefreshCw className="h-3.5 w-3.5" />
                           {fetchError ? 'Retry' : 'Refresh'}
                         </button>
                       )}

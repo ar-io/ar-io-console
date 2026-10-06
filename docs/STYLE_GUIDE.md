@@ -532,6 +532,21 @@ For hero sections and prominent actions:
 </button>
 ```
 
+### Small Action Button (section and list headers)
+The buttons beside a section or list title ("Export CSV", "Check Status", "Edit", "Manage", "Add record"), and the small primary action that sits with them ("Create page"). Always use `actionButtonClass` from `src/components/actionButton.ts`; don't hand-write these classes.
+
+```jsx
+<button className={actionButtonClass()}>Edit</button>
+<button className={actionButtonClass('danger')}>Clear History</button>
+<button className={actionButtonClass('primary')}><Plus className="h-3.5 w-3.5" />Create page</button>
+```
+
+- `default` is outlined: a visible border, so it reads as a button on touch screens, where there is no hover.
+- `danger` is red from the start, for actions that delete or give something away. Each still confirms in a modal.
+- `primary` is filled dark, for the one main action in a header. Not purple.
+- Icons are `h-3.5 w-3.5`. To show only the icon on phones, wrap the label in `<span className="sr-only sm:not-sr-only">`, so the text stays the button's accessible name.
+- Links within a row (Visit, Manage in a table) stay text links.
+
 ### Pill Button (Navigation/Filter)
 ```jsx
 <button className={`rounded-full px-4 py-2 font-body text-sm transition-colors ${

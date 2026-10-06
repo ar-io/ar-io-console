@@ -11,6 +11,7 @@ import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
 import IncompletePurchaseBanner from '@/features/arns/components/IncompletePurchaseBanner';
 import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
 import ManageDomainModal from '@/features/arns/components/ManageDomainModal';
+import { actionButtonClass } from '@/components/actionButton';
 
 const DOMAINS_SHOWN = 10;
 
@@ -114,12 +115,11 @@ export default function MyDomainsPage() {
                 // full list instead of the visible matches would quietly hand
                 // back a different set than the one being looked at.
                 onClick={() => downloadDomainsCsv(visibleDomains)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground transition-colors hover:text-foreground/80"
+                className={actionButtonClass('default')}
                 title={needle ? 'Export the matching names to CSV' : 'Export domains to CSV'}
-                aria-label={needle ? 'Export the matching names to CSV' : 'Export domains to CSV'}
               >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">
+                <Download className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only">
                   Export CSV{needle ? ` (${visibleDomains.length})` : ''}
                 </span>
               </button>
@@ -127,12 +127,11 @@ export default function MyDomainsPage() {
             <button
               onClick={() => fetchOwnedNames(true)}
               disabled={loadingDomains}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground transition-colors hover:text-foreground/80 disabled:opacity-50"
+              className={actionButtonClass('default')}
               title="Refresh domains"
-              aria-label="Refresh domains"
             >
-              <RefreshCw className={`h-4 w-4 ${loadingDomains ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingDomains ? 'animate-spin' : ''}`} />
+              <span className="sr-only sm:not-sr-only">Refresh</span>
             </button>
           </div>
         )}

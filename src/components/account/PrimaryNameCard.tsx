@@ -10,6 +10,7 @@ import {
   useArNSTurboSigner,
 } from '@/features/arns';
 import type { PrimaryNameModalMode } from '@/features/arns';
+import { actionButtonClass } from '@/components/actionButton';
 
 interface PrimaryNameCardProps {
   address: string;
@@ -201,7 +202,7 @@ export default function PrimaryNameCard({
               {canApproveRequest && (
                 <button
                   onClick={() => setModalMode('approve')}
-                  className="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  className={actionButtonClass('primary')}
                 >
                   Approve
                 </button>

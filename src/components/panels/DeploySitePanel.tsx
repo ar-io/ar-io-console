@@ -22,6 +22,7 @@ import UploadProgressSummary from '../UploadProgressSummary';
 import { JitTokenSelector } from '../JitTokenSelector';
 import X402OnlyBanner from '../X402OnlyBanner';
 import ModalHeader from '../modals/ModalHeader';
+import { actionButtonClass } from '@/components/actionButton';
 
 // Helper function moved outside component to prevent recreation on every render
 function getFileIcon(filename: string) {
@@ -2669,11 +2670,11 @@ export default function DeploySitePanel() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={exportDeployToCSV}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded text-foreground hover:bg-card hover:text-foreground transition-colors"
+                  className={actionButtonClass('default')}
                   title="Export deployment history to CSV"
                 >
-                  <Archive className="w-3 h-3" />
-                  <span className="hidden sm:inline">Export CSV</span>
+                  <Archive className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Export CSV</span>
                 </button>
                 <button
                   onClick={() => {
@@ -2687,19 +2688,19 @@ export default function DeploySitePanel() {
                     checkMultipleStatuses(allIds, true);
                   }}
                   disabled={Object.values(statusChecking).some(checking => checking)}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded text-foreground hover:bg-card hover:text-foreground transition-colors disabled:opacity-50"
+                  className={actionButtonClass('default')}
                   title="Check status for recent deployed files"
                 >
-                  <RefreshCw className={`w-3 h-3 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Check Status</span>
+                  <RefreshCw className={`h-3.5 w-3.5 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
+                  <span className="sr-only sm:not-sr-only">Check Status</span>
                 </button>
                 <button
                   onClick={clearDeployHistory}
-                  className="flex items-center gap-1 px-3 py-2 text-xs text-foreground/80 hover:text-error border border-border/10 rounded hover:border-error/50 transition-colors"
+                  className={actionButtonClass('danger')}
                   title="Clear all deployment history"
                 >
-                  <XCircle className="w-3 h-3" />
-                  <span className="hidden sm:inline">Clear History</span>
+                  <XCircle className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Clear History</span>
                 </button>
               </div>
             )}

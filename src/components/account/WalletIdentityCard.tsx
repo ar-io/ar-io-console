@@ -3,6 +3,7 @@ import { formatWalletAddress } from '../../utils';
 import { getExplorerAddressUrl } from '../../utils/getExplorerAddressUrl';
 import { getWalletNetworkLabel } from '../../utils/walletDisplay';
 import CopyButton from '../CopyButton';
+import { actionButtonClass } from '@/components/actionButton';
 
 interface WalletIdentityCardProps {
   address: string;
@@ -130,7 +131,7 @@ export default function WalletIdentityCard({
               </span>
               <button
                 onClick={onLink}
-                className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
+                className={actionButtonClass('primary')}
               >
                 <Link2 className="h-3.5 w-3.5" />
                 Link wallet
