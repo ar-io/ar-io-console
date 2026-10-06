@@ -5,6 +5,7 @@ import {
   Globe,
   Loader2,
   Pencil,
+  Plus,
   Search,
   Trash2,
   X,
@@ -480,6 +481,7 @@ export default function RecordsTable({
               // filled button: one primary action per page, and this isn't it.
               className={actionButtonClass()}
             >
+              <Plus className="h-3.5 w-3.5" />
               Add record
             </button>
           )}

@@ -4,13 +4,20 @@ import { useQueryClient } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
+  CalendarPlus,
   ExternalLink,
   Globe,
   Layers,
   Loader2,
+  LogOut,
+  Pencil,
+  Plus,
+  Repeat,
+  Send,
   Star,
   Tag,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 
 import { useStore } from '@/store/useStore';
@@ -101,15 +108,18 @@ function SectionCard({
 /** A section's action, beside its title. See `actionButtonClass`. */
 function SectionAction({
   label,
+  icon: Icon,
   onClick,
   danger,
 }: {
   label: string;
+  icon: LucideIcon;
   onClick: () => void;
   danger?: boolean;
 }) {
   return (
     <button type="button" onClick={onClick} className={actionButtonClass(danger ? 'danger' : 'default')}>
+      <Icon className="h-3.5 w-3.5" />
       {label}
     </button>
   );
@@ -388,6 +398,7 @@ export default function NameDetailPage() {
                 canManage && (
                   <SectionAction
                     label={record.type === 'lease' ? 'Renew or upgrade' : 'Add undername slots'}
+                    icon={record.type === 'lease' ? CalendarPlus : Plus}
                     onClick={() => setOpen('manage')}
                   />
                 )
@@ -421,7 +432,7 @@ export default function NameDetailPage() {
               icon={Tag}
               action={
                 canManage && (
-                  <SectionAction label="Edit" onClick={() => openOwnerAction('edit')} />
+                  <SectionAction label="Edit" icon={Pencil} onClick={() => openOwnerAction('edit')} />
                 )
               }
             >
@@ -475,10 +486,10 @@ export default function NameDetailPage() {
               action={
                 ownerOnly && (
                   <div className="flex flex-wrap justify-end gap-1.5">
-                    <SectionAction danger label="Transfer" onClick={() => setOpen('transfer')} />
-                    <SectionAction danger label="Reassign" onClick={() => openOwnerAction('reassign')} />
+                    <SectionAction danger label="Transfer" icon={Send} onClick={() => setOpen('transfer')} />
+                    <SectionAction danger label="Reassign" icon={Repeat} onClick={() => openOwnerAction('reassign')} />
                     {record.type === 'permabuy' && (
-                      <SectionAction danger label="Release" onClick={() => openOwnerAction('release')} />
+                      <SectionAction danger label="Release" icon={LogOut} onClick={() => openOwnerAction('release')} />
                     )}
                   </div>
                 )
@@ -522,7 +533,7 @@ export default function NameDetailPage() {
               icon={Users}
               action={
                 ownerOnly && (
-                  <SectionAction label="Manage" onClick={() => openOwnerAction('controllers')} />
+                  <SectionAction label="Manage" icon={Users} onClick={() => openOwnerAction('controllers')} />
                 )
               }
             >

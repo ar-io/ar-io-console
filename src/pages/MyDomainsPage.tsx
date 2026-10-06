@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Globe, RefreshCw, AlertTriangle, Download, Search, X } from 'lucide-react';
+import { Globe, RefreshCw, AlertTriangle, Download, Plus, Search, X } from 'lucide-react';
 import { getExpiringDomains, expiryLabel } from '@/utils/domainExpiry';
 import { downloadDomainsCsv } from '@/utils/domainCsv';
 import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
@@ -91,24 +91,27 @@ export default function MyDomainsPage() {
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Header — title + (when signed in with ArNS access) CSV/Refresh actions */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
+      {/* Header: title + (when signed in with ArNS access) the actions, on the
+          same row at every width. On a phone they are icons, so they fit
+          beside the title instead of sitting alone on a line below it. */}
+      <div className="mb-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20">
             <Globe className="h-5 w-5 text-primary" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="mb-1 font-heading text-2xl font-extrabold text-foreground sm:text-3xl">
               Manage Domains
             </h1>
-            <p className="text-sm text-foreground/80">
+            <p className="hidden text-sm text-foreground/80 sm:block">
               Renew, transfer, and configure the ArNS names you own.
             </p>
           </div>
         </div>
 
         {hasArNSAccess && (
-          <div className="flex flex-shrink-0 items-center gap-2">
+          <div className="mt-1 flex flex-shrink-0 items-center gap-2">
             {ownedNames.length > 0 && (
               <button
                 // Export what is on screen. With a search active, exporting the
@@ -133,8 +136,26 @@ export default function MyDomainsPage() {
               <RefreshCw className={`h-3.5 w-3.5 ${loadingDomains ? 'animate-spin' : ''}`} />
               <span className="sr-only sm:not-sr-only">Refresh</span>
             </button>
+            {/* With names listed, the empty state's "Register a name" is gone;
+                this keeps buying another one a click away. */}
+            {ownedNames.length > 0 && (
+              <button
+                onClick={() => navigate('/arns')}
+                className={actionButtonClass('primary')}
+                title="Register a name"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only">Register a name</span>
+              </button>
+            )}
           </div>
         )}
+      </div>
+      {/* On a phone the actions share the title's row, so the description
+          takes the full width below it rather than a squeezed column. */}
+      <p className="mt-1 text-sm text-foreground/80 sm:hidden">
+        Renew, transfer, and configure the ArNS names you own.
+      </p>
       </div>
 
       {hasArNSAccess ? (

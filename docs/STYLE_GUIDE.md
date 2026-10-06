@@ -544,7 +544,7 @@ The buttons beside a section or list title ("Export CSV", "Check Status", "Edit"
 - `default` is outlined: a visible border, so it reads as a button on touch screens, where there is no hover.
 - `danger` is red from the start, for actions that delete or give something away. Each still confirms in a modal.
 - `primary` is filled dark, for the one main action in a header. Not purple.
-- Icons are `h-3.5 w-3.5`. To show only the icon on phones, wrap the label in `<span className="sr-only sm:not-sr-only">`, so the text stays the button's accessible name.
+- Every action button has a leading icon, `h-3.5 w-3.5`, so a row of them scans the same everywhere and each can shrink to its icon on a phone. To show only the icon on phones, wrap the label in `<span className="sr-only sm:not-sr-only">`, so the text stays the button's accessible name.
 - Links within a row (Visit, Manage in a table) stay text links.
 
 ### Pill Button (Navigation/Filter)

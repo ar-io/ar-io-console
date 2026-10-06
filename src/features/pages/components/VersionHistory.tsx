@@ -16,7 +16,9 @@ import {
   ExternalLink,
   Globe,
   History,
+  Link2,
   Loader2,
+  PlugZap,
   RadioTower,
 } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
@@ -125,6 +127,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
             onClick={() => setShowLinkModal(true)}
             className={actionButtonClass('primary')}
           >
+            <Link2 className="h-3.5 w-3.5" />
             Link Wallet
           </button>
         </div>
@@ -137,6 +140,7 @@ export default function VersionHistory({ page, onBack, onMakeLive }: VersionHist
             onClick={promptReconnect}
             className={actionButtonClass('primary')}
           >
+            <PlugZap className="h-3.5 w-3.5" />
             Reconnect
           </button>
         </div>

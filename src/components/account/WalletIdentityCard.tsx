@@ -1,4 +1,4 @@
-import { Wallet, ExternalLink, Link2, Unlink } from 'lucide-react';
+import { Wallet, ExternalLink, Link2, Unlink, PlugZap, ArrowLeftRight } from 'lucide-react';
 import { formatWalletAddress } from '../../utils';
 import { getExplorerAddressUrl } from '../../utils/getExplorerAddressUrl';
 import { getWalletNetworkLabel } from '../../utils/walletDisplay';
@@ -96,31 +96,26 @@ export default function WalletIdentityCard({
                 </span>
                 <CopyButton textToCopy={linkedAddress} />
               </div>
-              <div className="flex flex-shrink-0 items-center gap-3 text-xs">
+              <div className="flex flex-shrink-0 items-center gap-2 text-xs">
                 {isSolanaConnected ? (
                   <span className="text-success" title="Ready to sign ArNS transactions">Connected</span>
                 ) : (
                   <button
                     onClick={onLink}
-                    className="text-primary hover:underline"
-                    title="Reconnect to sign ArNS transactions — viewing still works"
+                    className={actionButtonClass()}
+                    title="Reconnect to sign ArNS transactions; viewing still works"
                   >
+                    <PlugZap className="h-3.5 w-3.5" />
                     Reconnect
                   </button>
                 )}
-                <button
-                  onClick={onLink}
-                  className="text-foreground/60 transition-colors hover:text-foreground"
-                >
-                  Change
+                <button onClick={onLink} className={actionButtonClass()} title="Link a different Solana wallet">
+                  <ArrowLeftRight className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Change</span>
                 </button>
-                <button
-                  onClick={onUnlink}
-                  className="p-1 text-foreground/40 transition-colors hover:text-error"
-                  title="Unlink wallet"
-                  aria-label="Unlink Solana wallet"
-                >
+                <button onClick={onUnlink} className={actionButtonClass('danger')} title="Unlink wallet">
                   <Unlink className="h-3.5 w-3.5" />
+                  <span className="sr-only">Unlink Solana wallet</span>
                 </button>
               </div>
             </div>
