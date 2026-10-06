@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CalendarPlus,
   CheckCircle2,
@@ -137,9 +138,24 @@ export default function ManageDomainModal({
     Credits a finished token top-up is waiting on. A token payment lands as
     credits later (AR in 15 to 30 minutes, SOL within a minute), and until it
     does the route here is still "top up", so Continue would send the same
-    payment again. Held until the balance covers it.
+    payment again. Held until credits arrive: the balance rises above where it
+    stood when the payment finished, or reaches the price. Rising is enough on
+    its own, because a top-up sized from a quote can land a hair under the
+    price, and waiting for the full price would keep this locked for nothing.
   */
-  const [awaitingCredits, setAwaitingCredits] = useState<number | null>(null);
+  const [awaitingCredits, setAwaitingCredits] = useState<{
+    price: number;
+    balanceAtPayment: number;
+  } | null>(null);
+  // The balance when the payment step opened: read at completion instead, a
+  // fast SOL top-up could already be in it and the release would never see
+  // the balance rise.
+  const balanceBeforePaymentRef = useRef(0);
+  const openPayment = () => {
+    balanceBeforePaymentRef.current = balances.credits;
+    setShowPayment(true);
+  };
+  const queryClient = useQueryClient();
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
   const [showPayment, setShowPayment] = useState(false);
@@ -383,17 +399,20 @@ export default function ManageDomainModal({
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
   const creditsArriving =
-    awaitingCredits !== null && balances.credits < awaitingCredits - 1e-9;
+    awaitingCredits !== null &&
+    balances.credits <= awaitingCredits.balanceAtPayment + 1e-9 &&
+    balances.credits < awaitingCredits.price - 1e-9;
   useEffect(() => {
     if (awaitingCredits === null) return;
     if (!creditsArriving) {
       setAwaitingCredits(null);
       return;
     }
-    // Re-read the balance from the payment service every 30s while waiting.
-    // No Solana RPC is involved, and nothing faster is needed for AR.
+    // Re-read only the credit balance (payment service) every 30s while
+    // waiting. Not `refresh-balance`: that also refetches the SOL and ARIO
+    // balances from the Solana RPC. Nothing faster is needed for AR.
     const t = setInterval(
-      () => window.dispatchEvent(new CustomEvent('refresh-balance')),
+      () => queryClient.invalidateQueries({ queryKey: ['credit-balance'] }),
       30_000,
     );
     // Release the hold after 45 minutes, past AR's slowest case, so a price
@@ -403,7 +422,7 @@ export default function ManageDomainModal({
       clearInterval(t);
       clearTimeout(release);
     };
-  }, [awaitingCredits, creditsArriving]);
+  }, [awaitingCredits, creditsArriving, queryClient]);
 
   // Turbo pays the Solana cost on every credits-settled route, so topping up
   // credits is always enough to make the change succeed.
@@ -700,7 +719,7 @@ export default function ManageDomainModal({
                 <button
                   onClick={() => {
                     setSelectedId('card');
-                    setShowPayment(true);
+                    openPayment();
                   }}
                   className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
                 >
@@ -728,7 +747,7 @@ export default function ManageDomainModal({
             {/* Confirm */}
             {needsPaymentStep ? (
               <button
-                onClick={() => setShowPayment(true)}
+                onClick={openPayment}
                 disabled={creditsArriving || (route.kind !== 'card' && !priceReady)}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
@@ -796,7 +815,12 @@ export default function ManageDomainModal({
                   // Back to the default route, which becomes credits once the
                   // top-up lands, and hold Continue until then.
                   setSelectedId(undefined);
-                  if (creditsPrice) setAwaitingCredits(creditsPrice.sponsoredCredits);
+                  if (creditsPrice) {
+                    setAwaitingCredits({
+                      price: creditsPrice.sponsoredCredits,
+                      balanceAtPayment: balanceBeforePaymentRef.current,
+                    });
+                  }
                 }}
               />
             )}
