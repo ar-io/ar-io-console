@@ -41,6 +41,11 @@ interface CryptoConfirmationPanelProps {
   onBack: () => void;
   /** Set when a host modal owns the title; suppresses this panel's header. */
   purpose?: { kind: 'arns-name'; name: string };
+  /**
+   * Inside a host modal that owns the title, surface and terms, without a
+   * `purpose` (a payment for a change to a name the user already has).
+   */
+  embedded?: boolean;
   onPaymentComplete: (result: any) => void;
 }
 
@@ -49,8 +54,10 @@ export default function CryptoConfirmationPanel({
   tokenType,
   onBack,
   purpose,
+  embedded = false,
   onPaymentComplete,
 }: CryptoConfirmationPanelProps) {
+  const hostOwned = !!purpose || embedded;
   const { address, walletType, paymentTargetAddress, paymentTargetType } = useStore();
   const { wallets } = useWallets(); // Get Privy wallets
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
@@ -728,7 +735,7 @@ export default function CryptoConfirmationPanel({
   return (
     <div className="px-4 sm:px-6 space-y-6">
       {/* Suppressed when a host modal already carries the title. */}
-      {!purpose && (
+      {!hostOwned && (
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
             <Wallet className="w-5 h-5 text-primary" />
@@ -749,7 +756,7 @@ export default function CryptoConfirmationPanel({
       */}
       <div
         className={
-          purpose
+          hostOwned
             ? ''
             : 'bg-card rounded-2xl border border-border/20 p-6'
         }
@@ -958,7 +965,7 @@ export default function CryptoConfirmationPanel({
 
             {/* Host-owned when embedded — see PaymentConfirmationPanel. Its
                 "By uploading" wording is also wrong for a name purchase. */}
-            {!purpose && (
+            {!hostOwned && (
             <div className="text-center bg-card/30 rounded-2xl p-4 mb-6">
               <p className="text-xs text-foreground/80">
                 By uploading, you agree to our{' '}
@@ -998,7 +1005,13 @@ export default function CryptoConfirmationPanel({
 
             {/* Action Buttons */}
             <div className="flex justify-between items-center pt-6 border-t border-border/20">
-              <button onClick={onBack} className="text-sm text-foreground/80 hover:text-foreground">
+              {/* Disabled mid-transfer: in a host modal Back closes the
+                  payment, and the result of a transfer in flight with it. */}
+              <button
+                onClick={onBack}
+                disabled={isProcessing}
+                className="text-sm text-foreground/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 Back
               </button>
 

@@ -59,9 +59,21 @@ export function useCryptoPriceForWinc(
    */
   roundUp = false,
 ): number | undefined {
+  return useCryptoPriceForWincQuery(wincAmount, tokenType, roundUp).tokenAmount;
+}
+
+/**
+ * `useCryptoPriceForWinc`, with whether the lookup failed and a retry. For a
+ * caller that must not wait forever on a price that is never coming.
+ */
+export function useCryptoPriceForWincQuery(
+  wincAmount: number | undefined,
+  tokenType: SupportedTokenType,
+  roundUp = false,
+): { tokenAmount: number | undefined; isError: boolean; refetch: () => void } {
   const turboConfig = useTurboConfig(tokenType);
 
-  const { data: tokenAmount } = useQuery({
+  const { data: tokenAmount, isError, refetch } = useQuery({
     queryKey: ['cryptoPriceForWinc', wincAmount, tokenType, roundUp, turboConfig.paymentServiceConfig.url],
     queryFn: async () => {
       if (!wincAmount || wincAmount <= 0) return undefined;
@@ -97,7 +109,7 @@ export function useCryptoPriceForWinc(
     retry: 2, // Retry failed requests twice
   });
 
-  return tokenAmount;
+  return { tokenAmount, isError, refetch: () => void refetch() };
 }
 
 /**

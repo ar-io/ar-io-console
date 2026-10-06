@@ -8,7 +8,8 @@ import { arioPresetsFor } from '../../utils/arioPresets';
 import { useStore } from '../../store/useStore';
 import { Loader2, Lock, CreditCard, DollarSign, Wallet, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
-import { useArioUsdRate, useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
+import { useArioUsdRate, useCryptoPriceForWinc, useCryptoPriceForWincQuery } from '../../hooks/useCryptoPrice';
+import { cryptoAmountStep } from '../../utils/cryptoAmountStep';
 import CryptoConfirmationPanel from './crypto/CryptoConfirmationPanel';
 import CryptoManualPaymentPanel from './crypto/CryptoManualPaymentPanel';
 import PaymentDetailsPanel from './fiat/PaymentDetailsPanel';
@@ -203,8 +204,10 @@ export default function TopUpPanel({
     it re-states the price the host modal is already showing and puts a Continue
     button between the user and the card form, so open straight on the form.
 
-    Crypto keeps its amount step: token amounts still move with quotes, and that
-    screen carries the transfer's own confirmation.
+    A targeted crypto top-up skips it too, for the same reason: the checkout
+    chose the token and the amount is the purchase's. The confirmation step
+    prices the transfer and holds the Pay button, so nothing is lost. See
+    `cryptoAmountStep` for where the amount step still shows.
   */
   const skipAmountStep =
     embedded && initialUsdAmount != null && initialPaymentMethod === 'fiat';
@@ -282,7 +285,11 @@ export default function TopUpPanel({
     initialCreditAmount != null && initialCreditAmount > 0
       ? initialCreditAmount * 1e12
       : undefined;
-  const cryptoForTarget = useCryptoPriceForWinc(
+  const {
+    tokenAmount: cryptoForTarget,
+    isError: cryptoForTargetFailed,
+    refetch: refetchCryptoForTarget,
+  } = useCryptoPriceForWincQuery(
     wincNeededForTarget,
     selectedTokenType,
     true, // charged, not displayed — see the hook's `roundUp`
@@ -587,6 +594,22 @@ export default function TopUpPanel({
   const handleCryptoBackToSelection = () => {
     setCryptoFlowStep('selection');
     setCryptoPaymentResult(null);
+  };
+
+  /*
+    Set once a targeted crypto top-up has skipped its amount step. From then on
+    Back on the confirmation leaves the payment, as it does for card: behind it
+    is a screen the flow skipped, and the checkout is where the token or term
+    can actually be changed.
+  */
+  const cryptoAdvancedRef = useRef(false);
+  const handleCryptoConfirmationBack = () => {
+    if (cryptoAdvancedRef.current) {
+      setCryptoPaymentResult(null);
+      onCancel?.();
+      return;
+    }
+    handleCryptoBackToSelection();
   };
 
   // Fiat flow handlers
@@ -957,6 +980,59 @@ export default function TopUpPanel({
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
+  const cryptoStep = cryptoAmountStep({
+    targeted: targetedTopUp && initialPaymentMethod === 'crypto' && paymentMethod === 'crypto',
+    onAmountStep: cryptoFlowStep === 'selection',
+    advanced: cryptoAdvancedRef.current,
+    // ARIO waits for its cap too: advancing before the rate loads would
+    // skip the one check that screen enforces.
+    tokenAmount:
+      selectedTokenType === 'ario' && arioMaxTokens === undefined
+        ? undefined
+        : cryptoForTarget,
+    pricingFailed: cryptoForTargetFailed,
+    walletCanSend: !!walletType && isTokenCompatibleWithWallet(selectedTokenType),
+    overCap:
+      selectedTokenType === 'ario' &&
+      arioMaxTokens !== undefined &&
+      cryptoForTarget !== undefined &&
+      cryptoForTarget > arioMaxTokens,
+  });
+
+  useEffect(() => {
+    if (cryptoStep !== 'advance' || cryptoForTarget === undefined) return;
+    cryptoAdvancedRef.current = true;
+    // Set here too: the seeding effect's update has not rendered yet.
+    setCryptoAmount(cryptoForTarget);
+    setCryptoAmountInput(String(cryptoForTarget));
+    setCryptoFlowStep('confirmation');
+  }, [cryptoStep, cryptoForTarget]);
+
+  if (cryptoStep === 'wait' || cryptoStep === 'error' || cryptoStep === 'advance') {
+    // Mid-skip, as for card below: never flash the amount step it skips.
+    return (
+      <div className="px-1 py-10 text-center">
+        {cryptoStep === 'error' ? (
+          <>
+            <p className="text-sm text-error">
+              Couldn't price this payment in {tokenLabels[selectedTokenType]}.
+            </p>
+            <button
+              onClick={refetchCryptoForTarget}
+              className="mt-3 rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Try again
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center justify-center gap-2 text-sm text-foreground/70">
+            <Loader2 className="h-4 w-4 animate-spin" /> Preparing payment…
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (skipAmountStep && paymentMethod === 'fiat' && fiatFlowStep === 'amount') {
     // Mid-skip: the intent is being created. Never show the amount UI here —
     // it is the screen the user was promised they would not see.
@@ -1045,9 +1121,10 @@ export default function TopUpPanel({
         return (
           <CryptoConfirmationPanel
             purpose={purpose}
+            embedded={embedded}
             cryptoAmount={inputType === 'storage' && cryptoForStorage !== undefined ? cryptoForStorage : cryptoAmount}
             tokenType={selectedTokenType}
-            onBack={handleCryptoBackToSelection}
+            onBack={handleCryptoConfirmationBack}
             onPaymentComplete={handleCryptoPaymentComplete}
           />
         );
@@ -1055,9 +1132,10 @@ export default function TopUpPanel({
         return (
           <CryptoManualPaymentPanel
             purpose={purpose}
+            embedded={embedded}
             cryptoTopupValue={cryptoPaymentResult?.quote?.tokenAmount || 0}
             tokenType={selectedTokenType}
-            onBack={handleCryptoBackToSelection}
+            onBack={handleCryptoConfirmationBack}
             onComplete={handleManualPaymentComplete}
           />
         );

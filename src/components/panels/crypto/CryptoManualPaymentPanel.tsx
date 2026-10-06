@@ -17,6 +17,8 @@ interface CryptoManualPaymentPanelProps {
   onBack: () => void;
   /** Set when a host modal owns the title; suppresses this panel's header. */
   purpose?: { kind: 'arns-name'; name: string };
+  /** Inside a host modal that owns the title. See CryptoConfirmationPanel. */
+  embedded?: boolean;
   onComplete: () => void;
 }
 
@@ -25,6 +27,7 @@ export default function CryptoManualPaymentPanel({
   tokenType,
   onBack,
   purpose,
+  embedded = false,
   onComplete
 }: CryptoManualPaymentPanelProps) {
   const address = useAddressState();
@@ -147,7 +150,7 @@ export default function CryptoManualPaymentPanel({
   return (
     <div className="px-4 sm:px-6 space-y-6">
       {/* Suppressed when a host modal already carries the title. */}
-      {!purpose && (
+      {!purpose && !embedded && (
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
             <Copy className="w-5 h-5 text-primary" />
