@@ -320,7 +320,7 @@ export default function RecordsTable({
               placeholder="blog"
               className="w-48 rounded-2xl border border-border/20 bg-card p-2 text-sm focus:border-primary"
             />
-            <span className="text-sm text-foreground/60">_{'{name}'}.ar.io</span>
+            <span className="text-sm text-foreground/60">_{'{name}'}.{arnsHost ?? 'ar.io'}</span>
           </div>
           {newName && !nameValid && (
             <p className="mt-1 text-xs text-error">

@@ -4,6 +4,11 @@ All notable changes to the ar.io Console are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Open a record from its name.** On a name's page, each record in the
+  Records table links to what it serves: `name.ar.io` for the root,
+  `undername_name.ar.io` for the rest.
+
 ### Changed
 - **ARIO top-ups are smaller.** Each ARIO top-up is limited to $100 at the
   day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
@@ -15,11 +20,6 @@ All notable changes to the ar.io Console are documented in this file.
   did not read as a button on a phone. They now share one outlined style, red
   for actions that delete or give something away, and a small dark button for
   the one main action in a header.
-
-### Added
-- **Open a record from its name.** On a name's page, each record in the
-  Records table links to what it serves: `name.ar.io` for the root,
-  `undername_name.ar.io` for the rest.
 
 ### Fixed
 - **Visit on testnet.** The Visit button on a name's page opened

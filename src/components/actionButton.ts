@@ -17,13 +17,16 @@
  */
 export type ActionButtonVariant = 'default' | 'danger' | 'primary';
 
+// `relative` anchors an sr-only label; `whitespace-nowrap` keeps a label on
+// one line in a squeezed header. Hover is gated on `:not(:disabled)` rather
+// than `enabled:`, which never matches, so a `<Link>` styled this way keeps it.
 const BASE =
-  'inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+  'relative inline-flex flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 
 const VARIANTS: Record<ActionButtonVariant, string> = {
-  default: 'border-foreground text-foreground enabled:hover:bg-foreground/5',
-  danger: 'border-error text-error enabled:hover:bg-error/10',
-  primary: 'border-foreground bg-foreground text-white enabled:hover:opacity-90',
+  default: 'border-foreground text-foreground [&:not(:disabled)]:hover:bg-foreground/5',
+  danger: 'border-error text-error [&:not(:disabled)]:hover:bg-error/10',
+  primary: 'border-foreground bg-foreground text-white [&:not(:disabled)]:hover:opacity-90',
 };
 
 export function actionButtonClass(variant: ActionButtonVariant = 'default'): string {

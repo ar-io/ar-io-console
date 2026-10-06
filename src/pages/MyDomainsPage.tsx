@@ -108,7 +108,7 @@ export default function MyDomainsPage() {
         </div>
 
         {hasArNSAccess && (
-          <div className="flex flex-shrink-0 items-center gap-1">
+          <div className="flex flex-shrink-0 items-center gap-2">
             {ownedNames.length > 0 && (
               <button
                 // Export what is on screen. With a search active, exporting the

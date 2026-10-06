@@ -120,18 +120,18 @@ export default function PrimaryNameCard({
                 <span className="font-mono text-sm text-primary">
                   {currentDisplay}.ar.io
                 </span>
-                <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setModalMode('change')}
                     disabled={removeBusy || confirmingRemove}
-                    className="text-foreground/70 hover:text-foreground hover:underline disabled:opacity-50"
+                    className={actionButtonClass()}
                   >
                     Change
                   </button>
                   <button
                     onClick={() => setConfirmingRemove(true)}
                     disabled={removeBusy || confirmingRemove}
-                    className="text-error/80 hover:text-error hover:underline disabled:opacity-50"
+                    className={actionButtonClass('danger')}
                   >
                     Remove
                   </button>

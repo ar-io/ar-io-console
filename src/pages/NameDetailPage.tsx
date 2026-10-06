@@ -327,7 +327,7 @@ export default function NameDetailPage() {
               <div className="min-w-0">
                 <h1 className="truncate font-heading text-2xl font-extrabold text-foreground">
                   {displayName}
-                  <span className="font-normal text-foreground/50">.ar.io</span>
+                  <span className="font-normal text-foreground/50">.{arnsHost}</span>
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span
@@ -359,9 +359,9 @@ export default function NameDetailPage() {
                     <button
                       type="button"
                       onClick={() => openOwnerAction('primary')}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                      className={actionButtonClass()}
                     >
-                      <Star className="h-3 w-3" /> Set as primary
+                      <Star className="h-3.5 w-3.5" /> Set as primary
                     </button>
                   )}
                 </div>
