@@ -23,6 +23,8 @@ import { JitTokenSelector } from '../JitTokenSelector';
 import X402OnlyBanner from '../X402OnlyBanner';
 import ModalHeader from '../modals/ModalHeader';
 import { actionButtonClass } from '@/components/actionButton';
+import AssignedDomainLinks from '@/components/AssignedDomainLinks';
+import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
 
 // Helper function moved outside component to prevent recreation on every render
 function getFileIcon(filename: string) {
@@ -949,7 +951,8 @@ export default function DeploySitePanel() {
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
-  const [deployMessage, setDeployMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [deployMessage, setDeployMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string; domain?: { name: string; undername?: string } } | null>(null);
+  const arnsHost = useArnsHost();
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showFolderContents, setShowFolderContents] = useState(false);
   const [indexFile, setIndexFile] = useState<string>('');
@@ -1163,7 +1166,8 @@ export default function DeploySitePanel() {
     const isUpdate = existingAssociation && existingAssociation.arnsName;
     setDeployMessage({
       type: 'success',
-      text: `Domain ${undername ? undername + '_' : ''}${arnsName}.ar.io ${isUpdate ? 'updated' : 'assigned'} successfully!`
+      text: `${assignedLabel(arnsName, undername)}.${arnsHost} ${isUpdate ? 'now points to this deploy' : 'is assigned to this deploy'}.`,
+      domain: { name: arnsName, undername },
     });
   };
 
@@ -2631,7 +2635,10 @@ export default function DeploySitePanel() {
             : 'bg-info/10 border border-info/20 text-info'
         }`}>
           <div className="flex items-center justify-between">
-            <span>{deployMessage.text}</span>
+            <div>
+              {deployMessage.text}
+              {deployMessage.domain && <AssignedDomainLinks {...deployMessage.domain} />}
+            </div>
             <button
               onClick={() => setDeployMessage(null)}
               className="ml-4 p-1 hover:opacity-70 transition-opacity flex-shrink-0"

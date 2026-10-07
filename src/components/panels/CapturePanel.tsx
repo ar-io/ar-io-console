@@ -24,6 +24,8 @@ import { supportsJitPayment, getTokenConverter, formatTokenAmount } from '../../
 import { tokenLabels } from '../../constants';
 import X402OnlyBanner from '../X402OnlyBanner';
 import { actionButtonClass } from '@/components/actionButton';
+import AssignedDomainLinks from '@/components/AssignedDomainLinks';
+import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
 
 // Helper function to get contextual file icon based on content type or file name
 const getFileIcon = (contentType?: string, fileName?: string) => {
@@ -94,7 +96,8 @@ export default function CapturePanel() {
       return undefined;
     }
   }, [urlInput]);
-  const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string; domain?: { name: string; undername?: string } } | null>(null);
+  const arnsHost = useArnsHost();
   const { capture, isCapturing, error: captureError, result: captureResult, captureFile } = useTurboCapture();
 
   // ArNS assignment state
@@ -466,7 +469,10 @@ export default function CapturePanel() {
             <div className="flex items-center gap-2">
               {captureMessage.type === 'error' && <XCircle className="w-5 h-5" />}
               {captureMessage.type === 'success' && <CheckCircle className="w-5 h-5" />}
-              <span className="text-sm">{captureMessage.text}</span>
+              <div className="text-sm">
+                {captureMessage.text}
+                {captureMessage.domain && <AssignedDomainLinks {...captureMessage.domain} />}
+              </div>
             </div>
             <button
               onClick={() => setCaptureMessage(null)}
@@ -931,7 +937,8 @@ export default function CapturePanel() {
             setShowAssignDomainModal(null);
             setCaptureMessage({
               type: 'success',
-              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io!`
+              text: `${assignedLabel(arnsName, undername)}.${arnsHost} now points to your capture.`,
+              domain: { name: arnsName, undername },
             });
           }}
         />

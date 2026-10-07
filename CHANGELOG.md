@@ -5,6 +5,9 @@ All notable changes to the ar.io Console are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Visit or manage a name right after assigning it.** After you point a name
+  at an upload, a capture or a deploy, the success message has Visit and
+  Manage buttons, and it names the right host on testnet.
 - **Open a record from its name.** On a name's page, each record in the
   Records table links to what it serves: `name.ar.io` for the root,
   `undername_name.ar.io` for the rest.

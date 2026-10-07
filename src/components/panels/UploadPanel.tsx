@@ -24,6 +24,8 @@ import { Loader2 } from 'lucide-react';
 import X402OnlyBanner from '../X402OnlyBanner';
 import ModalHeader from '../modals/ModalHeader';
 import { actionButtonClass } from '@/components/actionButton';
+import AssignedDomainLinks from '@/components/AssignedDomainLinks';
+import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
 
 // Helper function to get contextual file icon based on content type or file name
 // size: 'sm' (16px) for inline use, 'lg' (24px) for file list thumbnails
@@ -347,7 +349,8 @@ export default function UploadPanel() {
   // Image preview management for selected files
   const { getPreviewUrl, isPreviewableImage } = useImagePreviews(files);
 
-  const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string; domain?: { name: string; undername?: string } } | null>(null);
+  const arnsHost = useArnsHost();
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showAssignDomainModal, setShowAssignDomainModal] = useState<string | null>(null);
   // The just-completed single-file upload, surfaced as a result card. Only for
@@ -762,7 +765,10 @@ export default function UploadPanel() {
             <div className="flex items-center gap-2">
               {uploadMessage.type === 'error' && <XCircle className="w-5 h-5" />}
               {uploadMessage.type === 'success' && <CheckCircle className="w-5 h-5" />}
-              <span className="text-sm">{uploadMessage.text}</span>
+              <div className="text-sm">
+                {uploadMessage.text}
+                {uploadMessage.domain && <AssignedDomainLinks {...uploadMessage.domain} />}
+              </div>
             </div>
             <button
               onClick={() => setUploadMessage(null)}
@@ -1334,7 +1340,8 @@ export default function UploadPanel() {
             // Show success message
             setUploadMessage({
               type: 'success',
-              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io to your file!`
+              text: `${assignedLabel(arnsName, undername)}.${arnsHost} now points to your file.`,
+              domain: { name: arnsName, undername },
             });
           }}
         />
