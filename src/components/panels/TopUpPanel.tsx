@@ -719,11 +719,10 @@ export default function TopUpPanel({
     () =>
       buildSources({
         // Exactly the tokens this wallet could pay with before the dropdown.
+        // ARIO carries no tag: its fee can change, and the price column
+        // already shows what each token costs.
         tokens: topUpTokensForWallet(walletType, isTokenSelectable).map((token) => ({
           token,
-          // ARIO top-ups carry a 25% infrastructure fee against 35% for the
-          // rest. Said as a small tag and nothing more: it is never preselected.
-          ...(token === 'ario' ? { badge: 'Lower fee' } : {}),
         })),
         balances: {
           ...(rowToken ? { [rowToken]: rowHeld } : {}),

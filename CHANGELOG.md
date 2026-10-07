@@ -23,6 +23,8 @@ All notable changes to the ar.io Console are documented in this file.
   day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
   5,000, 10,000 and 25,000 ARIO. A preset at or above the limit is replaced by
   the limit itself.
+- **No "Lower fee" tag on ARIO in Buy Credits.** Its fee can change, and the
+  price shown for each token already says what it costs.
 - **Paying for a name in crypto goes straight to the confirmation.** When you
   renew, upgrade or make a name permanent and pay in AR, SOL or another token,
   the amount is already known, so the screen that asked you to pick it is
