@@ -431,7 +431,7 @@ export default function NameDetailPage() {
           <Globe className="mx-auto mb-3 h-10 w-10 text-primary/60" />
           <h1 className="mb-1 font-heading text-2xl font-extrabold text-foreground">
             <span className="font-mono">{displayName}</span>
-            <span className="text-foreground/50">.ar.io</span> is available
+            <span className="text-foreground/50">.{arnsHost}</span> is available
           </h1>
           <p className="mb-5 text-sm text-foreground/70">
             No one owns this name yet — you could be the first.
@@ -440,7 +440,7 @@ export default function NameDetailPage() {
             onClick={() => navigate(`/arns?q=${encodeURIComponent(name)}`)}
             className={buttonClass('primary', 'md')}
           >
-            Register {displayName}.ar.io
+            Register {displayName}.{arnsHost}
           </button>
         </div>
       ) : record && arnsName ? (
