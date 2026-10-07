@@ -15,6 +15,7 @@ import {
 } from '../purchase/actionFailure';
 import { incompletePurchase } from '../purchase/incompletePurchase';
 import { toUnicodeName } from '@/utils/punycode';
+import { buttonClass } from '@/components/button';
 
 /**
  * A purchase that was started in this browser and not seen to finish, read
@@ -144,7 +145,7 @@ export default function IncompletePurchaseBanner({
                 dismiss();
                 navigate(`/arns?q=${encodeURIComponent(view.name)}`);
               }}
-              className="mt-2 rounded-full bg-foreground px-4 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+              className={`${buttonClass('secondary', 'xs')} mt-2`}
             >
               Try again
             </button>

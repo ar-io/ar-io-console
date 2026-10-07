@@ -6,6 +6,7 @@ import {
   TIMEOUT_THRESHOLD_MS,
   MAX_GATEWAY_AUTO_RETRIES,
 } from "../utils/constants";
+import { buttonClass } from '@/components/button';
 
 interface RoutingLoadingScreenProps {
   identifier: string;
@@ -147,7 +148,7 @@ export function RoutingLoadingScreen({
             </div>
             <button
               onClick={onRetry}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+              className={buttonClass('secondary', 'sm')}
             >
               <svg
                 className="w-4 h-4"

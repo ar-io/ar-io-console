@@ -34,6 +34,7 @@ import { useUndernameWrites, type UndernameRecord } from '../hooks/useUndernames
 import type { RecordWrite } from '../writeSettle';
 import type { ANTDetails } from '../hooks/useANTDetails';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 /** Local mirror of the page's id shortener — keeps this component self-contained. */
 function shorten(id: string, head = 6, tail = 4) {
@@ -397,7 +398,7 @@ export default function RecordsTable({
             disabled={!canSave || busy}
             busy={busy}
             actionVerb="save this record"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`${buttonClass('primary', 'sm')} w-full`}
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Save record

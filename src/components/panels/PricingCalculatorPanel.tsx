@@ -11,6 +11,7 @@ import { useStore } from '../../store/useStore';
 import { SupportedTokenType, tokenLabels } from '../../constants';
 import { promptSignIn } from '../../utils';
 import { getTokenDecimals } from '../../utils/jitPayment';
+import { buttonClass } from '@/components/button';
 
 export default function PricingCalculatorPanel() {
   const { address, creditBalance, x402OnlyMode } = useStore();
@@ -697,7 +698,7 @@ export default function PricingCalculatorPanel() {
               <p className="text-foreground/80 mb-4">Sign in to top up credits and start uploading.</p>
               <button
                 onClick={promptSignIn}
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
+                className={buttonClass('primary', 'lg')}
               >
                 <Wallet className="w-4 h-4" /> Sign in
               </button>
@@ -710,14 +711,14 @@ export default function PricingCalculatorPanel() {
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
                   to="/upload"
-                  className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
+                  className={buttonClass('primary', 'lg')}
                 >
                   <Upload className="w-4 h-4" />
                   Upload Files
                 </Link>
                 <Link
                   to="/arns"
-                  className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
+                  className={buttonClass('secondary', 'lg')}
                 >
                   <Globe className="w-4 h-4" />
                   Search for a Domain
@@ -731,7 +732,7 @@ export default function PricingCalculatorPanel() {
               <p className="text-foreground/80 mb-4">Top up your account with credits to start uploading files or registering ArNS names.</p>
               <Link
                 to="/topup"
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
+                className={buttonClass('primary', 'lg')}
               >
                 <CreditCard className="w-4 h-4" />
                 Top Up Credits

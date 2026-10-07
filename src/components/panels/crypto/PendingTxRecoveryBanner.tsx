@@ -6,6 +6,7 @@ import { getPendingTopUpTxs, removePendingTopUpTx, savePendingTopUpTx, PendingTo
 import { tokenLabels, SupportedTokenType } from '../../../constants';
 import { useTurboConfig } from '../../../hooks/useTurboConfig';
 import CopyButton from '../../CopyButton';
+import { buttonClass } from '@/components/button';
 
 // Token types that support top-up recovery
 // Recovery is deliberately NOT filtered by isTokenSelectable: if a transfer was
@@ -223,7 +224,7 @@ export default function PendingTxRecoveryBanner() {
                 <button
                   onClick={() => handleRetry(tx)}
                   disabled={retryingTxId !== null}
-                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`${buttonClass('secondary', 'sm')} mt-3`}
                 >
                   <RefreshCw
                     className={`w-3.5 h-3.5 ${retryingTxId === tx.txId ? 'animate-spin' : ''}`}
@@ -290,7 +291,7 @@ export default function PendingTxRecoveryBanner() {
             <button
               onClick={handleManualSubmit}
               disabled={!manualTxId.trim() || manualSubmitting}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={buttonClass('primary', 'sm')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${manualSubmitting ? 'animate-spin' : ''}`} />
               {manualSubmitting ? 'Submitting...' : 'Submit Transaction'}

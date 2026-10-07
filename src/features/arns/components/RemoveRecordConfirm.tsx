@@ -5,6 +5,7 @@ import ModalHeader from '../../../components/modals/ModalHeader';
 import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
 import type { WriterChoice } from '../records/writerChoice';
 import RailSwitch from './RailSwitch';
+import { buttonClass } from '@/components/button';
 
 /**
  * Confirm removing one record, and name what it costs.
@@ -130,7 +131,7 @@ export default function RemoveRecordConfirm({
             type="button"
             onClick={onConfirm}
             disabled={busy || pending}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-error px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className={buttonClass('danger', 'md')}
           >
             {busy ? (
               <>

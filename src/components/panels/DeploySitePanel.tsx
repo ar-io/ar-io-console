@@ -23,6 +23,7 @@ import { JitTokenSelector } from '../JitTokenSelector';
 import X402OnlyBanner from '../X402OnlyBanner';
 import ModalHeader from '../modals/ModalHeader';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 // Helper function moved outside component to prevent recreation on every render
 function getFileIcon(filename: string) {
@@ -891,7 +892,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
         <div className="flex flex-col-reverse sm:flex-row gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 px-4 rounded-lg border border-border/20 text-foreground/80 hover:text-foreground hover:border-border/10 transition-colors"
+            className={`${buttonClass('secondary', 'lg')} flex-1`}
           >
             Cancel
           </button>
@@ -910,7 +911,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
               // Crypto pricing has not resolved yet — see UploadPanel.
               (paymentTab === 'crypto' && creditsNeeded > 0 && !(localJitMax > 0))
             }
-            className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
+            className={`${buttonClass('primary', 'lg')} flex-1`}
           >
             {!pricingReady ? 'Calculating...' : paymentTab === 'crypto' && creditsNeeded > 0 ? 'Deploy & Auto-Pay' : 'Deploy Now'}
           </button>
@@ -1931,7 +1932,7 @@ export default function DeploySitePanel() {
             />
             <label
               htmlFor="folder-upload"
-              className="inline-block px-4 py-2 rounded-full bg-foreground text-card font-medium cursor-pointer hover:bg-foreground/90 transition-colors"
+              className={`${buttonClass('primary', 'sm')} cursor-pointer`}
             >
               Select Site Folder
             </label>
@@ -2257,7 +2258,7 @@ export default function DeploySitePanel() {
         <button
           onClick={address ? () => setShowConfirmModal(true) : promptSignIn}
           disabled={!!address && (deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
-          className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className={`${buttonClass('primary', 'xl')} w-full mt-4`}
         >
           {!address ? (
             <>
@@ -2359,7 +2360,7 @@ export default function DeploySitePanel() {
                       text: 'Site deployed successfully! ArNS update was cancelled.'
                     });
                   }}
-                  className="px-4 py-2 text-sm bg-card border border-border/20 rounded-lg text-foreground/80 hover:text-foreground hover:border-border/10 transition-colors"
+                  className={buttonClass('secondary', 'sm')}
                 >
                   Skip ArNS Update
                 </button>
@@ -2429,7 +2430,7 @@ export default function DeploySitePanel() {
                   getArweaveUrl(deploySuccessInfo.manifestId),
                 '_blank'
               )}
-              className="flex-1 py-3 px-4 bg-success text-white rounded-lg font-medium hover:bg-success/90 transition-colors"
+              className={`${buttonClass('primary', 'lg')} flex-1`}
             >
               Visit Your Site
             </button>
@@ -2443,7 +2444,7 @@ export default function DeploySitePanel() {
                 setPostDeployShowUndername(false);
                 setPostDeployArNSEnabled(false);
               }}
-              className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card hover:border-primary/50 transition-colors"
+              className={`${buttonClass('secondary', 'lg')} flex-1`}
             >
               Deploy Another Site
             </button>
@@ -2500,13 +2501,13 @@ export default function DeploySitePanel() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => navigate('/arns')}
-                className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                className={`${buttonClass('secondary', 'lg')} flex-1`}
               >
                 Find a name
               </button>
               <button
                 onClick={() => window.open('https://docs.ar.io/learn/arns', '_blank', 'noopener,noreferrer')}
-                className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card transition-colors"
+                className={`${buttonClass('secondary', 'lg')} flex-1`}
               >
                 How ArNS works
               </button>
@@ -2605,7 +2606,7 @@ export default function DeploySitePanel() {
                   setPostDeployArNSUpdating(false);
                 }}
                 disabled={!postDeployArNSName || postDeployArNSUpdating || (postDeployShowUndername && !postDeployUndername)}
-                className="w-full py-3 px-4 bg-foreground text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+                className={`${buttonClass('secondary', 'lg')} w-full`}
               >
                 {postDeployArNSUpdating ? (
                   <>

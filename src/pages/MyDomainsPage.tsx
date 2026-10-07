@@ -12,6 +12,7 @@ import IncompletePurchaseBanner from '@/features/arns/components/IncompletePurch
 import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
 import ManageDomainModal from '@/features/arns/components/ManageDomainModal';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 const DOMAINS_SHOWN = 10;
 
@@ -251,7 +252,7 @@ export default function MyDomainsPage() {
               </p>
               <button
                 onClick={() => navigate('/arns')}
-                className="rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary/90"
+                className={buttonClass('primary', 'sm')}
               >
                 Register a name
               </button>
@@ -325,7 +326,7 @@ export default function MyDomainsPage() {
           </p>
           <button
             onClick={() => setShowLinkModal(true)}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
+            className={`${buttonClass('primary', 'md')} mt-4`}
           >
             <Globe className="h-4 w-4" />
             Link a Solana wallet

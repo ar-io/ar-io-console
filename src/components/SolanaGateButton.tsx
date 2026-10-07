@@ -6,6 +6,7 @@ import { useArNSTurboSigner } from '../features/arns/hooks/useArNSTurboSigner';
 import { useLinkedSolanaWallet } from '../hooks/useLinkedSolanaWallet';
 import LinkSolanaWalletModal from './modals/LinkSolanaWalletModal';
 import WalletSelectionModal from './modals/WalletSelectionModal';
+import { buttonClass } from '@/components/button';
 
 interface SolanaGateButtonProps {
   /** The real action, run only once a live Solana signer is available. */
@@ -38,8 +39,7 @@ interface SolanaGateButtonProps {
   ariaLabel?: string;
 }
 
-const PRIMARY_BTN =
-  'flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50';
+const PRIMARY_BTN = `${buttonClass('primary', 'lg')} w-full`;
 
 /**
  * A primary action button that gates on a live Solana signer — the signer every
