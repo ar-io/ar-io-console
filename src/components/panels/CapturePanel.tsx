@@ -380,7 +380,8 @@ export default function CapturePanel() {
               if (failedFiles.length === 0) {
                 setCaptureMessage({
                   type: 'success',
-                  text: `Screenshot captured and uploaded! Assigned to ${selectedUndername ? selectedUndername + '_' : ''}${selectedArnsName}.ar.io`
+                  text: `Screenshot captured and uploaded. ${assignedLabel(selectedArnsName, selectedUndername || undefined)}.${arnsHost} now points to it.`,
+                  domain: { name: selectedArnsName, undername: selectedUndername || undefined },
                 });
               }
             } else {

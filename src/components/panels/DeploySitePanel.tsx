@@ -4,7 +4,7 @@ import { useFolderUpload } from '../../hooks/useFolderUpload';
 import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags } from '../../hooks/useFreeUploadLimit';
 import { wincPerCredit, SupportedTokenType, tokenLabels } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Globe, XCircle, Loader2, RefreshCw, Info, Receipt, ChevronDown, ChevronUp, CheckCircle, Folder, File, FileText, Image, Code, ExternalLink, Home, AlertTriangle, Archive, Clock, HelpCircle, MoreVertical, Zap, ArrowRight, Copy, X, Wallet, CreditCard, Sparkles, Package } from 'lucide-react';
+import { Globe, XCircle, Loader2, RefreshCw, Info, Receipt, ChevronDown, ChevronUp, CheckCircle, Folder, File, FileText, Image, Code, ExternalLink, Home, AlertTriangle, Archive, Clock, HelpCircle, MoreVertical, Zap, ArrowRight, Copy, X, Wallet, CreditCard, Sparkles, Package, Settings } from 'lucide-react';
 import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { supportsJitPayment, calculateRequiredTokenAmount, formatTokenAmount, getTokenConverter } from '../../utils/jitPayment';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
@@ -13,7 +13,7 @@ import { getArweaveUrl, getArweaveRawUrl, promptSignIn } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ReceiptModal from '../modals/ReceiptModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
 import AssignDomainModal from '../modals/AssignDomainModal';
@@ -2387,13 +2387,13 @@ export default function DeploySitePanel() {
               <div className="flex items-center gap-2 p-3 bg-card rounded border border-border/10">
                 <span className="font-mono text-sm text-foreground flex-1 min-w-0 truncate">
                   {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                    `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
+                    `https://${assignedLabel(deploySuccessInfo.arnsName, deploySuccessInfo.undername)}.${arnsHost}` :
                     getArweaveUrl(deploySuccessInfo.manifestId)
                   }
                 </span>
                 <CopyButton textToCopy={
                   deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                    `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
+                    `https://${assignedLabel(deploySuccessInfo.arnsName, deploySuccessInfo.undername)}.${arnsHost}` :
                     getArweaveUrl(deploySuccessInfo.manifestId)
                 } />
               </div>
@@ -2429,7 +2429,7 @@ export default function DeploySitePanel() {
             <button
               onClick={() => window.open(
                 deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                  `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
+                  `https://${assignedLabel(deploySuccessInfo.arnsName, deploySuccessInfo.undername)}.${arnsHost}` :
                   getArweaveUrl(deploySuccessInfo.manifestId),
                 '_blank'
               )}
@@ -2452,6 +2452,16 @@ export default function DeploySitePanel() {
               Deploy Another Site
             </button>
           </div>
+          {/* The name this deploy is on, one click from its page. */}
+          {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName && (
+            <Link
+              to={`/domains/${encodeURIComponent(deploySuccessInfo.arnsName)}`}
+              className={actionButtonClass()}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Manage {deploySuccessInfo.arnsName}
+            </Link>
+          )}
 
         </div>
       )}
