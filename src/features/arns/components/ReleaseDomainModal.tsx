@@ -185,7 +185,7 @@ export default function ReleaseDomainModal({
                   <Loader2 className="h-4 w-4 animate-spin" /> Releasing…
                 </>
               }
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-error px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${buttonClass('danger', 'lg')} w-full`}
               actionVerb="release this name"
             >
               <Flame className="h-4 w-4" /> Release name to auction

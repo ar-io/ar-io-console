@@ -31,6 +31,7 @@ import PriceAmount from './PriceAmount';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
 import { toUnicodeName } from '@/utils/punycode';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 const PAGE_SIZE = 25;
 
@@ -326,7 +327,7 @@ export default function ReturnedNamesPanel() {
                   <button
                     onClick={() => setSelected(r)}
                     disabled={remaining <= 0}
-                    className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={buttonClass('primary', 'sm')}
                   >
                     Buy
                   </button>

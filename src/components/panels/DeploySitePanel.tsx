@@ -2501,7 +2501,7 @@ export default function DeploySitePanel() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => navigate('/arns')}
-                className={`${buttonClass('primary', 'lg')} flex-1`}
+                className={`${buttonClass('secondary', 'lg')} flex-1`}
               >
                 Find a name
               </button>
@@ -2606,7 +2606,7 @@ export default function DeploySitePanel() {
                   setPostDeployArNSUpdating(false);
                 }}
                 disabled={!postDeployArNSName || postDeployArNSUpdating || (postDeployShowUndername && !postDeployUndername)}
-                className={`${buttonClass('primary', 'lg')} w-full`}
+                className={`${buttonClass('secondary', 'lg')} w-full`}
               >
                 {postDeployArNSUpdating ? (
                   <>

@@ -243,7 +243,7 @@ export default function ReturnedNameBuyModal({
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => freshness.refetch()}
-                className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10"
+                className={buttonClass('secondary', 'sm')}
               >
                 <RefreshCw className="h-4 w-4" /> Refresh
               </button>

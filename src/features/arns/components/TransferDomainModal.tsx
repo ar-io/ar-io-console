@@ -175,7 +175,7 @@ export default function TransferDomainModal({
                   <Loader2 className="h-4 w-4 animate-spin" /> Transferring…
                 </>
               }
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${buttonClass('danger', 'lg')} w-full`}
               actionVerb="transfer this name"
             >
               <Send className="h-4 w-4" /> Transfer name

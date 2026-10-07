@@ -718,7 +718,7 @@ export default function PricingCalculatorPanel() {
                 </Link>
                 <Link
                   to="/arns"
-                  className={buttonClass('primary', 'lg')}
+                  className={buttonClass('secondary', 'lg')}
                 >
                   <Globe className="w-4 h-4" />
                   Search for a Domain

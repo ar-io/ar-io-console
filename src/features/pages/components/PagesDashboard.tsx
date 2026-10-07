@@ -334,7 +334,7 @@ function RemoveDomainConfirm({
           <button
             type="button"
             onClick={onConfirm}
-            className={buttonClass('danger', 'sm')}
+            className={buttonClass('primary', 'sm')}
           >
             Remove
           </button>

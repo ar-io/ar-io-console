@@ -232,7 +232,7 @@ export function GatewayCombobox({
         <div className="flex gap-2">
           <button
             onClick={handleCustomUrlSubmit}
-            className={`${buttonClass('primary', 'xs')} flex-1`}
+            className={`${buttonClass('primary', 'sm')} flex-1`}
           >
             Save
           </button>
@@ -242,7 +242,7 @@ export function GatewayCombobox({
               setCustomUrl("");
               setCustomUrlError(null);
             }}
-            className={`${buttonClass('secondary', 'xs')} flex-1`}
+            className={`${buttonClass('secondary', 'sm')} flex-1`}
           >
             Cancel
           </button>

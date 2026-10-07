@@ -13,7 +13,9 @@ All notable changes to the ar.io Console are documented in this file.
 - **Buttons follow the ar.io brand colours.** The main action on each screen
   is purple, the actions beside it are outlined, and destructive confirms are
   red. Some main actions were dark and some purple, and Close and Try again
-  were sometimes purple; they now follow one rule.
+  were sometimes purple; they now follow one rule. The red used for errors and
+  destructive actions is darker (#b91c1c), so white text on it and red text
+  on grey cards are easier to read.
 - **ARIO top-ups are smaller.** Each ARIO top-up is limited to $100 at the
   day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
   5,000, 10,000 and 25,000 ARIO. A preset at or above the limit is replaced by

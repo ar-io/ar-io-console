@@ -491,7 +491,7 @@ const Header = () => {
           onClick={() => {
             setShowWalletModal(true);
           }}
-          className={`${buttonClass('primary', 'md')} mr-2 sm:mr-0`}
+          className={`${buttonClass('secondary', 'md')} mr-2 sm:mr-0`}
         >
           <Wallet className="w-4 h-4" />
           Sign in

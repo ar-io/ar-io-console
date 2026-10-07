@@ -508,7 +508,7 @@ alongside it; don't hand-write button colours.
 | Primary | `buttonClass('primary')`: purple fill, white text | The one main action on a screen: Pay, Upload, Deploy, Register, Sign in, Continue, a success screen's next step |
 | Secondary | `buttonClass('secondary')`: outlined, transparent | Everything beside or after it: Cancel, Try again, Close, Done, Download |
 | Destructive | `buttonClass('danger')`: red fill | The final confirm inside a destructive confirmation: Remove, Revoke, Delete |
-| Destructive (opener) | `buttonClass('danger-outline')`: red outline | A destructive action that opens that confirmation |
+| Destructive (immediate or opener) | `buttonClass('danger-outline')`: red outline | A destructive action that acts at once (Cancel an upload) or opens a confirmation |
 | Tertiary | a text link | Back, "Pay with card instead", "Register another name" |
 
 Sizes: `xs` (in a callout or list row), `sm` (inline beside text), `md` (default),
@@ -521,16 +521,16 @@ foot of a panel).
 <button className={buttonClass('danger')}>Remove</button>
 ```
 
-- **One primary per screen.** A Close or Try again is never purple.
+- **One primary per screen.** A Close or Try again is never purple; in a grid of cards, the per-card action is secondary.
+- **Global navigation uses secondary.** The header's Sign in is outlined, so it never competes with a page's own primary.
 - **Dark fills are not buttons.** `bg-foreground` is for dark sections and selected toggles. On a dark hero, buttons use the brand kit's dark variants (white fill, or a white translucent outline).
 - **Disabled** is `opacity-50` from the helper; don't add a different disabled colour.
+- **Not buttons:** toggles and segmented controls (selected state may be filled), and buttons on a dark hero.
 
-### Tertiary Button (Ghost)
-```jsx
-<button className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-body text-sm font-medium text-foreground/80 transition-colors hover:bg-card hover:text-foreground">
-  Tertiary Action
-</button>
-```
+### Tertiary actions are text links
+Back, "Pay with card instead", "Register another name": a plain text link
+(`text-sm text-primary hover:underline`, or `text-foreground/80
+hover:text-foreground` for a quieter one), not a button shape.
 
 ### Small Action Button (section and list headers)
 The buttons beside a section or list title ("Export CSV", "Check Status", "Edit", "Manage", "Add record"), and the small primary action that sits with them ("Create page"). Always use `actionButtonClass` from `src/components/actionButton.ts`; don't hand-write these classes.
@@ -849,10 +849,10 @@ import BaseModal from './modals/BaseModal';
 
     {/* Actions */}
     <div className="flex gap-3 border-t border-border p-6">
-      <button className="flex-1 rounded-full border border-foreground bg-transparent px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/5">
+      <button className={`${buttonClass('secondary')} flex-1`}>
         Cancel
       </button>
-      <button className="flex-1 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90">
+      <button className={`${buttonClass('primary')} flex-1`}>
         Confirm
       </button>
     </div>
@@ -1144,9 +1144,10 @@ className="hover:border-primary/30"
 .font-heading.font-extrabold (headings)
 .font-body (body text)
 
-/* Buttons */
-.rounded-full.bg-foreground.text-white.px-5.py-2.5.font-semibold (primary CTA)
-.rounded-full.border.border-foreground.text-foreground (secondary)
+/* Buttons: use buttonClass() from src/components/button.ts */
+buttonClass('primary')   /* purple fill, one per screen */
+buttonClass('secondary') /* outlined */
+buttonClass('danger')    /* red fill, final destructive confirm */
 
 /* Cards */
 .rounded-2xl.border.border-border.bg-card.p-6.shadow-sm

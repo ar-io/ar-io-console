@@ -9,8 +9,8 @@
  *   Download: anything beside or after the main action.
  * - `danger` — red fill, for the final confirm of something destructive
  *   (Remove, Revoke, Delete) inside its confirmation.
- * - `danger-outline` — red outline, for a destructive action that opens that
- *   confirmation.
+ * - `danger-outline` — red outline, for a destructive action that acts at
+ *   once (Cancel an upload) or opens a confirmation.
  *
  * Text links (Back, "Pay with card instead") stay links. The small buttons
  * beside a section title use `actionButtonClass` instead.
@@ -29,15 +29,17 @@ export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-outline
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 // Hover is gated on `:not(:disabled)` rather than `enabled:`, which never
-// matches, so a `<Link>` or `<a>` styled this way keeps its hover.
+// matches, so a `<Link>` or `<a>` styled this way keeps its hover. Font weight
+// lives in each size (so `xl` is really bold), and only the compact sizes
+// refuse to wrap: a long or dynamic label must wrap on a phone, not overflow.
 const BASE =
-  'relative inline-flex items-center justify-center gap-2 rounded-full border font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+  'relative inline-flex items-center justify-center gap-2 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 
 const SIZES: Record<ButtonSize, string> = {
-  xs: 'whitespace-nowrap px-3 py-1.5 text-xs',
-  sm: 'whitespace-nowrap px-4 py-2 text-sm',
-  md: 'whitespace-nowrap px-5 py-2.5 text-sm',
-  lg: 'px-6 py-3 text-base',
+  xs: 'whitespace-nowrap px-3 py-1.5 text-xs font-semibold',
+  sm: 'whitespace-nowrap px-4 py-2 text-sm font-semibold',
+  md: 'px-5 py-2.5 text-sm font-semibold',
+  lg: 'px-6 py-3 text-base font-semibold',
   xl: 'px-6 py-4 text-lg font-bold',
 };
 

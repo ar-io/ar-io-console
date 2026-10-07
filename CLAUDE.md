@@ -816,7 +816,7 @@ All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It 
 ```
 
 ### Buttons
-Use `buttonClass(variant, size)` from `src/components/button.ts` (brand kit pill CTAs): `primary` is purple, one per screen; `secondary` is outlined (Cancel, Try again, Close); `danger` is red. Small section-header buttons use `actionButtonClass`. Never hand-write button colours; `docs/STYLE_GUIDE.md` "Button Styles" has the roles.
+Use `buttonClass(variant, size)` from `src/components/button.ts` (brand kit pill CTAs): `primary` is purple, one per screen; `secondary` is outlined (Cancel, Try again, Close, the header's Sign in, per-card actions in a grid); `danger` is a red fill for the final destructive confirm; `danger-outline` is a red outline for a destructive action that acts at once or opens a confirmation. Small section-header buttons use `actionButtonClass`. Exceptions: toggles and segmented controls, and buttons on a dark hero (brand kit dark variants). Never hand-write button colours; `docs/STYLE_GUIDE.md` "Button Styles" has the roles.
 ```jsx
 <button className={buttonClass('primary', 'lg')}>Continue</button>
 ```

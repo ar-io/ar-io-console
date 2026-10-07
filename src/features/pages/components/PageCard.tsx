@@ -266,7 +266,7 @@ export default function PageCard({
           <button
             type="button"
             onClick={onEdit}
-            className={buttonClass('primary', 'sm')}
+            className={buttonClass('secondary', 'xs')}
           >
             <PenLine className="h-3.5 w-3.5" />
             Edit
@@ -276,7 +276,7 @@ export default function PageCard({
               href={liveUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={buttonClass('secondary', 'sm')}
+              className={buttonClass('secondary', 'xs')}
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Visit

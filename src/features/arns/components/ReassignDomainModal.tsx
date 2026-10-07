@@ -160,7 +160,7 @@ export default function ReassignDomainModal({
                   <Loader2 className="h-4 w-4 animate-spin" /> Reassigning…
                 </>
               }
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${buttonClass('danger', 'lg')} w-full`}
               actionVerb="reassign this name"
             >
               <Shuffle className="h-4 w-4" /> Reassign name

@@ -547,7 +547,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           </button>
           <button
             disabled={!isValid}
-            className={buttonClass('primary', 'sm')}
+            className={buttonClass('primary', 'lg')}
             onClick={handleSubmit}
           >
             Next

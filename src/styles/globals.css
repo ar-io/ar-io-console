@@ -36,7 +36,7 @@
 
     /* Semantic status colors */
     --color-success: 22 163 74;        /* #16a34a - Success/positive states */
-    --color-error: 220 38 38;          /* #dc2626 - Error/danger states */
+    --color-error: 185 28 28;          /* #b91c1c - Error/danger states; passes AA as a fill and as text on bg-card */
     --color-warning: 217 119 6;        /* #d97706 - Warning/caution states */
     --color-info: 37 99 235;           /* #2563eb - Informational states */
   }
