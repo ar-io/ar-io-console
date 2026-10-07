@@ -59,7 +59,13 @@ export default function CryptoConfirmationPanel({
   onPaymentComplete,
 }: CryptoConfirmationPanelProps) {
   const hostOwned = !!purpose || embedded;
-  const { address, walletType, paymentTargetAddress, paymentTargetType } = useStore();
+  const { address, walletType, paymentTargetAddress: storedTarget, paymentTargetType } = useStore();
+  /*
+    A recipient picked on the Top Up page. Embedded (a payment for this user's
+    own purchase) never shows that picker, so a leftover one would credit an
+    account the purchase never reads: the signed-in wallet is the recipient.
+  */
+  const paymentTargetAddress = embedded ? null : storedTarget;
   const { wallets } = useWallets(); // Get Privy wallets
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const [isProcessing, setIsProcessing] = useState(false);

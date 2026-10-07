@@ -342,10 +342,20 @@ export default function TopUpPanel({
 
   // Truncate address for display
   // Displayed and charged must be the same account — see `resolveCreditTarget`.
+  /*
+    The recipient someone picked on the Top Up page. Embedded (a payment for
+    this user's own purchase) hides that picker, so a recipient left over from
+    an earlier visit would credit an account the purchase never reads; the
+    host's destination, or the signed-in wallet, is the only right answer.
+  */
+  const recipientAddress = embedded ? null : paymentTargetAddress;
+  const recipientType = embedded
+    ? null
+    : (paymentTargetType as CreditWalletType | null);
   const creditTargetAddress = resolveCreditTarget({
     destination: creditDestination,
-    paymentTargetAddress,
-    paymentTargetType: paymentTargetType as CreditWalletType | null,
+    paymentTargetAddress: recipientAddress,
+    paymentTargetType: recipientType,
     sessionAddress: address,
     sessionWalletType: walletType as CreditWalletType | null,
   })?.address;
@@ -500,8 +510,8 @@ export default function TopUpPanel({
       // For fiat, we need either a connected wallet OR a target address
       const target = resolveCreditTarget({
         destination: creditDestination,
-        paymentTargetAddress,
-        paymentTargetType: paymentTargetType as CreditWalletType | null,
+        paymentTargetAddress: recipientAddress,
+        paymentTargetType: recipientType,
         sessionAddress: address,
         sessionWalletType: walletType as CreditWalletType | null,
       });
@@ -1067,8 +1077,8 @@ export default function TopUpPanel({
     */
     const target = resolveCreditTarget({
       destination: creditDestination,
-      paymentTargetAddress,
-      paymentTargetType: paymentTargetType as CreditWalletType | null,
+      paymentTargetAddress: recipientAddress,
+      paymentTargetType: recipientType,
       sessionAddress: address,
       sessionWalletType: walletType as CreditWalletType | null,
     });
