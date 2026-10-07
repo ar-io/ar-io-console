@@ -815,11 +815,10 @@ All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It 
 </div>
 ```
 
-### Primary Button
+### Buttons
+Use `buttonClass(variant, size)` from `src/components/button.ts` (brand kit pill CTAs): `primary` is purple, one per screen; `secondary` is outlined (Cancel, Try again, Close); `danger` is red. Small section-header buttons use `actionButtonClass`. Never hand-write button colours; `docs/STYLE_GUIDE.md` "Button Styles" has the roles.
 ```jsx
-<button className="inline-flex items-center gap-2 bg-foreground text-white px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity">
-  Button Text
-</button>
+<button className={buttonClass('primary', 'lg')}>Continue</button>
 ```
 
 ### Privy Wallet Detection

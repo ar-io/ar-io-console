@@ -4,6 +4,7 @@ import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditBalance } from '../../hooks/useCreditBalance';
 import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import { wincPerCredit } from '../../constants';
+import { buttonClass } from '@/components/button';
 
 export default function BalanceCard() {
   const navigate = useNavigate();
@@ -88,14 +89,14 @@ export default function BalanceCard() {
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button
               onClick={() => navigate('/topup')}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-foreground px-4 py-3 font-medium text-white transition-colors hover:bg-foreground/90"
+              className={`${buttonClass('primary', 'lg')} flex-1`}
             >
               <Plus className="h-4 w-4" />
               Top Up
             </button>
             <button
               onClick={() => navigate('/share')}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-border/20 bg-background px-4 py-3 font-medium text-foreground transition-colors hover:bg-card"
+              className={`${buttonClass('secondary', 'lg')} flex-1`}
             >
               <Share2 className="h-4 w-4" />
               Share

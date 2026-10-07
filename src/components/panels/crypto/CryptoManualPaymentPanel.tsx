@@ -8,6 +8,7 @@ import useAddressState, { TransferTransactionResult } from '../../../hooks/useAd
 import useTurboWallets from '../../../hooks/useTurboWallets';
 import CopyButton from '../../CopyButton';
 import { isSdkToken } from '../../../constants';
+import { buttonClass } from '@/components/button';
 
 
 
@@ -218,7 +219,7 @@ export default function CryptoManualPaymentPanel({
                     submitNativeTransaction(cryptoTopupValue);
                   }
                 }}
-                className="w-full px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                className={`${buttonClass('primary', 'lg')} w-full`}
               >
                 Send Payment
               </button>
@@ -330,7 +331,7 @@ export default function CryptoManualPaymentPanel({
                     e.preventDefault();
                     submitTransactionToTurbo();
                   }}
-                  className="w-full px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                  className={`${buttonClass('primary', 'lg')} w-full`}
                   disabled={!transferTransactionResult}
                 >
                   Submit to ar.io
@@ -362,7 +363,7 @@ export default function CryptoManualPaymentPanel({
                 <button
                   onClick={retryTransaction}
                   disabled={isRetrying}
-                  className="mt-3 flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`${buttonClass('secondary', 'sm')} mt-3`}
                 >
                   <RefreshCw className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} />
                   {isRetrying ? 'Retrying...' : 'Retry Transaction'}
@@ -386,7 +387,7 @@ export default function CryptoManualPaymentPanel({
         {transactionSubmitted && (
           <button
             onClick={onComplete}
-            className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90"
+            className={buttonClass('primary', 'lg')}
           >
             Complete
           </button>

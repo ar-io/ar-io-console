@@ -8,6 +8,7 @@ import { useWincForOneGiB } from '../../../hooks/useWincForOneGiB';
 import { wincPerCredit } from '../../../constants';
 import { getWalletTypeLabel } from '../../../utils/addressValidation';
 import CopyButton from '../../CopyButton';
+import { buttonClass } from '@/components/button';
 
 interface PaymentConfirmationPanelProps {
   usdAmount: number;
@@ -336,7 +337,7 @@ const PaymentConfirmationPanel: React.FC<PaymentConfirmationPanelProps> = ({
           </button>
           <button
             disabled={sendingPayment || !estimatedCredits}
-            className="px-8 py-3 rounded-full bg-primary text-primary-foreground font-bold hover:bg-primary/90 disabled:bg-card disabled:text-foreground/80 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className={buttonClass('primary', 'lg')}
             onClick={submitPayment}
           >
             {sendingPayment ? (

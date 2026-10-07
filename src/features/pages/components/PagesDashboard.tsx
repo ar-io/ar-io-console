@@ -27,6 +27,7 @@ import { useUploadStatus } from '@/hooks/useUploadStatus';
 import AssignDomainModal from '@/components/modals/AssignDomainModal';
 import PageCard from './PageCard';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 export interface PagesDashboardProps {
   arioGatewayUrl?: string;
@@ -137,7 +138,7 @@ export default function PagesDashboard({
             <button
               type="button"
               onClick={onCreate}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+              className={buttonClass('primary', 'md')}
             >
               <LayoutTemplate className="h-4 w-4" />
               Browse templates
@@ -145,7 +146,7 @@ export default function PagesDashboard({
             <button
               type="button"
               onClick={onImport}
-              className="inline-flex items-center gap-2 rounded-full border border-border/20 bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/40"
+              className={buttonClass('secondary', 'md')}
             >
               <DownloadCloud className="h-4 w-4" />
               Edit an existing page
@@ -326,14 +327,14 @@ function RemoveDomainConfirm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full border border-border/20 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card"
+            className={buttonClass('secondary', 'sm')}
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('danger', 'sm')}
           >
             Remove
           </button>
@@ -389,14 +390,14 @@ function DeleteConfirm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-full border border-border/20 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card"
+            className={buttonClass('secondary', 'sm')}
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-full bg-error px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('danger', 'sm')}
           >
             Delete
           </button>

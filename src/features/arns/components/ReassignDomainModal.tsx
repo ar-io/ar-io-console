@@ -15,6 +15,7 @@ import { useReassignArNSName } from '../hooks/useReassignArNSName';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
 import TransactionReceipt from './TransactionReceipt';
+import { buttonClass } from '@/components/button';
 
 interface ReassignDomainModalProps {
   domain: ArNSName;
@@ -81,7 +82,7 @@ export default function ReassignDomainModal({
             <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
-              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('secondary', 'md')} mt-4`}
             >
               Close
             </button>

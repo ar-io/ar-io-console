@@ -9,6 +9,7 @@ import {
 import { GatewayCombobox } from "./GatewayCombobox";
 import type { GatewayWithStake } from "../types";
 import { lockBodyScroll, releaseBodyScroll } from "@/components/modals/bodyScrollLock";
+import { buttonClass } from '@/components/button';
 
 // Feature flag: Signature verification is hidden until SDK fixes ANS-104 data item support
 // The SDK's SignatureVerificationStrategy uses /tx/{txId} which only works for L1 transactions
@@ -371,7 +372,7 @@ export function BrowseSettingsFlyout({
         <div className="px-6 py-4 border-t border-border/20">
           <button
             onClick={handleDone}
-            className="w-full py-2.5 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+            className={`${buttonClass('secondary', 'md')} w-full`}
           >
             Done
           </button>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Globe, Search, CheckCircle, XCircle, Shield, Zap, ExternalLink } from 'lucide-react';
 import { getARIO } from '../../utils';
+import { buttonClass } from '@/components/button';
 
 export default function ArNSPanel() {
   const [nameSearch, setNameSearch] = useState('');
@@ -104,7 +105,7 @@ export default function ArNSPanel() {
           <button
             onClick={checkAvailability}
             disabled={!nameSearch || checking || hasInvalidHyphens}
-            className="w-full sm:w-auto px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={`${buttonClass('primary', 'lg')} w-full sm:w-auto`}
           >
             <Search className="w-4 h-4" />
             {checking ? 'Checking...' : 'Check'}
@@ -147,7 +148,7 @@ export default function ArNSPanel() {
                   href={`https://arns.ar.io/#/register/${checkedName}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-full hover:bg-primary/90 transition-colors"
+                  className={buttonClass('primary', 'lg')}
                 >
                   <Globe className="w-5 h-5" />
                   Register on ArNS App
@@ -241,7 +242,7 @@ export default function ArNSPanel() {
                 href="https://arns.ar.io"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-medium rounded-full hover:bg-primary/90 transition-colors"
+                className={buttonClass('primary', 'sm')}
               >
                 <ExternalLink className="w-4 h-4" />
                 Open ArNS App

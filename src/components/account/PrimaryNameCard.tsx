@@ -11,6 +11,7 @@ import {
 } from '@/features/arns';
 import type { PrimaryNameModalMode } from '@/features/arns';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 interface PrimaryNameCardProps {
   address: string;
@@ -161,7 +162,7 @@ export default function PrimaryNameCard({
                     <button
                       onClick={handleRemove}
                       disabled={removeBusy}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-error px-4 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                      className={buttonClass('danger', 'xs')}
                     >
                       {removeBusy ? (
                         <>
@@ -188,7 +189,7 @@ export default function PrimaryNameCard({
               <p className="text-sm text-foreground/60">No primary name set.</p>
               <button
                 onClick={() => setModalMode('set')}
-                className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className={buttonClass('primary', 'md')}
               >
                 Set primary name
               </button>

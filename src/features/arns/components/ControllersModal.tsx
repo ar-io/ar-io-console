@@ -15,6 +15,7 @@ import {
   useControllerWrites,
 } from '../hooks/useControllers';
 import type { ControllerWrite } from '../writeSettle';
+import { buttonClass } from '@/components/button';
 
 interface ControllersModalProps {
   domain: ArNSName;
@@ -250,7 +251,7 @@ export default function ControllersModal({
               <button
                 onClick={handleAdd}
                 disabled={!canAdd || pending}
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className={buttonClass('primary', 'sm')}
               >
                 {busyKey === newController.trim() ? (
                   <>

@@ -66,6 +66,7 @@ import {
 } from '../purchase/topUpSteps';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
+import { buttonClass } from '@/components/button';
 
 interface ArNSPurchaseCardProps {
   name: string;
@@ -1312,7 +1313,7 @@ export function ArNSPurchaseCard({
                   ? promptReconnect()
                   : setShowLinkModal(true)
               }
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={buttonClass('primary', 'md')}
             >
               <Wallet className="h-4 w-4" />
               {cardPlan.kind === 'reconnect'
@@ -1352,7 +1353,7 @@ export function ArNSPurchaseCard({
             targetBlocks ||
             (!sponsored && (gasUnavailable || insufficientSol || balances.sol === undefined))
           }
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className={`${buttonClass('primary', 'lg')} w-full`}
         >
           {tokenStepLabel ? (
             <>

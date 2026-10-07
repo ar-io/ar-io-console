@@ -66,6 +66,7 @@ import { isArweaveTxId, isValidArNSName } from '@/features/arns/utils';
 import { toUnicodeName } from '@/utils/punycode';
 import { actionButtonClass } from '@/components/actionButton';
 import { arnsHostFor } from '@/features/pages/publish/renderCtx';
+import { buttonClass } from '@/components/button';
 
 /** Which action modal is open, if any. */
 type OpenModal =
@@ -419,7 +420,7 @@ export default function NameDetailPage() {
           </p>
           <button
             onClick={() => refetchRecord()}
-            className="rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('secondary', 'sm')}
           >
             Retry
           </button>
@@ -437,7 +438,7 @@ export default function NameDetailPage() {
           </p>
           <button
             onClick={() => navigate(`/arns?q=${encodeURIComponent(name)}`)}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            className={buttonClass('primary', 'md')}
           >
             Register {displayName}.ar.io
           </button>
@@ -507,7 +508,7 @@ export default function NameDetailPage() {
               href={`https://${name}.${arnsHost}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className={`${buttonClass('primary', 'md')} flex-shrink-0`}
             >
               Visit <ExternalLink className="h-4 w-4" />
             </a>

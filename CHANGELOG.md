@@ -10,6 +10,10 @@ All notable changes to the ar.io Console are documented in this file.
   `undername_name.ar.io` for the rest.
 
 ### Changed
+- **Buttons follow the ar.io brand colours.** The main action on each screen
+  is purple, the actions beside it are outlined, and destructive confirms are
+  red. Some main actions were dark and some purple, and Close and Try again
+  were sometimes purple; they now follow one rule.
 - **ARIO top-ups are smaller.** Each ARIO top-up is limited to $100 at the
   day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
   5,000, 10,000 and 25,000 ARIO. A preset at or above the limit is replaced by
@@ -18,8 +22,8 @@ All notable changes to the ar.io Console are documented in this file.
   History, Refresh, Edit, Manage and the other buttons beside a section or list
   title looked different on almost every screen, and some were plain text that
   did not read as a button on a phone. They now share one outlined style, red
-  for actions that delete or give something away, and a small dark button for
-  the one main action in a header.
+  for actions that delete or give something away, and a small purple button
+  for the one main action in a header.
 
 ### Fixed
 - **Visit on testnet.** The Visit button on a name's page opened

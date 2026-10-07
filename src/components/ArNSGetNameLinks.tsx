@@ -1,4 +1,5 @@
 import { Globe, Search } from 'lucide-react';
+import { buttonClass } from '@/components/button';
 
 /**
  * The "get a name" call to action, shared by both name pickers.
@@ -82,7 +83,7 @@ export function ArNSGetNameLinks({
       <button
         type="button"
         onClick={() => open(registerUrl)}
-        className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+        className={buttonClass('primary', 'sm')}
       >
         <Globe className="h-4 w-4" />
         {suggestedName ? `Check "${toNameQuery(suggestedName)}"` : 'Find a name'}

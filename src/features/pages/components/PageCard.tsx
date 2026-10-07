@@ -35,6 +35,7 @@ import { renderCtxFor } from '../publish/renderCtx';
 import { isPageDirty } from '../publish/pageFile';
 import { templates } from '../templates';
 import { useElementWidth } from './useElementWidth';
+import { buttonClass } from '@/components/button';
 
 /** Design size the thumbnail iframe renders at before being scaled to card width. */
 const THUMB_W = 400;
@@ -265,7 +266,7 @@ export default function PageCard({
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('primary', 'sm')}
           >
             <PenLine className="h-3.5 w-3.5" />
             Edit
@@ -275,7 +276,7 @@ export default function PageCard({
               href={liveUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/20 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary/50"
+              className={buttonClass('secondary', 'sm')}
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Visit

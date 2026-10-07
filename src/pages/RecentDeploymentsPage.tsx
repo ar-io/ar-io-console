@@ -11,6 +11,7 @@ import CopyButton from '../components/CopyButton';
 import ReceiptModal from '../components/modals/ReceiptModal';
 import { useNavigate } from 'react-router-dom';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 export default function RecentDeploymentsPage() {
   const navigate = useNavigate();
@@ -268,7 +269,7 @@ export default function RecentDeploymentsPage() {
                 <p className="text-sm text-foreground/80 mb-4">Deploy your first site to get started</p>
                 <button
                   onClick={() => navigate('/deploy')}
-                  className="px-4 py-2 bg-primary text-white rounded-full hover:bg-primary/90 transition-colors"
+                  className={buttonClass('primary', 'sm')}
                 >
                   Deploy Site
                 </button>

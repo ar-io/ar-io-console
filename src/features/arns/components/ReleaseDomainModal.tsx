@@ -17,6 +17,7 @@ import { useReleaseName } from '../hooks/useReleaseName';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
 import TransactionReceipt from './TransactionReceipt';
+import { buttonClass } from '@/components/button';
 
 interface ReleaseDomainModalProps {
   domain: ArNSName;
@@ -103,7 +104,7 @@ export default function ReleaseDomainModal({
               </button>
               <button
                 onClick={onClose}
-                className="rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className={buttonClass('secondary', 'md')}
               >
                 Close
               </button>

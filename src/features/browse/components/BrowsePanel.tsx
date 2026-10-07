@@ -32,6 +32,7 @@ import {
   type ContentCategory,
 } from "../utils/contentTypeUtils";
 import type { VerificationEvent } from "../service-worker/types";
+import { buttonClass } from '@/components/button';
 
 /**
  * Extract the base gateway domain from a URL, removing the first subdomain.
@@ -981,7 +982,7 @@ function BrowsePanelContent({
                     // Force re-run of initialization by toggling a dependency
                     window.location.reload();
                   }}
-                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                  className={buttonClass('secondary', 'sm')}
                 >
                   Refresh Page
                 </button>

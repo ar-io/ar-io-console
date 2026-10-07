@@ -34,6 +34,7 @@ import {
   CONTRACT_WALLET_PAYMENT_ERROR,
   isContractWalletCode,
 } from '../../../utils/contractWallet';
+import { buttonClass } from '@/components/button';
 
 interface CryptoConfirmationPanelProps {
   cryptoAmount: number;
@@ -992,7 +993,7 @@ export default function CryptoConfirmationPanel({
                       <button
                         onClick={retryTransaction}
                         disabled={isRetrying}
-                        className="mt-3 w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`${buttonClass('secondary', 'sm')} mt-3 w-full sm:w-auto`}
                       >
                         <RefreshCw className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} />
                         {isRetrying ? 'Retrying...' : 'Retry Transaction'}
@@ -1018,7 +1019,7 @@ export default function CryptoConfirmationPanel({
               {solanaWalletDisconnected ? (
                 <button
                   onClick={() => setShowSolanaReconnect(true)}
-                  className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 flex items-center gap-2"
+                  className={buttonClass('primary', 'lg')}
                 >
                   <Wallet className="w-4 h-4" />
                   Reconnect wallet to pay
@@ -1027,7 +1028,7 @@ export default function CryptoConfirmationPanel({
               <button
                 onClick={handlePayment}
                 disabled={!quote || isProcessing || (!hasSufficientBalance && !balanceLoading)}
-                className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className={buttonClass('primary', 'lg')}
               >
                 {isProcessing ? (
                   <>

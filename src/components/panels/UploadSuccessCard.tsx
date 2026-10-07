@@ -5,6 +5,7 @@ import { useState } from 'react';
 import CopyButton from '../CopyButton';
 import { type UploadResult } from '../../store/useStore';
 import { formatBytes, getArweaveUrl } from '../../utils';
+import { buttonClass } from '@/components/button';
 
 interface UploadSuccessCardProps {
   result: UploadResult;
@@ -107,7 +108,7 @@ export default function UploadSuccessCard({
           </div>
           <button
             onClick={onConnectDomain}
-            className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className={`${buttonClass('primary', 'md')} flex-shrink-0`}
           >
             Connect Domain
           </button>
@@ -125,7 +126,7 @@ export default function UploadSuccessCard({
               console.error('Failed to copy:', err);
             }
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-border/20 bg-background px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-foreground"
+          className={buttonClass('secondary', 'md')}
         >
           {copiedId
             ? <Check className="h-4 w-4 text-success" aria-hidden="true" />

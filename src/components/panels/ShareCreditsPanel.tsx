@@ -13,6 +13,7 @@ import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { buttonClass } from '@/components/button';
 
 interface Approval {
   approvedAddress: string;
@@ -165,7 +166,7 @@ export default function ShareCreditsPanel() {
         <p className="text-foreground/80 mb-5">Sign in to share credits with another wallet.</p>
         <button
           onClick={promptSignIn}
-          className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors"
+          className={buttonClass('primary', 'lg')}
         >
           <Wallet className="w-4 h-4" /> Sign in to share credits
         </button>
@@ -407,7 +408,7 @@ export default function ShareCreditsPanel() {
         <button
           onClick={handleShare}
           disabled={sending || !address || creditAmount < 0.01 || creditAmount > creditBalance || !approvedAddress}
-          className="w-full py-4 px-6 rounded-full bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className={`${buttonClass('primary', 'xl')} w-full`}
         >
           {sending ? (
             <>
@@ -462,13 +463,13 @@ export default function ShareCreditsPanel() {
                 <button
                   onClick={handleRevoke}
                   disabled={revoking}
-                  className="px-4 py-2 rounded-full bg-error text-white font-medium disabled:opacity-50"
+                  className={buttonClass('danger', 'sm')}
                 >
                   {revoking ? 'Revoking...' : 'Confirm Revoke'}
                 </button>
                 <button
                   onClick={() => setRevokeAddress('')}
-                  className="px-4 py-2 rounded-full border border-border/20 text-foreground/80"
+                  className={buttonClass('secondary', 'sm')}
                 >
                   Cancel
                 </button>

@@ -17,6 +17,7 @@ import {
 import { ChevronDown, Check, Plus, AlertCircle, Loader2 } from "lucide-react";
 import useDebounce from "@/hooks/useDebounce";
 import type { GatewayWithStake } from "../types";
+import { buttonClass } from '@/components/button';
 
 interface GatewayComboboxProps {
   value: string | null;
@@ -231,7 +232,7 @@ export function GatewayCombobox({
         <div className="flex gap-2">
           <button
             onClick={handleCustomUrlSubmit}
-            className="flex-1 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+            className={`${buttonClass('primary', 'xs')} flex-1`}
           >
             Save
           </button>
@@ -241,7 +242,7 @@ export function GatewayCombobox({
               setCustomUrl("");
               setCustomUrlError(null);
             }}
-            className="flex-1 py-1.5 bg-card border border-border/20 text-foreground rounded-lg text-sm font-medium hover:bg-card/80 transition-colors"
+            className={`${buttonClass('secondary', 'xs')} flex-1`}
           >
             Cancel
           </button>

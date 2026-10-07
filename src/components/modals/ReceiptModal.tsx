@@ -4,6 +4,7 @@ import BaseModal from './BaseModal';
 import CopyButton from '../CopyButton';
 import { useUploadStatus, UploadStatus } from '../../hooks/useUploadStatus';
 import { getArweaveUrl } from '../../utils';
+import { buttonClass } from '@/components/button';
 
 interface ReceiptModalProps {
   onClose: () => void;
@@ -254,7 +255,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
               <div className="flex gap-2">
                 <button
                   onClick={downloadReceipt}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-card border border-border/20 rounded-2xl text-sm text-foreground/80 hover:text-foreground hover:border-primary/50 transition-colors"
+                  className={`${buttonClass('secondary', 'sm')} flex-1`}
                 >
                   <Download className="w-4 h-4" />
                   Download Receipt
@@ -263,7 +264,7 @@ const ReceiptModal = ({ onClose, receipt, uploadId, initialStatus }: ReceiptModa
                   href={getArweaveUrl(uploadId)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm hover:bg-primary/90 transition-colors"
+                  className={`${buttonClass('primary', 'sm')} flex-1`}
                 >
                   <ExternalLink className="w-4 h-4" />
                   View on Arweave

@@ -5,6 +5,7 @@ import useDebounce from '../../../hooks/useDebounce';
 import { useArNSAvailability } from '../hooks/useArNSAvailability';
 import { useArNSPricing } from '@/hooks/useArNSPricing';
 import { isValidArNSName } from '../utils';
+import { buttonClass } from '@/components/button';
 
 interface ArNSNameSearchProps {
   value: string;
@@ -145,7 +146,7 @@ export function ArNSNameSearch({
               ) : (
                 <button
                   onClick={() => onSelect(debounced)}
-                  className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  className={buttonClass('primary', 'md')}
                 >
                   Select this name
                 </button>

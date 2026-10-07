@@ -28,7 +28,7 @@ The ar.io brand uses a refined, minimal color palette:
 
 | Color | Hex | CSS Variable | Usage |
 |-------|-----|--------------|-------|
-| **Primary** | `#5427C8` | `--color-primary` | CTAs, links, accents, interactive elements |
+| **Primary** | `#5427C8` | `--color-primary` | Primary buttons, links, accents |
 | **Lavender** | `#DFD6F7` | `--color-lavender` | Gradients, backgrounds, footer, decorative |
 | **Black** | `#23232D` | `--color-foreground` | Primary text, dark UI elements |
 | **White** | `#FFFFFF` | `--color-background` | Page background, light text on dark |
@@ -85,7 +85,7 @@ Define these in `globals.css` and reference in `tailwind.config.js`:
 bg-background          /* #FFFFFF - page background */
 bg-card                /* #F0F0F0 - card surfaces, elevated elements */
 bg-lavender            /* #DFD6F7 - decorative backgrounds, footer */
-bg-primary             /* #5427C8 - accent backgrounds (use sparingly) */
+bg-primary             /* #5427C8 - primary buttons; elsewhere an accent (use sparingly) */
 bg-foreground          /* #23232D - dark backgrounds, inverted sections */
 
 /* Text */
@@ -157,7 +157,7 @@ text-info, bg-info/10, border-info/20
 - Apply opacity modifiers for visual depth
 
 **DON'T:**
-- Overuse the primary purple - reserve for CTAs and key interactive elements
+- Overuse the primary purple - reserve it for the one primary button per screen, links and accents
 - Use hardcoded hex values - always use semantic tokens
 - Create new accent colors - the palette is intentionally minimal
 - Use `bg-primary` for large areas - it should accent, not dominate
@@ -498,32 +498,32 @@ All service panels follow a consistent structure:
 
 ## Button Styles
 
-### Primary CTA Button (Dark)
-The main call-to-action uses a pill shape with dark background:
+Buttons follow the ar.io brand kit's pill CTAs (`components.pill_ctas` in
+https://ar.io/brand-kit/agents.json). Always use `buttonClass(variant, size)`
+from `src/components/button.ts`, and pass layout (width, margin, flex)
+alongside it; don't hand-write button colours.
+
+| Role | Variant | Use for |
+|---|---|---|
+| Primary | `buttonClass('primary')`: purple fill, white text | The one main action on a screen: Pay, Upload, Deploy, Register, Sign in, Continue, a success screen's next step |
+| Secondary | `buttonClass('secondary')`: outlined, transparent | Everything beside or after it: Cancel, Try again, Close, Done, Download |
+| Destructive | `buttonClass('danger')`: red fill | The final confirm inside a destructive confirmation: Remove, Revoke, Delete |
+| Destructive (opener) | `buttonClass('danger-outline')`: red outline | A destructive action that opens that confirmation |
+| Tertiary | a text link | Back, "Pay with card instead", "Register another name" |
+
+Sizes: `xs` (in a callout or list row), `sm` (inline beside text), `md` (default),
+`lg` (a modal's or form's main action), `xl` (the large checkout button at the
+foot of a panel).
 
 ```jsx
-<button className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 font-body text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
-  <Icon className="h-4 w-4" />
-  Button Text
-</button>
+<button className={buttonClass('primary', 'lg')}>Continue</button>
+<button className={`${buttonClass('secondary', 'lg')} flex-1`}>Cancel</button>
+<button className={buttonClass('danger')}>Remove</button>
 ```
 
-### Primary CTA Button (Large)
-For hero sections and prominent actions:
-
-```jsx
-<button className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3 font-body text-base font-semibold text-white transition-opacity hover:opacity-90">
-  <Icon className="h-5 w-5" />
-  Get Started
-</button>
-```
-
-### Secondary Button (Outlined)
-```jsx
-<button className="inline-flex items-center justify-center gap-2 rounded-full border border-foreground bg-transparent px-5 py-2.5 font-body text-sm font-semibold text-foreground transition-colors hover:bg-foreground/5">
-  Secondary Action
-</button>
-```
+- **One primary per screen.** A Close or Try again is never purple.
+- **Dark fills are not buttons.** `bg-foreground` is for dark sections and selected toggles. On a dark hero, buttons use the brand kit's dark variants (white fill, or a white translucent outline).
+- **Disabled** is `opacity-50` from the helper; don't add a different disabled colour.
 
 ### Tertiary Button (Ghost)
 ```jsx
@@ -543,7 +543,7 @@ The buttons beside a section or list title ("Export CSV", "Check Status", "Edit"
 
 - `default` is outlined: a visible border, so it reads as a button on touch screens, where there is no hover.
 - `danger` is red from the start, for actions that delete or give something away. Each still confirms in a modal.
-- `primary` is filled dark, for the one main action in a header. Not purple.
+- `primary` is purple, for the one main action in a header, matching `buttonClass('primary')`.
 - Every action button has a leading icon, `h-3.5 w-3.5`, so a row of them scans the same everywhere and each can shrink to its icon on a phone. To show only the icon on phones, wrap the label in `<span className="sr-only sm:not-sr-only">`, so the text stays the button's accessible name.
 - Links within a row (Visit, Manage in a table) stay text links.
 
@@ -586,11 +586,7 @@ The buttons beside a section or list title ("Export CSV", "Check Status", "Edit"
 ```
 
 ### Destructive Button
-```jsx
-<button className="inline-flex items-center justify-center gap-2 rounded-full border border-red-500/30 bg-transparent px-5 py-2.5 font-body text-sm font-semibold text-red-600 transition-colors hover:bg-red-500/10">
-  Disconnect
-</button>
-```
+Use `buttonClass('danger')` for the final confirm and `buttonClass('danger-outline')` for the button that opens it (see Button Styles).
 
 ### Loading State
 ```jsx
