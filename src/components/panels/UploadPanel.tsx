@@ -26,6 +26,7 @@ import ModalHeader from '../modals/ModalHeader';
 import { actionButtonClass } from '@/components/actionButton';
 import AssignedDomainLinks from '@/components/AssignedDomainLinks';
 import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
+import { buttonClass } from '@/components/button';
 
 // Helper function to get contextual file icon based on content type or file name
 // size: 'sm' (16px) for inline use, 'lg' (24px) for file list thumbnails
@@ -822,7 +823,7 @@ export default function UploadPanel() {
               />
               <label
                 htmlFor="file-upload"
-                className="inline-block px-4 py-2 rounded-full bg-foreground text-card font-medium cursor-pointer hover:bg-foreground/90 transition-colors"
+                className={`${buttonClass('primary', 'sm')} cursor-pointer`}
               >
                 Select Files
               </label>
@@ -941,7 +942,7 @@ export default function UploadPanel() {
               <button
                 onClick={address ? handleUpload : promptSignIn}
                 disabled={!!address && files.length === 0}
-                className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={`${buttonClass('primary', 'xl')} w-full mt-4`}
               >
                 {address ? (
                   <>
@@ -1660,7 +1661,7 @@ export default function UploadPanel() {
                   <div className="flex flex-col-reverse sm:flex-row gap-3">
                     <button
                       onClick={() => setShowConfirmModal(false)}
-                      className="flex-1 py-3 px-4 rounded-lg border border-border/20 text-foreground/80 hover:text-foreground hover:border-border/20/50 transition-colors"
+                      className={`${buttonClass('secondary', 'lg')} flex-1`}
                     >
                       Cancel
                     </button>
@@ -1685,7 +1686,7 @@ export default function UploadPanel() {
                           (shouldEnableJit && creditsNeeded > 0 && !(localJitMax > 0))
                         );
                       })()}
-                      className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
+                      className={`${buttonClass('primary', 'lg')} flex-1`}
                     >
                       {localJitEnabled && paymentTab === 'crypto' && creditsNeeded > 0 ? 'Pay & Upload' : 'Upload'}
                     </button>

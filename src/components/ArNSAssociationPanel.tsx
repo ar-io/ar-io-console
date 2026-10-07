@@ -9,6 +9,7 @@ import ArNSGetNameLinks from './ArNSGetNameLinks';
 import { useStore } from '../store/useStore';
 import { promptSignIn } from '../utils';
 import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 interface ArNSAssociationPanelProps {
   enabled: boolean;
@@ -210,7 +211,7 @@ export default function ArNSAssociationPanel({
             </div>
             <button
               onClick={promptSignIn}
-              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+              className={buttonClass('primary', 'sm')}
             >
               Sign in
             </button>
@@ -225,7 +226,7 @@ export default function ArNSAssociationPanel({
             </div>
             <button
               onClick={() => setShowLinkModal(true)}
-              className="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+              className={`${buttonClass('primary', 'sm')} flex-shrink-0`}
             >
               Link wallet
             </button>
@@ -239,7 +240,7 @@ export default function ArNSAssociationPanel({
             </div>
             <button
               onClick={promptReconnect}
-              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap ml-3"
+              className={`${buttonClass('primary', 'sm')} ml-3`}
             >
               Reconnect
             </button>

@@ -12,6 +12,7 @@ import FormEntry from '../../FormEntry';
 import { wincPerCredit } from '../../../constants';
 import { getWalletTypeLabel } from '../../../utils/addressValidation';
 import CopyButton from '../../CopyButton';
+import { buttonClass } from '@/components/button';
 
 interface PaymentDetailsPanelProps {
   usdAmount: number;
@@ -546,7 +547,7 @@ const PaymentDetailsPanel: FC<PaymentDetailsPanelProps> = ({ usdAmount, onBack, 
           </button>
           <button
             disabled={!isValid}
-            className="px-6 py-2 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:bg-card disabled:text-foreground/80 disabled:cursor-not-allowed transition-colors"
+            className={buttonClass('primary', 'lg')}
             onClick={handleSubmit}
           >
             Next

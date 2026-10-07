@@ -41,6 +41,7 @@ import {
   resolveCreditTarget,
   type CreditWalletType,
 } from '../../utils/creditTarget';
+import { buttonClass } from '@/components/button';
 
 export type TopUpHostStep = 'amount' | 'details' | 'review' | 'success';
 
@@ -1019,7 +1020,7 @@ export default function TopUpPanel({
             </p>
             <button
               onClick={refetchCryptoForTarget}
-              className="mt-3 rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className={`${buttonClass('secondary', 'sm')} mt-3`}
             >
               Try again
             </button>
@@ -1043,7 +1044,7 @@ export default function TopUpPanel({
             <p className="text-sm text-error">{errorMessage}</p>
             <button
               onClick={() => void handleCheckout()}
-              className="mt-3 rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className={`${buttonClass('secondary', 'sm')} mt-3`}
             >
               Try again
             </button>
@@ -2226,7 +2227,7 @@ export default function TopUpPanel({
         {/* Checkout Button */}
         <button
           onClick={handleCheckout}
-          className="w-full py-4 px-6 rounded-full bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className={`${buttonClass('primary', 'xl')} w-full`}
           disabled={
             (paymentMethod === 'fiat' && (
               (!paymentTargetAddress && !address) || // Must have either a target address or connected wallet

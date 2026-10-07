@@ -3,6 +3,7 @@ import { CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide-react';
 
 import { useAclDrift } from '@/features/arns/hooks/useAclDrift';
 import { useSyncOwnership } from '@/features/arns/hooks/useSyncOwnership';
+import { buttonClass } from '@/components/button';
 
 interface SyncOwnershipBannerProps {
   /** Connected/linked Solana address to check for ACL drift. */
@@ -109,7 +110,7 @@ export default function SyncOwnershipBanner({
         <button
           onClick={handleSync}
           disabled={isBusy}
-          className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className={`${buttonClass('primary', 'sm')} flex-shrink-0`}
         >
           {isBusy ? (
             <>

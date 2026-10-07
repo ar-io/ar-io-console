@@ -23,6 +23,7 @@ import { formatWalletAddress } from '../../utils';
 import { formatFeePercent } from '../../utils/infraFee';
 import { endpointSourceFor } from '../../utils/tokenEndpoints';
 import { useStore } from '../../store/useStore';
+import { buttonClass } from '@/components/button';
 
 export default function GatewayInfoPanel() {
   const {
@@ -493,7 +494,7 @@ export default function GatewayInfoPanel() {
               {configMode === 'custom' && (
                 <button
                   onClick={resetToDefaults}
-                  className="px-4 py-2 border border-border/20 text-foreground/80 rounded-full hover:bg-background transition-colors text-sm"
+                  className={buttonClass('secondary', 'sm')}
                 >
                   Reset to Production
                 </button>
@@ -501,7 +502,7 @@ export default function GatewayInfoPanel() {
 
               <button
                 onClick={applyConfiguration}
-                className="px-6 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/80 transition-colors text-sm font-medium"
+                className={buttonClass('primary', 'sm')}
               >
                 Apply Changes
               </button>

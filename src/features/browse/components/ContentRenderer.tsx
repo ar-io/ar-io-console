@@ -21,6 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { ContentCategory } from "../utils/contentTypeUtils";
+import { buttonClass } from '@/components/button';
 
 /**
  * Get appropriate file extension for a content category.
@@ -164,7 +165,7 @@ export const ContentRenderer = memo(function ContentRenderer({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+            className={buttonClass('primary', 'md')}
           >
             <ExternalLink className="w-4 h-4" />
             Open in New Tab
@@ -172,7 +173,7 @@ export const ContentRenderer = memo(function ContentRenderer({
           <a
             href={downloadUrl}
             onClick={handleDownload}
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors disabled:opacity-50"
+            className={buttonClass('secondary', 'md')}
           >
             {isDownloading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -297,14 +298,14 @@ export const ContentRenderer = memo(function ContentRenderer({
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+              className={buttonClass('primary', 'md')}
             >
               <ExternalLink className="w-4 h-4" />
               Open in New Tab
             </a>
             <a
               href={downloadUrl}
-              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
+              className={buttonClass('secondary', 'md')}
             >
               <Download className="w-4 h-4" />
               Download
@@ -336,7 +337,7 @@ export const ContentRenderer = memo(function ContentRenderer({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+          className={buttonClass('primary', 'md')}
         >
           <ExternalLink className="w-4 h-4" />
           Open in New Tab
@@ -344,7 +345,7 @@ export const ContentRenderer = memo(function ContentRenderer({
         <a
           href={downloadUrl}
           onClick={handleDownload}
-          className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-card border border-border/20 text-foreground rounded-full font-medium hover:bg-card/80 transition-colors"
+          className={buttonClass('secondary', 'md')}
         >
           {isDownloading ? (
             <Loader2 className="w-4 h-4 animate-spin" />

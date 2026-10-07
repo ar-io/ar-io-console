@@ -15,6 +15,7 @@ import TransactionReceipt from './TransactionReceipt';
 import { toUnicodeName } from '@/utils/punycode';
 import type { BuyFailure, BuyPhase } from '../hooks/useBuyArNSName';
 import { heldByPhrase, heldMessage } from '../purchase/actionFailure';
+import { buttonClass } from '@/components/button';
 
 /**
  * Whether `until` has passed, re-checked every 15 s until it has.
@@ -161,7 +162,7 @@ export function ArNSPurchaseStatus({
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 onClick={() => navigate('/deploy')}
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                className={buttonClass('primary', 'sm')}
               >
                 <Rocket className="h-4 w-4" /> Deploy a site
               </button>
@@ -229,7 +230,7 @@ export function ArNSPurchaseStatus({
             <button
               onClick={onRetry}
               disabled={!ready}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className={`${buttonClass('primary', 'md')} mt-4`}
             >
               Finish registering
             </button>
@@ -263,7 +264,7 @@ export function ArNSPurchaseStatus({
             )}
             <button
               onClick={onRetry}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('primary', 'md')} mt-4`}
             >
               Finish registering
             </button>
@@ -291,7 +292,7 @@ export function ArNSPurchaseStatus({
             <p className="text-sm text-foreground/70 mt-1">{heldMessage(failure.held)}</p>
             <button
               onClick={onRetry ?? onDone}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('secondary', 'md')} mt-4`}
             >
               Try again
             </button>
@@ -316,7 +317,7 @@ export function ArNSPurchaseStatus({
             </p>
             <button
               onClick={() => navigate('/topup')}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('primary', 'md')} mt-4`}
             >
               <CreditCard className="w-4 h-4" /> Buy Turbo Credits
             </button>
@@ -337,7 +338,7 @@ export function ArNSPurchaseStatus({
           </p>
           <button
             onClick={onRetry ?? onDone}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            className={`${buttonClass('secondary', 'md')} mt-4`}
           >
             Try again
           </button>

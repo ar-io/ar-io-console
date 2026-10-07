@@ -1,4 +1,5 @@
 import { LoadingSpinner } from "./LoadingSpinner";
+import { buttonClass } from '@/components/button';
 
 interface ErrorDisplayProps {
   error: Error | { message: string };
@@ -54,7 +55,7 @@ export function ErrorDisplay({
         {onRetry && !isAutoRetrying && (
           <button
             onClick={onRetry}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+            className={buttonClass('secondary', 'sm')}
           >
             <svg
               className="w-4 h-4"

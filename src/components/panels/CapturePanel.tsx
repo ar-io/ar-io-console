@@ -26,6 +26,7 @@ import X402OnlyBanner from '../X402OnlyBanner';
 import { actionButtonClass } from '@/components/actionButton';
 import AssignedDomainLinks from '@/components/AssignedDomainLinks';
 import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
+import { buttonClass } from '@/components/button';
 
 // Helper function to get contextual file icon based on content type or file name
 const getFileIcon = (contentType?: string, fileName?: string) => {
@@ -531,7 +532,7 @@ export default function CapturePanel() {
         <button
           onClick={address ? handleCapture : promptSignIn}
           disabled={!!address && (isCapturing || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
-          className="w-full py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className={`${buttonClass('primary', 'xl')} w-full`}
         >
           {address ? (
             <>
@@ -1269,7 +1270,7 @@ export default function CapturePanel() {
                   <div className="flex flex-col-reverse sm:flex-row gap-3">
                     <button
                       onClick={() => setShowConfirmModal(false)}
-                      className="flex-1 py-3 px-4 rounded-2xl border border-border/20 text-foreground/80 hover:text-foreground hover:border-border/50 transition-colors"
+                      className={`${buttonClass('secondary', 'lg')} flex-1`}
                     >
                       Cancel
                     </button>
@@ -1283,7 +1284,7 @@ export default function CapturePanel() {
                         // Crypto pricing has not resolved yet — see UploadPanel.
                         (localJitEnabled && creditsNeeded > 0 && !(localJitMax > 0))
                       }
-                      className="flex-1 py-3 px-4 rounded-2xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
+                      className={`${buttonClass('primary', 'lg')} flex-1`}
                     >
                       {localJitEnabled && creditsNeeded > 0 ? 'Pay & Upload' : 'Upload'}
                     </button>

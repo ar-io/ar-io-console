@@ -19,6 +19,7 @@ import { useWincForOneGiB } from '../hooks/useWincForOneGiB';
 import { useCreditBalance } from '../hooks/useCreditBalance';
 import { clearEthereumTurboClientCache } from '../hooks/useEthereumTurboClient';
 import { clearX402SignerCache } from '../hooks/useX402Upload';
+import { buttonClass } from '@/components/button';
 
 // Services for logged-in users
 const accountServices = [
@@ -490,7 +491,7 @@ const Header = () => {
           onClick={() => {
             setShowWalletModal(true);
           }}
-          className="flex items-center gap-2 bg-foreground text-card px-4 py-2.5 rounded-full font-semibold hover:bg-foreground/90 transition-colors mr-2 sm:mr-0"
+          className={`${buttonClass('secondary', 'md')} mr-2 sm:mr-0`}
         >
           <Wallet className="w-4 h-4" />
           Sign in

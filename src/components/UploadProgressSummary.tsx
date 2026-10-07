@@ -12,6 +12,7 @@ import {
   HardDrive,
   X
 } from 'lucide-react';
+import { buttonClass } from '@/components/button';
 
 export interface ActiveUpload {
   name: string;
@@ -188,7 +189,7 @@ export default function UploadProgressSummary({
             {onCancel && (
               <button
                 onClick={onCancel}
-                className="px-3 py-1 rounded-full border border-error/50 text-xs font-medium text-error hover:bg-error/10 transition-colors flex items-center gap-1"
+                className={buttonClass('danger-outline', 'xs')}
                 title="Cancel all uploads"
               >
                 <X className="w-3 h-3" />
@@ -295,7 +296,7 @@ export default function UploadProgressSummary({
               {onRetryFailed && errors.some(e => e.retryable) && (
                 <button
                   onClick={onRetryFailed}
-                  className="w-full py-2 px-3 rounded-full bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                  className={`${buttonClass('secondary', 'sm')} w-full`}
                 >
                   <RefreshCw className="w-4 h-4" />
                   Retry Failed Uploads

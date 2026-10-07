@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BaseModal from "@/components/modals/BaseModal";
+import { buttonClass } from '@/components/button';
 
 interface VerificationBlockedModalProps {
   identifier: string;
@@ -156,13 +157,13 @@ export function VerificationBlockedModal({
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={onGoBack}
-              className="flex-1 px-4 py-2.5 bg-primary text-white rounded-full hover:opacity-90 transition-opacity font-medium"
+              className={`${buttonClass('primary', 'md')} flex-1`}
             >
               Go Back to Safety
             </button>
             <button
               onClick={onRetry}
-              className="flex-1 px-4 py-2.5 border border-border/30 text-foreground rounded-full hover:bg-card/80 transition-colors font-medium"
+              className={`${buttonClass('secondary', 'md')} flex-1`}
             >
               Retry with Different Gateway
             </button>
