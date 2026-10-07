@@ -2,7 +2,7 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [Unreleased]
+## [4.11.0] - 2026-10-07
 
 ### Added
 - **Visit or manage a name right after assigning it.** After you point a name
@@ -23,6 +23,12 @@ All notable changes to the ar.io Console are documented in this file.
   day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
   5,000, 10,000 and 25,000 ARIO. A preset at or above the limit is replaced by
   the limit itself.
+- **Paying for a name in crypto goes straight to the confirmation.** When you
+  renew, upgrade or make a name permanent and pay in AR, SOL or another token,
+  the amount is already known, so the screen that asked you to pick it is
+  gone. The payment names the purchase ("Pay for name.ar.io"), and the Manage
+  window no longer shows behind it. After a token top-up, Continue waits until
+  the credits arrive, so the same change cannot be paid for twice.
 - **One style for small action buttons.** Export CSV, Check Status, Clear
   History, Refresh, Edit, Manage and the other buttons beside a section or list
   title looked different on almost every screen, and some were plain text that
@@ -31,6 +37,13 @@ All notable changes to the ar.io Console are documented in this file.
   for the one main action in a header.
 
 ### Fixed
+- **A record change shows straight away.** After adding, editing or removing
+  a record on a name's page, the change could be missing until you left the
+  page and came back: the one re-read after saving sometimes reached a
+  network node that had not caught up yet. The change now shows as soon as it
+  is saved, and the page checks it against the chain a few times over 20
+  seconds, re-reading only what changed. Transfers and controller changes
+  work the same way.
 - **Visit on testnet.** The Visit button on a name's page opened
   `name.ar.io`, which does not resolve testnet names. It now uses the testnet
   gateway, as Pages already did.
