@@ -78,8 +78,9 @@ Open **Buy Credits** (`/topup`) and choose **Card** or **Crypto**.
 - **Crypto** offers every token your wallet can pay with in one dropdown,
   with your balance and the price beside each. A token you can't use stays
   listed with the reason.
-- **ARIO** is offered to Solana wallets. Each ARIO top-up is limited to $100 at
-  the day's ARIO rate, and the preset amounts start at 1,000 ARIO.
+- **ARIO** is offered when you sign in with a Solana wallet (not to a linked
+  Solana wallet). Each ARIO top-up is limited to $100 at the day's ARIO rate,
+  and the preset amounts start at 1,000 ARIO.
 - **Buying for** lets a full-page top-up credit another wallet. Inside a name
   purchase this option is hidden, and credits go to the account you signed in
   with.
@@ -158,18 +159,28 @@ in a Solana wallet.
 - **Register** (`/arns`) checks a name and buys it.
 - **Pricing** (`/pricing?type=domains`) shows the price table.
 
-At checkout you choose a lease (1 to 5 years) or a permanent purchase, and how
-to pay:
+At checkout you choose a lease (1 to 5 years) or a permanent purchase, and one
+of three ways to pay:
 
-| Route | What happens |
+| Method | What happens |
 | --- | --- |
 | **Credits** | Turbo pays the Solana costs and bills your credits. No SOL needed. |
 | **Card** | You pay the name's price by card in one step. |
-| **Crypto** | You send a token, it becomes credits, and the purchase settles from them. The amount is already known, so the app goes straight to the confirmation. |
-| **ARIO** | Pays the registry directly from your wallet, with no Turbo infrastructure fee. Your wallet pays the Solana fee, so it needs a little SOL. Gateway operators, and a gateway's operations wallet, get a 20% discount on this route. |
+| **Crypto** | You pick a token. Most tokens become credits and the purchase settles from them; the amount is already known, so the app goes straight to the confirmation. |
 
-Every route needs a Solana wallet to own the name. Signing in with email creates
-one. You can set what the name points at during the purchase: a recent deploy,
+**ARIO** is one of the Crypto options, and works differently: the Solana wallet
+that will own the name pays the registry directly, with no Turbo
+infrastructure fee. That wallet pays the Solana costs too, so it needs some SOL,
+and the option says how much when the wallet is short. ARIO is the only route
+that spends your SOL; credits, card and other tokens are sponsored by Turbo.
+
+Gateway operators get a 20% discount when paying with ARIO, if the gateway has
+been joined for at least 180 days and passed at least 90% of epochs. A
+gateway's operations wallet qualifies only on gateway schema 1.2.0. The
+discount never applies to primary names.
+
+Every method needs a Solana wallet to own the name. Signing in with email
+creates one. You can set what the name points at during the purchase: a recent deploy,
 page or upload, or a transaction ID.
 
 If a purchase doesn't finish, for example because you closed the wallet prompt
@@ -188,7 +199,7 @@ On a name's page, each action sits in the header of the section it changes:
 | --- | --- |
 | Header | **Visit**, **Set as primary** |
 | Overview | **Renew or upgrade** (lease), or **Add undername slots** (permanent) |
-| Details | **Edit** the name's own metadata |
+| Details | **Edit** the name's own details |
 | Ownership | **Transfer**, **Reassign**, **Release** (owner only) |
 | Controllers | **Manage** (owner only) |
 | Records | **Add record**, and edit or remove each record |
@@ -197,28 +208,34 @@ Each record name links to what it serves: `yourname.ar.io` for the root and
 `blog_yourname.ar.io` for an undername. A record change shows as soon as it is
 saved; the page then confirms it against the chain with a few reads.
 
-Owners can do everything. Controllers can edit records and record metadata, but
-cannot transfer, reassign, release or change controllers.
+Owners can do everything. Controllers can edit records and their metadata,
+edit the name's details and set it as their primary name, but cannot transfer,
+reassign, release or change controllers.
 
 ### Who pays for a change
 
-Most changes can be paid two ways:
+An owner's changes can be paid two ways:
 
-- **With your wallet's SOL.** If the owning wallet holds enough SOL, it signs
-  the transaction and pays the Solana fee itself. This is the default, because
+- **With your wallet's SOL.** If the signing wallet holds enough SOL (0.002
+  SOL for a record change), it signs the transaction and pays the Solana fee
+  itself. This is the default, because
   the network fee is usually a fraction of a cent. **Pay with credits instead**
   switches to credits for that change.
 - **With credits.** Turbo pays the Solana fee and bills credits. A wallet with
   no SOL, such as a new email account, always uses this.
 
-Transfers and controller changes need about 0.005 SOL before SOL becomes the
+A controller's changes are never sponsored: Turbo accepts only the owner's
+signature, so a controller's wallet always signs and pays the Solana fee
+itself.
+
+Transfers and adding a controller need 0.005 SOL before SOL becomes the
 default, because they can create accounts on chain. Renewing, upgrading and
 adding undername slots settle from credits with no wallet approval, or by
 card, crypto or ARIO.
 
-Some actions always cost SOL from your wallet: setting a primary name,
-releasing, reassigning, editing the name's own details (not a record's), and
-buying a returned name. Every change shows its cost before you confirm.
+Some actions are never sponsored and always cost SOL from your wallet: **Edit
+details** (the name's own details, not a record's), **Set as primary**,
+**Reassign** and **Release**, and buying a returned name. Every change shows its cost before you confirm.
 
 ### Returned names
 
