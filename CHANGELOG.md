@@ -2,6 +2,14 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Set as primary is offered only to a name's owner.** A controller saw the
+  button, but the registry accepts a primary name only from the name's owner,
+  so the attempt always failed. The modal no longer says a name you do not own
+  creates a request for its owner to approve; that flow is not built yet.
+
 ## [4.11.0] - 2026-10-07
 
 ### Added
