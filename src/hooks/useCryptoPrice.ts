@@ -301,8 +301,9 @@ export function useArioUsdRate(
       const wincPerUsd = Number(usdQuote.winc);
       /*
         The two legs are NOT quoted on the same footing: each comes back net of
-        its own currency's infrastructure fee — 35% on USD, 25% on ARIO — so a
-        raw ratio keeps the difference instead of cancelling it. Each leg's own
+        its own currency's infrastructure fee (each quote carries its own, and
+        Turbo can change them without a release), so a raw ratio keeps the
+        difference instead of cancelling it. Each leg's own
         `fees` are passed so both are scaled back to fee-free. Passing only the
         USD fees was correct while ARIO was fee-free, and read a quarter low
         once it was not.

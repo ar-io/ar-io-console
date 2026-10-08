@@ -34,7 +34,8 @@ export function inclusiveFeeMultiplier(
  *
  * `wincPerArio / wincPerUsd` looks like a rate but is not one: each leg comes
  * back net of whatever infrastructure fee its currency carries, and the two
- * currencies carry different fees (35% on USD, 25% on ARIO), so a raw ratio
+ * currencies can carry different fees (each read from its own quote, and
+ * changeable by Turbo without a release), so a raw ratio
  * keeps the difference instead of cancelling it. When ARIO was fee-free that
  * overstated ARIO by 1/0.65 ≈ 1.54x — a name priced at 1,734 ARIO rendered as
  * $2.09, the fee-inclusive CARD price, when the tokens were worth $1.36.
