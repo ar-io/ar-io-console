@@ -3,6 +3,7 @@ import { AlertTriangle, DownloadCloud, Info, Loader2 } from 'lucide-react';
 import BaseModal from '@/components/modals/BaseModal';
 import type { RenderCtx } from '../render/renderPageHtml';
 import { importPageFromSource, type ImportedPage } from '../publish/importPage';
+import { buttonClass } from '@/components/button';
 
 interface ImportPageModalProps {
   ctx: RenderCtx;
@@ -88,7 +89,7 @@ export default function ImportPageModal({ ctx, onClose, onImported }: ImportPage
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 rounded-full border border-border/20 px-4 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground disabled:opacity-50"
+            className={`${buttonClass('secondary', 'md')} flex-1`}
           >
             Cancel
           </button>
@@ -96,7 +97,7 @@ export default function ImportPageModal({ ctx, onClose, onImported }: ImportPage
             type="button"
             onClick={submit}
             disabled={loading || !input.trim()}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`${buttonClass('primary', 'md')} flex-1`}
           >
             {loading ? (
               <>

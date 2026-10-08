@@ -23,6 +23,10 @@ import { tokenLabels } from '../../constants';
 import { Loader2 } from 'lucide-react';
 import X402OnlyBanner from '../X402OnlyBanner';
 import ModalHeader from '../modals/ModalHeader';
+import { actionButtonClass } from '@/components/actionButton';
+import AssignedDomainLinks from '@/components/AssignedDomainLinks';
+import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
+import { buttonClass } from '@/components/button';
 
 // Helper function to get contextual file icon based on content type or file name
 // size: 'sm' (16px) for inline use, 'lg' (24px) for file list thumbnails
@@ -346,7 +350,8 @@ export default function UploadPanel() {
   // Image preview management for selected files
   const { getPreviewUrl, isPreviewableImage } = useImagePreviews(files);
 
-  const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string; domain?: { name: string; undername?: string } } | null>(null);
+  const arnsHost = useArnsHost();
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showAssignDomainModal, setShowAssignDomainModal] = useState<string | null>(null);
   // The just-completed single-file upload, surfaced as a result card. Only for
@@ -761,7 +766,10 @@ export default function UploadPanel() {
             <div className="flex items-center gap-2">
               {uploadMessage.type === 'error' && <XCircle className="w-5 h-5" />}
               {uploadMessage.type === 'success' && <CheckCircle className="w-5 h-5" />}
-              <span className="text-sm">{uploadMessage.text}</span>
+              <div className="text-sm">
+                {uploadMessage.text}
+                {uploadMessage.domain && <AssignedDomainLinks {...uploadMessage.domain} />}
+              </div>
             </div>
             <button
               onClick={() => setUploadMessage(null)}
@@ -815,7 +823,7 @@ export default function UploadPanel() {
               />
               <label
                 htmlFor="file-upload"
-                className="inline-block px-4 py-2 rounded-full bg-foreground text-card font-medium cursor-pointer hover:bg-foreground/90 transition-colors"
+                className={`${buttonClass('primary', 'sm')} cursor-pointer`}
               >
                 Select Files
               </label>
@@ -934,7 +942,7 @@ export default function UploadPanel() {
               <button
                 onClick={address ? handleUpload : promptSignIn}
                 disabled={!!address && files.length === 0}
-                className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={`${buttonClass('primary', 'xl')} w-full mt-4`}
               >
                 {address ? (
                   <>
@@ -996,31 +1004,31 @@ export default function UploadPanel() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={exportToCSV}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded-full text-foreground hover:bg-card/80 hover:text-foreground transition-colors"
+                  className={actionButtonClass('default')}
                   title="Export upload history to CSV"
                 >
-                  <Archive className="w-3 h-3" />
-                  <span className="hidden sm:inline">Export CSV</span>
+                  <Archive className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Export CSV</span>
                 </button>
                 <button
                   onClick={() => checkMultipleStatuses(uploadHistory.map(r => r.id), true)}
                   disabled={Object.values(statusChecking).some(checking => checking)}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded-full text-foreground hover:bg-card/80 hover:text-foreground transition-colors disabled:opacity-50"
+                  className={actionButtonClass('default')}
                   title="Check status for all uploaded files"
                 >
-                  <RefreshCw className={`w-3 h-3 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Check Status</span>
+                  <RefreshCw className={`h-3.5 w-3.5 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
+                  <span className="sr-only sm:not-sr-only">Check Status</span>
                 </button>
                 <button
                   onClick={() => {
                     clearUploadHistory();
                     resetFileUpload();
                   }}
-                  className="flex items-center gap-1 px-3 py-2 text-xs text-foreground/80 hover:text-error border border-border/20 rounded-full hover:border-error/50 transition-colors"
+                  className={actionButtonClass('danger')}
                   title="Clear all upload history"
                 >
-                  <XCircle className="w-3 h-3" />
-                  <span className="hidden sm:inline">Clear History</span>
+                  <XCircle className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Clear History</span>
                 </button>
               </div>
             )}
@@ -1333,7 +1341,8 @@ export default function UploadPanel() {
             // Show success message
             setUploadMessage({
               type: 'success',
-              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io to your file!`
+              text: `${assignedLabel(arnsName, undername)}.${arnsHost} now points to your file.`,
+              domain: { name: arnsName, undername },
             });
           }}
         />
@@ -1652,7 +1661,7 @@ export default function UploadPanel() {
                   <div className="flex flex-col-reverse sm:flex-row gap-3">
                     <button
                       onClick={() => setShowConfirmModal(false)}
-                      className="flex-1 py-3 px-4 rounded-lg border border-border/20 text-foreground/80 hover:text-foreground hover:border-border/20/50 transition-colors"
+                      className={`${buttonClass('secondary', 'lg')} flex-1`}
                     >
                       Cancel
                     </button>
@@ -1677,7 +1686,7 @@ export default function UploadPanel() {
                           (shouldEnableJit && creditsNeeded > 0 && !(localJitMax > 0))
                         );
                       })()}
-                      className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
+                      className={`${buttonClass('primary', 'lg')} flex-1`}
                     >
                       {localJitEnabled && paymentTab === 'crypto' && creditsNeeded > 0 ? 'Pay & Upload' : 'Upload'}
                     </button>

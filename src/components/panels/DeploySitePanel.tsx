@@ -4,7 +4,7 @@ import { useFolderUpload } from '../../hooks/useFolderUpload';
 import { useFreeUploadLimit, useFreeStatus, isFileFree, computeFreeFlags } from '../../hooks/useFreeUploadLimit';
 import { wincPerCredit, SupportedTokenType, tokenLabels } from '../../constants';
 import { useStore } from '../../store/useStore';
-import { Globe, XCircle, Loader2, RefreshCw, Info, Receipt, ChevronDown, ChevronUp, CheckCircle, Folder, File, FileText, Image, Code, ExternalLink, Home, AlertTriangle, Archive, Clock, HelpCircle, MoreVertical, Zap, ArrowRight, Copy, X, Wallet, CreditCard, Sparkles, Package } from 'lucide-react';
+import { Globe, XCircle, Loader2, RefreshCw, Info, Receipt, ChevronDown, ChevronUp, CheckCircle, Folder, File, FileText, Image, Code, ExternalLink, Home, AlertTriangle, Archive, Clock, HelpCircle, MoreVertical, Zap, ArrowRight, Copy, X, Wallet, CreditCard, Sparkles, Package, Settings } from 'lucide-react';
 import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { supportsJitPayment, calculateRequiredTokenAmount, formatTokenAmount, getTokenConverter } from '../../utils/jitPayment';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
@@ -13,7 +13,7 @@ import { getArweaveUrl, getArweaveRawUrl, promptSignIn } from '../../utils';
 import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ReceiptModal from '../modals/ReceiptModal';
 import ArNSAssociationPanel from '../ArNSAssociationPanel';
 import AssignDomainModal from '../modals/AssignDomainModal';
@@ -22,6 +22,10 @@ import UploadProgressSummary from '../UploadProgressSummary';
 import { JitTokenSelector } from '../JitTokenSelector';
 import X402OnlyBanner from '../X402OnlyBanner';
 import ModalHeader from '../modals/ModalHeader';
+import { actionButtonClass } from '@/components/actionButton';
+import AssignedDomainLinks from '@/components/AssignedDomainLinks';
+import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
+import { buttonClass } from '@/components/button';
 
 // Helper function moved outside component to prevent recreation on every render
 function getFileIcon(filename: string) {
@@ -890,7 +894,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
         <div className="flex flex-col-reverse sm:flex-row gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 px-4 rounded-lg border border-border/20 text-foreground/80 hover:text-foreground hover:border-border/10 transition-colors"
+            className={`${buttonClass('secondary', 'lg')} flex-1`}
           >
             Cancel
           </button>
@@ -909,7 +913,7 @@ const DeployConfirmationModal = React.memo(function DeployConfirmationModal({
               // Crypto pricing has not resolved yet — see UploadPanel.
               (paymentTab === 'crypto' && creditsNeeded > 0 && !(localJitMax > 0))
             }
-            className="flex-1 py-3 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
+            className={`${buttonClass('primary', 'lg')} flex-1`}
           >
             {!pricingReady ? 'Calculating...' : paymentTab === 'crypto' && creditsNeeded > 0 ? 'Deploy & Auto-Pay' : 'Deploy Now'}
           </button>
@@ -948,7 +952,8 @@ export default function DeploySitePanel() {
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FileList | null>(null);
-  const [deployMessage, setDeployMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [deployMessage, setDeployMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string; domain?: { name: string; undername?: string } } | null>(null);
+  const arnsHost = useArnsHost();
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null);
   const [showFolderContents, setShowFolderContents] = useState(false);
   const [indexFile, setIndexFile] = useState<string>('');
@@ -1162,7 +1167,8 @@ export default function DeploySitePanel() {
     const isUpdate = existingAssociation && existingAssociation.arnsName;
     setDeployMessage({
       type: 'success',
-      text: `Domain ${undername ? undername + '_' : ''}${arnsName}.ar.io ${isUpdate ? 'updated' : 'assigned'} successfully!`
+      text: `${assignedLabel(arnsName, undername)}.${arnsHost} ${isUpdate ? 'now points to this deploy' : 'is assigned to this deploy'}.`,
+      domain: { name: arnsName, undername },
     });
   };
 
@@ -1930,7 +1936,7 @@ export default function DeploySitePanel() {
             />
             <label
               htmlFor="folder-upload"
-              className="inline-block px-4 py-2 rounded-full bg-foreground text-card font-medium cursor-pointer hover:bg-foreground/90 transition-colors"
+              className={`${buttonClass('primary', 'sm')} cursor-pointer`}
             >
               Select Site Folder
             </label>
@@ -2256,7 +2262,7 @@ export default function DeploySitePanel() {
         <button
           onClick={address ? () => setShowConfirmModal(true) : promptSignIn}
           disabled={!!address && (deploying || hashingStage === 'hashing' || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
-          className="w-full mt-4 py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className={`${buttonClass('primary', 'xl')} w-full mt-4`}
         >
           {!address ? (
             <>
@@ -2358,7 +2364,7 @@ export default function DeploySitePanel() {
                       text: 'Site deployed successfully! ArNS update was cancelled.'
                     });
                   }}
-                  className="px-4 py-2 text-sm bg-card border border-border/20 rounded-lg text-foreground/80 hover:text-foreground hover:border-border/10 transition-colors"
+                  className={buttonClass('secondary', 'sm')}
                 >
                   Skip ArNS Update
                 </button>
@@ -2382,13 +2388,13 @@ export default function DeploySitePanel() {
               <div className="flex items-center gap-2 p-3 bg-card rounded border border-border/10">
                 <span className="font-mono text-sm text-foreground flex-1 min-w-0 truncate">
                   {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                    `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
+                    `https://${assignedLabel(deploySuccessInfo.arnsName, deploySuccessInfo.undername)}.${arnsHost}` :
                     getArweaveUrl(deploySuccessInfo.manifestId)
                   }
                 </span>
                 <CopyButton textToCopy={
                   deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                    `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
+                    `https://${assignedLabel(deploySuccessInfo.arnsName, deploySuccessInfo.undername)}.${arnsHost}` :
                     getArweaveUrl(deploySuccessInfo.manifestId)
                 } />
               </div>
@@ -2424,11 +2430,11 @@ export default function DeploySitePanel() {
             <button
               onClick={() => window.open(
                 deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName ?
-                  `https://${deploySuccessInfo.undername ? deploySuccessInfo.undername + '_' : ''}${deploySuccessInfo.arnsName}.ar.io` :
+                  `https://${assignedLabel(deploySuccessInfo.arnsName, deploySuccessInfo.undername)}.${arnsHost}` :
                   getArweaveUrl(deploySuccessInfo.manifestId),
                 '_blank'
               )}
-              className="flex-1 py-3 px-4 bg-success text-white rounded-lg font-medium hover:bg-success/90 transition-colors"
+              className={`${buttonClass('primary', 'lg')} flex-1`}
             >
               Visit Your Site
             </button>
@@ -2442,11 +2448,21 @@ export default function DeploySitePanel() {
                 setPostDeployShowUndername(false);
                 setPostDeployArNSEnabled(false);
               }}
-              className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card hover:border-primary/50 transition-colors"
+              className={`${buttonClass('secondary', 'lg')} flex-1`}
             >
               Deploy Another Site
             </button>
           </div>
+          {/* The name this deploy is on, one click from its page. */}
+          {deploySuccessInfo.arnsConfigured && deploySuccessInfo.arnsName && (
+            <Link
+              to={`/domains/${encodeURIComponent(deploySuccessInfo.arnsName)}`}
+              className={actionButtonClass()}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Manage {deploySuccessInfo.arnsName}
+            </Link>
+          )}
 
         </div>
       )}
@@ -2499,13 +2515,13 @@ export default function DeploySitePanel() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => navigate('/arns')}
-                className="flex-1 py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                className={`${buttonClass('secondary', 'lg')} flex-1`}
               >
                 Find a name
               </button>
               <button
                 onClick={() => window.open('https://docs.ar.io/learn/arns', '_blank', 'noopener,noreferrer')}
-                className="flex-1 py-3 px-4 bg-card border border-border/20 rounded-lg text-foreground hover:bg-card transition-colors"
+                className={`${buttonClass('secondary', 'lg')} flex-1`}
               >
                 How ArNS works
               </button>
@@ -2604,7 +2620,7 @@ export default function DeploySitePanel() {
                   setPostDeployArNSUpdating(false);
                 }}
                 disabled={!postDeployArNSName || postDeployArNSUpdating || (postDeployShowUndername && !postDeployUndername)}
-                className="w-full py-3 px-4 bg-foreground text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+                className={`${buttonClass('secondary', 'lg')} w-full`}
               >
                 {postDeployArNSUpdating ? (
                   <>
@@ -2630,7 +2646,10 @@ export default function DeploySitePanel() {
             : 'bg-info/10 border border-info/20 text-info'
         }`}>
           <div className="flex items-center justify-between">
-            <span>{deployMessage.text}</span>
+            <div>
+              {deployMessage.text}
+              {deployMessage.domain && <AssignedDomainLinks {...deployMessage.domain} />}
+            </div>
             <button
               onClick={() => setDeployMessage(null)}
               className="ml-4 p-1 hover:opacity-70 transition-opacity flex-shrink-0"
@@ -2669,11 +2688,11 @@ export default function DeploySitePanel() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={exportDeployToCSV}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded text-foreground hover:bg-card hover:text-foreground transition-colors"
+                  className={actionButtonClass('default')}
                   title="Export deployment history to CSV"
                 >
-                  <Archive className="w-3 h-3" />
-                  <span className="hidden sm:inline">Export CSV</span>
+                  <Archive className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Export CSV</span>
                 </button>
                 <button
                   onClick={() => {
@@ -2687,19 +2706,19 @@ export default function DeploySitePanel() {
                     checkMultipleStatuses(allIds, true);
                   }}
                   disabled={Object.values(statusChecking).some(checking => checking)}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded text-foreground hover:bg-card hover:text-foreground transition-colors disabled:opacity-50"
+                  className={actionButtonClass('default')}
                   title="Check status for recent deployed files"
                 >
-                  <RefreshCw className={`w-3 h-3 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Check Status</span>
+                  <RefreshCw className={`h-3.5 w-3.5 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
+                  <span className="sr-only sm:not-sr-only">Check Status</span>
                 </button>
                 <button
                   onClick={clearDeployHistory}
-                  className="flex items-center gap-1 px-3 py-2 text-xs text-foreground/80 hover:text-error border border-border/10 rounded hover:border-error/50 transition-colors"
+                  className={actionButtonClass('danger')}
                   title="Clear all deployment history"
                 >
-                  <XCircle className="w-3 h-3" />
-                  <span className="hidden sm:inline">Clear History</span>
+                  <XCircle className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Clear History</span>
                 </button>
               </div>
             )}

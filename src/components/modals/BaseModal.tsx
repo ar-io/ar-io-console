@@ -41,6 +41,15 @@ interface BaseModalProps {
    * dismissed mid-operation, e.g. the wallet-connection spinner.
    */
   dismissible?: boolean;
+  /**
+   * Hides the backdrop and panel while keeping the modal mounted, for a host
+   * whose own child modal (a payment step) is open on top. Both portal to
+   * document.body, so the host panel otherwise draws over the child's
+   * backdrop: two titles and two close buttons, stacked. State, the stack
+   * entry and the scroll lock are untouched; the child is topmost, so it owns
+   * Escape and the focus trap.
+   */
+  suspended?: boolean;
 }
 
 export default function BaseModal({
@@ -48,6 +57,7 @@ export default function BaseModal({
   children,
   showCloseButton = true,
   dismissible = true,
+  suspended = false,
 }: BaseModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const idRef = useRef<symbol>(Symbol('modal'));
@@ -141,7 +151,7 @@ export default function BaseModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/80 z-[9998]"
+        className={`fixed inset-0 bg-black/80 z-[9998] ${suspended ? 'hidden' : ''}`}
         onClick={dismissible ? onClose : undefined}
         aria-hidden="true"
       />
@@ -152,12 +162,13 @@ export default function BaseModal({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
+        aria-hidden={suspended || undefined}
         tabIndex={-1}
         // No focus:outline-none needed: the global :focus-visible rule scopes
         // itself to [tabindex]:not([tabindex="-1"]), so this panel — focused
         // programmatically on mount purely to move the screen reader in — never
         // draws a ring in the first place.
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] max-w-[90vw] max-h-[90vh] overflow-y-auto overflow-x-hidden bg-card border border-border/20 rounded-2xl shadow-xl"
+        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] max-w-[90vw] max-h-[90vh] overflow-y-auto overflow-x-hidden bg-card border border-border/20 rounded-2xl shadow-xl ${suspended ? 'hidden' : ''}`}
       >
         {showCloseButton && dismissible && (
           <button

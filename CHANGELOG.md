@@ -2,6 +2,59 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.11.0] - 2026-10-07
+
+### Added
+- **Visit or manage a name right after assigning it.** After you point a name
+  at an upload, a capture or a deploy, the success message has Visit and
+  Manage buttons, and it names the right host on testnet.
+- **Open a record from its name.** On a name's page, each record in the
+  Records table links to what it serves: `name.ar.io` for the root,
+  `undername_name.ar.io` for the rest.
+
+### Changed
+- **Buttons follow the ar.io brand colours.** The main action on each screen
+  is purple, the actions beside it are outlined, and destructive confirms are
+  red. Some main actions were dark and some purple, and Close and Try again
+  were sometimes purple; they now follow one rule. The red used for errors and
+  destructive actions is darker (#b91c1c), so white text on it and red text
+  on grey cards are easier to read.
+- **ARIO top-ups are smaller.** Each ARIO top-up is limited to $100 at the
+  day's ARIO rate, down from $200, and the preset amounts start lower: 1,000,
+  5,000, 10,000 and 25,000 ARIO. A preset at or above the limit is replaced by
+  the limit itself.
+- **No "Lower fee" tag on ARIO in Buy Credits.** Its fee can change, and the
+  price shown for each token already says what it costs.
+- **Paying for a name in crypto goes straight to the confirmation.** When you
+  renew, upgrade or make a name permanent and pay in AR, SOL or another token,
+  the amount is already known, so the screen that asked you to pick it is
+  gone. The payment names the purchase ("Pay for name.ar.io"), and the Manage
+  window no longer shows behind it. After a token top-up, Continue waits until
+  the credits arrive, so the same change cannot be paid for twice.
+- **One style for small action buttons.** Export CSV, Check Status, Clear
+  History, Refresh, Edit, Manage and the other buttons beside a section or list
+  title looked different on almost every screen, and some were plain text that
+  did not read as a button on a phone. They now share one outlined style, red
+  for actions that delete or give something away, and a small purple button
+  for the one main action in a header.
+
+### Fixed
+- **A record change shows straight away.** After adding, editing or removing
+  a record on a name's page, the change could be missing until you left the
+  page and came back: the one re-read after saving sometimes reached a
+  network node that had not caught up yet. The change now shows as soon as it
+  is saved, and the page checks it against the chain a few times over 20
+  seconds, re-reading only what changed. Transfers and controller changes
+  work the same way.
+- **Visit on testnet.** The Visit button on a name's page opened
+  `name.ar.io`, which does not resolve testnet names. It now uses the testnet
+  gateway, as Pages already did.
+- **Paying from a Solana wallet after a reload.** With Solflare, reloading Buy
+  Credits and paying with ARIO, SOL or USDC failed with "Wallet not available
+  for direct payment", because the wallet was only reconnected on the domain
+  pages. A wallet you signed in with now reconnects on every page, and if it
+  still is not connected the Pay button becomes "Reconnect wallet to pay".
+
 ## [4.10.0] - 2026-10-03
 
 ### Added

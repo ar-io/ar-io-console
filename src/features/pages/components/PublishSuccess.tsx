@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, ExternalLink, Globe, LayoutGrid, PenLine, PlusCircle } from 'lucide-react';
 import CopyButton from '@/components/CopyButton';
 import type { PublishResult } from '../hooks/usePagePublish';
+import { buttonClass } from '@/components/button';
 
 interface PublishSuccessProps {
   result: PublishResult;
@@ -106,7 +107,7 @@ export default function PublishSuccess({
               <button
                 type="button"
                 onClick={onAssignDomain}
-                className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+                className={`${buttonClass('primary', 'xs')} mt-2.5`}
               >
                 <Globe className="h-3.5 w-3.5" /> Assign a domain
               </button>
@@ -130,14 +131,14 @@ export default function PublishSuccess({
         <button
           type="button"
           onClick={onCreateAnother}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border/20 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/50"
+          className={`${buttonClass('secondary', 'md')} flex-1`}
         >
           <PlusCircle className="h-4 w-4" /> Create another
         </button>
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          className={`${buttonClass('primary', 'md')} flex-1`}
         >
           <PenLine className="h-4 w-4" /> Edit page
         </button>

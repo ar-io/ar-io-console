@@ -30,6 +30,8 @@ import {
 import PriceAmount from './PriceAmount';
 import ReturnedNameBuyModal from './ReturnedNameBuyModal';
 import { toUnicodeName } from '@/utils/punycode';
+import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 const PAGE_SIZE = 25;
 
@@ -181,10 +183,10 @@ export default function ReturnedNamesPanel() {
             onClick={refresh}
             disabled={loading}
             title="Refresh auctions"
-            className="flex items-center gap-2 rounded-full border border-border/20 bg-card px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-primary/10 disabled:opacity-50"
+            className={actionButtonClass('default')}
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="sr-only sm:not-sr-only">Refresh</span>
           </button>
         </div>
       </div>
@@ -325,7 +327,7 @@ export default function ReturnedNamesPanel() {
                   <button
                     onClick={() => setSelected(r)}
                     disabled={remaining <= 0}
-                    className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={buttonClass('primary', 'sm')}
                   >
                     Buy
                   </button>

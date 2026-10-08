@@ -15,12 +15,14 @@ import { useTransferArNSName } from '../hooks/useTransferArNSName';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import ActionCostNote from './ActionCostNote';
 import TransactionReceipt from './TransactionReceipt';
+import { buttonClass } from '@/components/button';
 
 interface TransferDomainModalProps {
   domain: ArNSName;
   onClose: () => void;
   /** Called after a settled transfer so the caller can refresh its data. */
-  onSuccess?: () => void;
+  /** Fired after the transfer lands, with the new owner. */
+  onSuccess?: (newOwner?: string) => void;
 }
 
 /**
@@ -56,7 +58,7 @@ export default function TransferDomainModal({
   const handleTransfer = async () => {
     try {
       await transfer(domain.processId, trimmedRecipient);
-      onSuccess?.();
+      onSuccess?.(trimmedRecipient);
     } catch {
       // surfaced via `error`
     }
@@ -90,7 +92,7 @@ export default function TransferDomainModal({
             <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
-              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('secondary', 'md')} mt-4`}
             >
               Close
             </button>
@@ -173,7 +175,7 @@ export default function TransferDomainModal({
                   <Loader2 className="h-4 w-4 animate-spin" /> Transferring…
                 </>
               }
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${buttonClass('danger', 'lg')} w-full`}
               actionVerb="transfer this name"
             >
               <Send className="h-4 w-4" /> Transfer name

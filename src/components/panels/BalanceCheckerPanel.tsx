@@ -10,6 +10,7 @@ import { usePrimaryArNSName } from '../../hooks/usePrimaryArNSName';
 import CopyButton from '../CopyButton';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { buttonClass } from '@/components/button';
 
 interface BalanceResult {
   address: string;
@@ -346,7 +347,7 @@ export default function BalanceCheckerPanel() {
             <button
               onClick={() => handleCheckBalance()}
               disabled={loading || !walletAddress.trim()}
-              className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className={buttonClass('primary', 'lg')}
             >
               <Search className="w-4 h-4" />
               {loading ? 'Checking...' : 'Check'}

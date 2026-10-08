@@ -17,6 +17,7 @@ import { useReleaseName } from '../hooks/useReleaseName';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
 import TransactionReceipt from './TransactionReceipt';
+import { buttonClass } from '@/components/button';
 
 interface ReleaseDomainModalProps {
   domain: ArNSName;
@@ -103,7 +104,7 @@ export default function ReleaseDomainModal({
               </button>
               <button
                 onClick={onClose}
-                className="rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className={buttonClass('secondary', 'md')}
               >
                 Close
               </button>
@@ -184,7 +185,7 @@ export default function ReleaseDomainModal({
                   <Loader2 className="h-4 w-4 animate-spin" /> Releasing…
                 </>
               }
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-error px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${buttonClass('danger', 'lg')} w-full`}
               actionVerb="release this name"
             >
               <Flame className="h-4 w-4" /> Release name to auction

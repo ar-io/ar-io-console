@@ -28,11 +28,13 @@ import { formatTokenAmount } from '../../../utils/jitPayment';
 import { savePendingTopUpTx, removePendingTopUpTx } from '../../../utils/pendingTopUp';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useArioUsdRate } from '../../../hooks/useCryptoPrice';
+import LinkSolanaWalletModal from '../../modals/LinkSolanaWalletModal';
 import {
   CONTRACT_WALLET_DESTINATION_ERROR,
   CONTRACT_WALLET_PAYMENT_ERROR,
   isContractWalletCode,
 } from '../../../utils/contractWallet';
+import { buttonClass } from '@/components/button';
 
 interface CryptoConfirmationPanelProps {
   cryptoAmount: number;
@@ -40,6 +42,11 @@ interface CryptoConfirmationPanelProps {
   onBack: () => void;
   /** Set when a host modal owns the title; suppresses this panel's header. */
   purpose?: { kind: 'arns-name'; name: string };
+  /**
+   * Inside a host modal that owns the title, surface and terms, without a
+   * `purpose` (a payment for a change to a name the user already has).
+   */
+  embedded?: boolean;
   onPaymentComplete: (result: any) => void;
 }
 
@@ -48,12 +55,21 @@ export default function CryptoConfirmationPanel({
   tokenType,
   onBack,
   purpose,
+  embedded = false,
   onPaymentComplete,
 }: CryptoConfirmationPanelProps) {
-  const { address, walletType, paymentTargetAddress, paymentTargetType } = useStore();
+  const hostOwned = !!purpose || embedded;
+  const { address, walletType, paymentTargetAddress: storedTarget, paymentTargetType } = useStore();
+  /*
+    A recipient picked on the Top Up page. Embedded (a payment for this user's
+    own purchase) never shows that picker, so a leftover one would credit an
+    account the purchase never reads: the signed-in wallet is the recipient.
+  */
+  const paymentTargetAddress = embedded ? null : storedTarget;
   const { wallets } = useWallets(); // Get Privy wallets
   const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSolanaReconnect, setShowSolanaReconnect] = useState(false);
   const [paymentError, setPaymentError] = useState<string>();
   const [failedTxId, setFailedTxId] = useState<string>();
   const [isRetrying, setIsRetrying] = useState(false);
@@ -123,6 +139,15 @@ export default function CryptoConfirmationPanel({
         tokenType === 'polygon-usdc')) ||
     (walletType === 'solana' &&
       (tokenType === 'solana' || tokenType === 'solana-usdc' || tokenType === 'ario'));
+
+  /*
+    A Solana session whose wallet is not connected to the page right now: the
+    session survives a reload, or a wallet that auto-locks, but the adapter
+    does not. Paying needs the live wallet, so the button offers to reconnect
+    instead of failing with "Wallet not available for direct payment".
+  */
+  const solanaWalletDisconnected =
+    canPayDirectly && walletType === 'solana' && !solanaPublicKey;
 
   const handlePayment = async () => {
     if (!address || !quote) return;
@@ -502,13 +527,12 @@ export default function CryptoConfirmationPanel({
         } else if (
           walletType === 'solana' &&
           solanaPublicKey &&
-          solanaSignMessage &&
           (tokenType === 'solana' || tokenType === 'solana-usdc' || tokenType === 'ario')
         ) {
           // The payment is a transaction the wallet must sign. Wallet Standard
           // makes transaction signing optional, so check for it here rather
           // than let the SDK fail with a message about adapters.
-          // Top Up's $200 ARIO cap, checked again where the money moves. The
+          // Top Up's ARIO_TOPUP_MAX_USD cap, checked again where the money moves. The
           // panel already blocks it; this stops any other caller from going
           // over, and an unknown rate never lets an ARIO payment through.
           if (tokenType === 'ario') {
@@ -528,7 +552,24 @@ export default function CryptoConfirmationPanel({
             paymentServiceConfig: {
               url: turboConfig.paymentServiceUrl || 'https://payment.ardrive.io',
             },
-            walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction },
+            /*
+              A token transfer is a signed transaction; it does not need a
+              signed message. Requiring `signMessage` up front turned away a
+              wallet that cannot sign messages (a hardware-backed account, for
+              one) with "Wallet not available". If the SDK ever does ask, the
+              wallet's inability is said plainly instead.
+            */
+            walletAdapter: {
+              publicKey: solanaPublicKey,
+              signMessage:
+                solanaSignMessage ??
+                (async () => {
+                  throw new Error(
+                    "This Solana wallet can't sign messages. Connect a wallet that can, such as Phantom or Solflare.",
+                  );
+                }),
+              signTransaction: solanaSignTransaction,
+            },
             // Same RPC for both: USDC on Solana is an SPL token on the very
             // same chain, so there is no second endpoint to configure.
             gatewayUrl: turboConfig.tokenMap.solana,
@@ -560,6 +601,10 @@ export default function CryptoConfirmationPanel({
             tokenType,
             transactionId: result.id,
           });
+        } else if (walletType === 'solana' && !solanaPublicKey) {
+          throw new Error(
+            'Your Solana wallet is not connected. Reconnect it and try again.',
+          );
         } else {
           throw new Error('Wallet not available for direct payment');
         }
@@ -697,7 +742,7 @@ export default function CryptoConfirmationPanel({
   return (
     <div className="px-4 sm:px-6 space-y-6">
       {/* Suppressed when a host modal already carries the title. */}
-      {!purpose && (
+      {!hostOwned && (
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
             <Wallet className="w-5 h-5 text-primary" />
@@ -718,7 +763,7 @@ export default function CryptoConfirmationPanel({
       */}
       <div
         className={
-          purpose
+          hostOwned
             ? ''
             : 'bg-card rounded-2xl border border-border/20 p-6'
         }
@@ -927,7 +972,7 @@ export default function CryptoConfirmationPanel({
 
             {/* Host-owned when embedded — see PaymentConfirmationPanel. Its
                 "By uploading" wording is also wrong for a name purchase. */}
-            {!purpose && (
+            {!hostOwned && (
             <div className="text-center bg-card/30 rounded-2xl p-4 mb-6">
               <p className="text-xs text-foreground/80">
                 By uploading, you agree to our{' '}
@@ -954,7 +999,7 @@ export default function CryptoConfirmationPanel({
                       <button
                         onClick={retryTransaction}
                         disabled={isRetrying}
-                        className="mt-3 w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`${buttonClass('secondary', 'sm')} mt-3 w-full sm:w-auto`}
                       >
                         <RefreshCw className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} />
                         {isRetrying ? 'Retrying...' : 'Retry Transaction'}
@@ -967,14 +1012,29 @@ export default function CryptoConfirmationPanel({
 
             {/* Action Buttons */}
             <div className="flex justify-between items-center pt-6 border-t border-border/20">
-              <button onClick={onBack} className="text-sm text-foreground/80 hover:text-foreground">
+              {/* Disabled mid-transfer: in a host modal Back closes the
+                  payment, and the result of a transfer in flight with it. */}
+              <button
+                onClick={onBack}
+                disabled={isProcessing}
+                className="text-sm text-foreground/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 Back
               </button>
 
+              {solanaWalletDisconnected ? (
+                <button
+                  onClick={() => setShowSolanaReconnect(true)}
+                  className={buttonClass('primary', 'lg')}
+                >
+                  <Wallet className="w-4 h-4" />
+                  Reconnect wallet to pay
+                </button>
+              ) : (
               <button
                 onClick={handlePayment}
                 disabled={!quote || isProcessing || (!hasSufficientBalance && !balanceLoading)}
-                className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className={buttonClass('primary', 'lg')}
               >
                 {isProcessing ? (
                   <>
@@ -988,7 +1048,14 @@ export default function CryptoConfirmationPanel({
                   </>
                 )}
               </button>
+              )}
             </div>
+            {showSolanaReconnect && (
+              <LinkSolanaWalletModal
+                isReconnect
+                onClose={() => setShowSolanaReconnect(false)}
+              />
+            )}
           </>
         ) : (
           <div className="text-center py-8">

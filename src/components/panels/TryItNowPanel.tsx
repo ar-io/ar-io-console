@@ -31,6 +31,7 @@ import { useUploadStatus } from '../../hooks/useUploadStatus';
 import { getArweaveUrl, resolveEthereumAddress, getTurboBalance } from '../../utils';
 import CopyButton from '../CopyButton';
 import ReceiptModal from '../modals/ReceiptModal';
+import { buttonClass } from '@/components/button';
 
 // Get appropriate icon for file type (returns component class)
 function getFileIconClass(type: string) {
@@ -407,7 +408,7 @@ export default function TryItNowPanel() {
               />
               <label
                 htmlFor="try-file-upload"
-                className="inline-block px-4 py-2 rounded-full bg-primary text-primary-foreground font-medium cursor-pointer hover:bg-primary/90 transition-colors"
+                className={`${buttonClass('primary', 'sm')} cursor-pointer`}
               >
                 Select File
               </label>
@@ -458,7 +459,7 @@ export default function TryItNowPanel() {
             <button
               onClick={handleUpload}
               disabled={isLoading}
-              className="w-full py-4 px-6 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className={`${buttonClass('primary', 'xl')} w-full`}
             >
               {isLoading ? (
                 <>
@@ -508,7 +509,7 @@ export default function TryItNowPanel() {
                 href={getArweaveUrl(lastUploadedFile.id, lastUploadedFile.dataCaches)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-success text-white font-medium rounded-full hover:bg-success/90 transition-colors"
+                className={buttonClass('primary', 'sm')}
               >
                 <ExternalLink className="w-4 h-4" />
                 View Your File

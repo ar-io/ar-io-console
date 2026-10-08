@@ -26,6 +26,7 @@ import BlocksControls from './controls/BlocksControls';
 import ThemeControls from './controls/ThemeControls';
 import DomainControls from './controls/DomainControls';
 import PageSettingsControls from './controls/PageSettingsControls';
+import { buttonClass } from '@/components/button';
 
 export interface PageEditorProps {
   def: PageDef;
@@ -107,7 +108,7 @@ export default function PageEditor(props: PageEditorProps) {
             type="button"
             onClick={signedIn ? onPublish : promptSignIn}
             disabled={publishing}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className={buttonClass('primary', 'md')}
           >
             {signedIn ? (
               <>

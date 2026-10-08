@@ -17,6 +17,8 @@ import { useOwnedArNSNames } from '../../hooks/useOwnedArNSNames';
 import { useLinkedSolanaWallet } from '../../hooks/useLinkedSolanaWallet';
 import { sanitizeUndername, hasInvalidCharacters } from '../../utils/undernames';
 import ArNSGetNameLinks from '../ArNSGetNameLinks';
+import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 interface AssignDomainModalProps {
   onClose: () => void;
@@ -261,9 +263,9 @@ export default function AssignDomainModal({
                       {!needsLinking && (
                         <button
                           onClick={() => fetchOwnedNames(true)}
-                          className="px-3 py-1.5 border border-border/20 text-foreground/80 rounded-full text-xs hover:bg-card transition-colors flex items-center gap-1"
+                          className={actionButtonClass('default')}
                         >
-                          <RefreshCw className="w-3 h-3" />
+                          <RefreshCw className="h-3.5 w-3.5" />
                           {fetchError ? 'Retry' : 'Refresh'}
                         </button>
                       )}
@@ -665,7 +667,7 @@ export default function AssignDomainModal({
                 </div>
                 <button
                   onClick={() => setShowLinkModal(true)}
-                  className="px-3 py-1.5 bg-primary text-white rounded-full text-xs font-medium hover:bg-primary/90 transition-colors"
+                  className={buttonClass('primary', 'xs')}
                 >
                   Link Wallet
                 </button>
@@ -680,7 +682,7 @@ export default function AssignDomainModal({
                 </div>
                 <button
                   onClick={promptReconnect}
-                  className="px-3 py-1.5 bg-primary text-white rounded-full text-xs font-medium hover:bg-primary/90 transition-colors"
+                  className={buttonClass('primary', 'xs')}
                 >
                   Reconnect
                 </button>
@@ -705,7 +707,7 @@ export default function AssignDomainModal({
                 (undernameMode === 'new' && !selectedUndername) ||
                 (undernameMode === 'existing' && !selectedUndername)
               }
-              className="px-6 py-3 rounded-full bg-primary text-white font-bold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className={buttonClass('primary', 'lg')}
             >
               {isAssigning ? (
                 <>

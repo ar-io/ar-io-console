@@ -11,6 +11,7 @@ import { normalizeLinkUrl } from '../render/arResolve';
 import { arnsLabel } from '../publish/permalink';
 import { MAX_PAGE_BYTES, estimatePageCredits } from '../publish/cost';
 import type { PublishStage } from '../hooks/usePagePublish';
+import { buttonClass } from '@/components/button';
 
 interface PublishModalProps {
   def: PageDef;
@@ -303,7 +304,7 @@ export default function PublishModal({
             type="button"
             onClick={onClose}
             disabled={publishing}
-            className="flex-1 rounded-full border border-border/20 px-4 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground disabled:opacity-50"
+            className={`${buttonClass('secondary', 'md')} flex-1`}
           >
             Cancel
           </button>
@@ -311,7 +312,7 @@ export default function PublishModal({
             type="button"
             onClick={handleConfirm}
             disabled={publishing || !canPublish}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`${buttonClass('primary', 'md')} flex-1`}
           >
             {publishing ? (
               <>

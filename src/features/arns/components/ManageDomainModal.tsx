@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CalendarPlus,
   CheckCircle2,
@@ -45,6 +46,7 @@ import TransactionReceipt from './TransactionReceipt';
 import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import { buttonClass } from '@/components/button';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 const UNDERNAME_QTY_OPTIONS = [1, 5, 10, 25, 50];
@@ -133,6 +135,28 @@ export default function ManageDomainModal({
   const [years, setYears] = useState(1);
   const [qty, setQty] = useState(1);
   const [selectedId, setSelectedId] = useState<string | undefined>();
+  /*
+    Credits a finished token top-up is waiting on. A token payment lands as
+    credits later (AR in 15 to 30 minutes, SOL within a minute), and until it
+    does the route here is still "top up", so Continue would send the same
+    payment again. Held until credits arrive: the balance rises above where it
+    stood when the payment finished, or reaches the price. Rising is enough on
+    its own, because a top-up sized from a quote can land a hair under the
+    price, and waiting for the full price would keep this locked for nothing.
+  */
+  const [awaitingCredits, setAwaitingCredits] = useState<{
+    price: number;
+    balanceAtPayment: number;
+  } | null>(null);
+  // The balance when the payment step opened: read at completion instead, a
+  // fast SOL top-up could already be in it and the release would never see
+  // the balance rise.
+  const balanceBeforePaymentRef = useRef(0);
+  const openPayment = () => {
+    balanceBeforePaymentRef.current = balances.credits;
+    setShowPayment(true);
+  };
+  const queryClient = useQueryClient();
   const [fundingSource, setFundingSource] =
     useState<ArNSFundingSource>('balance');
   const [showPayment, setShowPayment] = useState(false);
@@ -375,6 +399,32 @@ export default function ManageDomainModal({
     creditShortfall > 0 && creditsForOneUSD
       ? Math.ceil(creditShortfall / creditsForOneUSD)
       : undefined;
+  const creditsArriving =
+    awaitingCredits !== null &&
+    balances.credits <= awaitingCredits.balanceAtPayment + 1e-9 &&
+    balances.credits < awaitingCredits.price - 1e-9;
+  useEffect(() => {
+    if (awaitingCredits === null) return;
+    if (!creditsArriving) {
+      setAwaitingCredits(null);
+      return;
+    }
+    // Re-read only the credit balance (payment service) every 30s while
+    // waiting. Not `refresh-balance`: that also refetches the SOL and ARIO
+    // balances from the Solana RPC. Nothing faster is needed for AR.
+    const t = setInterval(
+      () => queryClient.invalidateQueries({ queryKey: ['credit-balance'] }),
+      30_000,
+    );
+    // Release the hold after 45 minutes, past AR's slowest case, so a price
+    // that moved after payment can't lock Continue for good.
+    const release = setTimeout(() => setAwaitingCredits(null), 45 * 60_000);
+    return () => {
+      clearInterval(t);
+      clearTimeout(release);
+    };
+  }, [awaitingCredits, creditsArriving, queryClient]);
+
   // Turbo pays the Solana cost on every credits-settled route, so topping up
   // credits is always enough to make the change succeed.
   const needsPaymentStep =
@@ -436,7 +486,17 @@ export default function ManageDomainModal({
   };
 
   return (
-    <BaseModal onClose={onClose} showCloseButton dismissible={!isBusy}>
+    /*
+      Suspended while a payment step is open over it: both portal to the body,
+      and this panel would otherwise show through around the smaller payment
+      modal. It comes back on cancel with the term and token as they were.
+    */
+    <BaseModal
+      onClose={onClose}
+      showCloseButton
+      dismissible={!isBusy}
+      suspended={showPayment && (route.kind === 'card' || route.kind === 'topup')}
+    >
       {/*
         Wider than the default modal: this one carries the full payment row
         (Balance, Card, ARIO, SOL) and at max-w-lg the options were clipped, so
@@ -481,7 +541,7 @@ export default function ManageDomainModal({
 
             <button
               onClick={onClose}
-              className="mt-4 block w-full rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('secondary', 'md')} mt-4 w-full`}
             >
               Close
             </button>
@@ -660,7 +720,7 @@ export default function ManageDomainModal({
                 <button
                   onClick={() => {
                     setSelectedId('card');
-                    setShowPayment(true);
+                    openPayment();
                   }}
                   className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
                 >
@@ -675,12 +735,22 @@ export default function ManageDomainModal({
               </div>
             )}
 
+            {creditsArriving && (
+              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-border/20 p-4 text-sm text-foreground/80">
+                <Loader2 className="mt-0.5 h-4 w-4 flex-shrink-0 animate-spin" />
+                <span>
+                  Payment sent. Your credits are on their way; Continue
+                  unlocks when they arrive.
+                </span>
+              </div>
+            )}
+
             {/* Confirm */}
             {needsPaymentStep ? (
               <button
-                onClick={() => setShowPayment(true)}
-                disabled={route.kind !== 'card' && !priceReady}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                onClick={openPayment}
+                disabled={creditsArriving || (route.kind !== 'card' && !priceReady)}
+                className={`${buttonClass('primary', 'lg')} w-full`}
               >
                 {route.kind === 'card' ? (
                   <CreditCard className="h-4 w-4" />
@@ -737,10 +807,22 @@ export default function ManageDomainModal({
                 initialUsdAmount={topUpUsd}
                 shortfallCredits={creditShortfall}
                 paymentMethod="crypto"
-                      token={route.token as SupportedTokenType}
+                titleName={domain.displayName}
+                token={route.token as SupportedTokenType}
                 tokenLabel={tokenLabels[route.token as SupportedTokenType]}
                 onClose={() => setShowPayment(false)}
-                onComplete={() => setShowPayment(false)}
+                onComplete={() => {
+                  setShowPayment(false);
+                  // Back to the default route, which becomes credits once the
+                  // top-up lands, and hold Continue until then.
+                  setSelectedId(undefined);
+                  if (creditsPrice) {
+                    setAwaitingCredits({
+                      price: creditsPrice.sponsoredCredits,
+                      balanceAtPayment: balanceBeforePaymentRef.current,
+                    });
+                  }
+                }}
               />
             )}
           </>

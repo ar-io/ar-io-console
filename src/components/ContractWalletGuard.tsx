@@ -8,6 +8,7 @@ import { clearX402SignerCache } from '../hooks/useX402Upload';
 import { isContractWalletCode } from '../utils/contractWallet';
 import BaseModal from './modals/BaseModal';
 import ModalHeader from './modals/ModalHeader';
+import { buttonClass } from '@/components/button';
 
 // Answers already settled this page load, so a re-render or a store rehydrate
 // does not repeat three RPC calls. Only a definite answer is cached: one that
@@ -124,7 +125,7 @@ export default function ContractWalletGuard() {
         <div className="mt-5 flex justify-end">
           <button
             onClick={() => setBlocked(false)}
-            className="inline-flex items-center gap-2 bg-foreground text-white px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity"
+            className={buttonClass('primary', 'md')}
           >
             OK
           </button>

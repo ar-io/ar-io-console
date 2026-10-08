@@ -33,6 +33,7 @@ import ReturnedNamePremiumChart from './ReturnedNamePremiumChart';
 import { toUnicodeName } from '@/utils/punycode';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import TransactionReceipt from './TransactionReceipt';
+import { buttonClass } from '@/components/button';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -242,13 +243,13 @@ export default function ReturnedNameBuyModal({
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => freshness.refetch()}
-                className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10"
+                className={buttonClass('secondary', 'sm')}
               >
                 <RefreshCw className="h-4 w-4" /> Refresh
               </button>
               <button
                 onClick={onClose}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className={buttonClass('secondary', 'sm')}
               >
                 Close
               </button>
@@ -421,7 +422,7 @@ export default function ReturnedNameBuyModal({
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     onClick={() => navigate('/deploy')}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                    className={buttonClass('primary', 'sm')}
                   >
                     <Rocket className="h-4 w-4" /> Deploy a site
                   </button>
@@ -478,7 +479,7 @@ export default function ReturnedNameBuyModal({
                   </p>
                   <button
                     onClick={() => buyState.reset()}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                    className={`${buttonClass('secondary', 'md')} mt-4`}
                   >
                     Try again
                   </button>
@@ -496,7 +497,7 @@ export default function ReturnedNameBuyModal({
                   </p>
                   <button
                     onClick={() => buyState.reset()}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                    className={`${buttonClass('secondary', 'md')} mt-4`}
                   >
                     Try again
                   </button>

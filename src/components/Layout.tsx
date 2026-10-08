@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import Banner from './Banner';
+import { buttonClass } from '@/components/button';
 
 // Shown in the content area while a lazily-loaded route chunk downloads. The
 // surrounding chrome (header/nav/footer) stays mounted because this Suspense
@@ -34,7 +35,7 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
           <p className="text-foreground/80">This page failed to load.</p>
           <button
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('secondary', 'md')}
           >
             Reload
           </button>

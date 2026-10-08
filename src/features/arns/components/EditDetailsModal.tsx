@@ -28,6 +28,7 @@ import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
 import {
 } from '../recordFields';
+import { buttonClass } from '@/components/button';
 
 interface EditDetailsModalProps {
   domain: ArNSName;
@@ -169,7 +170,7 @@ export default function EditDetailsModal({
             )}
             <button
               onClick={onClose}
-              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('secondary', 'md')} mt-4`}
             >
               Close
             </button>
@@ -282,7 +283,7 @@ export default function EditDetailsModal({
                   <Loader2 className="h-4 w-4 animate-spin" /> Saving…
                 </>
               }
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${buttonClass('primary', 'lg')} mt-5 w-full`}
               actionVerb="edit this name"
             >
               <Save className="h-4 w-4" />

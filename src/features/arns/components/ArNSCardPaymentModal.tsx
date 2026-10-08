@@ -11,6 +11,7 @@ import { useArNSFiatPurchase, type FiatQuoteInput } from '../hooks/useArNSFiatPu
 import { formatFiatAmount, hasMinimumChargeExcess } from '../purchase/fiatQuote';
 import { isMoneyAtRisk } from '../purchase/purchaseMachine';
 import ModalHeader from '../../../components/modals/ModalHeader';
+import { buttonClass } from '@/components/button';
 
 /** Matches the app's other card input; Stripe's iframe can't read our CSS vars. */
 const cardElementOptions: StripeCardElementOptions = {
@@ -193,7 +194,7 @@ function CardCheckout({
               type="button"
               onClick={() => void confirmCard()}
               disabled={isBusy}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className={`${buttonClass('primary', 'lg')} w-full`}
             >
               {state.status === 'submitting' ? (
                 <>
@@ -213,7 +214,7 @@ function CardCheckout({
             reset();
             void requestQuote(quoteInput);
           }}
-          className="mt-3 w-full rounded-full border border-border/20 px-6 py-2.5 text-sm font-semibold text-foreground hover:border-primary/40"
+          className={`${buttonClass('secondary', 'md')} mt-3 w-full`}
         >
           Try again
         </button>
@@ -225,7 +226,7 @@ function CardCheckout({
         <button
           type="button"
           onClick={onClose}
-          className="mt-4 w-full rounded-full bg-foreground px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+          className={`${buttonClass('secondary', 'md')} mt-4 w-full`}
         >
           Done
         </button>

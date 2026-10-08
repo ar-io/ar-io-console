@@ -68,6 +68,31 @@ type ANTUndernameWriteable = {
   }): Promise<{ id: string }>;
 };
 
+/** One read of an ANT's undername records; see `useUndernameRecords`. */
+export async function fetchUndernameRecords(processId: string): Promise<UndernameRecord[]> {
+  const ant = (await getANT(processId)) as unknown as ANTRecordsReadable;
+  const records = await ant.getRecords({ includeMetadata: true });
+  return Object.entries(records)
+    .filter(([key]) => key !== '@')
+    .map(([undername, rec]) => ({
+      index: rec?.index ?? Number.MAX_SAFE_INTEGER,
+      record: {
+        undername,
+        transactionId: rec?.transactionId ?? '',
+        ttlSeconds: rec?.ttlSeconds ?? 0,
+        targetProtocol: rec?.targetProtocol ?? 0,
+        priority: rec?.priority,
+        owner: rec?.owner,
+        displayName: rec?.displayName,
+        logo: rec?.logo,
+        description: rec?.description,
+        keywords: Array.isArray(rec?.keywords) ? rec?.keywords : undefined,
+      } satisfies UndernameRecord,
+    }))
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.record);
+}
+
 /**
  * Read an ANT's undername records (everything except the apex `@`), sorted by
  * their on-chain index. One `getRecords` read; cached briefly while the editor
@@ -82,29 +107,7 @@ export function useUndernameRecords(
     queryKey: ['ant-undernames', configKey, processId],
     enabled: enabled && !!processId,
     staleTime: 15_000,
-    queryFn: async () => {
-      const ant = (await getANT(processId as string)) as unknown as ANTRecordsReadable;
-      const records = await ant.getRecords({ includeMetadata: true });
-      return Object.entries(records)
-        .filter(([key]) => key !== '@')
-        .map(([undername, rec]) => ({
-          index: rec?.index ?? Number.MAX_SAFE_INTEGER,
-          record: {
-            undername,
-            transactionId: rec?.transactionId ?? '',
-            ttlSeconds: rec?.ttlSeconds ?? 0,
-            targetProtocol: rec?.targetProtocol ?? 0,
-            priority: rec?.priority,
-            owner: rec?.owner,
-            displayName: rec?.displayName,
-            logo: rec?.logo,
-            description: rec?.description,
-            keywords: Array.isArray(rec?.keywords) ? rec?.keywords : undefined,
-          } satisfies UndernameRecord,
-        }))
-        .sort((a, b) => a.index - b.index)
-        .map((entry) => entry.record);
-    },
+    queryFn: () => fetchUndernameRecords(processId as string),
   });
 }
 

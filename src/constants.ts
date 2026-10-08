@@ -130,12 +130,11 @@ export const tokenLabels: Record<SupportedTokenType, string> = {
 /**
  * Largest ARIO top-up, in dollars at the live ARIO rate.
  *
- * ARIO top-ups carry the lower 25% infrastructure fee, a newer path than the
- * other tokens. A cap keeps any one payment small while that path proves
- * itself; the amount in ARIO follows the rate, so the ceiling stays $200
- * whatever ARIO trades at.
+ * ARIO top-ups are a newer path than the other tokens. A cap keeps any one
+ * payment small while that path proves itself; the amount in ARIO follows the
+ * rate, so the ceiling stays $100 whatever ARIO trades at.
  */
-export const ARIO_TOPUP_MAX_USD = 200;
+export const ARIO_TOPUP_MAX_USD = 100;
 
 export const tokenNetworkLabels: Record<SupportedTokenType, string> = {
   arweave: 'Arweave Network',

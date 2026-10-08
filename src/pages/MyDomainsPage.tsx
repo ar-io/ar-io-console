@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { Globe, RefreshCw, AlertTriangle, Download, Search, X } from 'lucide-react';
+import { Globe, RefreshCw, AlertTriangle, Download, Plus, Search, X } from 'lucide-react';
 import { getExpiringDomains, expiryLabel } from '@/utils/domainExpiry';
 import { downloadDomainsCsv } from '@/utils/domainCsv';
 import { useOwnedArNSNames } from '@/hooks/useOwnedArNSNames';
@@ -11,6 +11,8 @@ import SyncOwnershipBanner from '@/components/account/SyncOwnershipBanner';
 import IncompletePurchaseBanner from '@/features/arns/components/IncompletePurchaseBanner';
 import LinkSolanaWalletModal from '@/components/modals/LinkSolanaWalletModal';
 import ManageDomainModal from '@/features/arns/components/ManageDomainModal';
+import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 const DOMAINS_SHOWN = 10;
 
@@ -90,36 +92,38 @@ export default function MyDomainsPage() {
 
   return (
     <div className="px-4 sm:px-6">
-      {/* Header — title + (when signed in with ArNS access) CSV/Refresh actions */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
+      {/* Header: title + (when signed in with ArNS access) the actions, on the
+          same row at every width. On a phone they are icons, so they fit
+          beside the title instead of sitting alone on a line below it. */}
+      <div className="mb-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20">
             <Globe className="h-5 w-5 text-primary" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="mb-1 font-heading text-2xl font-extrabold text-foreground sm:text-3xl">
               Manage Domains
             </h1>
-            <p className="text-sm text-foreground/80">
+            <p className="hidden text-sm text-foreground/80 sm:block">
               Renew, transfer, and configure the ArNS names you own.
             </p>
           </div>
         </div>
 
         {hasArNSAccess && (
-          <div className="flex flex-shrink-0 items-center gap-1">
+          <div className="mt-1 flex flex-shrink-0 items-center gap-2">
             {ownedNames.length > 0 && (
               <button
                 // Export what is on screen. With a search active, exporting the
                 // full list instead of the visible matches would quietly hand
                 // back a different set than the one being looked at.
                 onClick={() => downloadDomainsCsv(visibleDomains)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground transition-colors hover:text-foreground/80"
+                className={actionButtonClass('default')}
                 title={needle ? 'Export the matching names to CSV' : 'Export domains to CSV'}
-                aria-label={needle ? 'Export the matching names to CSV' : 'Export domains to CSV'}
               >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">
+                <Download className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only">
                   Export CSV{needle ? ` (${visibleDomains.length})` : ''}
                 </span>
               </button>
@@ -127,15 +131,32 @@ export default function MyDomainsPage() {
             <button
               onClick={() => fetchOwnedNames(true)}
               disabled={loadingDomains}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-foreground transition-colors hover:text-foreground/80 disabled:opacity-50"
+              className={actionButtonClass('default')}
               title="Refresh domains"
-              aria-label="Refresh domains"
             >
-              <RefreshCw className={`h-4 w-4 ${loadingDomains ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingDomains ? 'animate-spin' : ''}`} />
+              <span className="sr-only sm:not-sr-only">Refresh</span>
             </button>
+            {/* With names listed, the empty state's "Register a name" is gone;
+                this keeps buying another one a click away. */}
+            {ownedNames.length > 0 && (
+              <button
+                onClick={() => navigate('/arns')}
+                className={actionButtonClass('primary')}
+                title="Register a name"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only">Register a name</span>
+              </button>
+            )}
           </div>
         )}
+      </div>
+      {/* On a phone the actions share the title's row, so the description
+          takes the full width below it rather than a squeezed column. */}
+      <p className="mt-1 text-sm text-foreground/80 sm:hidden">
+        Renew, transfer, and configure the ArNS names you own.
+      </p>
       </div>
 
       {hasArNSAccess ? (
@@ -231,7 +252,7 @@ export default function MyDomainsPage() {
               </p>
               <button
                 onClick={() => navigate('/arns')}
-                className="rounded-full bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary/90"
+                className={buttonClass('primary', 'sm')}
               >
                 Register a name
               </button>
@@ -305,7 +326,7 @@ export default function MyDomainsPage() {
           </p>
           <button
             onClick={() => setShowLinkModal(true)}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
+            className={`${buttonClass('primary', 'md')} mt-4`}
           >
             <Globe className="h-4 w-4" />
             Link a Solana wallet

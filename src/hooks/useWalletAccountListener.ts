@@ -89,7 +89,7 @@ export function useWalletAccountListener() {
   // Use publicKey as source of truth — solanaConnected can be stale when
   // Standard Wallet adapters auto-approve (connect() returns early without
   // emitting 'connect' event, so WalletProviderBase never calls setConnected(true)).
-  const { publicKey: solanaPublicKey, wallets: solanaWallets } = useWallet();
+  const { publicKey: solanaPublicKey, wallets: solanaWallets, wallet: solanaWallet } = useWallet();
 
   // Track whether a Solana wallet has been active in this session.
   const solanaEverConnectedRef = useRef(false);
@@ -108,10 +108,12 @@ export function useWalletAccountListener() {
         if (address) {
           clearAllPaymentState();
         }
-        setAddress(newAddress, 'solana');
+        // With the adapter's name, or a reload reconnects the old wallet and
+        // finds an account that is not this one.
+        setAddress(newAddress, 'solana', solanaWallet?.adapter.name);
       }
     }
-  }, [solanaPublicKey, address, walletType, setAddress, clearAllPaymentState]);
+  }, [solanaPublicKey, address, walletType, setAddress, clearAllPaymentState, solanaWallet]);
 
   // Handle Solana disconnection: clear store when publicKey disappears.
   // Only runs after a wallet has been active at least once in this session,

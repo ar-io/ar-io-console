@@ -18,6 +18,7 @@ import { parsePrimaryName } from '../utils';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
 import TransactionReceipt from './TransactionReceipt';
+import { buttonClass } from '@/components/button';
 
 export type PrimaryNameModalMode = 'set' | 'change' | 'approve';
 
@@ -34,7 +35,8 @@ interface PrimaryNameModalProps {
   pendingRequest?: { name: string; initiator: string };
   onClose: () => void;
   /** Called after any successful write, so the caller can refetch/invalidate. */
-  onSuccess?: () => void;
+  /** Fired after a write lands, with the name that is now primary. */
+  onSuccess?: (primaryName?: string) => void;
 }
 
 const TITLES: Record<PrimaryNameModalMode, string> = {
@@ -100,8 +102,8 @@ export default function PrimaryNameModal({
 
   const isPickMode = mode === 'set' || mode === 'change';
 
-  const afterWrite = () => {
-    onSuccess?.();
+  const afterWrite = (primaryName: string) => {
+    onSuccess?.(primaryName);
   };
 
   const handleSet = async () => {
@@ -111,7 +113,7 @@ export default function PrimaryNameModal({
       // land) while surfacing the error via state — mirror ManageDomainModal and
       // only fire onSuccess when we actually got a tx id back.
       const id = await setPrimaryName({ name: selected.name });
-      if (id) afterWrite();
+      if (id) afterWrite(selected.name);
     } catch {
       /* surfaced via error */
     }
@@ -124,7 +126,7 @@ export default function PrimaryNameModal({
         name: pendingRequest.name,
         address: pendingRequest.initiator,
       });
-      if (id) afterWrite();
+      if (id) afterWrite(pendingRequest.name);
     } catch {
       /* surfaced via error */
     }
@@ -172,7 +174,7 @@ export default function PrimaryNameModal({
             <TransactionReceipt txId={txId} className="mt-3" />
             <button
               onClick={onClose}
-              className="mt-4 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className={`${buttonClass('secondary', 'md')} mt-4`}
             >
               Close
             </button>
@@ -282,7 +284,7 @@ export default function PrimaryNameModal({
                 <button
                   onClick={handleSet}
                   disabled={!selected || isBusy}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`${buttonClass('primary', 'md')} w-full`}
                 >
                   {isBusy ? (
                     <>
@@ -329,7 +331,7 @@ export default function PrimaryNameModal({
                 <button
                   onClick={handleApprove}
                   disabled={!pendingRequest || !approveBaseOwned || isBusy}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`${buttonClass('primary', 'md')} w-full`}
                 >
                   {isBusy ? (
                     <>

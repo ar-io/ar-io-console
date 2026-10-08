@@ -22,6 +22,8 @@ import { wincPerCredit, tokenLabels, type SupportedTokenType } from '@/constants
 import { formatSmallestUnit } from '@/utils/jitPayment';
 import { getExplorerTxUrl } from '@/utils/getExplorerTxUrl';
 import CopyButton from '@/components/CopyButton';
+import { actionButtonClass } from '@/components/actionButton';
+import { buttonClass } from '@/components/button';
 
 // ---- formatting helpers ------------------------------------------------------
 
@@ -241,7 +243,7 @@ export default function PaymentHistorySection() {
             <button
               onClick={() => downloadTopupCsv(payments)}
               title="Export loaded top-up history as CSV"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/20 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-card"
+              className={actionButtonClass('default')}
             >
               <Download className="h-3.5 w-3.5" />
               Export CSV
@@ -255,7 +257,7 @@ export default function PaymentHistorySection() {
         <div className="px-4 pb-6 pt-2 text-center sm:px-6">
           <button
             onClick={load}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('primary', 'md')}
           >
             <Receipt className="h-4 w-4" />
             View my top-up history
@@ -296,7 +298,7 @@ export default function PaymentHistorySection() {
           <p className="mb-4 text-sm text-error">{error}</p>
           <button
             onClick={load}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-foreground bg-transparent px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/5"
+            className={buttonClass('secondary', 'md')}
           >
             <RefreshCw className="h-4 w-4" />
             Try again
@@ -314,7 +316,7 @@ export default function PaymentHistorySection() {
           </p>
           <button
             onClick={() => navigate('/topup')}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('primary', 'md')}
           >
             Buy Credits
           </button>
@@ -339,7 +341,7 @@ export default function PaymentHistorySection() {
               <button
                 onClick={loadMore}
                 disabled={status === 'loadingMore'}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/20 bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card disabled:opacity-50 disabled:cursor-not-allowed"
+                className={buttonClass('secondary', 'sm')}
               >
                 {status === 'loadingMore' ? (
                   <>

@@ -4,10 +4,12 @@ import { Listbox, Transition } from '@headlessui/react';
 import { useCreditsForFiat } from '../../hooks/useCreditsForFiat';
 import useDebounce from '../../hooks/useDebounce';
 import { defaultUSDAmount, minUSDAmount, maxUSDAmount, wincPerCredit, tokenLabels, SupportedTokenType , isTokenSelectable, ARIO_TOPUP_MAX_USD } from '../../constants';
+import { arioPresetsFor } from '../../utils/arioPresets';
 import { useStore } from '../../store/useStore';
 import { Loader2, Lock, CreditCard, DollarSign, Wallet, Shield, AlertCircle, HardDrive, ChevronDown, Check, MapPin } from 'lucide-react';
 import { useWincForOneGiB, useWincForAnyToken } from '../../hooks/useWincForOneGiB';
-import { useArioUsdRate, useCryptoPriceForWinc } from '../../hooks/useCryptoPrice';
+import { useArioUsdRate, useCryptoPriceForWinc, useCryptoPriceForWincQuery } from '../../hooks/useCryptoPrice';
+import { cryptoAmountStep } from '../../utils/cryptoAmountStep';
 import CryptoConfirmationPanel from './crypto/CryptoConfirmationPanel';
 import CryptoManualPaymentPanel from './crypto/CryptoManualPaymentPanel';
 import PaymentDetailsPanel from './fiat/PaymentDetailsPanel';
@@ -39,6 +41,7 @@ import {
   resolveCreditTarget,
   type CreditWalletType,
 } from '../../utils/creditTarget';
+import { buttonClass } from '@/components/button';
 
 export type TopUpHostStep = 'amount' | 'details' | 'review' | 'success';
 
@@ -202,8 +205,10 @@ export default function TopUpPanel({
     it re-states the price the host modal is already showing and puts a Continue
     button between the user and the card form, so open straight on the form.
 
-    Crypto keeps its amount step: token amounts still move with quotes, and that
-    screen carries the transfer's own confirmation.
+    A targeted crypto top-up skips it too, for the same reason: the checkout
+    chose the token and the amount is the purchase's. The confirmation step
+    prices the transfer and holds the Pay button, so nothing is lost. See
+    `cryptoAmountStep` for where the amount step still shows.
   */
   const skipAmountStep =
     embedded && initialUsdAmount != null && initialPaymentMethod === 'fiat';
@@ -281,7 +286,11 @@ export default function TopUpPanel({
     initialCreditAmount != null && initialCreditAmount > 0
       ? initialCreditAmount * 1e12
       : undefined;
-  const cryptoForTarget = useCryptoPriceForWinc(
+  const {
+    tokenAmount: cryptoForTarget,
+    isError: cryptoForTargetFailed,
+    refetch: refetchCryptoForTarget,
+  } = useCryptoPriceForWincQuery(
     wincNeededForTarget,
     selectedTokenType,
     true, // charged, not displayed — see the hook's `roundUp`
@@ -333,10 +342,20 @@ export default function TopUpPanel({
 
   // Truncate address for display
   // Displayed and charged must be the same account — see `resolveCreditTarget`.
+  /*
+    The recipient someone picked on the Top Up page. Embedded (a payment for
+    this user's own purchase) hides that picker, so a recipient left over from
+    an earlier visit would credit an account the purchase never reads; the
+    host's destination, or the signed-in wallet, is the only right answer.
+  */
+  const recipientAddress = embedded ? null : paymentTargetAddress;
+  const recipientType = embedded
+    ? null
+    : (paymentTargetType as CreditWalletType | null);
   const creditTargetAddress = resolveCreditTarget({
     destination: creditDestination,
-    paymentTargetAddress,
-    paymentTargetType: paymentTargetType as CreditWalletType | null,
+    paymentTargetAddress: recipientAddress,
+    paymentTargetType: recipientType,
     sessionAddress: address,
     sessionWalletType: walletType as CreditWalletType | null,
   })?.address;
@@ -388,7 +407,7 @@ export default function TopUpPanel({
   }, [targetedTopUp, cryptoForTarget]);
 
   /*
-    The $200 ARIO cap, in ARIO at Turbo's live rate (the same rate every other
+    The ARIO cap (ARIO_TOPUP_MAX_USD), in ARIO at Turbo's live rate (the same rate every other
     ARIO price here uses). Undefined until the rate loads: an ARIO top-up then
     waits rather than going ahead unbounded.
   */
@@ -397,13 +416,7 @@ export default function TopUpPanel({
     arioUsdRate && arioUsdRate > 0
       ? Math.floor(ARIO_TOPUP_MAX_USD / arioUsdRate)
       : undefined;
-  const arioPresets =
-    arioMaxTokens === undefined
-      ? [10_000, 25_000, 50_000, 100_000]
-      : [
-          ...[10_000, 25_000, 50_000, 100_000].filter((a) => a < arioMaxTokens),
-          arioMaxTokens,
-        ].slice(-4);
+  const arioPresets = arioPresetsFor(arioMaxTokens);
   const arioAmount =
     inputType === 'storage' && cryptoForStorage !== undefined
       ? cryptoForStorage
@@ -414,7 +427,7 @@ export default function TopUpPanel({
   const arioCapNote =
     selectedTokenType === 'ario'
       ? arioMaxTokens === undefined
-        ? 'Loading the ARIO rate for the $200 limit…'
+        ? `Loading the ARIO rate for the $${ARIO_TOPUP_MAX_USD} limit…`
         : `Up to $${ARIO_TOPUP_MAX_USD} in ARIO per top-up (${arioMaxTokens.toLocaleString()} ARIO at today's rate).`
       : undefined;
 
@@ -422,9 +435,8 @@ export default function TopUpPanel({
   const getCryptoPresets = (tokenType: SupportedTokenType) => {
     switch (tokenType) {
       case 'arweave': return [0.5, 1, 5, 10];
-      // Sized to the $200 cap rather than to a round number of tokens: at
-      // ARIO's price, 1,000 ARIO was a dollar and a half. Presets above the
-      // cap are dropped; the cap is always offered.
+      // Kept under the ARIO_TOPUP_MAX_USD cap: presets at or above it are
+      // dropped and the cap offered instead (see `arioPresets`).
       case 'ario': return arioPresets;
       case 'base-ario': return [50, 100, 500, 1000]; // Same presets as ARIO
       case 'ethereum': return [0.01, 0.05, 0.1, 0.25];
@@ -498,8 +510,8 @@ export default function TopUpPanel({
       // For fiat, we need either a connected wallet OR a target address
       const target = resolveCreditTarget({
         destination: creditDestination,
-        paymentTargetAddress,
-        paymentTargetType: paymentTargetType as CreditWalletType | null,
+        paymentTargetAddress: recipientAddress,
+        paymentTargetType: recipientType,
         sessionAddress: address,
         sessionWalletType: walletType as CreditWalletType | null,
       });
@@ -593,6 +605,22 @@ export default function TopUpPanel({
   const handleCryptoBackToSelection = () => {
     setCryptoFlowStep('selection');
     setCryptoPaymentResult(null);
+  };
+
+  /*
+    Set once a targeted crypto top-up has skipped its amount step. From then on
+    Back on the confirmation leaves the payment, as it does for card: behind it
+    is a screen the flow skipped, and the checkout is where the token or term
+    can actually be changed.
+  */
+  const cryptoAdvancedRef = useRef(false);
+  const handleCryptoConfirmationBack = () => {
+    if (cryptoAdvancedRef.current) {
+      setCryptoPaymentResult(null);
+      onCancel?.();
+      return;
+    }
+    handleCryptoBackToSelection();
   };
 
   // Fiat flow handlers
@@ -701,11 +729,10 @@ export default function TopUpPanel({
     () =>
       buildSources({
         // Exactly the tokens this wallet could pay with before the dropdown.
+        // ARIO carries no tag: its fee can change, and the price column
+        // already shows what each token costs.
         tokens: topUpTokensForWallet(walletType, isTokenSelectable).map((token) => ({
           token,
-          // ARIO top-ups carry a 25% infrastructure fee against 35% for the
-          // rest. Said as a small tag and nothing more: it is never preselected.
-          ...(token === 'ario' ? { badge: 'Lower fee' } : {}),
         })),
         balances: {
           ...(rowToken ? { [rowToken]: rowHeld } : {}),
@@ -963,6 +990,59 @@ export default function TopUpPanel({
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
+  const cryptoStep = cryptoAmountStep({
+    targeted: targetedTopUp && initialPaymentMethod === 'crypto' && paymentMethod === 'crypto',
+    onAmountStep: cryptoFlowStep === 'selection',
+    advanced: cryptoAdvancedRef.current,
+    // ARIO waits for its cap too: advancing before the rate loads would
+    // skip the one check that screen enforces.
+    tokenAmount:
+      selectedTokenType === 'ario' && arioMaxTokens === undefined
+        ? undefined
+        : cryptoForTarget,
+    pricingFailed: cryptoForTargetFailed,
+    walletCanSend: !!walletType && isTokenCompatibleWithWallet(selectedTokenType),
+    overCap:
+      selectedTokenType === 'ario' &&
+      arioMaxTokens !== undefined &&
+      cryptoForTarget !== undefined &&
+      cryptoForTarget > arioMaxTokens,
+  });
+
+  useEffect(() => {
+    if (cryptoStep !== 'advance' || cryptoForTarget === undefined) return;
+    cryptoAdvancedRef.current = true;
+    // Set here too: the seeding effect's update has not rendered yet.
+    setCryptoAmount(cryptoForTarget);
+    setCryptoAmountInput(String(cryptoForTarget));
+    setCryptoFlowStep('confirmation');
+  }, [cryptoStep, cryptoForTarget]);
+
+  if (cryptoStep === 'wait' || cryptoStep === 'error' || cryptoStep === 'advance') {
+    // Mid-skip, as for card below: never flash the amount step it skips.
+    return (
+      <div className="px-1 py-10 text-center">
+        {cryptoStep === 'error' ? (
+          <>
+            <p className="text-sm text-error">
+              Couldn't price this payment in {tokenLabels[selectedTokenType]}.
+            </p>
+            <button
+              onClick={refetchCryptoForTarget}
+              className={`${buttonClass('secondary', 'sm')} mt-3`}
+            >
+              Try again
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center justify-center gap-2 text-sm text-foreground/70">
+            <Loader2 className="h-4 w-4 animate-spin" /> Preparing payment…
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (skipAmountStep && paymentMethod === 'fiat' && fiatFlowStep === 'amount') {
     // Mid-skip: the intent is being created. Never show the amount UI here —
     // it is the screen the user was promised they would not see.
@@ -973,7 +1053,7 @@ export default function TopUpPanel({
             <p className="text-sm text-error">{errorMessage}</p>
             <button
               onClick={() => void handleCheckout()}
-              className="mt-3 rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className={`${buttonClass('secondary', 'sm')} mt-3`}
             >
               Try again
             </button>
@@ -997,8 +1077,8 @@ export default function TopUpPanel({
     */
     const target = resolveCreditTarget({
       destination: creditDestination,
-      paymentTargetAddress,
-      paymentTargetType: paymentTargetType as CreditWalletType | null,
+      paymentTargetAddress: recipientAddress,
+      paymentTargetType: recipientType,
       sessionAddress: address,
       sessionWalletType: walletType as CreditWalletType | null,
     });
@@ -1051,9 +1131,10 @@ export default function TopUpPanel({
         return (
           <CryptoConfirmationPanel
             purpose={purpose}
+            embedded={embedded}
             cryptoAmount={inputType === 'storage' && cryptoForStorage !== undefined ? cryptoForStorage : cryptoAmount}
             tokenType={selectedTokenType}
-            onBack={handleCryptoBackToSelection}
+            onBack={handleCryptoConfirmationBack}
             onPaymentComplete={handleCryptoPaymentComplete}
           />
         );
@@ -1061,9 +1142,10 @@ export default function TopUpPanel({
         return (
           <CryptoManualPaymentPanel
             purpose={purpose}
+            embedded={embedded}
             cryptoTopupValue={cryptoPaymentResult?.quote?.tokenAmount || 0}
             tokenType={selectedTokenType}
-            onBack={handleCryptoBackToSelection}
+            onBack={handleCryptoConfirmationBack}
             onComplete={handleManualPaymentComplete}
           />
         );
@@ -2154,7 +2236,7 @@ export default function TopUpPanel({
         {/* Checkout Button */}
         <button
           onClick={handleCheckout}
-          className="w-full py-4 px-6 rounded-full bg-foreground text-card font-bold text-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className={`${buttonClass('primary', 'xl')} w-full`}
           disabled={
             (paymentMethod === 'fiat' && (
               (!paymentTargetAddress && !address) || // Must have either a target address or connected wallet
@@ -2164,7 +2246,7 @@ export default function TopUpPanel({
             )) ||
             (paymentMethod === 'crypto' && (
               !!targetAddressError || // Block checkout if recipient address validation failed
-              arioOverCap || // ARIO: at most $200 per top-up, and not before the rate loads
+              arioOverCap || // ARIO: at most ARIO_TOPUP_MAX_USD per top-up, and not before the rate loads
               (inputType === 'dollars' && (cryptoAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || !!tokenPricingError)) ||
               (inputType === 'storage' && (!wincForOneGiB || !creditsForOneUSD || storageAmount <= 0 || !walletType || !isTokenCompatibleWithWallet(selectedTokenType) || cryptoForStorage === undefined))
             )) ||

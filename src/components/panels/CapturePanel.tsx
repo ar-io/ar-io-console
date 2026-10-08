@@ -23,6 +23,10 @@ import { JitTokenSelector } from '../JitTokenSelector';
 import { supportsJitPayment, getTokenConverter, formatTokenAmount } from '../../utils/jitPayment';
 import { tokenLabels } from '../../constants';
 import X402OnlyBanner from '../X402OnlyBanner';
+import { actionButtonClass } from '@/components/actionButton';
+import AssignedDomainLinks from '@/components/AssignedDomainLinks';
+import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
+import { buttonClass } from '@/components/button';
 
 // Helper function to get contextual file icon based on content type or file name
 const getFileIcon = (contentType?: string, fileName?: string) => {
@@ -93,7 +97,8 @@ export default function CapturePanel() {
       return undefined;
     }
   }, [urlInput]);
-  const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const [captureMessage, setCaptureMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string; domain?: { name: string; undername?: string } } | null>(null);
+  const arnsHost = useArnsHost();
   const { capture, isCapturing, error: captureError, result: captureResult, captureFile } = useTurboCapture();
 
   // ArNS assignment state
@@ -376,7 +381,8 @@ export default function CapturePanel() {
               if (failedFiles.length === 0) {
                 setCaptureMessage({
                   type: 'success',
-                  text: `Screenshot captured and uploaded! Assigned to ${selectedUndername ? selectedUndername + '_' : ''}${selectedArnsName}.ar.io`
+                  text: `Screenshot captured and uploaded. ${assignedLabel(selectedArnsName, selectedUndername || undefined)}.${arnsHost} now points to it.`,
+                  domain: { name: selectedArnsName, undername: selectedUndername || undefined },
                 });
               }
             } else {
@@ -465,7 +471,10 @@ export default function CapturePanel() {
             <div className="flex items-center gap-2">
               {captureMessage.type === 'error' && <XCircle className="w-5 h-5" />}
               {captureMessage.type === 'success' && <CheckCircle className="w-5 h-5" />}
-              <span className="text-sm">{captureMessage.text}</span>
+              <div className="text-sm">
+                {captureMessage.text}
+                {captureMessage.domain && <AssignedDomainLinks {...captureMessage.domain} />}
+              </div>
             </div>
             <button
               onClick={() => setCaptureMessage(null)}
@@ -523,7 +532,7 @@ export default function CapturePanel() {
         <button
           onClick={address ? handleCapture : promptSignIn}
           disabled={!!address && (isCapturing || (arnsEnabled && !selectedArnsName) || (arnsEnabled && showUndername && !selectedUndername))}
-          className="w-full py-4 px-6 rounded-full bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className={`${buttonClass('primary', 'xl')} w-full`}
         >
           {address ? (
             <>
@@ -596,31 +605,31 @@ export default function CapturePanel() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={exportToCSV}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded-full text-foreground hover:bg-card/80 hover:text-foreground transition-colors"
+                  className={actionButtonClass('default')}
                   title="Export history to CSV"
                 >
-                  <Archive className="w-3 h-3" />
-                  <span className="hidden sm:inline">Export CSV</span>
+                  <Archive className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Export CSV</span>
                 </button>
                 <button
                   onClick={() => checkMultipleStatuses(uploadHistory.map(r => r.id), true)}
                   disabled={Object.values(statusChecking).some(checking => checking)}
-                  className="flex items-center gap-1 px-3 py-2 text-xs bg-card border border-border/20 rounded-full text-foreground hover:bg-card/80 hover:text-foreground transition-colors disabled:opacity-50"
+                  className={actionButtonClass('default')}
                   title="Check status for all items"
                 >
-                  <RefreshCw className={`w-3 h-3 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Check Status</span>
+                  <RefreshCw className={`h-3.5 w-3.5 ${Object.values(statusChecking).some(checking => checking) ? 'animate-spin' : ''}`} />
+                  <span className="sr-only sm:not-sr-only">Check Status</span>
                 </button>
                 <button
                   onClick={() => {
                     clearUploadHistory();
                     resetFileUpload();
                   }}
-                  className="flex items-center gap-1 px-3 py-2 text-xs text-foreground/80 hover:text-error border border-border/20 rounded-full hover:border-error/50 transition-colors"
+                  className={actionButtonClass('danger')}
                   title="Clear all history"
                 >
-                  <XCircle className="w-3 h-3" />
-                  <span className="hidden sm:inline">Clear History</span>
+                  <XCircle className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only">Clear History</span>
                 </button>
               </div>
             )}
@@ -930,7 +939,8 @@ export default function CapturePanel() {
             setShowAssignDomainModal(null);
             setCaptureMessage({
               type: 'success',
-              text: `Successfully assigned ${undername ? undername + '_' : ''}${arnsName}.ar.io!`
+              text: `${assignedLabel(arnsName, undername)}.${arnsHost} now points to your capture.`,
+              domain: { name: arnsName, undername },
             });
           }}
         />
@@ -1260,7 +1270,7 @@ export default function CapturePanel() {
                   <div className="flex flex-col-reverse sm:flex-row gap-3">
                     <button
                       onClick={() => setShowConfirmModal(false)}
-                      className="flex-1 py-3 px-4 rounded-2xl border border-border/20 text-foreground/80 hover:text-foreground hover:border-border/50 transition-colors"
+                      className={`${buttonClass('secondary', 'lg')} flex-1`}
                     >
                       Cancel
                     </button>
@@ -1274,7 +1284,7 @@ export default function CapturePanel() {
                         // Crypto pricing has not resolved yet — see UploadPanel.
                         (localJitEnabled && creditsNeeded > 0 && !(localJitMax > 0))
                       }
-                      className="flex-1 py-3 px-4 rounded-2xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-foreground/80"
+                      className={`${buttonClass('primary', 'lg')} flex-1`}
                     >
                       {localJitEnabled && creditsNeeded > 0 ? 'Pay & Upload' : 'Upload'}
                     </button>

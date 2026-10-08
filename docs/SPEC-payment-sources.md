@@ -152,7 +152,7 @@ From your Solana wallet
   - Top Up: the first affordable source on a fast chain (USDC on Solana, SOL, USDC on Base, ETH on Base), then the session wallet's own token.
 - **A selection survives a re-render while it stays available,** and falls back to the preselection only when it does not. This is the rule `TopUpPanel` already follows in its "keep the selected token payable" effect.
 - **A slow token is labelled with its wait** in its row, such as "about 40 min" for AR, and is still offered. On the name checkout it follows the two-step flow in § 7.8.
-- **On Top Up, ARIO is a row like any other, placed after the preselected token.** It carries a small "Lower fee" tag and nothing more: no badge colour, no preselection, no banner. It pays the 25% infrastructure fee instead of 35%, and its price column shows the difference as ordinary numbers. ARIO keeps its prominent "Best price" badge on the name checkout, where it pays the registry directly.
+- **On Top Up, ARIO is a row like any other, placed after the preselected token.** It carries no tag, no preselection and no banner; its price column shows what it costs, like every other row. (A "Lower fee" tag was removed in 4.11.0, because the fee can change.) ARIO keeps its prominent "Best price" badge on the name checkout, where it pays the registry directly.
 
 ### 7.3 The name checkout, by session type
 
@@ -200,7 +200,6 @@ These strings are the source of truth. They follow the house copy rules: no em d
 | Disabled row, low balance | Not enough USDC |
 | Disabled row, no SOL for the fee (USDC on Solana) | Needs 0.000005 SOL for the network fee |
 | Slow token row | about WAIT |
-| ARIO row on Top Up | Lower fee |
 | Slow token, name checkout, before paying | This payment takes about WAIT to reach your balance. You can leave this page. Once it arrives, buy the name with credits in one step. |
 | Slow token, name checkout, waiting | Waiting for your payment to confirm. You can leave this page; your credits arrive either way. |
 | Slow token, name checkout, credits arrived | Your credits have arrived. Buy NAME with credits. |
@@ -425,7 +424,7 @@ Phil answered the open questions on 2026-09-23, as follows:
 
 | Question | Decision | Where |
 | --- | --- | --- |
-| Offer ARIO for credit top-ups? | Yes, subtly: an ordinary row with a "Lower fee" tag | § 7.2 |
+| Offer ARIO for credit top-ups? | Yes, subtly: an ordinary row (its "Lower fee" tag was removed in 4.11.0) | § 7.2 |
 | Keep slow tokens on the name checkout? | Yes, with a two-step flow for long waits | § 7.8 |
 | Show "Paid from" in payment history? | Yes. The service returns the sender for every crypto row | § 9.2 |
 | SOL threshold for the USDC fee | The base signature fee, 5,000 lamports | § 7.9 |

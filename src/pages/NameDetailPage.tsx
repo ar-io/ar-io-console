@@ -4,13 +4,20 @@ import { useQueryClient } from '@tanstack/react-query';
 import RecordsTable from '@/features/arns/components/RecordsTable';
 import {
   ArrowLeft,
+  CalendarPlus,
   ExternalLink,
   Globe,
   Layers,
   Loader2,
+  LogOut,
+  Pencil,
+  Plus,
+  Repeat,
+  Send,
   Star,
   Tag,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 
 import { useStore } from '@/store/useStore';
@@ -32,10 +39,34 @@ import {
   usePrimaryName,
 } from '@/features/arns';
 import { useArNSNameRecord } from '@/features/arns/hooks/useArNSNameRecord';
-import { useAntSummaries } from '@/features/arns/hooks/useAntLogos';
+import {
+  antSummariesMints,
+  fetchAntSummaries,
+  useAntSummaries,
+  type AntSummary,
+} from '@/features/arns/hooks/useAntLogos';
+import { fetchApexRecord, type ANTDetails } from '@/features/arns/hooks/useANTDetails';
+import { fetchUndernameRecords, type UndernameRecord } from '@/features/arns/hooks/useUndernames';
+import { fetchControllersLight } from '@/features/arns/hooks/useControllers';
+import { fetchPrimaryName, type PrimaryName } from '@/features/arns/hooks/usePrimaryName';
+import { useArNSConfigKey } from '@/features/arns/hooks/useArNSConfigKey';
+import { useSettleAfterWrite } from '@/features/arns/hooks/useSettleAfterWrite';
+import {
+  apexReflects,
+  applyApexWrite,
+  applyControllerWrite,
+  applyRecordWrite,
+  controllersReflect,
+  recordsReflect,
+  type ControllerWrite,
+  type RecordWrite,
+} from '@/features/arns/writeSettle';
 import { deriveAntRoleStrict } from '@/features/arns/antRole';
 import { isArweaveTxId, isValidArNSName } from '@/features/arns/utils';
 import { toUnicodeName } from '@/utils/punycode';
+import { actionButtonClass } from '@/components/actionButton';
+import { arnsHostFor } from '@/features/pages/publish/renderCtx';
+import { buttonClass } from '@/components/button';
 
 /** Which action modal is open, if any. */
 type OpenModal =
@@ -96,30 +127,21 @@ function SectionCard({
   );
 }
 
-/**
- * A section's action: small and quiet. `danger` marks the owner's
- * irreversible ones in red; each opens a modal with its own warning and
- * confirmation, so the link itself need not be loud.
- */
+/** A section's action, beside its title. See `actionButtonClass`. */
 function SectionAction({
   label,
+  icon: Icon,
   onClick,
   danger,
-  className = '-mr-2',
 }: {
   label: string;
+  icon: LucideIcon;
   onClick: () => void;
   danger?: boolean;
-  className?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${className} flex-shrink-0 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
-        danger ? 'text-error hover:bg-error/10' : 'text-primary hover:bg-primary/10'
-      }`}
-    >
+    <button type="button" onClick={onClick} className={actionButtonClass(danger ? 'danger' : 'default')}>
+      <Icon className="h-3.5 w-3.5" />
       {label}
     </button>
   );
@@ -154,6 +176,10 @@ export default function NameDetailPage() {
   const backLabel = backTo === '/my-domains' ? 'My domains' : 'All names';
   const navigate = useNavigate();
   const configMode = useStore((s) => s.configMode);
+  const arioGatewayUrl = useStore((s) => s.getCurrentConfig().arioGatewayUrl);
+  // The host that serves this network's names: ar.io on mainnet, the testnet
+  // gateway on devnet, where ar.io would not resolve them.
+  const arnsHost = arnsHostFor({ configMode, arioGatewayUrl });
   const { arnsAddress } = useLinkedSolanaWallet();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<OpenModal>(null);
@@ -227,15 +253,30 @@ export default function NameDetailPage() {
       }`
     : undefined;
 
+  /*
+    Writes whose result the page can state show it at once and confirm it with
+    a few reads of that one query (`useSettleAfterWrite`). A single re-read
+    straight after the write could land on an RPC node a slot behind, and the
+    stale answer then stayed until the page remounted.
+  */
+  const configKey = useArNSConfigKey();
+  const { settle, isSettling } = useSettleAfterWrite(`${configKey}:${name}`);
+
   // After any write, refetch the record AND invalidate every query scoped to
   // this name's processId / name / owner (ANT details, undernames, controllers,
   // ANT summaries, primary-name) — otherwise the page shows a stale target,
   // records, ownership, or primary status after Edit/Primary/Transfer/Reassign/
-  // Release (those modals only call onSuccess).
+  // Release (those modals only call onSuccess). Once per write, never looped.
+  //
+  // Any query a settle is confirming is left out, including one started by an
+  // earlier write: an immediate read there duplicates the settle's own, and
+  // can land on a lagging node and flash the old state back. So a handler
+  // starts its settle BEFORE calling this.
   const refresh = () => {
     refetchRecord();
     queryClient.invalidateQueries({
       predicate: (q) => {
+        if (isSettling(q.queryKey)) return false;
         const key = JSON.stringify(q.queryKey);
         return (
           (!!processId && key.includes(processId)) ||
@@ -244,6 +285,96 @@ export default function NameDetailPage() {
         );
       },
     });
+  };
+
+  /*
+    A record write changes the records and nothing else on the page, so it
+    settles that one query and skips the broad refresh, which would re-read
+    the name, its summaries, controllers and primary name for no change.
+  */
+  const onRecordWrite = (write: RecordWrite) => {
+    if (!processId) return;
+    if (write.undername === '@') {
+      const queryKey = ['ant-details', configKey, processId];
+      settle<ANTDetails>({
+        queryKey,
+        // The apex record alone (one batch of two accounts), laid over the
+        // details already loaded: `getState` would scan every record.
+        read: async () => {
+          const apex = await fetchApexRecord(processId);
+          // No `@` record read back: nothing to compare or apply this tick.
+          if (!apex) return undefined;
+          const cur = queryClient.getQueryData<ANTDetails>(queryKey);
+          return cur && { ...cur, ...apex };
+        },
+        reflects: (d) => apexReflects(d, write),
+        apply: (d) => applyApexWrite(d, write),
+      });
+    } else {
+      settle<UndernameRecord[]>({
+        queryKey: ['ant-undernames', configKey, processId],
+        read: () => fetchUndernameRecords(processId),
+        reflects: (d) => recordsReflect(d, write),
+        apply: (d) => applyRecordWrite(d, write),
+      });
+    }
+  };
+
+  const onTransferred = (newOwner?: string) => {
+    if (!processId || !newOwner) return refresh();
+    const mints = antSummariesMints([processId]);
+    settle<Record<string, AntSummary>>({
+      queryKey: ['ant-summaries', configKey, mints],
+      read: () => fetchAntSummaries(mints),
+      reflects: (d) => d?.[processId]?.owner === newOwner,
+      // Only over a summary already loaded: role derivation reads its
+      // controllers, so a half-built entry would break the page. A transfer
+      // clears the controllers on chain, so they are cleared here too; left in
+      // place, the old owner's delegates would still read as controllers.
+      apply: (d) =>
+        d?.[processId]
+          ? { ...d, [processId]: { ...d[processId], owner: newOwner, controllers: [] } }
+          : d,
+    });
+    refresh();
+  };
+
+  const onControllersChanged = (write?: ControllerWrite) => {
+    if (!processId || !write) return refresh();
+    settle({
+      queryKey: ['ant-controllers', configKey, processId],
+      // Owner and controllers from their two accounts; `getState` would scan
+      // every record for a change that touched none of them.
+      read: () => fetchControllersLight(processId),
+      reflects: (d) => controllersReflect(d, write),
+      apply: (d) => applyControllerWrite(d, write),
+    });
+    refresh();
+  };
+
+  /*
+    Only for the owner: the page reads the OWNER's primary name, and a
+    controller's write sets their own (or files a request), so there is nothing
+    on this page to expect.
+  */
+  const onPrimarySet = (primaryName?: string) => {
+    if (role !== 'owner' || !owner || !primaryName) return refresh();
+    settle({
+      queryKey: ['arns-primary-name', configKey, owner],
+      read: () => fetchPrimaryName(owner),
+      reflects: (d) => d?.current?.name === primaryName,
+      apply: (d) =>
+        d && {
+          // The previous primary's details belong to another name; keep only
+          // the name until the confirming read brings the full record.
+          current:
+            d.current?.name === primaryName
+              ? d.current
+              : ({ name: primaryName } as PrimaryName),
+          request: d.request?.name === primaryName ? undefined : d.request,
+        },
+    });
+    refresh();
   };
 
   return (
@@ -289,7 +420,7 @@ export default function NameDetailPage() {
           </p>
           <button
             onClick={() => refetchRecord()}
-            className="rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className={buttonClass('secondary', 'sm')}
           >
             Retry
           </button>
@@ -300,16 +431,16 @@ export default function NameDetailPage() {
           <Globe className="mx-auto mb-3 h-10 w-10 text-primary/60" />
           <h1 className="mb-1 font-heading text-2xl font-extrabold text-foreground">
             <span className="font-mono">{displayName}</span>
-            <span className="text-foreground/50">.ar.io</span> is available
+            <span className="text-foreground/50">.{arnsHost}</span> is available
           </h1>
           <p className="mb-5 text-sm text-foreground/70">
             No one owns this name yet — you could be the first.
           </p>
           <button
             onClick={() => navigate(`/arns?q=${encodeURIComponent(name)}`)}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            className={buttonClass('primary', 'md')}
           >
-            Register {displayName}.ar.io
+            Register {displayName}.{arnsHost}
           </button>
         </div>
       ) : record && arnsName ? (
@@ -333,7 +464,7 @@ export default function NameDetailPage() {
               <div className="min-w-0">
                 <h1 className="truncate font-heading text-2xl font-extrabold text-foreground">
                   {displayName}
-                  <span className="font-normal text-foreground/50">.ar.io</span>
+                  <span className="font-normal text-foreground/50">.{arnsHost}</span>
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span
@@ -365,19 +496,19 @@ export default function NameDetailPage() {
                     <button
                       type="button"
                       onClick={() => openOwnerAction('primary')}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                      className={actionButtonClass()}
                     >
-                      <Star className="h-3 w-3" /> Set as primary
+                      <Star className="h-3.5 w-3.5" /> Set as primary
                     </button>
                   )}
                 </div>
               </div>
             </div>
             <a
-              href={`https://${name}.ar.io`}
+              href={`https://${name}.${arnsHost}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className={`${buttonClass('primary', 'md')} flex-shrink-0`}
             >
               Visit <ExternalLink className="h-4 w-4" />
             </a>
@@ -394,6 +525,7 @@ export default function NameDetailPage() {
                 canManage && (
                   <SectionAction
                     label={record.type === 'lease' ? 'Renew or upgrade' : 'Add undername slots'}
+                    icon={record.type === 'lease' ? CalendarPlus : Plus}
                     onClick={() => setOpen('manage')}
                   />
                 )
@@ -427,7 +559,7 @@ export default function NameDetailPage() {
               icon={Tag}
               action={
                 canManage && (
-                  <SectionAction label="Edit" onClick={() => openOwnerAction('edit')} />
+                  <SectionAction label="Edit" icon={Pencil} onClick={() => openOwnerAction('edit')} />
                 )
               }
             >
@@ -480,11 +612,11 @@ export default function NameDetailPage() {
               icon={Layers}
               action={
                 ownerOnly && (
-                  <div className="-mr-2 flex flex-wrap justify-end gap-x-1">
-                    <SectionAction danger className="" label="Transfer" onClick={() => setOpen('transfer')} />
-                    <SectionAction danger className="" label="Reassign" onClick={() => openOwnerAction('reassign')} />
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    <SectionAction danger label="Transfer" icon={Send} onClick={() => setOpen('transfer')} />
+                    <SectionAction danger label="Reassign" icon={Repeat} onClick={() => openOwnerAction('reassign')} />
                     {record.type === 'permabuy' && (
-                      <SectionAction danger className="" label="Release" onClick={() => openOwnerAction('release')} />
+                      <SectionAction danger label="Release" icon={LogOut} onClick={() => openOwnerAction('release')} />
                     )}
                   </div>
                 )
@@ -528,7 +660,7 @@ export default function NameDetailPage() {
               icon={Users}
               action={
                 ownerOnly && (
-                  <SectionAction label="Manage" onClick={() => openOwnerAction('controllers')} />
+                  <SectionAction label="Manage" icon={Users} onClick={() => openOwnerAction('controllers')} />
                 )
               }
             >
@@ -566,18 +698,19 @@ export default function NameDetailPage() {
             undernames={undernames}
             canManage={canEditRecords}
             undernameLimit={record.undernameLimit}
-            onSuccess={refresh}
+            arnsHost={arnsHost}
+            onSuccess={onRecordWrite}
           />
 
           {/* Action modals — each reuses the existing component, refetches on success */}
           {open === 'manage' && (
-            <ManageDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ManageDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
           {open === 'edit' && (
-            <EditDetailsModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <EditDetailsModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
           {open === 'controllers' && (
-            <ControllersModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ControllersModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={onControllersChanged} />
           )}
           {open === 'primary' && (
             <PrimaryNameModal
@@ -592,17 +725,17 @@ export default function NameDetailPage() {
                   : undefined
               }
               onClose={() => setOpen(null)}
-              onSuccess={refresh}
+              onSuccess={onPrimarySet}
             />
           )}
           {open === 'transfer' && (
-            <TransferDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <TransferDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={onTransferred} />
           )}
           {open === 'reassign' && (
-            <ReassignDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ReassignDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
           {open === 'release' && (
-            <ReleaseDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={refresh} />
+            <ReleaseDomainModal domain={arnsName} onClose={() => setOpen(null)} onSuccess={() => refresh()} />
           )}
         </>
       ) : null}
