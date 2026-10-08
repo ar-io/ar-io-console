@@ -8,7 +8,7 @@ The ar.io Console provides a streamlined interface for:
 - **File uploads** to the permaweb with instant confirmation
 - **Site deployment** with ArNS domain support
 - **Credit management** (purchase and share)
-- **ArNS domains** — buy and manage a name paying only in credits, with no SOL
+- **ArNS domains**: buy a name with credits, a card, ARIO or another token (you need a Solana wallet to own it), and manage it with credits or, when that wallet holds SOL, with its own SOL
 
 ## Quick Start
 

@@ -36,8 +36,8 @@ export function availableTokensForWallet(
  * for a Solana wallet.
  *
  * ARIO buys credits here only. It is an SPL token on the Solana wallet's own
- * key, so the top-up credits that same wallet, and it carries a lower fee than
- * the others. It stays out of `availableTokensForWallet` because that list also
+ * key, so the top-up credits that same wallet. Its fee is Turbo's and comes
+ * with the quote, like every token's. It stays out of `availableTokensForWallet` because that list also
  * drives pay-at-upload and the name checkout, which treat ARIO their own way.
  * Last in the list, so it is never the default.
  */
