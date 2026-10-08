@@ -1,7 +1,7 @@
 # ar.io Console product guide
 
 This guide describes what ar.io Console does and how each part behaves, as of
-version 4.11.0. It is for anyone who supports, sells, documents or builds on
+4.11.0 and the Unreleased changes in the changelog. It is for anyone who supports, sells, documents or builds on
 the Console and needs the product's behaviour in one place. For how the code
 is organised, see [`CLAUDE.md`](../CLAUDE.md). For what changed in each
 release, see [`CHANGELOG.md`](../CHANGELOG.md), which the app also shows at
@@ -42,7 +42,7 @@ Choose a sign-in method from **Connect wallet** in the header.
 
 | Method | Identity | Notes |
 | --- | --- | --- |
-| Email (Privy) | An embedded Ethereum wallet and an embedded Solana wallet | No extension needed. The Solana wallet lets an email user own and manage ArNS names. |
+| Email (Privy) | An embedded Ethereum wallet, which holds your credits, plus an embedded Solana wallet for ArNS | No extension needed. The Solana wallet lets an email user own and manage ArNS names. |
 | Wander | Arweave wallet | Uploads and payments in AR. |
 | Ethereum wallets | MetaMask, Coinbase, WalletConnect and others | The app switches the wallet to the right network before a payment. Smart-contract wallets such as Base Account and Safe are not offered, and are signed out if detected. |
 | Solana wallets | Phantom, Solflare, the Solana account in MetaMask, and any other wallet that registers through the Wallet Standard | The Solana account in MetaMask is a different address from MetaMask on Ethereum, with its own credits. |
@@ -54,7 +54,8 @@ sign. If you sign in with Wander or an Ethereum wallet, you can link a Solana
 wallet for ArNS without changing who you are signed in as. The linked wallet is
 remembered, and reconnects on the pages that use it.
 
-Credits always belong to the account you signed in with. A name is owned by
+Credits are held by the account you signed in with, never by the linked
+Solana wallet. A name is owned by
 the Solana wallet: your own on a Solana session, or the linked one otherwise.
 
 ### Wallet capabilities
@@ -66,7 +67,7 @@ the Solana wallet: your own on a Solana session, or the linked one otherwise.
 | Upload, deploy, capture | Yes | Yes | Yes |
 | Pay at upload time | No | ETH on Base, USDC on Base | SOL, USDC on Solana |
 | Share credits | Yes | Yes | Yes |
-| Own and manage ArNS names | Through a linked Solana wallet | Through a linked Solana wallet | Yes |
+| Own and manage ArNS names | Through a linked Solana wallet | Through a linked Solana wallet (email accounts have one built in) | Yes |
 
 ## Credits
 
@@ -88,8 +89,8 @@ Open **Buy Credits** (`/topup`) and choose **Card** or **Crypto**.
 Fees are Turbo's and come with each price quote, so they can differ by token
 and can change. **Settings** shows the card infrastructure fee.
 
-AR payments take longer to confirm, about 40 minutes at worst. Other tokens
-usually credit within a few minutes. If you close the tab during a crypto
+AR payments take longer to confirm: usually about 40 minutes, and sometimes
+close to an hour. Other tokens usually credit within a few minutes. If you close the tab during a crypto
 payment, **Have a transaction ID? Recover credits manually** on Buy Credits
 lets you submit the transaction ID again.
 
@@ -102,7 +103,8 @@ set an expiry, and revoke a share at any time from your Account page.
 
 Each item you store costs storage plus a small per-item fee. Files under the
 free-tier size are free; the free limit and any lifetime allowance show on the
-upload screen. **Try It Out** (`/try`) is a quick free upload.
+upload screen. **Try It Out** (`/try`) is an upload that needs no wallet: it
+signs you in by email when you upload.
 
 There are three ways to pay:
 
@@ -134,8 +136,9 @@ permanently.
 
 ### Point a name at what you stored
 
-Upload, Deploy and Capture can all point an ArNS name you own or control at
-the result, either during the flow or afterwards from the history. When it
+You can point an ArNS name you own or control at what you stored. Deploy and
+Capture can set a name during the flow; all three can set one afterwards from
+the result or the history. When it
 succeeds, the message names the address, such as `blog_yourname.ar.io`, and
 offers **Visit** and **Manage yourname**. For an owner this change is paid in
 credits.
@@ -145,7 +148,8 @@ credits.
 **Pages** (`/pages`) builds a link-in-bio page from a template. You edit your
 profile, links and theme with a live preview, then publish a single
 self-contained page to Arweave, optionally on an ArNS name. A page published
-with a name is reachable at the name and shares a generated preview image.
+with a name is reachable at the name and, when it fits the free tier, shares a
+generated preview image.
 Earlier versions stay listed, and any of them can be made live again.
 
 ## ArNS names
@@ -168,14 +172,15 @@ ways to pay:
 | Method | What happens |
 | --- | --- |
 | **Credits** | Turbo pays the Solana costs and bills your credits. No SOL needed. |
-| **Card** | You pay the name's price by card in one step. |
-| **Crypto** | You pick a token. Most tokens become credits and the purchase settles from them; the amount is already known, so the app goes straight to the confirmation. |
+| **Card** | You pay by card. That buys credits (at least $5; anything over the price stays on your balance), and the name is then bought from them with one wallet approval. |
+| **Crypto** | Every token except ARIO buys credits first, and the name is bought from them: two wallet approvals, with the amount worked out for you. |
 
 **ARIO** is one of the Crypto options, and works differently: the Solana wallet
 that will own the name pays the registry directly, with no Turbo
 infrastructure fee. That wallet pays the Solana costs too, so it needs some SOL,
 and the option says how much when the wallet is short. ARIO is the only route
-that spends your SOL; credits, card and other tokens are sponsored by Turbo.
+where your wallet pays the Solana costs of the purchase; with credits, a card
+or another token, Turbo pays them.
 
 Gateway operators get a 20% discount when paying with ARIO, if the gateway has
 been joined for at least 180 days and passed at least 90% of epochs. A
@@ -204,7 +209,7 @@ On a name's page, each action sits in the header of the section it changes:
 | Header | **Visit**, **Set as primary** | Owner only (the program requires the record owner to set it) |
 | Overview | **Renew or upgrade** (lease), or **Add undername slots** (permanent) | Owner or controller |
 | Details | **Edit** the name's own details | Owner or controller |
-| Ownership | **Transfer**, **Reassign**, **Release** | Owner only |
+| Ownership | **Transfer**, **Reassign**, and **Release** (permanent names only) | Owner only |
 | Controllers | **Manage** | Owner only |
 | Records | **Add record**, and edit or remove each record | Owner or controller |
 
@@ -236,7 +241,9 @@ Pointing a name at an upload, deploy, capture or page from those screens uses
 credits for an owner; the SOL default applies on the name's page.
 
 Renewing, upgrading and adding undername slots settle from credits with no
-wallet approval, or by card, crypto or ARIO.
+wallet approval, or by card, crypto or ARIO. In this Manage window a card pays
+in one step at the exact price, and a crypto payment goes straight to the
+confirmation because the amount is already known.
 
 Some actions are never sponsored, so the wallet that signs them pays:
 
@@ -246,19 +253,21 @@ Some actions are never sponsored, so the wallet that signs them pays:
 - **Set as primary** costs SOL and an ARIO fee from the wallet. Owner only.
 - Buying a returned name costs ARIO and SOL.
 
-Every change shows its cost before you confirm.
+Changes paid in credits show their price before you confirm; the actions above
+say that your wallet pays a Solana fee, but not how much.
 
 ### Returned names
 
-**Returned names** (`/returned-names`) lists expired names in their return
-auction. Buying one is paid in ARIO, needs SOL for a new name token, and takes
+**Returned names** (`/returned-names`) lists names returned to the registry,
+expired or released, during their return auction. Buying one is paid in ARIO, needs SOL for a new name token, and takes
 two wallet approvals.
 
 ## Browse
 
 **Browse** (`/browse`) opens permaweb content by ArNS name or transaction ID.
-With verification on, a service worker checks the content's signatures through
-ar.io gateways and shows a verification badge.
+With verification on, a service worker checks the content against trusted
+ar.io gateways (by hash by default, or by signature) and shows a verification
+badge.
 
 ## Account
 
@@ -297,7 +306,9 @@ ARIO, which pays the registry directly.
 
 The Console follows the ar.io brand kit. Each screen has one purple primary
 button; secondary actions are outlined; destructive actions are red. The small
-buttons beside a section or list title share one outlined style with an icon.
+buttons beside a section or list title share one small outlined style with an
+icon: red for actions that delete or give something away, and purple for the
+one main action in a header.
 The rules and helpers are in [`docs/STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
 ## Routes
@@ -334,8 +345,8 @@ Reconnect it from that button and pay again.
 **A name I bought doesn't show yet.** Purchases appear on Manage Domains within
 a few seconds. If one doesn't, check for the incomplete-purchase notice there.
 
-**I paid with crypto but my credits haven't arrived.** AR can take up to about
-40 minutes. For other tokens, use the recovery option on Buy Credits with your
+**I paid with crypto but my credits haven't arrived.** AR usually takes about
+40 minutes, and sometimes close to an hour. For other tokens, use the recovery option on Buy Credits with your
 transaction ID.
 
 **My Solana wallet's address is different from my MetaMask address.** The
