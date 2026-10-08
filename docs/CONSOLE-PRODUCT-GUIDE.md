@@ -86,7 +86,7 @@ Open **Buy Credits** (`/topup`) and choose **Card** or **Crypto**.
   with.
 
 Fees are Turbo's and come with each price quote, so they can differ by token
-and can change. **Settings** shows the current infrastructure fee.
+and can change. **Settings** shows the card infrastructure fee.
 
 AR payments take longer to confirm, about 40 minutes at worst. Other tokens
 usually credit within a few minutes. If you close the tab during a crypto
@@ -137,7 +137,8 @@ permanently.
 Upload, Deploy and Capture can all point an ArNS name you own or control at
 the result, either during the flow or afterwards from the history. When it
 succeeds, the message names the address, such as `blog_yourname.ar.io`, and
-offers **Visit** and **Manage yourname**.
+offers **Visit** and **Manage yourname**. For an owner this change is paid in
+credits.
 
 ## Pages
 
@@ -159,8 +160,10 @@ in a Solana wallet.
 - **Register** (`/arns`) checks a name and buys it.
 - **Pricing** (`/pricing?type=domains`) shows the price table.
 
-At checkout you choose a lease (1 to 5 years) or a permanent purchase, and one
-of three ways to pay:
+At checkout you choose a lease (1 to 5 years) or a permanent purchase. You can
+then choose what the name points at: the default, one of your recent deploys,
+pages or uploads, or a transaction ID you paste. Last, you choose one of three
+ways to pay:
 
 | Method | What happens |
 | --- | --- |
@@ -180,62 +183,70 @@ gateway's operations wallet qualifies only on gateway schema 1.2.0. The
 discount never applies to primary names.
 
 Every method needs a Solana wallet to own the name. Signing in with email
-creates one. You can set what the name points at during the purchase: a recent deploy,
-page or upload, or a transaction ID.
+creates one.
 
-If a purchase doesn't finish, for example because you closed the wallet prompt
-or approved too late, **My domains** shows what happened and when the credits
-return, with a **Try again** button.
+If a credit, card or token purchase doesn't finish, for example because you
+closed the wallet prompt or approved too late, **Manage Domains** shows what
+happened to it and when its credits return. The notice shows only in the
+browser the purchase started in, for 30 minutes, and offers **Try again** once
+the credits are back. ARIO purchases don't use this notice.
 
 ### Manage a name
 
-**My domains** (`/my-domains`) lists the names your wallet owns or controls,
-with search, sorting, expiry warnings, **Export CSV** and **Register a name**.
-Open a name to reach its page at `/domains/<name>`.
+**Manage Domains** (`/my-domains`) lists the names your wallet owns or
+controls, with search, sorting, expiry warnings, **Export CSV** and **Register
+a name**. Open a name to reach its page at `/domains/<name>`.
 
 On a name's page, each action sits in the header of the section it changes:
 
-| Section | Actions |
-| --- | --- |
-| Header | **Visit**, **Set as primary** |
-| Overview | **Renew or upgrade** (lease), or **Add undername slots** (permanent) |
-| Details | **Edit** the name's own details |
-| Ownership | **Transfer**, **Reassign**, **Release** (owner only) |
-| Controllers | **Manage** (owner only) |
-| Records | **Add record**, and edit or remove each record |
+| Section | Actions | Who |
+| --- | --- | --- |
+| Header | **Visit**, **Set as primary** | Owner sets it; a controller requests it and the owner approves |
+| Overview | **Renew or upgrade** (lease), or **Add undername slots** (permanent) | Owner or controller |
+| Details | **Edit** the name's own details | Owner or controller |
+| Ownership | **Transfer**, **Reassign**, **Release** | Owner only |
+| Controllers | **Manage** | Owner only |
+| Records | **Add record**, and edit or remove each record | Owner or controller |
 
-Each record name links to what it serves: `yourname.ar.io` for the root and
-`blog_yourname.ar.io` for an undername. A record change shows as soon as it is
+Each record name links to what it serves: `yourname.ar.io` for the root (`@`)
+and `blog_yourname.ar.io` for an undername. The `@` record can be changed but
+not removed; undernames can be removed. A record change shows as soon as it is
 saved; the page then confirms it against the chain with a few reads.
-
-Owners can do everything. Controllers can edit records and their metadata,
-edit the name's details and set it as their primary name, but cannot transfer,
-reassign, release or change controllers.
 
 ### Who pays for a change
 
-An owner's changes can be paid two ways:
+On a name's page, an owner's record, transfer and controller changes can be
+paid two ways:
 
-- **With your wallet's SOL.** If the signing wallet holds enough SOL (0.002
-  SOL for a record change), it signs the transaction and pays the Solana fee
-  itself. This is the default, because
+- **With your wallet's SOL.** If the signing wallet holds enough SOL, it signs
+  the transaction and pays the Solana fee itself. This is the default, because
   the network fee is usually a fraction of a cent. **Pay with credits instead**
-  switches to credits for that change.
+  switches to credits for that change. A record change needs 0.002 SOL to
+  qualify; a transfer or adding a controller needs 0.005 SOL, because they can
+  create accounts on chain.
 - **With credits.** Turbo pays the Solana fee and bills credits. A wallet with
   no SOL, such as a new email account, always uses this.
 
 A controller's changes are never sponsored: Turbo accepts only the owner's
 signature, so a controller's wallet always signs and pays the Solana fee
-itself.
+itself. A record that points at an IPFS address, or sets a priority, is also
+always signed and paid by your wallet, so it needs SOL.
 
-Transfers and adding a controller need 0.005 SOL before SOL becomes the
-default, because they can create accounts on chain. Renewing, upgrading and
-adding undername slots settle from credits with no wallet approval, or by
-card, crypto or ARIO.
+Pointing a name at an upload, deploy, capture or page from those screens uses
+credits for an owner; the SOL default applies on the name's page.
 
-Some actions are never sponsored and always cost SOL from your wallet: **Edit
-details** (the name's own details, not a record's), **Set as primary**,
-**Reassign** and **Release**, and buying a returned name. Every change shows its cost before you confirm.
+Renewing, upgrading and adding undername slots settle from credits with no
+wallet approval, or by card, crypto or ARIO.
+
+Some actions are never sponsored. Your wallet signs them, which for a
+controller is the controller's own wallet:
+
+- **Edit details** (the name's own details, not a record's), **Reassign** and
+  **Release** cost SOL.
+- **Set as primary** costs SOL and an ARIO fee from the wallet.
+- Buying a returned name costs ARIO and SOL.
+
+Every change shows its cost before you confirm.
 
 ### Returned names
 
@@ -303,7 +314,7 @@ The rules and helpers are in [`docs/STYLE_GUIDE.md`](STYLE_GUIDE.md).
 | `/share` | Share credits |
 | `/account`, `/balances` | Account, and balance lookup |
 | `/domains`, `/domains/<name>` | All names, and one name's page |
-| `/my-domains` | Your names |
+| `/my-domains` | Manage Domains (your names) |
 | `/arns` | Register a name (accepts `?q=`) |
 | `/returned-names` | Returned name auctions |
 | `/pricing` | Storage and name pricing (`?type=domains` for names) |
@@ -320,8 +331,8 @@ The rules and helpers are in [`docs/STYLE_GUIDE.md`](STYLE_GUIDE.md).
 "Reconnect wallet to pay".** Your Solana wallet is locked or disconnected.
 Reconnect it from that button and pay again.
 
-**A name I bought doesn't show yet.** Purchases appear on My domains within a
-few seconds. If one doesn't, check for the incomplete-purchase notice there.
+**A name I bought doesn't show yet.** Purchases appear on Manage Domains within
+a few seconds. If one doesn't, check for the incomplete-purchase notice there.
 
 **I paid with crypto but my credits haven't arrived.** AR can take up to about
 40 minutes. For other tokens, use the recovery option on Buy Credits with your

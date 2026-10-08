@@ -607,11 +607,11 @@ Network-specific settings in `constants.ts`:
 | Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL/USDC/ARIO (ARIO capped at `ARIO_TOPUP_MAX_USD` per top-up) |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ❌ | ❌ | ✅ (the wallet pays SOL when it holds enough, otherwise credits) |
+| Update ArNS Records | ❌ | ❌ | ✅ (on a name's page the wallet pays SOL when it holds enough, otherwise credits; assigning from Upload/Deploy/Capture/Pages uses credits) |
 | JIT Payments | ❌ | ✅ Base-ETH, Base-USDC | ✅ SOL, USDC |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
-The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet — in both cases the primary identity is unchanged. That wallet always signs. Who pays depends on the rail (`records/writerChoice.ts`): with enough SOL the wallet signs the transaction and pays the network fee itself, and without it Turbo is fee payer and the write is billed in credits, so a wallet with zero SOL can still manage its names. Buying, the exceptions that always cost SOL, and the full rail rules are under the ArNS feature above.
+The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet — in both cases the primary identity is unchanged. That wallet always signs. Who pays depends on the rail (`records/writerChoice.ts`): on a name's page, an owner with enough SOL signs the transaction and pays the network fee itself, and without it Turbo is fee payer and the write is billed in credits, so a wallet with zero SOL can still manage its names. Assigning a name from Upload, Deploy, Capture or Pages uses `writerForRole`, which keeps an owner on credits. A controller always self-signs. Buying, the exceptions that always cost SOL, and the full rail rules are under the ArNS feature above.
 
 ## Environment Variables
 
