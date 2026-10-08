@@ -253,8 +253,9 @@ Some actions are never sponsored, so the wallet that signs them pays:
 - **Set as primary** costs SOL and an ARIO fee from the wallet. Owner only.
 - Buying a returned name costs ARIO and SOL.
 
-Changes paid in credits show their price before you confirm; the actions above
-say that your wallet pays a Solana fee, but not how much.
+Changes paid in credits show their price before you confirm. Edit details,
+Reassign, Release and Set as primary say that your wallet pays a Solana fee,
+but not how much; buying a returned name shows its ARIO price and SOL cost.
 
 ### Returned names
 
@@ -306,9 +307,9 @@ ARIO, which pays the registry directly.
 
 The Console follows the ar.io brand kit. Each screen has one purple primary
 button; secondary actions are outlined; destructive actions are red. The small
-buttons beside a section or list title share one small outlined style with an
-icon: red for actions that delete or give something away, and purple for the
-one main action in a header.
+buttons beside a section or list title share one small style with an icon:
+outlined by default, outlined in red for actions that delete or give something
+away, and filled purple for the one main action in a header.
 The rules and helpers are in [`docs/STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
 ## Routes
