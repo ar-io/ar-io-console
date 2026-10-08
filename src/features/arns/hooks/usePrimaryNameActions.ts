@@ -27,7 +27,12 @@ export interface ApprovePrimaryNameInput {
 export interface UsePrimaryNameActionsResult {
   /** Set/change the connected wallet's primary name (request + self-approve). */
   setPrimaryName: (input: SetPrimaryNameInput) => Promise<string | undefined>;
-  /** Request a primary name you do NOT own (leaves a pending request). */
+  /**
+   * Request a primary name you do NOT own (leaves a pending request).
+   * Not wired into any UI yet: a controller who wants a name it controls as
+   * its primary would need this, plus the owner's approve step. Until then
+   * "Set as primary" is owner only (NameDetailPage).
+   */
   requestPrimaryName: (input: SetPrimaryNameInput) => Promise<string | undefined>;
   /** Base-name owner approves a pending primary-name request. */
   approveRequest: (input: ApprovePrimaryNameInput) => Promise<string | undefined>;

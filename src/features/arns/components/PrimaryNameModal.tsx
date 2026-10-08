@@ -50,9 +50,11 @@ const inputCls =
 
 /**
  * Manage the connected wallet's ArNS primary name (reverse resolution). Setting
- * a name you own is a single wallet approval (request + self-approve); a name
- * owned by someone else creates a pending request its owner must approve. Remove
- * and owner-side approve are the ANT-owner paths.
+ * a name you own is a single wallet approval (request + self-approve), and is
+ * offered only to the name's owner. Requesting a name you do NOT own, for its
+ * owner to approve, exists in `usePrimaryNameActions.requestPrimaryName` but is
+ * not wired into this modal yet. Remove and owner-side approve are the
+ * ANT-owner paths.
  */
 export default function PrimaryNameModal({
   mode,
@@ -193,9 +195,7 @@ export default function PrimaryNameModal({
                 </span>
               ) : (
                 <span>
-                  Setting a name you own is a single wallet approval. A name
-                  owned by someone else instead creates a pending request the
-                  owner must approve.{' '}
+                  Setting a name you own is a single wallet approval.{' '}
                   <a
                     href="https://docs.ar.io/learn/arns"
                     target="_blank"
