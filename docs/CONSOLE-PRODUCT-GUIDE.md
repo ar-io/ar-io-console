@@ -201,7 +201,7 @@ On a name's page, each action sits in the header of the section it changes:
 
 | Section | Actions | Who |
 | --- | --- | --- |
-| Header | **Visit**, **Set as primary** | Owner sets it; a controller requests it and the owner approves |
+| Header | **Visit**, **Set as primary** | Owner only (the program requires the record owner to set it) |
 | Overview | **Renew or upgrade** (lease), or **Add undername slots** (permanent) | Owner or controller |
 | Details | **Edit** the name's own details | Owner or controller |
 | Ownership | **Transfer**, **Reassign**, **Release** | Owner only |
@@ -238,12 +238,12 @@ credits for an owner; the SOL default applies on the name's page.
 Renewing, upgrading and adding undername slots settle from credits with no
 wallet approval, or by card, crypto or ARIO.
 
-Some actions are never sponsored. Your wallet signs them, which for a
-controller is the controller's own wallet:
+Some actions are never sponsored, so the wallet that signs them pays:
 
-- **Edit details** (the name's own details, not a record's), **Reassign** and
-  **Release** cost SOL.
-- **Set as primary** costs SOL and an ARIO fee from the wallet.
+- **Edit details** (the name's own details, not a record's) costs SOL. A
+  controller can do this, paying from their own wallet.
+- **Reassign** and **Release** cost SOL. Owner only.
+- **Set as primary** costs SOL and an ARIO fee from the wallet. Owner only.
 - Buying a returned name costs ARIO and SOL.
 
 Every change shows its cost before you confirm.
