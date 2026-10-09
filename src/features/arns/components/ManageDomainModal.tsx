@@ -510,8 +510,8 @@ export default function ManageDomainModal({
           title={
             <>
               Manage{' '}
-              <span className="break-all font-mono text-primary">
-                {domain.displayName}.ar.io
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
+                {domain.displayName}
               </span>
             </>
           }

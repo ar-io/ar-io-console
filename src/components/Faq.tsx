@@ -13,7 +13,7 @@ const getFaqData = (freeLimit: number, lifetimeBytes: number) => [
   },
   {
     question: "What are Credits?",
-    answer: "Credits offer users the ability to pay via credit card instead of using AR tokens. Credits represent a 1:1 value with storage costs and are used solely to pay for uploads. Credits never expire once purchased."
+    answer: "Credits are a balance you spend across the Console: uploads, site deploys, captures, ArNS names and changes to them. You can buy them with a card or with crypto such as AR, ETH, USDC, SOL or ARIO, depending on your wallet. Credits never expire once purchased."
   },
   // DEPRECATED: Gifting feature disabled
   // {
@@ -26,7 +26,7 @@ const getFaqData = (freeLimit: number, lifetimeBytes: number) => [
   },
   {
     question: "What wallets are supported?",
-    answer: "Ar.io supports Wander for Arweave wallets, MetaMask for Ethereum wallets, and Phantom, Solflare or MetaMask for Solana wallets. You can connect any of these to manage your credits and uploads."
+    answer: "Ar.io supports Wander for Arweave wallets, MetaMask for Ethereum wallets, and Phantom, Solflare or the Solana account in MetaMask for Solana wallets. You can connect any of these to manage your credits and uploads."
   },
   {
     question: "Is my data permanent?",

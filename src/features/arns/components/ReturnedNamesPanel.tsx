@@ -32,6 +32,7 @@ import ReturnedNameBuyModal from './ReturnedNameBuyModal';
 import { toUnicodeName } from '@/utils/punycode';
 import { actionButtonClass } from '@/components/actionButton';
 import { buttonClass } from '@/components/button';
+import { useArnsHost } from '@/hooks/useArnsHost';
 
 const PAGE_SIZE = 25;
 
@@ -43,6 +44,7 @@ function premiumClasses(multiplier: number): string {
 }
 
 export default function ReturnedNamesPanel() {
+  const arnsHost = useArnsHost();
   const [searchInput, setSearchInput] = useState('');
   const search = useDebounce(searchInput);
   const [sortBy, setSortBy] = useState<ReturnedNameSortKey>('endTimestamp');
@@ -282,7 +284,7 @@ export default function ReturnedNamesPanel() {
                       {toUnicodeName(r.name)}
                     </span>
                     <span className="flex-shrink-0 text-sm text-foreground/50">
-                      .ar.io
+                      .{arnsHost}
                     </span>
                   </div>
                   {(() => {

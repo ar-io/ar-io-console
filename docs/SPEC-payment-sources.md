@@ -343,7 +343,7 @@ Run these on staging with real wallets before production, after § 9.4. The name
 | 8 | Arweave | Solana, connected | Top Up | USDC on Solana, Buying For a third wallet | Credits on the third wallet |
 | 9 | Arweave | Solana, connected | Top Up | Close the tab after approving | Recovery banner resubmits; credits on the Arweave address |
 | 10 | Arweave | Solana, no SOL | Top Up | USDC on Solana | Row disabled, or the fee notice before the wallet opens |
-| 11 | Arweave | Solana, connected | Top Up | ARIO | Credits on the Arweave address at the 25% fee. No ARIO top-up has been credited since that fee went live, so this is its first real proof |
+| 11 | Arweave | Solana, connected | Top Up | ARIO | Credits on the Arweave address at ARIO's fee (25% when this was written; Turbo sets it and can change it). No ARIO top-up has been credited since that fee went live, so this is its first real proof |
 | 12 | Arweave | none | Name checkout | AR | Two-step flow: pay, leave, return to "Buy NAME with credits" |
 
 ## 9. Implementation plan
@@ -436,7 +436,7 @@ The Turbo backend answered on 2026-09-23. Each answer and where it lands in this
 | Question | Answer | Where |
 | --- | --- | --- |
 | Confirmations and time to credit, per token | Only AR is slow (p90 ~51 min); every other token credits within about 2.5 minutes at p90 | § 7.8 |
-| Does ARIO get the 25% fee when crediting an Arweave or Ethereum address? | Yes. The fee is chosen from the payment token alone, before the destination is resolved. Proven by the live quote, not yet by a credited top-up | § 8.4, case 11 |
+| Does ARIO get its own fee (25% when this was written; Turbo can change it) when crediting an Arweave or Ethereum address? | Yes. The fee is chosen from the payment token alone, before the destination is resolved. Proven by the live quote, not yet by a credited top-up | § 8.4, case 11 |
 | Is the sender ever credited despite a destination? | Only when the destination is on-chain but not extracted. Solana is robust; ERC-20 through a smart-contract wallet is not | § 11.1 |
 | Does payment history return the sender? | Yes, as `senderAddress`, for every row since about 2025-10-27; older rows return an empty string | § 9.2 |
 

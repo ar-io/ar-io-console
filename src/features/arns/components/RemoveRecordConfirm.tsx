@@ -6,6 +6,7 @@ import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
 import type { WriterChoice } from '../records/writerChoice';
 import RailSwitch from './RailSwitch';
 import { buttonClass } from '@/components/button';
+import { useArnsHost } from '@/hooks/useArnsHost';
 
 /**
  * Confirm removing one record, and name what it costs.
@@ -63,6 +64,7 @@ export default function RemoveRecordConfirm({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const arnsHost = useArnsHost();
   // Priced only when Turbo is the one being paid.
   const { credits } = useArNSActionPrice(
     paysNetworkDirectly ? undefined : 'remove-record',
@@ -94,10 +96,9 @@ export default function RemoveRecordConfirm({
           title={
             <>
               Remove{' '}
-              <span className="break-all font-mono text-primary">
-                {undername}
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
+                {undername}?
               </span>
-              ?
             </>
           }
           description="This record will stop resolving"
@@ -105,7 +106,7 @@ export default function RemoveRecordConfirm({
 
         <p className="mb-4 text-sm text-foreground/80">
           {displayName
-            ? `${undername}_${displayName}.ar.io will stop working for anyone using it.`
+            ? `${undername}_${displayName}.${arnsHost} will stop working for anyone using it.`
             : 'This record will stop working for anyone using it.'}{' '}
           You can add it back later. Removing costs {cost}.
         </p>
@@ -123,7 +124,7 @@ export default function RemoveRecordConfirm({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-full border border-border/20 bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-primary/5 disabled:opacity-50"
+            className={buttonClass('secondary', 'md')}
           >
             Cancel
           </button>

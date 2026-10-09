@@ -8,7 +8,7 @@ The ar.io Console provides a streamlined interface for:
 - **File uploads** to the permaweb with instant confirmation
 - **Site deployment** with ArNS domain support
 - **Credit management** (purchase and share)
-- **ArNS domains** — buy and manage a name paying only in credits, with no SOL
+- **ArNS domains**: buy, renew and upgrade a name with credits, a card, a token or ARIO, and edit its records with credits or SOL (see [Paying for ArNS](#paying-for-arns))
 
 ## Quick Start
 
@@ -98,16 +98,26 @@ External resources are available via the navigation menu:
 | Update ArNS Records | ❌ | ❌ | ✅ |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
-ArNS writes are signed by a Solana wallet, but **that wallet never needs SOL** —
-Turbo pays the Solana fees and rent, and the user pays in Turbo Credits. Signing
-in with an email address creates a Solana wallet automatically, so someone who
-has never held cryptocurrency can buy and run a name.
+### Paying for ArNS
 
-Four things are not covered and still cost the signer a small amount of SOL:
-setting a primary name, releasing a name, pointing it at a different name token,
-and editing the name's own details. Buying from an auction and paying in ARIO
-also use the wallet's own SOL. The interface says which is which before you
-commit rather than at the wallet prompt.
+A name is owned by a Solana wallet, which signs its writes. Signing in with an
+email address creates one automatically.
+
+- **Buying, renewing, upgrading, adding undername slots**: paid with credits or
+  a card, Turbo pays the Solana costs, so the wallet needs no SOL. Paid with a
+  token, Turbo still pays the name's Solana costs; sending the token has its own
+  network fee. Paying with ARIO is a transaction from the wallet itself and
+  needs some SOL.
+- **Record edits, transfers, controller changes** (on the name's page): the
+  owner's wallet pays the Solana fee itself when it holds enough SOL, and
+  credits are used otherwise. IPFS targets and record priority always need SOL.
+  A controller always pays from its own wallet.
+- **Always SOL**: editing the name's own details, reassigning it, releasing it,
+  and setting a primary name (which also charges an ARIO fee). Buying a
+  returned name at auction uses ARIO and SOL.
+
+The interface says which applies before you confirm, rather than at the wallet
+prompt.
 
 ## A note on the turbo-sdk pin
 

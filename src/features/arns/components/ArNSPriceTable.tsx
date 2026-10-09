@@ -115,7 +115,7 @@ export default function ArNSPriceTable() {
                   </th>
                   <th
                     className="py-2 px-3 font-semibold text-right"
-                    title="Cost to add one undername (label.name.ar.io) to a leased name"
+                    title="Cost to add one undername (label_name) to a leased name"
                   >
                     + Undername
                   </th>

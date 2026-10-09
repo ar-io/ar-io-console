@@ -50,9 +50,11 @@ const inputCls =
 
 /**
  * Manage the connected wallet's ArNS primary name (reverse resolution). Setting
- * a name you own is a single wallet approval (request + self-approve); a name
- * owned by someone else creates a pending request its owner must approve. Remove
- * and owner-side approve are the ANT-owner paths.
+ * a name you own is a single wallet approval (request + self-approve), and is
+ * offered only to the name's owner. Requesting a name you do NOT own, for its
+ * owner to approve, exists in `usePrimaryNameActions.requestPrimaryName` but is
+ * not wired into this modal yet. Remove and owner-side approve are the
+ * ANT-owner paths.
  */
 export default function PrimaryNameModal({
   mode,
@@ -193,9 +195,7 @@ export default function PrimaryNameModal({
                 </span>
               ) : (
                 <span>
-                  Setting a name you own is a single wallet approval. A name
-                  owned by someone else instead creates a pending request the
-                  owner must approve.{' '}
+                  Setting a name you own is a single wallet approval.{' '}
                   <a
                     href="https://docs.ar.io/learn/arns"
                     target="_blank"
@@ -218,7 +218,7 @@ export default function PrimaryNameModal({
                       Current primary
                     </p>
                     <div className="rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground">
-                      {currentPrimary}.ar.io
+                      {currentPrimary}
                     </div>
                     <div className="my-2 flex justify-center">
                       <ArrowDown className="h-4 w-4 text-foreground/40" />
@@ -233,7 +233,7 @@ export default function PrimaryNameModal({
                 {selected ? (
                   <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl border border-success/40 bg-success/10 p-3">
                     <span className="truncate font-mono text-sm text-foreground">
-                      {selected.displayName}.ar.io
+                      {selected.displayName}
                     </span>
                     <button
                       onClick={() => setSelected(null)}
@@ -268,7 +268,7 @@ export default function PrimaryNameModal({
                             disabled={isBusy}
                             className="block w-full truncate rounded-xl border border-border/20 bg-card px-3 py-2 text-left font-mono text-sm text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50"
                           >
-                            {n.displayName}.ar.io
+                            {n.displayName}
                           </button>
                         </li>
                       ))}
@@ -309,7 +309,7 @@ export default function PrimaryNameModal({
                       Requested name
                     </p>
                     <p className="mb-3 break-all font-mono text-sm text-foreground">
-                      {pendingRequest.name}.ar.io
+                      {pendingRequest.name}
                     </p>
                     <p className="mb-1 text-xs font-medium text-foreground/60">
                       Requester

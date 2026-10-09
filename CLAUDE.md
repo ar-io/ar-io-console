@@ -21,7 +21,7 @@ npm run preview      # Preview production build
 - Uses yarn (packageManager: yarn@1.22.22) but npm works
 - Memory allocation via `cross-env NODE_OPTIONS=--max-old-space-size` (4GB dev/build, 8GB prod/staging vite build)
 - `prebuild` lifecycle hook runs `tsc -b` before every `npm run build`; `build:prod`/`build:staging` call it explicitly
-- Tests: Vitest — `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only** — there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. ~72 suites, the bulk in three clusters: `src/features/arns/` (34 — ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`, `buyTarget`), `src/features/pages/` (18 — schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (18 — deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore, credit settlement, infra fee). Two strays outside them: `src/components/modals/bodyScrollLock.test.ts` and `src/components/account/paymentRow.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
+- Tests: Vitest: `npm test` (run once) / `npm run test:watch`. `vitest.config.ts` is separate from `vite.config.ts`; it uses the `node` environment (no DOM/component harness) and only picks up `src/**/*.test.ts`. Coverage is **pure logic only**: there is no component/DOM harness, so anything importing React or a wallet SDK is untestable as-is. About 85 test files, the bulk in three clusters: `src/features/arns/` (about 40: ANT roles, record-writer selection, price tables, and the whole `purchase/` state machine: `cardPlan`, `buyDecisions`, `settlementRoute`, `purchaseMachine`, `pollPurchase`, `buyTarget`), `src/features/pages/` (18: schema, render, publish, plus `templates/security.test.ts`/`robustness.test.ts`/`registry.test.ts` which auto-run over every template), and `src/utils/` (about 25: deep links, punycode, explorer URLs, free tier, unit formatting, domain CSV/expiry/sort, wallet tokens, Solana session restore, credit settlement, infra fee). A few strays outside them, such as `src/components/modals/bodyScrollLock.test.ts`, `src/components/account/paymentRow.test.ts` and `src/features/payments/paymentSources.test.ts`. Run a single file: `npx vitest run src/utils/topupDeepLink.test.ts`
 - Path alias: `@/` maps to `src/` (e.g., `import { useStore } from '@/store/useStore'`)
 - Vite `base: '/'` — absolute asset paths, required so nested routes (`/domains/:name`) resolve assets on direct navigation. This trades away Arweave *subpath* compatibility (the old `'./'` value): the build assumes it is served from a domain root (`console.ar.io`, or an ArNS name root), not from `gateway/<txid>/`. Don't flip it back without re-checking nested-route deep links.
 - Build-time defines: `import.meta.env.PACKAGE_VERSION` (from package.json) and `import.meta.env.BUILD_TIME` (date-only ISO string)
@@ -168,9 +168,9 @@ Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit p
 
 ### ArNS Feature (`src/features/arns/`)
 
-The largest feature in the repo (~131 files) and the least guessable — read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
+The largest feature in the repo (about 145 files) and the least guessable. Read this before touching anything under `/domains`, `/arns`, `/returned-names`, or `/my-domains`.
 
-**ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset — not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet — but since Turbo sponsors the fees, that wallet needs **no SOL balance**. Email sign-in creates one (see `PrivySolanaBridge`), so a user who has never held cryptocurrency can own and run a name.
+**ArNS runs on Solana.** A name resolves to an **ANT**, which is a Solana Metaplex Core asset, not an AO process. Every ArNS *write* therefore needs a Solana signer, regardless of the user's session wallet. Turbo can be fee payer and bill credits instead, so with **no SOL balance** an owner's wallet can own a name and change its records (except IPFS targets and priority), transfer it and manage its controllers; editing the name's own details, setting a primary name, reassigning and releasing still need SOL. An owner's wallet that does hold SOL pays the network fee itself by default (see "Two rails" below). Email sign-in creates a Solana wallet (see `PrivySolanaBridge`), so a user who has never held cryptocurrency can own a name.
 
 **Turbo sponsors the Solana fees** (`actions/`). Twelve actions are gas-sponsored (nine at launch; `set-record-metadata`, `remove-record-metadata` and `transfer-record` arrived in turbo-sdk `1.42.0-alpha.11`):
 Turbo is fee payer, the user pays in Turbo Credits, and the ANT is minted
@@ -385,7 +385,7 @@ nothing.
 
 **A sponsored buy reserves credits at create, and is not resumed** (`purchase/actionFailure.ts`). `POST /v1/arns/actions/<action>` reserves the credits and returns a transaction that Solana only accepts for about 30 seconds after it is built (its blockhash); `expiresAt`, about 5 minutes after the action is created, is the refund deadline, not a signing deadline. The nonce is still saved through the SDK's `onNonce` (`services/arnsPurchaseResume.ts`), but nothing reads it back for a buy: `getPendingArNSPurchase` serves only the auction path, which reuses a spawned `processId` so a retry does not bleed another ~0.02 SOL. So a reload or a late approval abandons the attempt, and what the buyer is told depends on how `/sign` failed. The credits are back only when the service says so: a 409 whose body says "Your credits have been returned", or a 400 "Action <nonce> expired and was refunded". A 409 without that wording, a 400 "Action <nonce> expired at ...", or a wallet rejection after create means they stay held until the reconciler refunds them; it runs about every 5 minutes, so the refund lands by `expiresAt` plus up to 5 more. The console reads `expiresAt` (and `wincQty`) from the open `GET /v1/arns/actions/:nonce`, so it follows whatever window the service sets; when the time cannot be read it says "within about 10 minutes". A 503 "Blockhash not found" proves nothing: the service could not confirm expiry and the transaction may still land, so the copy sends the buyer to check My domains and never says nothing was charged. Only a 400 naming this action is an expiry; the program's own "Lease has expired" style 400s are ordinary errors. Every failure after create records the hold (per payer, localStorage with an in-memory fallback), and a success clears it. A new attempt that meets 402 during the hold is told about the hold only when the credits on hand plus the held ones would cover it; otherwise it is a real shortfall and gets the usual "Buy Turbo Credits". Record, transfer and controller writes get the same wording only for sponsored failures, which carry an HTTP status; a self-signed write reserved no credits and is never told about them. Never re-create an action to retry a failure the buyer did not ask to retry: each create reserves again.
 
-**Owner vs. controller gating** (`antRole.ts`): `getArNSRecordsForAddress` returns `Owned ∪ Controlled`, so a name in "your names" may be one the wallet only *controls*. Controllers can edit records/metadata/undernames; **transfer, reassign, release, and controller changes are owner-only**. Use `deriveAntRole` (optimistic — `unknown` treated leniently) only on owned-name surfaces where every row is in the ACL; use `deriveAntRoleStrict` (`none` is a real answer) anywhere a name isn't guaranteed to be the wallet's, such as the public Name Detail page. `isOwnerOnlyAllowed` denies both `unknown` and `controller` so destructive actions never flash before ownership is confirmed.
+**Owner vs. controller gating** (`antRole.ts`): `getArNSRecordsForAddress` returns `Owned ∪ Controlled`, so a name in "your names" may be one the wallet only *controls*. Controllers can edit records/metadata/undernames, edit the ANT's details, and renew or upgrade; **transfer, reassign, release, controller changes and setting a primary name are owner-only**. The primary-name path is `setPrimaryName` (`request_and_set_primary_name`), which the program accepts only from the record owner. The name page offers Set as primary to the owner only; the controller request flow (`requestPrimaryName`, then the owner's approval) exists in `usePrimaryNameActions` but is not built into any UI. Use `deriveAntRole` (optimistic, `unknown` treated leniently) only on owned-name surfaces where every row is in the ACL; use `deriveAntRoleStrict` (`none` is a real answer) anywhere a name isn't guaranteed to be the wallet's, such as the public Name Detail page. `isOwnerOnlyAllowed` denies both `unknown` and `controller` so destructive actions never flash before ownership is confirmed.
 
 **ACL drift** (`services/aclDrift.ts`): the on-chain ANT ACL is an eventually-consistent index powering "your names". A **raw Metaplex Core transfer** (direct send or NFT-marketplace sale) moves the asset but does *not* update the ACL, so a newly-owned name goes missing until `syncAcl` is called. Drift is detected by scanning MPL Core assets by owner and diffing against the ACL owner set.
 
@@ -424,7 +424,7 @@ Access via `useTurboConfig(tokenType)` hook or `getCurrentConfig()` from store.
 ## Token Support
 
 **Supported tokens** (from `constants.ts`):
-`arweave`, `ario`, `ethereum`, `base-eth`, `solana`, `solana-usdc`, `kyve`, `pol`, `usdc`, `base-usdc`
+`arweave`, `ario`, `ethereum`, `base-eth`, `solana`, `solana-usdc`, `pol`, `usdc`, `base-usdc`
 
 **Withdrawn from selection** (`unavailableCryptoTokens` in `constants.ts`), three of them, each because turbo-sdk can no longer settle the payment:
 
@@ -526,7 +526,7 @@ The app supports three upload modes with different payment strategies:
 **2. JIT (Just-In-Time) Payments**
 - No pre-purchase required; crypto sent at upload time
 - Uses `fundAndUpload()` from Turbo SDK
-- Supported tokens: `solana`, `base-eth`, `base-usdc` (per `supportsJitPayment()`; Arweave wallets have no JIT option)
+- Supported tokens: `solana`, `solana-usdc`, `base-eth`, `base-usdc` (per `supportsJitPayment()`; Arweave wallets have no JIT option)
 - Configurable via store: `jitPaymentEnabled`, `jitMaxTokenAmount`, `jitBufferMultiplier`
 
 **3. X402 Protocol (Base USDC)**
@@ -604,14 +604,14 @@ Network-specific settings in `constants.ts`:
 | Feature | Arweave | Ethereum/Base/Polygon | Solana |
 |---------|---------|----------------------|--------|
 | Buy Credits (Fiat) | ✅ | ✅ | ✅ |
-| Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL/USDC |
+| Buy Credits (Crypto) | ✅ AR | ✅ Base-USDC/Base-ETH/USDC/POL/ETH | ✅ SOL/USDC/ARIO (ARIO capped at `ARIO_TOPUP_MAX_USD` per top-up) |
 | Upload/Deploy/Capture | ✅ | ✅ | ✅ |
 | Share Credits | ✅ | ✅ | ✅ |
-| Update ArNS Records | ❌ | ❌ | ✅ (no SOL needed) |
-| JIT Payments | ❌ | ✅ Base-ETH, Base-USDC | ✅ SOL |
+| Update ArNS Records | ❌ | ❌ | ✅ (on a name's page an owner's wallet pays SOL when it holds enough, otherwise credits; assigning from Upload/Deploy/Capture/Pages uses credits; a controller always self-signs) |
+| JIT Payments | ❌ | ✅ Base-ETH, Base-USDC | ✅ SOL, USDC |
 | X402 USDC Uploads | ❌ | ✅ (Base only) | ❌ |
 
-The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet — in both cases the primary identity is unchanged. That wallet signs but never pays: Turbo is fee payer, so its SOL balance can stay at zero for the life of the name. The exceptions are listed under the ArNS feature above.
+The ArNS row is about the *session* wallet. Arweave/Ethereum users reach ArNS writes through a **linked** Solana wallet (`useLinkedSolanaWallet`), and email/Privy users through their embedded Solana wallet; in both cases the primary identity is unchanged. That wallet always signs. Who pays depends on the rail (`records/writerChoice.ts`): on a name's page, an owner with enough SOL signs the transaction and pays the network fee itself, and without it Turbo is fee payer and the write is billed in credits, so a wallet with zero SOL can still manage its names. Assigning a name from Upload, Deploy, Capture or Pages uses `writerForRole`, which keeps an owner on credits. A controller always self-signs. Buying, the exceptions that always cost SOL, and the full rail rules are under the ArNS feature above.
 
 ## Environment Variables
 
@@ -722,7 +722,7 @@ the infrastructure fee"* beats *"the best way to buy a name"*.
 **The infrastructure fee is INCLUSIVE — taken out of a top-up, never added on
 top of a price.** Turbo's quotes carry it as `operator: "multiply",
 operatorMagnitude: 0.65` ("Turbo Infrastructure Fee"): the payer receives 65% of
-what they pay as credits, so the fee is 35% **of each top-up**. Stating that
+what they pay as credits, so at the time of writing the fee is 35% **of each top-up**. Stating that
 same 35% as "+35% vs raw Arweave" is false — measured against the raw network
 cost the storage rate is ~+54% — and it is the kind of error a reader catches by
 dividing the two figures on screen. `/settings` reads the live percentage from
@@ -730,9 +730,9 @@ the quote (`utils/infraFee.ts`); never reconstruct it by setting the rate
 against a third-party AR spot price, which drifts and mislabels a margin as a
 markup.
 
-**The rate differs by currency and is config, not code.** ARIO top-ups carry
-25%, the rest 35%, and ARIO was fee-free until recently — the bundler can
-change any of this without a release (`TOKENS_WITHOUT_FEES` plus the dated
+**The rate differs by currency and is config, not code.** At 4.11.0 ARIO
+top-ups carried a lower fee than the other currencies, and ARIO was once
+fee-free; the bundler can change any of this without a release (`TOKENS_WITHOUT_FEES` plus the dated
 `payment_adjustment_catalog`). So never hardcode a fee or a "No Fee" badge,
 and never assume a leg is fee-free: any rate built from two quotes must scale
 **each** leg by its own `fees` (`usdPerArioFromLegs`), or it is off by exactly

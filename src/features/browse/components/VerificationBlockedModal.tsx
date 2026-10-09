@@ -143,9 +143,7 @@ export function VerificationBlockedModal({
                   className="mt-1 w-4 h-4 text-error rounded accent-error"
                 />
                 <span className="text-sm text-foreground">
-                  I understand the risks. I acknowledge that this content failed
-                  verification and may be malicious. I will not sign any
-                  transactions or connect my wallet on this page.
+                  I understand the risks.
                 </span>
               </label>
             </div>
