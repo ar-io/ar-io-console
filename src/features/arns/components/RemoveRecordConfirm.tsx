@@ -123,7 +123,7 @@ export default function RemoveRecordConfirm({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-full border border-border/20 bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-primary/5 disabled:opacity-50"
+            className={buttonClass('secondary', 'md')}
           >
             Cancel
           </button>

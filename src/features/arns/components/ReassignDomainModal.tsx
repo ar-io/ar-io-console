@@ -68,8 +68,6 @@ export default function ReassignDomainModal({
           description="Point this name at a different name token"
         />
 
-        <NeedsSolNote action="Reassigning a name" className="mb-4" />
-
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
@@ -89,21 +87,21 @@ export default function ReassignDomainModal({
           </div>
         ) : (
           <>
+            {/* Same order as Transfer: warning, cost line, input, one
+                confirmation, the red button. */}
             <div className="mb-4 rounded-2xl border border-error/30 bg-error/10 p-4 text-sm">
               <div className="mb-1 flex items-center gap-2 font-semibold text-error">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                Advanced — can break your name
+                Check the token address
               </div>
               <p className="text-foreground/80">
-                This repoints {domain.displayName}.ar.io at a different ANT. Only
-                enter an ANT you own and control.{' '}
-                <span className="font-medium text-foreground">
-                  Pointing it at a wrong, invalid, or inaccessible ANT bricks the
-                  name&apos;s resolution
-                </span>{' '}
-                and can lock you out of managing it.
+                This points {domain.displayName}.ar.io at a different name token,
+                which then holds its records. A wrong or inaccessible token breaks
+                the name and can lock you out of it.
               </p>
             </div>
+
+            <NeedsSolNote action="Reassigning a name" variant="line" className="mb-4" />
 
             <label className="mb-2 block text-sm font-medium">
               Target name token (ANT) address
@@ -117,10 +115,6 @@ export default function ReassignDomainModal({
               disabled={isBusy}
               className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary disabled:opacity-50"
             />
-            <p className="mb-1 text-xs text-foreground/50">
-              Every ArNS name is controlled by a token (an ANT) that holds its
-              records. Reassigning points this name at a different one you own.
-            </p>
             {trimmed && !isValidSolanaAddress(trimmed) && (
               <p className="mb-2 text-xs text-error">
                 Enter a valid ANT address.
@@ -128,7 +122,7 @@ export default function ReassignDomainModal({
             )}
             {trimmed && trimmed === domain.processId && (
               <p className="mb-2 text-xs text-error">
-                That&apos;s the name&apos;s current ANT — pick a different one.
+                That&apos;s the name&apos;s current token. Pick a different one.
               </p>
             )}
 
@@ -140,8 +134,7 @@ export default function ReassignDomainModal({
                 disabled={isBusy}
                 className="mt-0.5"
               />
-              I own this ANT and understand that a wrong target can break the
-              name.
+              I own this name token and have checked the address.
             </label>
 
             {phase === 'error' && error && (

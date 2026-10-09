@@ -29,8 +29,8 @@ interface ReleaseDomainModalProps {
 /**
  * Release a permanently-owned (permabuy) ArNS name back to the protocol,
  * starting a 14-day returned-name auction. The caller gets nothing back and the
- * name resolves to no one until someone buys it, so this is gated behind BOTH a
- * typed-name confirmation and an explicit acknowledgement. Only offered for
+ * name resolves to no one until someone buys it, so it is gated behind typing
+ * the name: one deliberate confirmation, as on the other modals. Only offered for
  * permabuy names (leases expire on their own — there is nothing to release).
  */
 export default function ReleaseDomainModal({
@@ -40,7 +40,6 @@ export default function ReleaseDomainModal({
 }: ReleaseDomainModalProps) {
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState('');
-  const [acknowledged, setAcknowledged] = useState(false);
   const { release, phase, error, txId, isBusy } = useReleaseName();
 
   // Type the name to arm (case-insensitive). Match the released identifier
@@ -51,7 +50,7 @@ export default function ReleaseDomainModal({
   const nameMatches =
     typedName === lowerCaseDomain(domain.name) ||
     typedName === lowerCaseDomain(domain.displayName);
-  const canRelease = nameMatches && acknowledged && !isBusy;
+  const canRelease = nameMatches && !isBusy;
 
   const handleRelease = async () => {
     try {
@@ -77,8 +76,6 @@ export default function ReleaseDomainModal({
           }
           description="Give up the name to a 14-day auction"
         />
-
-        <NeedsSolNote action="Releasing a name" className="mb-4" />
 
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
@@ -115,20 +112,16 @@ export default function ReleaseDomainModal({
             <div className="mb-4 rounded-2xl border border-error/30 bg-error/10 p-4 text-sm">
               <div className="mb-1 flex items-center gap-2 font-semibold text-error">
                 <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                Irreversible — you give up this name for nothing
+                This can&apos;t be undone
               </div>
               <p className="text-foreground/80">
-                Releasing gives up your permanent ownership of{' '}
-                {domain.displayName}.ar.io and puts it into a{' '}
-                <span className="font-medium text-foreground">
-                  14-day declining-price auction
-                </span>{' '}
-                that anyone can buy from. You receive no refund, everything the
-                name points at (its records and undernames) stops resolving, and
-                if it&apos;s your primary name that link breaks too. This cannot
-                be undone.
+                This gives up {domain.displayName}.ar.io to a 14-day public
+                auction, with no refund. Its records stop resolving, and if it is
+                your primary name, that link breaks too.
               </p>
             </div>
+
+            <NeedsSolNote action="Releasing a name" variant="line" className="mb-4" />
 
             <label
               htmlFor="release-confirm-name"
@@ -157,18 +150,6 @@ export default function ReleaseDomainModal({
               </p>
             )}
 
-            <label className="mb-4 mt-3 flex items-start gap-2 text-sm text-foreground/80">
-              <input
-                type="checkbox"
-                checked={acknowledged}
-                onChange={(e) => setAcknowledged(e.target.checked)}
-                disabled={isBusy}
-                className="mt-0.5"
-              />
-              I understand this permanently gives up the name to a public auction
-              and cannot be undone.
-            </label>
-
             {phase === 'error' && error && (
               <div className="mb-4 flex items-start gap-2 rounded-2xl border border-error/20 bg-error/10 p-4 text-sm text-error">
                 <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -185,7 +166,7 @@ export default function ReleaseDomainModal({
                   <Loader2 className="h-4 w-4 animate-spin" /> Releasing…
                 </>
               }
-              className={`${buttonClass('danger', 'lg')} w-full`}
+              className={`${buttonClass('danger', 'lg')} mt-3 w-full`}
               actionVerb="release this name"
             >
               <Flame className="h-4 w-4" /> Release name to auction
