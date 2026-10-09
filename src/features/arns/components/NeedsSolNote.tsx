@@ -29,7 +29,7 @@ export default function NeedsSolNote({
   if (variant === 'line') {
     return (
       <p className={`text-xs text-foreground/60 ${className}`}>
-        Your wallet pays a small Solana fee for this, not credits.
+        Your wallet pays a small Solana network fee.
       </p>
     );
   }

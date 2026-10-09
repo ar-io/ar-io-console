@@ -131,10 +131,10 @@ export function createsAccounts(action: string): boolean {
  */
 export function selfSignedCostNote(action: string): string {
   if (!createsAccounts(action)) {
-    return 'Your wallet pays the Solana fee in SOL, not credits.';
+    return 'Your wallet pays the Solana network fee.';
   }
   // The figure, not the reason: rent on accounts it may create is why.
-  return `Your wallet pays up to about ${MIN_SOL_FOR_ACCOUNT_CREATION} SOL, not credits.`;
+  return `Your wallet pays up to about ${MIN_SOL_FOR_ACCOUNT_CREATION} SOL.`;
 }
 
 /**
