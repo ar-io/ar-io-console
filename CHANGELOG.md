@@ -2,13 +2,31 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [Unreleased]
+## [4.11.1] - 2026-10-09
+
+### Changed
+- **Transfer, Reassign and Release look and read the same.** Each has a short
+  red warning that says when it can't be undone, a one-line cost, one input,
+  one confirmation and a red button. The checkbox reads "I understand this
+  can't be undone." Release asks you to type the name, without a second
+  checkbox. Reassign's warning says it can't be undone if the new token isn't
+  yours, since a token you hold can be reassigned back.
+- **Names appear without ".ar.io" in dialogs and purchase headings.** It is a
+  gateway's web address, not part of the name. Where a name is shown as an
+  address (search, the Browse and Returned names lists, record links), it
+  uses the network's host, so testnet shows ar-io.dev.
+- **Plainer cost lines.** A change your wallet pays for says "Your wallet pays
+  a small Solana network fee."
+- **The FAQ says credits also pay for names**, not only uploads.
 
 ### Fixed
 - **Set as primary is offered only to a name's owner.** A controller saw the
   button, but the registry accepts a primary name only from the name's owner,
   so the attempt always failed. The modal no longer says a name you do not own
   creates a request for its owner to approve; that flow is not built yet.
+- **Long dialog titles no longer run under the close button**, and long names
+  wrap whole instead of breaking mid-word.
+- **Visit links after a purchase and on Browse domains work on testnet.**
 
 ## [4.11.0] - 2026-10-07
 
