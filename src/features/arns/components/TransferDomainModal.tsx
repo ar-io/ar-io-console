@@ -72,8 +72,8 @@ export default function TransferDomainModal({
           title={
             <>
               Transfer{' '}
-              <span className="font-mono text-primary [overflow-wrap:anywhere]">
-                {domain.displayName}.ar.io
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
+                {domain.displayName}
               </span>
             </>
           }
@@ -84,7 +84,7 @@ export default function TransferDomainModal({
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
             <p className="font-semibold text-foreground">
-              Transferred &quot;{domain.displayName}.ar.io&quot;
+              Transferred &quot;{domain.displayName}&quot;
             </p>
             <p className="mt-1 text-sm text-foreground/70">
               Ownership now belongs to the recipient wallet.
@@ -107,7 +107,7 @@ export default function TransferDomainModal({
               <p className="text-foreground/80">
                 {/* Say what goes, the name and everything on it, rather than
                     "its ANT", and keep it to the two facts that matter. */}
-                This permanently gives {domain.displayName}.ar.io and all its
+                This permanently gives {domain.displayName} and all its
                 records to the wallet below.{' '}
                 <span className="font-medium text-foreground">
                   Check the address:

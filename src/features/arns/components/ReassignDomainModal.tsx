@@ -60,8 +60,8 @@ export default function ReassignDomainModal({
           title={
             <>
               Reassign{' '}
-              <span className="break-all font-mono text-primary">
-                {domain.displayName}.ar.io
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
+                {domain.displayName}
               </span>
             </>
           }
@@ -72,7 +72,7 @@ export default function ReassignDomainModal({
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
             <p className="font-semibold text-foreground">
-              Reassigned &quot;{domain.displayName}.ar.io&quot;
+              Reassigned &quot;{domain.displayName}&quot;
             </p>
             <p className="mt-1 text-sm text-foreground/70">
               The name now points at the new ANT.
@@ -101,7 +101,7 @@ export default function ReassignDomainModal({
                 else's token cannot, so the warning says exactly that.
               */}
               <p className="text-foreground/80">
-                This points {domain.displayName}.ar.io at a different name token,
+                This points {domain.displayName} at a different name token,
                 which then holds its records. If the token is wrong or isn&apos;t
                 yours, you can&apos;t reverse this and you lose the name.
               </p>

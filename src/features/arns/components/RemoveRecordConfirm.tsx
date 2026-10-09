@@ -6,6 +6,7 @@ import { useArNSActionPrice } from '../hooks/useArNSActionPrice';
 import type { WriterChoice } from '../records/writerChoice';
 import RailSwitch from './RailSwitch';
 import { buttonClass } from '@/components/button';
+import { useArnsHost } from '@/hooks/useArnsHost';
 
 /**
  * Confirm removing one record, and name what it costs.
@@ -64,6 +65,7 @@ export default function RemoveRecordConfirm({
   onCancel: () => void;
 }) {
   // Priced only when Turbo is the one being paid.
+  const arnsHost = useArnsHost();
   const { credits } = useArNSActionPrice(
     paysNetworkDirectly ? undefined : 'remove-record',
   );
@@ -94,7 +96,7 @@ export default function RemoveRecordConfirm({
           title={
             <>
               Remove{' '}
-              <span className="break-all font-mono text-primary">
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
                 {undername}
               </span>
               ?
@@ -105,7 +107,7 @@ export default function RemoveRecordConfirm({
 
         <p className="mb-4 text-sm text-foreground/80">
           {displayName
-            ? `${undername}_${displayName}.ar.io will stop working for anyone using it.`
+            ? `${undername}_${displayName}.${arnsHost} will stop working for anyone using it.`
             : 'This record will stop working for anyone using it.'}{' '}
           You can add it back later. Removing costs {cost}.
         </p>

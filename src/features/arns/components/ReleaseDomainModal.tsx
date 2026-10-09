@@ -69,8 +69,8 @@ export default function ReleaseDomainModal({
           title={
             <>
               Release{' '}
-              <span className="break-all font-mono text-primary">
-                {domain.displayName}.ar.io
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
+                {domain.displayName}
               </span>
             </>
           }
@@ -81,7 +81,7 @@ export default function ReleaseDomainModal({
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
             <p className="font-semibold text-foreground">
-              Released &quot;{domain.displayName}.ar.io&quot;
+              Released &quot;{domain.displayName}&quot;
             </p>
             <p className="mt-1 text-sm text-foreground/70">
               It&apos;s now in a 14-day returned-name auction, where anyone can
@@ -115,7 +115,7 @@ export default function ReleaseDomainModal({
                 This can&apos;t be undone
               </div>
               <p className="text-foreground/80">
-                This gives up {domain.displayName}.ar.io to a 14-day public
+                This gives up {domain.displayName} to a 14-day public
                 auction, with no refund. Its records stop resolving, and if it is
                 your primary name, that link breaks too.
               </p>
@@ -128,7 +128,7 @@ export default function ReleaseDomainModal({
               className="mb-2 block text-sm font-medium"
             >
               Type{' '}
-              <span className="break-all font-mono text-primary">
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
                 {domain.displayName}
               </span>{' '}
               to confirm
