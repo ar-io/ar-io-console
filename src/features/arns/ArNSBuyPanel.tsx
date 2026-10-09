@@ -137,7 +137,7 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
                   blanket claim on this very panel: paying in ARIO is the
                   buyer's own transaction and needs SOL, and the picker below
                   offers it. Naming credits and card keeps it true. */}
-              Search for a name and buy it with credits or a card — the Solana
+              Search for a name and buy it with credits or a card. The Solana
               fees are included, so neither needs SOL. You&apos;ll approve the
               purchase once in your wallet, and the name is yours.
             </p>

@@ -103,7 +103,7 @@ export default function ArNSPaymentModal({
           icon={payingByCard ? CreditCard : Wallet}
           title={
             headerName
-              ? `Pay for ${headerName}.ar.io`
+              ? `Pay for ${headerName}`
               : payingByCard
                 ? 'Pay with card'
                 : `Pay with ${tokenLabel ?? 'crypto'}`

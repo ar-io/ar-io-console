@@ -19,6 +19,7 @@ import {
 import useDebounce from '../../../hooks/useDebounce';
 import { toUnicodeName } from '@/utils/punycode';
 import { actionButtonClass } from '@/components/actionButton';
+import { useArnsHost } from '@/hooks/useArnsHost';
 
 const PAGE_SIZE = 25;
 const EXPIRING_WINDOW_DAYS = 60;
@@ -28,6 +29,7 @@ const fmtDate = (ms?: number) =>
 
 export default function BrowseDomainsPanel() {
   const navigate = useNavigate();
+  const arnsHost = useArnsHost();
   const [searchInput, setSearchInput] = useState('');
   const search = useDebounce(searchInput);
   const [sortBy, setSortBy] = useState<AllArNSSortKey>('startTimestamp');
@@ -249,14 +251,14 @@ export default function BrowseDomainsPanel() {
                 <div className="col-span-2 sm:col-span-4 min-w-0 overflow-hidden">
                   <button
                     onClick={() => navigate(`/domains/${r.name}`, { state: { from: '/domains' } })}
-                    title={`${toUnicodeName(r.name)}.ar.io — view details`}
+                    title={`View details for ${toUnicodeName(r.name)}`}
                     className="group flex w-full items-center gap-2 min-w-0 text-left"
                   >
                     <Globe className="w-4 h-4 text-primary flex-shrink-0" />
                     <span className="min-w-0 truncate font-heading font-extrabold text-foreground group-hover:text-primary group-hover:underline transition-colors">
                       {toUnicodeName(r.name)}
                     </span>
-                    <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>
+                    <span className="text-foreground/50 text-sm flex-shrink-0">.{arnsHost}</span>
                   </button>
                 </div>
 
@@ -289,7 +291,7 @@ export default function BrowseDomainsPanel() {
                 {/* Links */}
                 <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
                   <a
-                    href={`https://${r.name}.ar.io`}
+                    href={`https://${r.name}.${arnsHost}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Visit"

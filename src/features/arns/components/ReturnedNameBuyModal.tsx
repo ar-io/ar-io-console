@@ -16,6 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import type { ArNSName } from '@/types';
+import { useArnsHost } from '@/hooks/useArnsHost';
 import BaseModal from '../../../components/modals/BaseModal';
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import type { ArNSRegistrationType } from '../hooks/useArNSPrice';
@@ -64,6 +65,7 @@ export default function ReturnedNameBuyModal({
   endTimestamp,
   onClose,
 }: ReturnedNameBuyModalProps) {
+  const arnsHost = useArnsHost();
   const navigate = useNavigate();
   const signer = useArNSTurboSigner();
 
@@ -172,8 +174,8 @@ export default function ReturnedNameBuyModal({
           title={
             <>
               Buy{' '}
-              <span className="break-all font-mono text-primary">
-                {toUnicodeName(name)}.ar.io
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
+                {toUnicodeName(name)}
               </span>
             </>
           }
@@ -402,7 +404,7 @@ export default function ReturnedNameBuyModal({
               <CheckCircle2 className="h-6 w-6 flex-shrink-0 text-primary" />
               <div className="flex-1">
                 <p className="font-semibold text-foreground">
-                  Bought &quot;{toUnicodeName(name)}.ar.io&quot;
+                  Bought &quot;{toUnicodeName(name)}&quot;
                 </p>
                 <p className="mt-1 text-sm text-foreground/70">
                   The name is now yours and resolves across the ar.io network.
@@ -441,7 +443,7 @@ export default function ReturnedNameBuyModal({
                     <Settings2 className="h-4 w-4" /> Manage domains
                   </button>
                   <a
-                    href={`https://${name}.ar.io`}
+                    href={`https://${name}.${arnsHost}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10"

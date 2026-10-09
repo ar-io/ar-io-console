@@ -296,9 +296,11 @@ describe('what the SOL rail actually costs', () => {
     );
   });
 
-  it('always says the rail is SOL, not credits', () => {
+  it('says the wallet pays, without talking about credits', () => {
     for (const action of ['transfer', 'remove-controller']) {
-      expect(selfSignedCostNote(action)).toMatch(/SOL, not credits/);
+      const note = selfSignedCostNote(action);
+      expect(note).toMatch(/^Your wallet pays /);
+      expect(note).not.toMatch(/credits/);
     }
   });
 

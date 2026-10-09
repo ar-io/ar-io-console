@@ -13,7 +13,7 @@ import type { LucideIcon } from 'lucide-react';
  * to.
  *
  * `title` is a node, not a string: the domain modals set the name in mono
- * primary inside the heading ("Transfer `name`.ar.io"), which is a real part of
+ * primary inside the heading ("Transfer `name`"), which is a real part of
  * the pattern and worth keeping.
  *
  * The tile is `rounded-xl` (12px), not the `rounded-lg` Upload and Deploy
@@ -42,7 +42,9 @@ const ModalHeader: FC<ModalHeaderProps> = ({ icon: Icon, title, description }) =
     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/20">
       <Icon className="h-5 w-5 text-primary" />
     </div>
-    <div className="text-left">
+    {/* pr-8 keeps the title clear of BaseModal's close button, which sits
+        absolutely in the top-right corner; min-w-0 lets a long name wrap. */}
+    <div className="min-w-0 pr-8 text-left">
       <h3 className="text-lg font-extrabold text-foreground">{title}</h3>
       {description && (
         <p className="text-xs text-foreground/80">{description}</p>

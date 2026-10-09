@@ -60,21 +60,19 @@ export default function ReassignDomainModal({
           title={
             <>
               Reassign{' '}
-              <span className="break-all font-mono text-primary">
-                {domain.displayName}.ar.io
+              <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
+                {domain.displayName}
               </span>
             </>
           }
           description="Point this name at a different name token"
         />
 
-        <NeedsSolNote action="Reassigning a name" className="mb-4" />
-
         {phase === 'success' ? (
           <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
             <p className="font-semibold text-foreground">
-              Reassigned &quot;{domain.displayName}.ar.io&quot;
+              Reassigned &quot;{domain.displayName}&quot;
             </p>
             <p className="mt-1 text-sm text-foreground/70">
               The name now points at the new ANT.
@@ -89,21 +87,29 @@ export default function ReassignDomainModal({
           </div>
         ) : (
           <>
+            {/* Same order as Transfer: warning, cost line, input, one
+                confirmation, the red button. */}
             <div className="mb-4 rounded-2xl border border-error/30 bg-error/10 p-4 text-sm">
-              <div className="mb-1 flex items-center gap-2 font-semibold text-error">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                Advanced — can break your name
+              <div className="mb-1 flex items-start gap-2 font-semibold text-error">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                If the token isn&apos;t yours, this can&apos;t be undone
               </div>
+              {/*
+                Only the holder of the name's CURRENT token can reassign it,
+                and the program does not check the new one (ario-arns
+                manage.rs, reassign_name). A token you hold can be reassigned
+                back from; someone else's token, or an address that is not a
+                name token, cannot. The header already says what reassigning
+                does, so the warning only says when it is permanent.
+              */}
               <p className="text-foreground/80">
-                This repoints {domain.displayName}.ar.io at a different ANT. Only
-                enter an ANT you own and control.{' '}
-                <span className="font-medium text-foreground">
-                  Pointing it at a wrong, invalid, or inaccessible ANT bricks the
-                  name&apos;s resolution
-                </span>{' '}
-                and can lock you out of managing it.
+                The new token holds the name&apos;s records. If it isn&apos;t yours,
+                or isn&apos;t a name token, you can&apos;t reverse this and you lose
+                the name.
               </p>
             </div>
+
+            <NeedsSolNote variant="line" className="mb-4" />
 
             <label className="mb-2 block text-sm font-medium">
               Target name token (ANT) address
@@ -117,10 +123,6 @@ export default function ReassignDomainModal({
               disabled={isBusy}
               className="mb-1 w-full rounded-2xl border border-border/20 bg-card p-3 font-mono text-sm text-foreground focus:border-primary disabled:opacity-50"
             />
-            <p className="mb-1 text-xs text-foreground/50">
-              Every ArNS name is controlled by a token (an ANT) that holds its
-              records. Reassigning points this name at a different one you own.
-            </p>
             {trimmed && !isValidSolanaAddress(trimmed) && (
               <p className="mb-2 text-xs text-error">
                 Enter a valid ANT address.
@@ -128,7 +130,7 @@ export default function ReassignDomainModal({
             )}
             {trimmed && trimmed === domain.processId && (
               <p className="mb-2 text-xs text-error">
-                That&apos;s the name&apos;s current ANT — pick a different one.
+                That&apos;s the name&apos;s current token. Pick a different one.
               </p>
             )}
 
@@ -140,8 +142,7 @@ export default function ReassignDomainModal({
                 disabled={isBusy}
                 className="mt-0.5"
               />
-              I own this ANT and understand that a wrong target can break the
-              name.
+              I understand this can&apos;t be undone.
             </label>
 
             {phase === 'error' && error && (

@@ -28,7 +28,7 @@ describe('incompletePurchase', () => {
     expect(v.kind).toBe('waiting');
     if (v.kind !== 'waiting') return;
     expect(v.name).toBe('nnn270');
-    expect(v.message).toMatch(/nnn270\.ar\.io didn't finish/);
+    expect(v.message).toMatch(/nnn270 didn't finish/);
     expect(v.message).toMatch(/21:25/);
     // Turbo reports awaiting-signature even after the wallet approved, so the
     // copy never claims the wallet did not.
