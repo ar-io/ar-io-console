@@ -206,7 +206,7 @@ export default function NameDetailPage() {
   const summaries = useAntSummaries(processId ? [processId] : []);
   const summary = processId ? summaries.get(processId) : undefined;
   const owner = summary?.owner ?? controllers?.owner;
-  const { data: primary, isFetched: primaryFetched } = usePrimaryName(owner, !!owner);
+  const { data: primary } = usePrimaryName(owner, !!owner);
 
   // STRICT role — the name may be one you don't own or control (public view),
   // so there is NO optimistic "assume controller" fallback here.
@@ -493,10 +493,11 @@ export default function NameDetailPage() {
                     attempt always failed. A controller could REQUEST it for the
                     owner to approve (`requestPrimaryName`), but nothing wires
                     that flow up yet; until it is, the button is not offered.
-                    Waits for the lookup so it never flashes in on a name that
-                    is already primary.
+                    Waits for the lookup's answer, not just a finished fetch:
+                    a failed lookup has no data, and treating that as "not
+                    primary" would offer this on a name that already is.
                   */}
-                  {ownerOnly && primaryFetched && !isPrimary && (
+                  {ownerOnly && primary !== undefined && !isPrimary && (
                     <button
                       type="button"
                       onClick={() => openOwnerAction('primary')}
