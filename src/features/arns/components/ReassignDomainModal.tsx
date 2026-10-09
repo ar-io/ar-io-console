@@ -142,7 +142,7 @@ export default function ReassignDomainModal({
                 disabled={isBusy}
                 className="mt-0.5"
               />
-              I understand this can&apos;t be undone.
+              I understand this can&apos;t be undone if the token isn&apos;t mine.
             </label>
 
             {phase === 'error' && error && (
