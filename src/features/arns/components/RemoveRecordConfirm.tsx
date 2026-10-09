@@ -64,8 +64,8 @@ export default function RemoveRecordConfirm({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  // Priced only when Turbo is the one being paid.
   const arnsHost = useArnsHost();
+  // Priced only when Turbo is the one being paid.
   const { credits } = useArNSActionPrice(
     paysNetworkDirectly ? undefined : 'remove-record',
   );
@@ -97,9 +97,8 @@ export default function RemoveRecordConfirm({
             <>
               Remove{' '}
               <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">
-                {undername}
+                {undername}?
               </span>
-              ?
             </>
           }
           description="This record will stop resolving"

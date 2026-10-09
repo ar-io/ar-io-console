@@ -90,24 +90,26 @@ export default function ReassignDomainModal({
             {/* Same order as Transfer: warning, cost line, input, one
                 confirmation, the red button. */}
             <div className="mb-4 rounded-2xl border border-error/30 bg-error/10 p-4 text-sm">
-              <div className="mb-1 flex items-center gap-2 font-semibold text-error">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                A wrong token can&apos;t be undone
+              <div className="mb-1 flex items-start gap-2 font-semibold text-error">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                If the token isn&apos;t yours, this can&apos;t be undone
               </div>
               {/*
-                Only the holder of the name's CURRENT token can reassign it
-                (ario-arns manage.rs, ReassignName). Pointing it at a token
-                you hold can be reversed from that token; a wrong or someone
-                else's token cannot, so the warning says exactly that.
+                Only the holder of the name's CURRENT token can reassign it,
+                and the program does not check the new one (ario-arns
+                manage.rs, reassign_name). A token you hold can be reassigned
+                back from; someone else's token, or an address that is not a
+                name token, cannot. The header already says what reassigning
+                does, so the warning only says when it is permanent.
               */}
               <p className="text-foreground/80">
-                This points {domain.displayName} at a different name token,
-                which then holds its records. If the token is wrong or isn&apos;t
-                yours, you can&apos;t reverse this and you lose the name.
+                The new token holds the name&apos;s records. If it isn&apos;t yours,
+                or isn&apos;t a name token, you can&apos;t reverse this and you lose
+                the name.
               </p>
             </div>
 
-            <NeedsSolNote action="Reassigning a name" variant="line" className="mb-4" />
+            <NeedsSolNote variant="line" className="mb-4" />
 
             <label className="mb-2 block text-sm font-medium">
               Target name token (ANT) address

@@ -13,7 +13,7 @@ import type { LucideIcon } from 'lucide-react';
  * to.
  *
  * `title` is a node, not a string: the domain modals set the name in mono
- * primary inside the heading ("Transfer `name`.ar.io"), which is a real part of
+ * primary inside the heading ("Transfer `name`"), which is a real part of
  * the pattern and worth keeping.
  *
  * The tile is `rounded-xl` (12px), not the `rounded-lg` Upload and Deploy

@@ -16,8 +16,8 @@ export default function NeedsSolNote({
   variant = 'box',
   className = '',
 }: {
-  /** What the user is about to do, e.g. "Setting a primary name". */
-  action: string;
+  /** What the user is about to do, e.g. "Setting a primary name". Box only. */
+  action?: string;
   /**
    * `line` is the plain cost line the confirm modals share with Transfer's
    * `ActionCostNote`, placed under the warning. `box` stands alone at the top
@@ -37,7 +37,7 @@ export default function NeedsSolNote({
     <p
       className={`rounded-2xl border border-warning/30 bg-warning/10 p-3 text-xs leading-snug text-foreground/80 ${className}`}
     >
-      {action} isn&apos;t paid by Turbo, so your wallet pays a small Solana fee
+      {action ?? 'This action'} isn&apos;t paid by Turbo, so your wallet pays a small Solana fee
       for it, unlike buying, renewing and editing records.
     </p>
   );

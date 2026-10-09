@@ -19,6 +19,7 @@ import {
 import useDebounce from '../../../hooks/useDebounce';
 import { toUnicodeName } from '@/utils/punycode';
 import { actionButtonClass } from '@/components/actionButton';
+import { useArnsHost } from '@/hooks/useArnsHost';
 
 const PAGE_SIZE = 25;
 const EXPIRING_WINDOW_DAYS = 60;
@@ -28,6 +29,7 @@ const fmtDate = (ms?: number) =>
 
 export default function BrowseDomainsPanel() {
   const navigate = useNavigate();
+  const arnsHost = useArnsHost();
   const [searchInput, setSearchInput] = useState('');
   const search = useDebounce(searchInput);
   const [sortBy, setSortBy] = useState<AllArNSSortKey>('startTimestamp');
@@ -289,7 +291,7 @@ export default function BrowseDomainsPanel() {
                 {/* Links */}
                 <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
                   <a
-                    href={`https://${r.name}.ar.io`}
+                    href={`https://${r.name}.${arnsHost}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Visit"

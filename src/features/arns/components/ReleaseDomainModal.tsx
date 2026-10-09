@@ -115,13 +115,12 @@ export default function ReleaseDomainModal({
                 This can&apos;t be undone
               </div>
               <p className="text-foreground/80">
-                This gives up {domain.displayName} to a 14-day public
-                auction, with no refund. Its records stop resolving, and if it is
-                your primary name, that link breaks too.
+                You get no refund. Its records stop resolving, and if it is your
+                primary name, that link breaks too.
               </p>
             </div>
 
-            <NeedsSolNote action="Releasing a name" variant="line" className="mb-4" />
+            <NeedsSolNote variant="line" className="mb-4" />
 
             <label
               htmlFor="release-confirm-name"
