@@ -154,7 +154,7 @@ export default function TransferDomainModal({
                 disabled={isBusy}
                 className="mt-0.5"
               />
-              I&apos;ve checked the address. This transfer is permanent.
+              I understand this can&apos;t be undone.
             </label>
 
             {phase === 'error' && error && (
