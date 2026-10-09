@@ -33,7 +33,7 @@ export function incompletePurchase({
   status,
   now,
   formatTime,
-  displayName = (n) => `${n}.ar.io`,
+  displayName = (n) => n,
   held,
 }: {
   pending: PendingArNSPurchase | undefined;
@@ -44,7 +44,7 @@ export function incompletePurchase({
   status: Record<string, unknown> | undefined;
   now: number;
   formatTime?: (ms: number) => string;
-  /** How to show the name in the sentence; defaults to `<name>.ar.io`. */
+  /** How to show the name in the sentence; defaults to the name itself. */
   displayName?: (name: string) => string;
   /**
    * The held attempt `useBuyArNSName` recorded, if any. When it is this

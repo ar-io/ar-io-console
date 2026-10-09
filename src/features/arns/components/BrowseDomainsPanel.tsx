@@ -251,14 +251,14 @@ export default function BrowseDomainsPanel() {
                 <div className="col-span-2 sm:col-span-4 min-w-0 overflow-hidden">
                   <button
                     onClick={() => navigate(`/domains/${r.name}`, { state: { from: '/domains' } })}
-                    title={`${toUnicodeName(r.name)}.ar.io — view details`}
+                    title={`View details for ${toUnicodeName(r.name)}`}
                     className="group flex w-full items-center gap-2 min-w-0 text-left"
                   >
                     <Globe className="w-4 h-4 text-primary flex-shrink-0" />
                     <span className="min-w-0 truncate font-heading font-extrabold text-foreground group-hover:text-primary group-hover:underline transition-colors">
                       {toUnicodeName(r.name)}
                     </span>
-                    <span className="text-foreground/50 text-sm flex-shrink-0">.ar.io</span>
+                    <span className="text-foreground/50 text-sm flex-shrink-0">.{arnsHost}</span>
                   </button>
                 </div>
 

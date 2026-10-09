@@ -73,7 +73,7 @@ export default function IncompletePurchaseBanner({
     ownedNames,
     status,
     now: Date.now(),
-    displayName: (n) => `${toUnicodeName(n)}.ar.io`,
+    displayName: (n) => toUnicodeName(n),
     held: readHeldAttempt(heldStorage(), Date.now()),
   });
 

@@ -6,6 +6,7 @@ import { useArNSAvailability } from '../hooks/useArNSAvailability';
 import { useArNSPricing } from '@/hooks/useArNSPricing';
 import { isValidArNSName } from '../utils';
 import { buttonClass } from '@/components/button';
+import { useArnsHost } from '@/hooks/useArnsHost';
 
 interface ArNSNameSearchProps {
   value: string;
@@ -27,6 +28,7 @@ export function ArNSNameSearch({
   onSelect,
   selectedName,
 }: ArNSNameSearchProps) {
+  const arnsHost = useArnsHost();
   const debounced = useDebounce(value);
   const invalidHyphens = /^-|-$/.test(value);
   const validName = isValidArNSName(debounced);
@@ -85,7 +87,7 @@ export function ArNSNameSearch({
               spellCheck={false}
             />
             <div className="px-3 text-sm text-foreground/80 font-mono border-l border-border/20 flex-shrink-0">
-              .ar.io
+              .{arnsHost}
             </div>
           </div>
         </div>
@@ -118,7 +120,7 @@ export function ArNSNameSearch({
                 <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div className="min-w-0">
                   <span className="font-semibold text-foreground">
-                    "{debounced}.ar.io" is available
+                    "{debounced}" is available
                   </span>
                   {startPrice &&
                     (startPrice.usd !== undefined || startPrice.ario !== undefined) && (
@@ -157,7 +159,7 @@ export function ArNSNameSearch({
               <div className="flex items-center gap-2">
                 <XCircle className="w-5 h-5 text-error flex-shrink-0" />
                 <span className="font-semibold text-error">
-                  "{debounced}.ar.io" is {data.reserved ? 'reserved' : 'already taken'}
+                  "{debounced}" is {data.reserved ? 'reserved' : 'already taken'}
                 </span>
               </div>
               {suggestions.length > 0 && (

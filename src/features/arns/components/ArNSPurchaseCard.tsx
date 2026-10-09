@@ -67,6 +67,7 @@ import {
 import SolanaGateButton from '../../../components/SolanaGateButton';
 import { toUnicodeName } from '@/utils/punycode';
 import { buttonClass } from '@/components/button';
+import { useArnsHost } from '@/hooks/useArnsHost';
 
 interface ArNSPurchaseCardProps {
   name: string;
@@ -178,6 +179,7 @@ export function ArNSPurchaseCard({
   onTokenFunded,
   initialTarget,
 }: ArNSPurchaseCardProps) {
+  const arnsHost = useArnsHost();
   const [type, setType] = useState<ArNSRegistrationType>('lease');
   const [years, setYears] = useState(1);
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -1114,7 +1116,7 @@ export function ArNSPurchaseCard({
       )}
       <div className="mb-1 flex items-baseline justify-between">
         <h3 className="font-heading text-lg font-extrabold text-foreground">
-          Register <span className="break-all font-mono text-primary">{toUnicodeName(name)}.ar.io</span>
+          Register <span className="inline-block max-w-full font-mono text-primary [overflow-wrap:anywhere]">{toUnicodeName(name)}</span>
         </h3>
       </div>
       {/* Show the example, not just the number — "10 undernames" means nothing
@@ -1125,7 +1127,7 @@ export function ArNSPurchaseCard({
             The whole app builds them that way; a dot would be a subdomain of
             .ar.io, which is a different thing entirely and not yours. */}
         <span className="break-all font-mono">
-          blog_{toUnicodeName(name)}.ar.io
+          blog_{toUnicodeName(name)}.{arnsHost}
         </span>
       </p>
 

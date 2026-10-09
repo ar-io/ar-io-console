@@ -117,7 +117,7 @@ export function ArNSPurchaseStatus({
           <CheckCircle2 className="w-6 h-6 text-primary flex-shrink-0" />
           <div className="flex-1">
             <p className="font-semibold text-foreground">
-              Registered "{toUnicodeName(name)}.ar.io"
+              Registered "{toUnicodeName(name)}"
             </p>
             <p className="text-sm text-foreground/70 mt-1">
               The name is now yours and resolves across the ar.io network.
