@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useInfiniteQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { TurboFactory, TurboAuthenticatedClient, ArconnectSigner } from '@ardrive/turbo-sdk/web';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useStore } from '@/store/useStore';
 import { useTurboConfig } from '@/hooks/useTurboConfig';
 import { useEthereumTurboClient } from '@/hooks/useEthereumTurboClient';
+import { paymentHistoryStatus, type PaymentHistoryStatus } from '@/utils/paymentHistoryStatus';
+
+export type { PaymentHistoryStatus };
 
 /** One row from the SDK's payment history — a discriminated union on `type`. */
 export type PaymentHistoryItem = Awaited<
   ReturnType<TurboAuthenticatedClient['getPaymentHistory']>
 >['payments'][number];
 
-export type PaymentHistoryStatus = 'idle' | 'loading' | 'loadingMore' | 'loaded' | 'error';
+type HistoryPage = Awaited<ReturnType<TurboAuthenticatedClient['getPaymentHistory']>>;
 
 // Generous page size so almost every user sees their whole history in a single
 // signed request — pagination costs another signature (the SDK signs a fresh
@@ -18,21 +22,37 @@ export type PaymentHistoryStatus = 'idle' | 'loading' | 'loadingMore' | 'loaded'
 // there genuinely is more.
 const PAGE_SIZE = 50;
 
+/** Query key root. `useCreditBalance` marks it stale on `refresh-balance`. */
+export const PAYMENT_HISTORY_KEY = 'payment-history';
+
+// The authenticated client, kept across visits to the page so "Load more" and
+// Refresh don't rebuild the signer. Cleared by `useWalletAccountListener` on a
+// wallet switch, like the Ethereum and x402 signer caches.
+let clientCache: { key: string; client: TurboAuthenticatedClient } | null = null;
+
+export function clearPaymentHistoryClientCache(): void {
+  clientCache = null;
+}
+
 /**
- * Opt-in fetch of the connected wallet's own top-up history via the turbo-sdk
- * `getPaymentHistory` API. The call is authenticated and signature-scoped (the
- * service reads the wallet from the request signature), so nothing loads until
- * the user explicitly calls `load()` — that click is what triggers the wallet
- * signature. The authenticated client is cached per session so paging reuses the
- * same signer.
+ * The connected wallet's own top-up history via turbo-sdk `getPaymentHistory`.
  *
- * Note: the shared Ethereum signer/client cache is cleared centrally by
- * `useWalletAccountListener` on wallet switch/disconnect (same as Credit
- * Sharing), so this hook only manages its own per-session client + a session
- * guard that discards results from a superseded wallet.
+ * Every request is signed (the service reads the wallet from the signature),
+ * so nothing fetches on its own: not on mount, focus or reconnect, only when
+ * the user calls `load()`, `refresh()` or `loadMore()`. What loads is cached
+ * for the session in the query cache, keyed by wallet and network, so leaving
+ * the page and coming back shows it at once without another signature. A
+ * result can only land under the wallet that asked for it, and
+ * `useWalletAccountListener` drops other wallets' history when the session
+ * changes. Kept in memory only: persisting it would show it to whoever uses
+ * the browser next without the signature that gates it.
+ *
+ * `refresh-balance` (any top-up, share or revoke) marks it stale without
+ * fetching (`useCreditBalance`), so the section can offer a refresh rather
+ * than spring a wallet prompt.
  */
 export function usePaymentHistory() {
-  const { address, walletType } = useStore();
+  const { address, walletType, configMode } = useStore();
   const turboConfig = useTurboConfig();
   const { createEthereumTurboClient } = useEthereumTurboClient();
   const {
@@ -40,24 +60,13 @@ export function usePaymentHistory() {
     signMessage: solanaSignMessage,
     signTransaction: solanaSignTransaction,
   } = useWallet();
-
-  const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [status, setStatus] = useState<PaymentHistoryStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
-
-  // Cache the authenticated client for the session (keyed by address) so paging
-  // doesn't rebuild the signer. A wallet switch invalidates it (see reset()).
-  const clientRef = useRef<{ address: string; client: TurboAuthenticatedClient } | null>(null);
-  // Monotonic session id. Bumped on every reset (which runs on wallet change), so
-  // a request that resolves after a switch can be discarded instead of showing
-  // one wallet's history under another.
-  const sessionRef = useRef(0);
+  const queryClient = useQueryClient();
+  const queryKey = [PAYMENT_HISTORY_KEY, address, walletType, configMode];
+  const clientKey = `${address}|${walletType}|${configMode}`;
 
   const getClient = useCallback(async (): Promise<TurboAuthenticatedClient> => {
     if (!address || !walletType) throw new Error('Wallet not connected');
-    if (clientRef.current?.address === address) return clientRef.current.client;
+    if (clientCache?.key === clientKey) return clientCache.client;
 
     let client: TurboAuthenticatedClient;
     switch (walletType) {
@@ -90,17 +99,34 @@ export function usePaymentHistory() {
       default:
         throw new Error(`Unsupported wallet type: ${walletType}`);
     }
-    clientRef.current = { address, client };
+    clientCache = { key: clientKey, client };
     return client;
   }, [
     address,
     walletType,
+    clientKey,
     turboConfig,
     createEthereumTurboClient,
     solanaPublicKey,
     solanaSignMessage,
     solanaSignTransaction,
   ]);
+
+  const query = useInfiniteQuery({
+    queryKey,
+    // Only on an explicit click: every request asks the wallet to sign.
+    enabled: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    // A declined signature is an answer, not a flake.
+    retry: false,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) => {
+      const turbo = await getClient();
+      return turbo.getPaymentHistory(pageParam ? { limit: PAGE_SIZE, cursor: pageParam } : { limit: PAGE_SIZE });
+    },
+    getNextPageParam: (last) => (last.hasMore && last.cursor ? last.cursor : undefined),
+  });
 
   const toMessage = (e: unknown): string => {
     const msg = e instanceof Error ? e.message : String(e);
@@ -113,62 +139,55 @@ export function usePaymentHistory() {
   /** First page. Triggers the wallet signature. */
   const load = useCallback(async () => {
     if (!address) return;
-    const session = sessionRef.current;
-    setStatus('loading');
-    setError(null);
-    try {
-      const turbo = await getClient();
-      if (session !== sessionRef.current) return; // wallet changed mid-flight
-      const res = await turbo.getPaymentHistory({ limit: PAGE_SIZE });
-      if (session !== sessionRef.current) return;
-      setPayments(res.payments);
-      setCursor(res.cursor);
-      setHasMore(res.hasMore);
-      setStatus('loaded');
-    } catch (e) {
-      if (session !== sessionRef.current) return;
-      setError(toMessage(e));
-      setStatus('error');
-    }
-  }, [address, getClient]);
+    await query.refetch();
+  }, [address, query]);
+
+  /**
+   * Fetch the first page again, dropping later pages first: refetching an
+   * infinite query refetches every page it holds, a signature each.
+   */
+  const refresh = useCallback(async () => {
+    if (!address) return;
+    queryClient.setQueryData<InfiniteData<HistoryPage, string | undefined>>(
+      [PAYMENT_HISTORY_KEY, address, walletType, configMode],
+      (d) => (d ? { pages: d.pages.slice(0, 1), pageParams: d.pageParams.slice(0, 1) } : d),
+    );
+    await query.refetch();
+  }, [address, walletType, configMode, query, queryClient]);
 
   /** Next page (keeps existing rows on failure). */
   const loadMore = useCallback(async () => {
-    if (!cursor || status === 'loadingMore') return;
-    const session = sessionRef.current;
-    setStatus('loadingMore');
-    setError(null);
-    try {
-      const turbo = await getClient();
-      if (session !== sessionRef.current) return;
-      const res = await turbo.getPaymentHistory({ limit: PAGE_SIZE, cursor });
-      if (session !== sessionRef.current) return;
-      setPayments((prev) => [...prev, ...res.payments]);
-      setCursor(res.cursor);
-      setHasMore(res.hasMore);
-      setStatus('loaded');
-    } catch (e) {
-      if (session !== sessionRef.current) return;
-      setError(toMessage(e));
-      setStatus('loaded');
-    }
-  }, [cursor, status, getClient]);
+    if (!query.hasNextPage || query.isFetchingNextPage) return;
+    await query.fetchNextPage();
+  }, [query]);
 
-  const reset = useCallback(() => {
-    sessionRef.current += 1; // invalidate any in-flight request
-    clientRef.current = null;
-    setPayments([]);
-    setCursor(null);
-    setHasMore(false);
-    setStatus('idle');
-    setError(null);
-  }, []);
+  // TanStack never reports a disabled query as stale (`isStale` checks
+  // `enabled` first), so read the invalidation `refresh-balance` leaves on it
+  // straight from the cache. A successful fetch clears it.
+  const invalidated = useSyncExternalStore(
+    (onChange) => queryClient.getQueryCache().subscribe(onChange),
+    () => queryClient.getQueryState([PAYMENT_HISTORY_KEY, address, walletType, configMode])?.isInvalidated ?? false,
+  );
 
-  // Clear everything when the wallet changes so one wallet's history never shows
-  // under another.
-  useEffect(() => {
-    reset();
-  }, [address, walletType, reset]);
+  const hasData = !!query.data;
+  const status: PaymentHistoryStatus = paymentHistoryStatus({
+    hasData,
+    isFetching: query.isFetching,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isError: query.isError,
+  });
 
-  return { payments, hasMore, status, error, load, loadMore, reset };
+  return {
+    payments: query.data?.pages.flatMap((p) => p.payments) ?? [],
+    hasMore: !!query.hasNextPage,
+    status,
+    error: query.isError ? toMessage(query.error) : null,
+    /** When the cached history was fetched (ms), or undefined before the first load. */
+    loadedAt: hasData ? query.dataUpdatedAt : undefined,
+    /** True once a top-up, share or revoke has happened since it was fetched. */
+    stale: hasData && invalidated,
+    load,
+    refresh,
+    loadMore,
+  };
 }

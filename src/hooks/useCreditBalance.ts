@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '../store/useStore';
 import { getTurboBalance } from '../utils';
+import { PAYMENT_HISTORY_KEY } from './usePaymentHistory';
 
 /**
  * Shared React Query hook for the user's Turbo credit balance.
@@ -62,6 +63,11 @@ export function useCreditBalance() {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['credit-balance'] });
+        // Mark the cached top-up history stale too, without fetching: every
+        // history request asks the wallet to sign, so the Account page offers
+        // a refresh instead (usePaymentHistory). Lives here because this
+        // listener is always mounted; a top-up happens on another page.
+        queryClient.invalidateQueries({ queryKey: [PAYMENT_HISTORY_KEY], refetchType: 'none' });
       }, 150);
     };
     window.addEventListener('refresh-balance', onRefresh);
