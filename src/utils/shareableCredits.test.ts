@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toShareableBalance, toApprovedWinc, wincToCredits, toShareRows, isSameWallet, formatCreditsFloor, creditsToWinc } from './shareableCredits';
+import { toShareableBalance, toApprovedWinc, wincToCredits, toShareRows, isSameWallet, formatCreditsFloor, parseCreditsToWinc, shareFailureMessage } from './shareableCredits';
 
 const CREDIT = 1_000_000_000_000n;
 
@@ -135,7 +135,55 @@ describe('formatCreditsFloor', () => {
 
   it('what Max fills in reads back as no more than the balance', () => {
     for (const winc of [33_912_200_000_000n, 37_462_200_000_000n, 123_456_789n, 9_007_199_254_740_993_000n]) {
-      expect(creditsToWinc(Number(formatCreditsFloor(winc)))!).toBeLessThanOrEqual(winc);
+      expect(parseCreditsToWinc(formatCreditsFloor(winc))!).toBeLessThanOrEqual(winc);
     }
+  });
+});
+
+describe('parseCreditsToWinc', () => {
+  it('parses exactly, without floating point', () => {
+    expect(parseCreditsToWinc('5')).toBe(5n * CREDIT);
+    expect(parseCreditsToWinc('0.25')).toBe(CREDIT / 4n);
+    expect(parseCreditsToWinc('.5')).toBe(CREDIT / 2n);
+    expect(parseCreditsToWinc('3.')).toBe(3n * CREDIT);
+    expect(parseCreditsToWinc(' 12345.6789 ')).toBe(12_345_678_900_000_000n);
+    // Number('9007.1993') * 1e12 lands a winc away from what was typed.
+    expect(parseCreditsToWinc('9007.1993')).toBe(9_007_199_300_000_000n);
+  });
+
+  it('rounds digits past the twelfth place half up', () => {
+    expect(parseCreditsToWinc('0.0000000000014')).toBe(1n);
+    expect(parseCreditsToWinc('0.0000000000015')).toBe(2n);
+  });
+
+  it('rejects anything that is not a plain decimal', () => {
+    for (const bad of ['', '.', '-1', '1e3', 'abc', '1.2.3', '0x10']) {
+      expect(parseCreditsToWinc(bad)).toBeUndefined();
+    }
+  });
+
+  it('toApprovedWinc uses the exact parse for text and still clamps', () => {
+    expect(toApprovedWinc('9007.1993', 10_000n * CREDIT)).toBe(9_007_199_300_000_000n);
+    expect(toApprovedWinc('40', 33n * CREDIT)).toBe(33n * CREDIT);
+    expect(toApprovedWinc('', CREDIT)).toBe(0n);
+  });
+});
+
+describe('shareFailureMessage', () => {
+  it('turns the SDK wrapper into a refusal the user can act on', () => {
+    const err = new Error('Failed to upload file after 1 attempts Failed request (Status 400): Insufficient balance');
+    expect(shareFailureMessage(err, 'share')).toMatch(/^Couldn't share credits: the payment service says this wallet doesn't have enough credits/);
+  });
+
+  it('says nothing happened when the signature was cancelled', () => {
+    expect(shareFailureMessage(new Error('User rejected the request'), 'revoke')).toBe(
+      'Nothing was revoked: the signature request was cancelled.',
+    );
+  });
+
+  it('strips the wrapper and keeps the service reason', () => {
+    const err = new Error('Failed to upload file after 3 attempts Failed request (Status 503): Service Unavailable');
+    expect(shareFailureMessage(err, 'share')).toBe("Couldn't share credits: Service Unavailable");
+    expect(shareFailureMessage(undefined, 'revoke')).toBe("Couldn't revoke that share. Try again.");
   });
 });

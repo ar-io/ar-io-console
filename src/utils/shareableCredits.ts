@@ -58,8 +58,25 @@ export function wincToCredits(winc: bigint): number {
   return Number(winc) / wincPerCredit;
 }
 
-/** Credits as typed, in winc. Undefined for anything that isn't a finite, non-negative number. */
-export function creditsToWinc(credits: number): bigint | undefined {
+const WINC_DECIMALS = String(wincPerCredit).length - 1; // 12
+
+/**
+ * Credits as typed ("5", "0.25", ".5", "3."), in winc, parsed as a decimal
+ * string so nothing passes through floating point: `Number` turns some
+ * four-place figures above ~9,000 credits into a winc more than they say.
+ * Digits past the twelfth place round half up. Undefined for anything else.
+ */
+export function parseCreditsToWinc(text: string): bigint | undefined {
+  const m = /^(\d*)(?:\.(\d*))?$/.exec(text.trim());
+  if (!m || (m[1] === '' && !m[2])) return undefined;
+  const frac = m[2] ?? '';
+  const kept = frac.slice(0, WINC_DECIMALS).padEnd(WINC_DECIMALS, '0');
+  const roundUp = frac.length > WINC_DECIMALS && frac[WINC_DECIMALS] >= '5' ? 1n : 0n;
+  return BigInt(m[1] || '0') * BigInt(wincPerCredit) + BigInt(kept) + roundUp;
+}
+
+/** A credits figure that is already a number (not typed), in winc. */
+function numberToWinc(credits: number): bigint | undefined {
   if (!Number.isFinite(credits) || credits < 0) return undefined;
   return BigInt(Math.round(credits * wincPerCredit));
 }
@@ -79,13 +96,14 @@ export function formatCreditsFloor(winc: bigint): string {
 
 /**
  * The winc to approve for a share of `credits`, never above `shareableWinc`.
+ * Pass the form's text where there is one (`parseCreditsToWinc`, exact).
  *
- * Credits are a float in the form, so sharing "the max" round-trips through
- * floating point and can land a winc or two above the balance, which the
- * service refuses. Clamping here makes "share everything" always succeed.
+ * The clamp is a backstop: a number can round-trip through floating point and
+ * land a winc or two above the balance, which the service refuses. Clamping
+ * here makes "share everything" always succeed.
  */
-export function toApprovedWinc(credits: number, shareableWinc: bigint): bigint {
-  const requested = creditsToWinc(credits) ?? 0n;
+export function toApprovedWinc(credits: number | string, shareableWinc: bigint): bigint {
+  const requested = (typeof credits === 'string' ? parseCreditsToWinc(credits) : numberToWinc(credits)) ?? 0n;
   return requested > shareableWinc ? shareableWinc : requested;
 }
 
@@ -165,4 +183,26 @@ export function isSameWallet(candidate: string, own: string | null | undefined):
   if (!own) return false;
   const a = candidate.trim();
   return /^0x/i.test(a) ? a.toLowerCase() === own.toLowerCase() : a === own;
+}
+
+/**
+ * A share or revoke failure in words a person can act on. Both go through
+ * turbo-sdk's `uploadFile`, so a service refusal arrives wrapped as "Failed to
+ * upload file after N attempts Failed request (Status 400): <reason>", which
+ * reads like a crash rather than a refusal.
+ */
+export function shareFailureMessage(err: unknown, action: 'share' | 'revoke'): string {
+  const raw = err instanceof Error ? err.message : typeof err === 'string' ? err : '';
+  const verb = action === 'share' ? 'share credits' : 'revoke that share';
+  if (/insufficient balance/i.test(raw)) {
+    return `Couldn't ${verb}: the payment service says this wallet doesn't have enough credits for it. Your balance may have changed; it has been refreshed.`;
+  }
+  if (/user (rejected|denied|cancel)|cancelled|canceled|rejected the request/i.test(raw)) {
+    return `Nothing was ${action === 'share' ? 'shared' : 'revoked'}: the signature request was cancelled.`;
+  }
+  const reason = raw
+    .replace(/^Failed to upload file after \d+ attempts?\s*/i, '')
+    .replace(/^Failed request \(Status (\d+)\):\s*/i, '')
+    .trim();
+  return reason ? `Couldn't ${verb}: ${reason}` : `Couldn't ${verb}. Try again.`;
 }

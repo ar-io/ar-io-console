@@ -16,8 +16,9 @@ import {
   toApprovedWinc,
   toShareRows,
   isSameWallet,
-  creditsToWinc,
+  parseCreditsToWinc,
   formatCreditsFloor,
+  shareFailureMessage,
 } from '../../utils/shareableCredits';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
@@ -31,6 +32,7 @@ const plainCredits = (credits: number) => String(Number(credits.toFixed(4)));
 const creditsWord = (credits: number) => (credits === 1 ? 'credit' : 'credits');
 
 const MIN_SHARE = 0.01;
+const MIN_SHARE_WINC = BigInt(wincPerCredit) / 100n;
 
 type Expiry = 'never' | '1h' | '1d' | '1w' | 'custom';
 const EXPIRY_OPTIONS: { id: Expiry; label: string; short: string; seconds: number }[] = [
@@ -54,7 +56,6 @@ interface SharedResult {
   credits: number;
   recipient: string;
   expirySeconds: number;
-  remaining: string;
 }
 
 export default function ShareCreditsPanel() {
@@ -148,13 +149,15 @@ export default function ShareCreditsPanel() {
   const receivedText = formatCreditsFloor(receivedWinc);
 
   // Amount
-  const amount = /^\d*\.?\d*$/.test(amountInput.trim()) ? Number(amountInput.trim()) : NaN;
-  // Compared in winc: as floats, the Max figure can read a hair over the balance.
-  const amountWinc = creditsToWinc(amount);
+  // Decided in winc, parsed exactly from the text: as floats, the Max figure
+  // can read a hair over the balance. `amount` is for display only.
+  const amountWinc = parseCreditsToWinc(amountInput);
+  const amount = amountWinc !== undefined ? Number(amountInput.trim()) : NaN;
+  const amountEntered = amountInput.trim() !== '';
   const amountOver = !!shareBalance && amountWinc !== undefined && amountWinc > shareableWinc;
-  const amountValid = amountWinc !== undefined && amount >= MIN_SHARE && !amountOver && !!shareBalance;
-  const amountUnder = amountInput.trim() !== '' && Number.isFinite(amount) && amount < MIN_SHARE;
-  const amountMalformed = amountInput.trim() !== '' && !Number.isFinite(amount);
+  const amountUnder = amountEntered && amountWinc !== undefined && amountWinc < MIN_SHARE_WINC;
+  const amountMalformed = amountEntered && amountWinc === undefined;
+  const amountValid = !!shareBalance && amountWinc !== undefined && !amountUnder && !amountOver;
   const wincPerGiB = wincForOneGiB ? Number(wincForOneGiB) : NaN;
   const gib = amountValid && Number.isFinite(wincPerGiB) && wincPerGiB > 0 ? (amount * wincPerCredit) / wincPerGiB : null;
 
@@ -196,11 +199,11 @@ export default function ShareCreditsPanel() {
 
     try {
       const turbo = await createTurboClient();
-      const approvedWincAmount = toApprovedWinc(amount, shareableWinc).toString();
+      const approvedWinc = toApprovedWinc(amountInput, shareableWinc);
 
       await turbo.shareCredits({
         approvedAddress: recipient,
-        approvedWincAmount,
+        approvedWincAmount: approvedWinc.toString(),
         expiresBySeconds: expirySeconds > 0 ? expirySeconds : undefined,
       });
 
@@ -209,7 +212,6 @@ export default function ShareCreditsPanel() {
         credits: amount,
         recipient,
         expirySeconds,
-        remaining: formatCreditsFloor(shareableWinc - toApprovedWinc(amount, shareableWinc)),
       });
       resetForm();
 
@@ -218,15 +220,23 @@ export default function ShareCreditsPanel() {
       refetchBalance();
     } catch (err) {
       console.error('Share credits error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to share credits');
+      setError(shareFailureMessage(err, 'share'));
+      // A refusal usually means the balance moved; show the current one.
+      refetchBalance();
     } finally {
       setSending(false);
     }
   };
 
   const handleRevoke = async (revokedAddress: string) => {
-    const turbo = await createTurboClient();
-    await turbo.revokeCredits({ revokedAddress });
+    try {
+      const turbo = await createTurboClient();
+      await turbo.revokeCredits({ revokedAddress });
+    } catch (err) {
+      console.error('Revoke credits error:', err);
+      refetchBalance();
+      throw new Error(shareFailureMessage(err, 'revoke'));
+    }
     window.dispatchEvent(new CustomEvent('refresh-balance'));
     await refetchBalance();
   };
@@ -249,7 +259,7 @@ export default function ShareCreditsPanel() {
   const inputShell = (invalid: boolean) =>
     `field flex h-12 items-center gap-2 rounded-2xl border bg-background transition-colors ${invalid ? 'border-error' : 'border-border/20 focus-within:border-foreground'}`;
 
-  const form = (
+  const balanceHeader = (
     <>
       {/* What can be shared, ahead of everything else */}
       <div className="flex flex-col gap-2 border-b border-border/20 pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -279,6 +289,11 @@ export default function ShareCreditsPanel() {
         )}
       </div>
 
+    </>
+  );
+
+  const form = (
+    <>
       {/* Amount */}
       <div className="flex flex-col gap-2">
         <label htmlFor="share-amount" className="text-sm font-semibold">Amount</label>
@@ -455,8 +470,7 @@ export default function ShareCreditsPanel() {
           <p className="mt-1 text-sm leading-relaxed text-foreground/80">
             <span className="font-mono">{formatWalletAddress(shared.recipient, 4)}</span> can spend{' '}
             {shared.credits === 1 ? 'it' : 'them'} now.{' '}
-            {shared.expirySeconds > 0 ? `Ends ${formatEnd(shared.expirySeconds)}.` : 'Never expires.'} You can share{' '}
-            {shared.remaining} more.
+            {shared.expirySeconds > 0 ? `Ends ${formatEnd(shared.expirySeconds)}.` : 'Never expires.'}
           </p>
         </div>
       </div>
@@ -493,6 +507,7 @@ export default function ShareCreditsPanel() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <section aria-label="New share" className="flex flex-col gap-5 rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
+          {balanceHeader}
           {success || form}
         </section>
 
@@ -500,7 +515,10 @@ export default function ShareCreditsPanel() {
             scrolls inside it, so the columns end together however many shares
             there are. */}
         <div className="relative lg:min-h-[28rem]">
+          {/* Keyed on load so the list picks its opening tab from real data:
+              a wallet with only received shares should open on that tab. */}
           <ShareCreditsList
+            key={shareBalance ? 'loaded' : 'loading'}
             given={shareBalance?.given ?? []}
             received={shareBalance?.received ?? []}
             sharedOutWinc={shareBalance?.sharedOutWinc ?? 0n}
