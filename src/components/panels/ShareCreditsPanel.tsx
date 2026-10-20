@@ -92,11 +92,21 @@ export default function ShareCreditsPanel() {
     service would approve. The 'credit-balance' prefix keeps this query in the
     set that `refresh-balance` invalidates.
   */
-  const { data: shareBalance, isLoading: balanceLoading } = useQuery({
+  const {
+    data: shareBalance,
+    isError: balanceError,
+    refetch: refetchBalance,
+  } = useQuery({
     queryKey: ['credit-balance', 'shareable', address, walletType, configMode],
     enabled: !!address && !!walletType && paymentAvailable,
     staleTime: 30_000,
-    queryFn: async () => toShareableBalance(await getTurboBalance(address!, walletType!)),
+    queryFn: async () => {
+      const response = await getTurboBalance(address!, walletType!);
+      // getTurboBalance parses any response body, so a 5xx error body would
+      // otherwise read as a zero balance. A real balance always has `winc`.
+      if (response?.winc === undefined) throw new Error('Balance unavailable');
+      return toShareableBalance(response);
+    },
   });
   const shareableWinc = shareBalance?.shareableWinc ?? 0n;
   const shareableCredits = wincToCredits(shareableWinc);
@@ -221,16 +231,29 @@ export default function ShareCreditsPanel() {
         <div className="bg-card rounded-2xl p-4 mb-6">
           <div className="flex justify-between items-center">
             <span className="text-foreground/80">Available to Share:</span>
+            {balanceError ? (
+              <div className="text-right text-sm text-error">
+                Couldn&apos;t load your balance.{' '}
+                <button
+                  type="button"
+                  onClick={() => refetchBalance()}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
             <div className="text-right">
               <span className="font-bold text-foreground">
-                {balanceLoading ? '…' : floorTo4(shareableCredits)} Credits
+                {shareBalance ? floorTo4(shareableCredits) : '…'} Credits
               </span>
-              {!balanceLoading && wincForOneGiB && (
+              {shareBalance && wincForOneGiB && (
                 <div className="text-xs text-foreground/80">
                   ~{((shareableCredits * wincPerCredit) / Number(wincForOneGiB)).toFixed(2)} GiB capacity
                 </div>
               )}
             </div>
+            )}
           </div>
           {receivedCredits > 0 && (
             <div className="flex justify-between text-sm mt-2">
@@ -272,7 +295,7 @@ export default function ShareCreditsPanel() {
                 if (creditAmount < 0.01) {
                   finalAmount = 0.01;
                 } else if (creditAmount > shareableCredits) {
-                  finalAmount = shareableCredits;
+                  finalAmount = Number(floorTo4(shareableCredits));
                 }
                 setCreditAmount(finalAmount);
                 setCreditAmountInput(String(finalAmount));
@@ -291,7 +314,7 @@ export default function ShareCreditsPanel() {
                 Minimum share amount is 0.01 credits
               </div>
             )}
-            {!balanceLoading && creditAmount > shareableCredits && (
+            {shareBalance && creditAmount > shareableCredits && (
               <div className="mt-2 text-xs text-error">
                 Exceeds the {floorTo4(shareableCredits)} credits you can share
                 {receivedCredits > 0 && ' (credits shared with you can’t be re-shared)'}
@@ -435,7 +458,7 @@ export default function ShareCreditsPanel() {
 
         <button
           onClick={handleShare}
-          disabled={sending || !address || balanceLoading || creditAmount < 0.01 || creditAmount > shareableCredits || !approvedAddress}
+          disabled={sending || !address || !shareBalance || creditAmount < 0.01 || creditAmount > shareableCredits || !approvedAddress}
           className={`${buttonClass('primary', 'xl')} w-full`}
         >
           {sending ? (
@@ -513,7 +536,7 @@ export default function ShareCreditsPanel() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Documentation */}
           <a
-            href="https://docs.ardrive.io/docs/turbo/credit-sharing.html"
+            href="https://docs.ar.io/sdks/turbo-sdk/turbo-credit-sharing/"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors group"
@@ -533,7 +556,7 @@ export default function ShareCreditsPanel() {
 
           {/* Use Cases */}
           <a
-            href="https://docs.ardrive.io/docs/turbo/credit-sharing.html#use-cases"
+            href="https://docs.ar.io/sdks/turbo-sdk/turbo-credit-sharing/"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors group"

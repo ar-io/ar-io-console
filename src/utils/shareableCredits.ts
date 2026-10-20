@@ -49,6 +49,11 @@ export function toShareableBalance(balance: {
   };
 }
 
+/**
+ * For display and form input only. `Number` loses precision above
+ * Number.MAX_SAFE_INTEGER winc (about 9,007 credits), so never decide an
+ * approval from this; `toApprovedWinc` compares as bigint.
+ */
 export function wincToCredits(winc: bigint): number {
   return Number(winc) / wincPerCredit;
 }
