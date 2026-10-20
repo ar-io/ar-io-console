@@ -137,27 +137,41 @@ export function usePaymentHistory() {
   };
 
   /** First page. Triggers the wallet signature. */
+  // Every action waits for any fetch in flight: TanStack cancels a running
+  // fetch when another starts (`cancelRefetch`), which would throw away a
+  // signature the user has already given.
   const load = useCallback(async () => {
-    if (!address) return;
+    if (!address || query.isFetching) return;
     await query.refetch();
   }, [address, query]);
 
   /**
    * Fetch the first page again, dropping later pages first: refetching an
    * infinite query refetches every page it holds, a signature each.
+   *
+   * Trimming writes the cache, which would stamp it "just now" and clear the
+   * stale mark before anything is fetched; keep the old timestamp, and if the
+   * refresh fails (a declined signature, say) mark it stale again, so old rows
+   * never read as current.
    */
   const refresh = useCallback(async () => {
-    if (!address) return;
+    if (!address || query.isFetching) return;
+    const key = [PAYMENT_HISTORY_KEY, address, walletType, configMode];
+    const before = queryClient.getQueryState(key);
     queryClient.setQueryData<InfiniteData<HistoryPage, string | undefined>>(
-      [PAYMENT_HISTORY_KEY, address, walletType, configMode],
+      key,
       (d) => (d ? { pages: d.pages.slice(0, 1), pageParams: d.pageParams.slice(0, 1) } : d),
+      { updatedAt: before?.dataUpdatedAt },
     );
-    await query.refetch();
+    const result = await query.refetch();
+    if (result.isError && before?.isInvalidated) {
+      await queryClient.invalidateQueries({ queryKey: key, exact: true, refetchType: 'none' });
+    }
   }, [address, walletType, configMode, query, queryClient]);
 
   /** Next page (keeps existing rows on failure). */
   const loadMore = useCallback(async () => {
-    if (!query.hasNextPage || query.isFetchingNextPage) return;
+    if (!query.hasNextPage || query.isFetching) return;
     await query.fetchNextPage();
   }, [query]);
 

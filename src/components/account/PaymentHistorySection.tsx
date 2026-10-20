@@ -234,11 +234,14 @@ function HistoryFreshness({
   loadedAt,
   stale,
   refreshing,
+  busy,
   onRefresh,
 }: {
   loadedAt: number;
   stale: boolean;
   refreshing: boolean;
+  /** Another fetch (Load more) is running; Refresh would cancel it. */
+  busy: boolean;
   onRefresh: () => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -252,7 +255,7 @@ function HistoryFreshness({
     <button
       type="button"
       onClick={onRefresh}
-      disabled={refreshing}
+      disabled={refreshing || busy}
       title="Asks your wallet to sign"
       className="inline-flex items-center gap-1 font-medium text-primary hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-60"
     >
@@ -320,6 +323,7 @@ export default function PaymentHistorySection() {
           loadedAt={loadedAt}
           stale={stale}
           refreshing={status === 'refreshing'}
+          busy={status === 'loadingMore'}
           onRefresh={refresh}
         />
       )}
@@ -412,7 +416,7 @@ export default function PaymentHistorySection() {
             <div className="flex justify-center pt-4">
               <button
                 onClick={loadMore}
-                disabled={status === 'loadingMore'}
+                disabled={status !== 'loaded'}
                 className={buttonClass('secondary', 'sm')}
               >
                 {status === 'loadingMore' ? (
