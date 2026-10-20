@@ -2,7 +2,7 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [Unreleased]
+## [4.11.3] - 2026-10-20
 
 ### Changed
 - **The Account page leads with your balance.** When other wallets have
@@ -12,7 +12,6 @@ All notable changes to the ar.io Console are documented in this file.
   tabs, the same figures to four places, and the same Revoke, which now asks
   first and names the amount it returns. A wallet with no shares sees one line
   instead of an empty panel. Approval IDs are no longer shown.
-
 - **Top-up history stays loaded for the session.** Leaving the Account page
   and coming back shows it at once, without signing again. It says when it
   was loaded and offers Refresh, and after a top-up, share or revoke it says
