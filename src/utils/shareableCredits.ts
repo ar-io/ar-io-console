@@ -58,6 +58,25 @@ export function wincToCredits(winc: bigint): number {
   return Number(winc) / wincPerCredit;
 }
 
+/** Credits as typed, in winc. Undefined for anything that isn't a finite, non-negative number. */
+export function creditsToWinc(credits: number): bigint | undefined {
+  if (!Number.isFinite(credits) || credits < 0) return undefined;
+  return BigInt(Math.round(credits * wincPerCredit));
+}
+
+const WINC_PER_TEN_THOUSANDTH = BigInt(wincPerCredit) / 10_000n;
+
+/**
+ * Winc as credits to four places, rounded DOWN, worked in bigint. Rounding
+ * down means a figure the user copies into the form (or that Max fills in)
+ * never exceeds the balance; doing it in floating point turned 37.4622 into
+ * 37.4621.
+ */
+export function formatCreditsFloor(winc: bigint): string {
+  const units = (winc > 0n ? winc : 0n) / WINC_PER_TEN_THOUSANDTH;
+  return `${units / 10_000n}.${(units % 10_000n).toString().padStart(4, '0')}`;
+}
+
 /**
  * The winc to approve for a share of `credits`, never above `shareableWinc`.
  *
@@ -66,7 +85,84 @@ export function wincToCredits(winc: bigint): number {
  * service refuses. Clamping here makes "share everything" always succeed.
  */
 export function toApprovedWinc(credits: number, shareableWinc: bigint): bigint {
-  if (!Number.isFinite(credits) || credits <= 0) return 0n;
-  const requested = BigInt(Math.round(credits * wincPerCredit));
+  const requested = creditsToWinc(credits) ?? 0n;
   return requested > shareableWinc ? shareableWinc : requested;
+}
+
+/** One approval as `/v1/account/balance` lists it (turbo-sdk `CreditShareApproval`). */
+export interface ApprovalLike {
+  approvedAddress?: string;
+  payingAddress?: string;
+  approvedWincAmount?: unknown;
+  usedWincAmount?: unknown;
+  creationDate?: string;
+  expirationDate?: string;
+}
+
+/** Every approval between this wallet and one other wallet, in one direction. */
+export interface ShareRow {
+  /** The other wallet: the recipient of a given share, the granter of a received one. */
+  address: string;
+  approvedWinc: bigint;
+  usedWinc: bigint;
+  remainingWinc: bigint;
+  /** The soonest expiry among these approvals; undefined when none expire. */
+  soonestExpiry?: string;
+  /** How many approvals the row stands for. */
+  count: number;
+}
+
+const time = (iso?: string) => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? t : undefined;
+};
+
+/**
+ * Groups approvals by the other wallet, newest first, dropping any that have
+ * expired.
+ *
+ * Grouping is not cosmetic for given shares: `revokeCredits` takes an address
+ * and revokes every approval to it, so a Revoke button on a single approval
+ * would revoke more than its row shows.
+ */
+export function toShareRows(
+  approvals: ApprovalLike[] | null | undefined,
+  direction: 'given' | 'received',
+  now: number = Date.now(),
+): ShareRow[] {
+  const rows = new Map<string, ShareRow>();
+  const newest = new Map<string, number>();
+  for (const a of approvals ?? []) {
+    const address = direction === 'given' ? a.approvedAddress : a.payingAddress;
+    if (!address) continue;
+    const expires = time(a.expirationDate);
+    if (expires !== undefined && expires <= now) continue;
+
+    const approved = toWinc(a.approvedWincAmount);
+    const used = toWinc(a.usedWincAmount);
+    const row = rows.get(address) ?? {
+      address,
+      approvedWinc: 0n,
+      usedWinc: 0n,
+      remainingWinc: 0n,
+      count: 0,
+    };
+    row.approvedWinc += approved;
+    row.usedWinc += used;
+    row.remainingWinc += approved > used ? approved - used : 0n;
+    row.count += 1;
+    newest.set(address, Math.max(newest.get(address) ?? 0, time(a.creationDate) ?? 0));
+    if (expires !== undefined && (row.soonestExpiry === undefined || expires < time(row.soonestExpiry)!)) {
+      row.soonestExpiry = a.expirationDate;
+    }
+    rows.set(address, row);
+  }
+  return [...rows.values()].sort((x, y) => newest.get(y.address)! - newest.get(x.address)!);
+}
+
+/** Whether `candidate` is `own`, ignoring the case of a 0x address. */
+export function isSameWallet(candidate: string, own: string | null | undefined): boolean {
+  if (!own) return false;
+  const a = candidate.trim();
+  return /^0x/i.test(a) ? a.toLowerCase() === own.toLowerCase() : a === own;
 }
