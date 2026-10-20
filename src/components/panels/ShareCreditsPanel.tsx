@@ -1,20 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import {
-  TurboFactory,
-  TurboAuthenticatedClient,
-  ArconnectSigner
-} from '@ardrive/turbo-sdk/web';
 import { useStore } from '../../store/useStore';
 import { wincPerCredit } from '../../constants';
-import { useTurboConfig } from '../../hooks/useTurboConfig';
 import { Share2, Check, Wallet, Loader2 } from 'lucide-react';
 import DocsLink from '@/components/DocsLink';
-import { promptSignIn, getTurboBalance, formatWalletAddress } from '../../utils';
+import { promptSignIn, formatWalletAddress } from '../../utils';
 import {
-  toShareableBalance,
   toApprovedWinc,
-  toShareRows,
   isSameWallet,
   parseCreditsToWinc,
   formatCreditsFloor,
@@ -22,8 +13,8 @@ import {
 } from '../../utils/shareableCredits';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
-import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useShareBalance } from '../../hooks/useShareBalance';
+import { useWalletTurboClient } from '../../hooks/useWalletTurboClient';
 import { buttonClass } from '@/components/button';
 import ShareCreditsList from './ShareCreditsList';
 
@@ -62,49 +53,10 @@ interface SharedResult {
 }
 
 export default function ShareCreditsPanel() {
-  const { address, walletType, configMode } = useStore();
+  const { address } = useStore();
   const paymentAvailable = useStore((s) => s.isPaymentServiceAvailable());
   const wincForOneGiB = useWincForOneGiB();
-  const turboConfig = useTurboConfig();
-  const { createEthereumTurboClient } = useEthereumTurboClient();
-  const { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction } = useWallet();
-
-  // Create authenticated turbo client based on wallet type
-  const createTurboClient = async (): Promise<TurboAuthenticatedClient> => {
-    if (!address || !walletType) {
-      throw new Error('Wallet not connected');
-    }
-
-    switch (walletType) {
-      case 'arweave':
-        if (!window.arweaveWallet) {
-          throw new Error('Wander wallet extension not found. Please install from https://wander.app');
-        }
-        const signer = new ArconnectSigner(window.arweaveWallet);
-        return TurboFactory.authenticated({
-          ...turboConfig,
-          signer
-        });
-
-      case 'ethereum':
-        // Use the shared Ethereum Turbo client with custom connect message
-        return createEthereumTurboClient('ethereum');
-
-      case 'solana':
-        if (!solanaPublicKey || !solanaSignMessage) {
-          throw new Error('Solana wallet not connected. Please reconnect your Solana wallet.');
-        }
-
-        return TurboFactory.authenticated({
-          token: "solana",
-          walletAdapter: { publicKey: solanaPublicKey, signMessage: solanaSignMessage, signTransaction: solanaSignTransaction! },
-          ...turboConfig,
-        });
-
-      default:
-        throw new Error(`Unsupported wallet type: ${walletType}`);
-    }
-  };
+  const createTurboClient = useWalletTurboClient();
 
   const [amountInput, setAmountInput] = useState('');
   const [recipientInput, setRecipientInput] = useState('');
@@ -116,34 +68,12 @@ export default function ShareCreditsPanel() {
   const [error, setError] = useState('');
   const [shared, setShared] = useState<SharedResult | null>(null);
 
-  /*
-    Fetched here rather than read from the store's `creditBalance`, which is
-    `effectiveBalance`: it includes credits other wallets shared with this one,
-    which can be spent but not re-shared. Reading it offered more than the
-    service would approve. The 'credit-balance' prefix keeps this query in the
-    set that `refresh-balance` invalidates. The same response lists the
-    approvals in both directions.
-  */
+  // What can be shared, not the store's spendable `creditBalance`: see useShareBalance.
   const {
     data: shareBalance,
     isError: balanceError,
     refetch: refetchBalance,
-  } = useQuery({
-    queryKey: ['credit-balance', 'shareable', address, walletType, configMode],
-    enabled: !!address && !!walletType && paymentAvailable,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const response = await getTurboBalance(address!, walletType!);
-      // getTurboBalance parses any response body, so a 5xx error body would
-      // otherwise read as a zero balance. A real balance always has `winc`.
-      if (response?.winc === undefined) throw new Error('Balance unavailable');
-      return {
-        ...toShareableBalance(response),
-        given: toShareRows(response.givenApprovals, 'given'),
-        received: toShareRows(response.receivedApprovals, 'received'),
-      };
-    },
-  });
+  } = useShareBalance();
   const shareableWinc = shareBalance?.shareableWinc ?? 0n;
   const receivedWinc = shareBalance?.receivedWinc ?? 0n;
   // Figures are rounded down (formatCreditsFloor) so one the user copies back

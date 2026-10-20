@@ -81,17 +81,18 @@ function numberToWinc(credits: number): bigint | undefined {
   return BigInt(Math.round(credits * wincPerCredit));
 }
 
-const WINC_PER_TEN_THOUSANDTH = BigInt(wincPerCredit) / 10_000n;
-
 /**
- * Winc as credits to four places, rounded DOWN, worked in bigint. Rounding
- * down means a figure the user copies into the form (or that Max fills in)
- * never exceeds the balance; doing it in floating point turned 37.4622 into
- * 37.4621.
+ * Winc as credits to `places` decimals (four by default, at most twelve),
+ * rounded DOWN, worked in bigint. Rounding down means a figure the user copies
+ * into the form (or that Max fills in) never exceeds the balance; doing it in
+ * floating point turned 37.4622 into 37.4621, and 0.29 into 0.28.
  */
-export function formatCreditsFloor(winc: bigint): string {
-  const units = (winc > 0n ? winc : 0n) / WINC_PER_TEN_THOUSANDTH;
-  return `${units / 10_000n}.${(units % 10_000n).toString().padStart(4, '0')}`;
+export function formatCreditsFloor(winc: bigint, places = 4): string {
+  const p = Math.max(0, Math.min(WINC_DECIMALS, Math.floor(places)));
+  const scale = 10n ** BigInt(p);
+  const units = (winc > 0n ? winc : 0n) / (BigInt(wincPerCredit) / scale);
+  const whole = units / scale;
+  return p === 0 ? `${whole}` : `${whole}.${(units % scale).toString().padStart(p, '0')}`;
 }
 
 /**
