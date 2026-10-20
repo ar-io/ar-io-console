@@ -10,10 +10,11 @@ All notable changes to the ar.io Console are documented in this file.
   it shows them separately as spend only. The amount field has a Max button,
   the recipient is checked as you type (and your own wallet is refused),
   expiry is one control, and a sentence above the button says what it will
-  do. Your shares and the ones made to you sit beside the form as two tabs,
-  with how much of each has been spent, and each of your shares can be
-  revoked from its row. Shares to the same wallet are grouped, because
-  revoking always revokes everything shared with that wallet.
+  do. Your shares and the ones made to you are two tabs next to the form
+  (below it on a phone), with how much of each has been spent, and each of
+  your shares can be revoked from its row. Shares to the same wallet are
+  grouped, because revoking always revokes everything shared with that
+  wallet.
 - **Docs links have one style and sit beside what they explain**, named for
   their topic ("How ArNS works") instead of "Learn more". The bottom-of-page
   resource cards on Try It and Share Credits are gone.
