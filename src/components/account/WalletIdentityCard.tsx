@@ -38,8 +38,8 @@ export default function WalletIdentityCard({
     <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
-          <Wallet className="h-5 w-5 text-foreground" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
+          <Wallet className="h-5 w-5 text-primary" aria-hidden="true" />
         </div>
         <div>
           <h3 className="text-lg font-extrabold text-foreground">Primary Wallet</h3>
@@ -126,7 +126,7 @@ export default function WalletIdentityCard({
               </span>
               <button
                 onClick={onLink}
-                className={actionButtonClass('primary')}
+                className={`${actionButtonClass()} min-h-[44px] w-full sm:min-h-0 sm:w-auto`}
               >
                 <Link2 className="h-3.5 w-3.5" />
                 Link wallet

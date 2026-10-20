@@ -2,6 +2,8 @@ import { Coins, Share2, Plus, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditBalance } from '../../hooks/useCreditBalance';
+import { useShareBalance } from '../../hooks/useShareBalance';
+import { wincToCredits } from '../../utils/shareableCredits';
 import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import { wincPerCredit } from '../../constants';
 import { buttonClass } from '@/components/button';
@@ -12,6 +14,12 @@ export default function BalanceCard() {
   const { freeUploadLimitBytes } = useFreeUploadLimit();
   const { bytesRemaining } = useFreeStatus();
   const { credits, isLoading: loading } = useCreditBalance();
+  // `credits` is what this wallet can spend, which includes credits other
+  // wallets shared with it. Those can't be shared on, so when there are any,
+  // say how the total splits: the Share button below acts on the first part.
+  const { data: shareBalance } = useShareBalance();
+  const receivedCredits = shareBalance ? wincToCredits(shareBalance.receivedWinc) : 0;
+  const ownCredits = shareBalance ? wincToCredits(shareBalance.shareableWinc) : 0;
 
   // Derive storage from credits (1 credit = 1e12 winc)
   const gibStorage = wincForOneGiB ? (credits * wincPerCredit) / Number(wincForOneGiB) : 0;
@@ -32,6 +40,9 @@ export default function BalanceCard() {
     }
   };
 
+  // Two places, rounded down, so the split never shows more than is there.
+  const splitFigure = (c: number) => (Math.floor(c * 100) / 100).toFixed(2);
+
   const freeMsg = freeTierSummary(freeUploadLimitBytes, bytesRemaining);
   const freeExhausted = bytesRemaining === 0;
   // Only show the storage estimate once pricing has resolved — otherwise it reads
@@ -42,8 +53,8 @@ export default function BalanceCard() {
     <div className="rounded-2xl border border-border/20 bg-card p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
-          <Coins className="h-5 w-5 text-foreground" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
+          <Coins className="h-5 w-5 text-primary" aria-hidden="true" />
         </div>
         <div>
           <h3 className="text-lg font-extrabold text-foreground">Balance</h3>
@@ -67,6 +78,12 @@ export default function BalanceCard() {
             {formatCredits(credits)}{' '}
             <span className="text-base font-semibold text-foreground/60">Credits</span>
           </div>
+          {receivedCredits > 0 && (
+            <div className="mt-1 text-sm text-foreground/70">
+              {splitFigure(ownCredits)} yours · {splitFigure(receivedCredits)} shared with you{' '}
+              <span className="text-foreground/60">(spend only)</span>
+            </div>
+          )}
           {showStorage && (
             <div className="mt-1 text-sm text-foreground/60">
               ≈ {gibStorage.toFixed(2)} GiB of permanent storage

@@ -231,8 +231,8 @@ export default function PaymentHistorySection() {
     <div className="rounded-2xl border border-border/20 bg-card">
       {/* Header (matches CreditSharingSection) */}
       <div className="flex flex-wrap items-center gap-3 p-4 sm:p-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
-          <Receipt className="h-5 w-5 text-foreground" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
+          <Receipt className="h-5 w-5 text-primary" aria-hidden="true" />
         </div>
         <div>
           <h3 className="text-lg font-extrabold text-foreground">Top-up History</h3>

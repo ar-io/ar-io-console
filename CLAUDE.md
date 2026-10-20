@@ -59,7 +59,7 @@ Before diving in, these are the most common issues:
 
 10. **Free tier has two axes**: `useFreeUploadLimit()` returns `{ freeUploadLimitBytes, freeTier }`. `freeUploadLimitBytes` (== `freeTier.maxItemBytes`) is the per-item size cap used by `isFileFree()`. `freeTier.lifetimeBytes` / `freeTier.ipBytes` are separate lifetime/IP quotas (0 = uncapped) shown in UI messaging — don't conflate them with the per-item limit.
 
-11. **The store's `creditBalance` is spendable, not shareable**: `useCreditBalance` fills it from the payment service's `effectiveBalance`, which includes credits *other wallets shared with this one*. Those can pay for uploads but cannot be shared onward; only `winc` can. Anything that offers to share or hand credits on reads `toShareableBalance()` (`utils/shareableCredits.ts`), as `ShareCreditsPanel` does. Reading `creditBalance` there offers more than the service will approve.
+11. **The store's `creditBalance` is spendable, not shareable**: `useCreditBalance` fills it from the payment service's `effectiveBalance`, which includes credits *other wallets shared with this one*. Those can pay for uploads but cannot be shared onward; only `winc` can. Anything that offers to share or hand credits on reads `useShareBalance()` (`hooks/useShareBalance.ts`, built on `toShareableBalance()`), as Share Credits and the Account page do; both render shares with `ShareCreditsList`, so grouping and Revoke behave the same in both places. Reading `creditBalance` there offers more than the service will approve.
 
 ## Architecture Overview
 

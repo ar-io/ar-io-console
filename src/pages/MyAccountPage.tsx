@@ -54,13 +54,13 @@ export default function MyAccountPage() {
                 }
               }}
             />
-            <div className="fallback-icon hidden w-full h-full bg-foreground/20 rounded-2xl items-center justify-center border border-border/20">
-              <User className="w-6 h-6 text-foreground" />
+            <div className="fallback-icon hidden w-full h-full bg-primary/20 rounded-2xl items-center justify-center">
+              <User className="w-6 h-6 text-primary" aria-hidden="true" />
             </div>
           </div>
         ) : (
-          <div className="w-12 h-12 bg-foreground/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1 border border-border/20">
-            <User className="w-6 h-6 text-foreground" />
+          <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+            <User className="w-6 h-6 text-primary" aria-hidden="true" />
           </div>
         )}
 
@@ -74,7 +74,8 @@ export default function MyAccountPage() {
         </div>
       </div>
 
-      {/* Identity + Balance — cards stretch to equal height (grid default). */}
+      {/* Balance first: it's what this page is opened for. Cards stretch to
+          equal height (grid default); on a phone Balance stacks on top. */}
       <h2 className="sr-only">Account overview</h2>
       {(() => {
         const walletCard = (
@@ -90,8 +91,8 @@ export default function MyAccountPage() {
         );
         return paymentAvailable ? (
           <div className="grid gap-4 md:grid-cols-2 mb-8">
-            {walletCard}
             <BalanceCard />
+            {walletCard}
           </div>
         ) : (
           <div className="mb-8">{walletCard}</div>
@@ -105,8 +106,8 @@ export default function MyAccountPage() {
         </div>
       )}
 
-      {/* Credit sharing — an advanced feature most users don't need, so it lives at
-          the bottom. Hidden in x402-only mode. */}
+      {/* Credit sharing: most wallets never share, so it comes last, and with
+          no shares it is a single line. Hidden in x402-only mode. */}
       {paymentAvailable && (
         <div className="mb-8">
           <CreditSharingSection />
