@@ -458,7 +458,7 @@ export default function ShareCreditsPanel() {
 
         <button
           onClick={handleShare}
-          disabled={sending || !address || !shareBalance || creditAmount < 0.01 || creditAmount > shareableCredits || !approvedAddress}
+          disabled={sending || !address || balanceError || !shareBalance || creditAmount < 0.01 || creditAmount > shareableCredits || !approvedAddress}
           className={`${buttonClass('primary', 'xl')} w-full`}
         >
           {sending ? (
