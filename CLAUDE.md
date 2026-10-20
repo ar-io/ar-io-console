@@ -59,6 +59,8 @@ Before diving in, these are the most common issues:
 
 10. **Free tier has two axes**: `useFreeUploadLimit()` returns `{ freeUploadLimitBytes, freeTier }`. `freeUploadLimitBytes` (== `freeTier.maxItemBytes`) is the per-item size cap used by `isFileFree()`. `freeTier.lifetimeBytes` / `freeTier.ipBytes` are separate lifetime/IP quotas (0 = uncapped) shown in UI messaging — don't conflate them with the per-item limit.
 
+11. **The store's `creditBalance` is spendable, not shareable**: `useCreditBalance` fills it from the payment service's `effectiveBalance`, which includes credits *other wallets shared with this one*. Those can pay for uploads but cannot be shared onward; only `winc` can. Anything that offers to share or hand credits on reads `toShareableBalance()` (`utils/shareableCredits.ts`), as `ShareCreditsPanel` does. Reading `creditBalance` there offers more than the service will approve.
+
 ## Architecture Overview
 
 ### Application Structure
@@ -769,7 +771,7 @@ its own surface or horizontal padding — that's a frame inside a frame and
 double inset. Panels written for a standalone page (the `/topup` fiat and
 crypto steps) carry both and gate them on being embedded.
 
-All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
+All modal chrome lives in `components/modals/BaseModal.tsx` (~28 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
 
 - `showCloseButton` defaults to **true**. A dismiss affordance is opt-out, not opt-in.
 - Modals **nest** (`WalletSelectionModal` renders `BlockingMessageModal` inside its own `BaseModal`), so BaseModal keeps a module-level stack: only the topmost instance answers Escape and traps Tab, and the scroll lock lifts only when the last one closes. Preserve that if you touch it.

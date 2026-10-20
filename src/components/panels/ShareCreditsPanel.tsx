@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   TurboFactory,
   TurboAuthenticatedClient,
@@ -8,12 +9,17 @@ import { useStore } from '../../store/useStore';
 import { wincPerCredit } from '../../constants';
 import { useTurboConfig } from '../../hooks/useTurboConfig';
 import { ExternalLink, Shield, ArrowRight, Share2, Book, Lightbulb, Code, CheckCircle, Wallet } from 'lucide-react';
-import { promptSignIn } from '../../utils';
+import { promptSignIn, getTurboBalance } from '../../utils';
+import { toShareableBalance, toApprovedWinc, wincToCredits } from '../../utils/shareableCredits';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { validateWalletAddress, getWalletTypeLabel } from '../../utils/addressValidation';
 import { useEthereumTurboClient } from '../../hooks/useEthereumTurboClient';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { buttonClass } from '@/components/button';
+
+// Rounded down so a figure the user copies back into the form never exceeds
+// what can actually be shared.
+const floorTo4 = (credits: number) => (Math.floor(credits * 10_000) / 10_000).toFixed(4);
 
 interface Approval {
   approvedAddress: string;
@@ -22,7 +28,8 @@ interface Approval {
 }
 
 export default function ShareCreditsPanel() {
-  const { address, walletType, creditBalance } = useStore();
+  const { address, walletType, configMode } = useStore();
+  const paymentAvailable = useStore((s) => s.isPaymentServiceAvailable());
   const wincForOneGiB = useWincForOneGiB();
   const turboConfig = useTurboConfig();
   const { createEthereumTurboClient } = useEthereumTurboClient();
@@ -78,13 +85,37 @@ export default function ShareCreditsPanel() {
   const [revokeAddress, setRevokeAddress] = useState('');
   const [revoking, setRevoking] = useState(false);
 
-  // Use creditBalance from store instead of fetching separately
-  const balance = useMemo(() => {
-    if (creditBalance > 0) {
-      return { winc: String(creditBalance * wincPerCredit) };
-    }
-    return null;
-  }, [creditBalance]);
+  /*
+    Fetched here rather than read from the store's `creditBalance`, which is
+    `effectiveBalance`: it includes credits other wallets shared with this one,
+    which can be spent but not re-shared. Reading it offered more than the
+    service would approve. The 'credit-balance' prefix keeps this query in the
+    set that `refresh-balance` invalidates.
+  */
+  const {
+    data: shareBalance,
+    isError: balanceError,
+    refetch: refetchBalance,
+  } = useQuery({
+    queryKey: ['credit-balance', 'shareable', address, walletType, configMode],
+    enabled: !!address && !!walletType && paymentAvailable,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const response = await getTurboBalance(address!, walletType!);
+      // getTurboBalance parses any response body, so a 5xx error body would
+      // otherwise read as a zero balance. A real balance always has `winc`.
+      if (response?.winc === undefined) throw new Error('Balance unavailable');
+      return toShareableBalance(response);
+    },
+  });
+  const shareableWinc = shareBalance?.shareableWinc ?? 0n;
+  const shareableCredits = wincToCredits(shareableWinc);
+  const receivedCredits = wincToCredits(shareBalance?.receivedWinc ?? 0n);
+  const sharedOutCredits = wincToCredits(shareBalance?.sharedOutWinc ?? 0n);
+
+  // The amount of the share that just succeeded; the form resets to 0 before
+  // the success message renders, so it can't read `creditAmount`.
+  const [sharedAmount, setSharedAmount] = useState(0);
 
   const handleShare = async () => {
     if (!address || !approvedAddress || creditAmount < 0.01) {
@@ -97,7 +128,7 @@ export default function ShareCreditsPanel() {
     
     try {
       const turbo = await createTurboClient();
-      const approvedWincAmount = (creditAmount * wincPerCredit).toFixed();
+      const approvedWincAmount = toApprovedWinc(creditAmount, shareableWinc).toString();
       
       await turbo.shareCredits({
         approvedAddress,
@@ -105,6 +136,7 @@ export default function ShareCreditsPanel() {
         expiresBySeconds: expiresBySeconds > 0 ? expiresBySeconds : undefined,
       });
       
+      setSharedAmount(creditAmount);
       setSuccess(true);
 
       // Refresh balance in header
@@ -174,9 +206,6 @@ export default function ShareCreditsPanel() {
     );
   }
 
-  const spendPower = creditBalance > 0 ? creditBalance.toFixed(4) : '0';
-  // For now, we don't have shared credits info without authenticated client
-  const sharedCredits = '0';
   const givenApprovals: Approval[] = [];
 
   return (
@@ -198,23 +227,44 @@ export default function ShareCreditsPanel() {
       <div className="bg-card rounded-2xl border border-border/20 p-4 sm:p-6 mb-4 sm:mb-6">
       
       {/* Current Balance */}
-      {balance && (
+      {paymentAvailable && (
         <div className="bg-card rounded-2xl p-4 mb-6">
           <div className="flex justify-between items-center">
             <span className="text-foreground/80">Available to Share:</span>
+            {balanceError ? (
+              <div className="text-right text-sm text-error">
+                Couldn&apos;t load your balance.{' '}
+                <button
+                  type="button"
+                  onClick={() => refetchBalance()}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
             <div className="text-right">
-              <span className="font-bold text-foreground">{spendPower} Credits</span>
-              {wincForOneGiB && (
+              <span className="font-bold text-foreground">
+                {shareBalance ? floorTo4(shareableCredits) : '…'} Credits
+              </span>
+              {shareBalance && wincForOneGiB && (
                 <div className="text-xs text-foreground/80">
-                  ~{((creditBalance * wincPerCredit) / Number(wincForOneGiB)).toFixed(2)} GiB capacity
+                  ~{((shareableCredits * wincPerCredit) / Number(wincForOneGiB)).toFixed(2)} GiB capacity
                 </div>
               )}
             </div>
+            )}
           </div>
-          {+sharedCredits > 0 && (
-            <div className="flex justify-between text-sm">
+          {receivedCredits > 0 && (
+            <div className="flex justify-between text-sm mt-2">
+              <span className="text-foreground/80">Shared with you (spendable, not shareable):</span>
+              <span>{receivedCredits.toFixed(4)} Credits</span>
+            </div>
+          )}
+          {sharedOutCredits > 0 && (
+            <div className="flex justify-between text-sm mt-2">
               <span className="text-foreground/80">Already Shared:</span>
-              <span>{sharedCredits} Credits</span>
+              <span>{sharedOutCredits.toFixed(4)} Credits</span>
             </div>
           )}
         </div>
@@ -244,8 +294,8 @@ export default function ShareCreditsPanel() {
                 let finalAmount = creditAmount;
                 if (creditAmount < 0.01) {
                   finalAmount = 0.01;
-                } else if (creditAmount > creditBalance) {
-                  finalAmount = creditBalance;
+                } else if (creditAmount > shareableCredits) {
+                  finalAmount = Number(floorTo4(shareableCredits));
                 }
                 setCreditAmount(finalAmount);
                 setCreditAmountInput(String(finalAmount));
@@ -264,9 +314,10 @@ export default function ShareCreditsPanel() {
                 Minimum share amount is 0.01 credits
               </div>
             )}
-            {creditAmount > creditBalance && (
+            {shareBalance && creditAmount > shareableCredits && (
               <div className="mt-2 text-xs text-error">
-                Exceeds available balance ({creditBalance.toFixed(2)} credits)
+                Exceeds the {floorTo4(shareableCredits)} credits you can share
+                {receivedCredits > 0 && ' (credits shared with you can’t be re-shared)'}
               </div>
             )}
           </div>
@@ -400,14 +451,14 @@ export default function ShareCreditsPanel() {
               <span className="font-medium">Credits shared successfully!</span>
             </div>
             <p className="text-xs text-foreground/80">
-              {creditAmount} credits are now available for the recipient to use. Your balance has been updated.
+              {sharedAmount} credits are now available for the recipient to use. Your balance has been updated.
             </p>
           </div>
         )}
 
         <button
           onClick={handleShare}
-          disabled={sending || !address || creditAmount < 0.01 || creditAmount > creditBalance || !approvedAddress}
+          disabled={sending || !address || balanceError || !shareBalance || creditAmount < 0.01 || creditAmount > shareableCredits || !approvedAddress}
           className={`${buttonClass('primary', 'xl')} w-full`}
         >
           {sending ? (
@@ -485,7 +536,7 @@ export default function ShareCreditsPanel() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Documentation */}
           <a
-            href="https://docs.ardrive.io/docs/turbo/credit-sharing.html"
+            href="https://docs.ar.io/sdks/turbo-sdk/turbo-credit-sharing/"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors group"
@@ -505,7 +556,7 @@ export default function ShareCreditsPanel() {
 
           {/* Use Cases */}
           <a
-            href="https://docs.ardrive.io/docs/turbo/credit-sharing.html#use-cases"
+            href="https://docs.ar.io/sdks/turbo-sdk/turbo-credit-sharing/"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors group"
