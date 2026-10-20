@@ -13,9 +13,7 @@ import {
   FileVideo,
   FileAudio,
   File,
-  BookOpen,
   Code,
-  ArrowRight,
   RefreshCw,
   MoreVertical,
   Copy,
@@ -32,6 +30,7 @@ import { getArweaveUrl, resolveEthereumAddress, getTurboBalance } from '../../ut
 import CopyButton from '../CopyButton';
 import ReceiptModal from '../modals/ReceiptModal';
 import { buttonClass } from '@/components/button';
+import DocsLink from '@/components/DocsLink';
 
 // Get appropriate icon for file type (returns component class)
 function getFileIconClass(type: string) {
@@ -343,6 +342,9 @@ export default function TryItNowPanel() {
           <p className="text-sm text-foreground/80">
             Upload a file for free. It will be stored permanently and accessible to anyone with the link.
           </p>
+          <DocsLink href="https://docs.ar.io/learn/what-is-ario/" className="mt-1.5 text-xs">
+            What is ar.io?
+          </DocsLink>
         </div>
       </div>
 
@@ -727,45 +729,6 @@ export default function TryItNowPanel() {
           </div>
         </div>
       )}
-
-      {/* Learn More CTAs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-        <a
-          href="https://docs.ar.io/learn/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex items-center gap-4 p-4 bg-card rounded-2xl border border-border/20 hover:border-primary/30 transition-colors"
-        >
-          <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <BookOpen className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground group-hover:text-foreground">
-              What is the ar.io Network?
-            </p>
-            <p className="text-xs text-foreground/80">Learn about the permanent cloud - decentralized storage and hosting that lasts forever</p>
-          </div>
-          <ArrowRight className="w-4 h-4 text-foreground/80 group-hover:text-foreground group-hover:translate-x-1 transition-all" />
-        </a>
-
-        <a
-          href="https://docs.ar.io/build/turbo-sdk/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex items-center gap-4 p-4 bg-card rounded-2xl border border-border/20 hover:border-primary/30 transition-colors"
-        >
-          <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <Code className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground group-hover:text-foreground">
-              Build with Turbo SDK
-            </p>
-            <p className="text-xs text-foreground/80">Add permanent uploads to your app, or deploy and host it on the permaweb</p>
-          </div>
-          <ArrowRight className="w-4 h-4 text-foreground/80 group-hover:text-foreground group-hover:translate-x-1 transition-all" />
-        </a>
-      </div>
 
       {/* Receipt Modal */}
       {showReceiptModal && (

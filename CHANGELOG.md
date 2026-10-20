@@ -2,6 +2,34 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.11.2] - 2026-10-20
+
+### Changed
+- **Share Credits is rebuilt around what you can share.** The page leads with
+  the credits you can share. When other wallets have shared credits with you,
+  it shows them separately as spend only. The amount field has a Max button,
+  the recipient is checked as you type (and your own wallet is refused),
+  expiry is one control, and a sentence above the button says what it will
+  do. Your shares and the ones made to you are two tabs next to the form
+  (below it on a phone), with how much of each has been spent, and each of
+  your shares can be revoked from its row. Shares to the same wallet are
+  grouped, because revoking always revokes everything shared with that
+  wallet.
+- **Docs links have one style and sit beside what they explain**, named for
+  their topic ("How ArNS works") instead of "Learn more". The bottom-of-page
+  resource cards on Try It and Share Credits are gone.
+
+### Fixed
+- **Share Credits offered more than a wallet can share.** It counted credits
+  other wallets had shared with you, which can be spent but not passed on, so
+  a share of the full figure was refused.
+- **The share confirmation said "0 credits"**, and the page now says when the
+  balance can't load instead of showing zero.
+- **A refused share or revoke says why** instead of showing the upload
+  service's raw error.
+- **Three docs links were dead**, including one that loaded a "page not found"
+  page.
+
 ## [4.11.1] - 2026-10-09
 
 ### Changed

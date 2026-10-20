@@ -59,6 +59,8 @@ Before diving in, these are the most common issues:
 
 10. **Free tier has two axes**: `useFreeUploadLimit()` returns `{ freeUploadLimitBytes, freeTier }`. `freeUploadLimitBytes` (== `freeTier.maxItemBytes`) is the per-item size cap used by `isFileFree()`. `freeTier.lifetimeBytes` / `freeTier.ipBytes` are separate lifetime/IP quotas (0 = uncapped) shown in UI messaging — don't conflate them with the per-item limit.
 
+11. **The store's `creditBalance` is spendable, not shareable**: `useCreditBalance` fills it from the payment service's `effectiveBalance`, which includes credits *other wallets shared with this one*. Those can pay for uploads but cannot be shared onward; only `winc` can. Anything that offers to share or hand credits on reads `toShareableBalance()` (`utils/shareableCredits.ts`), as `ShareCreditsPanel` does. Reading `creditBalance` there offers more than the service will approve.
+
 ## Architecture Overview
 
 ### Application Structure
@@ -769,7 +771,7 @@ its own surface or horizontal padding — that's a frame inside a frame and
 double inset. Panels written for a standalone page (the `/topup` fiat and
 crypto steps) carry both and gate them on being embedded.
 
-All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
+All modal chrome lives in `components/modals/BaseModal.tsx` (~28 consumers). It provides Escape-to-close, a Tab focus trap, `role="dialog"`/`aria-modal`, body scroll lock, focus restore on close, and a labelled close button — **don't reimplement any of that in a consumer.** Two things to know:
 
 - `showCloseButton` defaults to **true**. A dismiss affordance is opt-out, not opt-in.
 - Modals **nest** (`WalletSelectionModal` renders `BlockingMessageModal` inside its own `BaseModal`), so BaseModal keeps a module-level stack: only the topmost instance answers Escape and traps Tab, and the scroll lock lifts only when the last one closes. Preserve that if you touch it.
@@ -786,6 +788,10 @@ All modal chrome lives in `components/modals/BaseModal.tsx` (~22 consumers). It 
 `rounded-2xl` is redefined to **20px** (brand cards are 20–24px), plus `rounded-3xl` (24px), `rounded-panel` (2rem), `rounded-hero` (2.5rem). Page containers use the `max-w-site` token (**1400px**) — not `max-w-7xl` (1280px) and not a hard-coded `max-w-[1400px]`.
 
 **Every routed screen has the same body width, on every device.** `Layout` wraps the outlet in `max-w-site`, and each screen's outermost element is `px-4 sm:px-6`, which also gives phones the same side gutter everywhere. **A screen must not add its own `mx-auto max-w-*` cap.** Name Detail (`max-w-5xl`), Pages (`max-w-6xl`) and two views inside Pages (`max-w-3xl`, `max-w-xl`) each had one, so they read as narrower than Upload or Deploy for no reason. Narrow measures are still right *inside* a screen: a centred empty-state sentence (`max-w-md`), prose (`max-w-prose`), modals, and the Pages live preview, which is a phone-sized frame on purpose. Browse is the one deliberate exception: it reclaims the layout padding to give its viewer more room.
+
+### Docs links
+
+Every link to documentation is `<DocsLink>` (`components/DocsLink.tsx`), placed beside what it explains (under the page description, or at the end of the sentence) and named for its topic ("How ArNS works"), never "Learn more". No bottom-of-page resource blocks or card grids. The console had five styles for this before 4.11.2 and three of its docs URLs were dead, one of them a soft 404 (`docs.ar.io` returns 200 with a "404: This page could not be found" title), so check a new URL's `<title>`, not its status code. Rules and exceptions: `docs/STYLE_GUIDE.md` § Docs links.
 
 ### Key Files
 
