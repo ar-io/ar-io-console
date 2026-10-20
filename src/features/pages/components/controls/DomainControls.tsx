@@ -1,5 +1,6 @@
-import { ExternalLink, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import ArNSAssociationPanel from '@/components/ArNSAssociationPanel';
+import DocsLink from '@/components/DocsLink';
 
 interface DomainControlsProps {
   enabled: boolean;
@@ -38,15 +39,7 @@ export default function DomainControls({
         <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
         <span>
           Optional — add a domain now, or anytime after you publish.{' '}
-          <a
-            href="https://docs.ar.io/learn/arns"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary transition-colors hover:text-primary/80"
-          >
-            How ArNS works
-            <ExternalLink className="h-3 w-3" />
-          </a>
+          <DocsLink href="https://docs.ar.io/learn/arns">How ArNS works</DocsLink>
         </span>
       </div>
       <ArNSAssociationPanel

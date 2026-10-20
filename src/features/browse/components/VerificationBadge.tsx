@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { LoadingSpinner } from "./LoadingSpinner";
+import DocsLink from '@/components/DocsLink';
 
 export type VerificationState =
   | "idle" // No verification in progress
@@ -318,14 +319,11 @@ export function VerificationBadge({
             </button>
           )}
 
-          <a
-            href="https://docs.ar.io/learn/wayfinder/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block mt-2 text-center text-xs text-foreground/50 hover:text-primary transition-colors"
-          >
-            Learn more about Wayfinder
-          </a>
+          <div className="mt-2 text-center">
+            <DocsLink href="https://docs.ar.io/learn/wayfinder/" className="text-xs">
+              How verification works
+            </DocsLink>
+          </div>
         </div>
       )}
     </div>

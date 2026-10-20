@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BaseModal from "@/components/modals/BaseModal";
 import { buttonClass } from '@/components/button';
+import DocsLink from '@/components/DocsLink';
 
 interface VerificationBlockedModalProps {
   identifier: string;
@@ -186,14 +187,9 @@ export function VerificationBlockedModal({
           </div>
 
           <div className="mt-3 text-center">
-            <a
-              href="https://docs.ar.io/learn/wayfinder/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-foreground/50 hover:text-primary transition-colors"
-            >
-              Learn more about Wayfinder verification
-            </a>
+            <DocsLink href="https://docs.ar.io/learn/wayfinder/" className="text-xs">
+              How verification works
+            </DocsLink>
           </div>
         </div>
       </div>

@@ -33,6 +33,7 @@ import {
 } from "../utils/contentTypeUtils";
 import type { VerificationEvent } from "../service-worker/types";
 import { buttonClass } from '@/components/button';
+import DocsLink from '@/components/DocsLink';
 
 /**
  * Extract the base gateway domain from a URL, removing the first subdomain.
@@ -1187,14 +1188,9 @@ function BrowsePanelContent({
           {!isFullscreen && resolvedUrl && (
             <div className="h-5 flex-shrink-0 px-3 flex items-center justify-between">
               {browseConfig.verificationEnabled ? (
-                <a
-                  href="https://docs.ar.io/learn/wayfinder/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground/40 hover:text-primary text-[11px] transition-colors"
-                >
-                  Learn about Wayfinder
-                </a>
+                <DocsLink href="https://docs.ar.io/learn/wayfinder/" className="text-xs">
+                  How verification works
+                </DocsLink>
               ) : (
                 <span />
               )}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Globe, ExternalLink, Flame, Tag, Settings2 } from 'lucide-react';
+import { ArrowLeft, Globe, Flame, Tag, Settings2 } from 'lucide-react';
 
 import { ArNSNameSearch } from './components/ArNSNameSearch';
 import { ArNSPurchaseCard } from './components/ArNSPurchaseCard';
@@ -10,6 +10,7 @@ import { useBuyArNSName } from './hooks/useBuyArNSName';
 import { buildTargetOptions, labelForTxId } from './purchase/buyTarget';
 import type { BuyTargetState } from './purchase/buyTarget';
 import type { BuyArNSNameInput } from './hooks/useBuyArNSName';
+import DocsLink from '@/components/DocsLink';
 
 /**
  * ArNS "buy a name with Turbo Credits" — the in-console replacement for the old
@@ -141,15 +142,9 @@ export function ArNSBuyPanel({ initialSearch }: { initialSearch?: string } = {})
               fees are included, so neither needs SOL. You&apos;ll approve the
               purchase once in your wallet, and the name is yours.
             </p>
-            <a
-              href="https://docs.ar.io/learn/arns"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-            >
+            <DocsLink href="https://docs.ar.io/learn/arns" className="mt-1.5 text-xs">
               What is ArNS?
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            </DocsLink>
           </div>
         </div>
       )}

@@ -4,7 +4,6 @@ import {
   CalendarPlus,
   CheckCircle2,
   CreditCard,
-  ExternalLink,
   Infinity as InfinityIcon,
   Layers,
   Loader2,
@@ -47,6 +46,7 @@ import ArNSPaymentModal from './ArNSPaymentModal';
 import ArNSCardPaymentModal from './ArNSCardPaymentModal';
 import ModalHeader from '../../../components/modals/ModalHeader';
 import { buttonClass } from '@/components/button';
+import DocsLink from '@/components/DocsLink';
 
 const LEASE_YEAR_OPTIONS = [1, 2, 3, 4, 5];
 const UNDERNAME_QTY_OPTIONS = [1, 5, 10, 25, 50];
@@ -619,15 +619,9 @@ export default function ManageDomainModal({
                     </button>
                   ))}
                 </div>
-                <a
-                  href="https://docs.ar.io/learn/arns"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  Learn about undernames
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                <DocsLink href="https://docs.ar.io/learn/arns" className="mt-2 text-xs">
+                  How undernames work
+                </DocsLink>
               </div>
             )}
 
