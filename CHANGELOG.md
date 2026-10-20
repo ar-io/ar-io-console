@@ -13,6 +13,12 @@ All notable changes to the ar.io Console are documented in this file.
   first and names the amount it returns. A wallet with no shares sees one line
   instead of an empty panel. Approval IDs are no longer shown.
 
+- **Top-up history stays loaded for the session.** Leaving the Account page
+  and coming back shows it at once, without signing again. It says when it
+  was loaded and offers Refresh, and after a top-up, share or revoke it says
+  your balance has changed since. It is never saved to the browser: a reload
+  or another wallet asks for the signature again.
+
 ### Fixed
 - **Revoking on the Account page took effect on one click** and revoked
   everything shared with that wallet, though the row showed one share. It now

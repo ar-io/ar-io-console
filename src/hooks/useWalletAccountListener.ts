@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useStore } from '../store/useStore';
 import { useAccount } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { clearEthereumTurboClientCache } from './useEthereumTurboClient';
 import { clearX402SignerCache } from './useX402Upload';
+import { clearPaymentHistoryClientCache, PAYMENT_HISTORY_KEY } from './usePaymentHistory';
 import { canRestoreSolanaSession } from '../utils/solanaSessionRestore';
 
 /**
@@ -29,6 +31,17 @@ export function useWalletAccountListener() {
   // Track previous connector to detect wallet app switches
   const prevConnectorRef = useRef<string | null>(null);
 
+  // Top-up history is cached for the session per wallet (usePaymentHistory).
+  // When the session wallet changes, sign-out included, drop every other
+  // wallet's: it was shown only after that wallet signed for it.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    queryClient.removeQueries({
+      queryKey: [PAYMENT_HISTORY_KEY],
+      predicate: (q) => q.queryKey[1] !== address,
+    });
+  }, [address, queryClient]);
+
   // Handle RainbowKit/Wagmi session restoration on page load
   // When user refreshes, wagmi auto-reconnects and we need to update our store
   // Only restore if store already has walletType === 'ethereum' — don't auto-connect
@@ -45,6 +58,7 @@ export function useWalletAccountListener() {
       if (address) {
         clearEthereumTurboClientCache();
         clearX402SignerCache();
+        clearPaymentHistoryClientCache();
       }
 
       setAddress(ethAddress, 'ethereum');
@@ -60,6 +74,7 @@ export function useWalletAccountListener() {
       // Clear cached Turbo clients since we have a new wallet
       clearEthereumTurboClientCache();
       clearX402SignerCache();
+      clearPaymentHistoryClientCache();
 
       // Update to new address
       setAddress(ethAddress, 'ethereum');
@@ -80,6 +95,7 @@ export function useWalletAccountListener() {
       // Clear cached Turbo clients when switching wallet apps
       clearEthereumTurboClientCache();
       clearX402SignerCache();
+      clearPaymentHistoryClientCache();
     }
 
     prevConnectorRef.current = currentConnectorId;
@@ -234,6 +250,7 @@ export function useWalletAccountListener() {
         // Clear cached Turbo clients since we have a new wallet
         clearEthereumTurboClientCache();
         clearX402SignerCache();
+        clearPaymentHistoryClientCache();
 
         // Update to new address
         setAddress(accounts[0], 'ethereum');

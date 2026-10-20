@@ -151,6 +151,8 @@ what it did. Don't reintroduce a second verification entry point.
 
 **Cache expiry:** ArNS names (24h), owned names (6h), upload status (1h confirmed, 24h finalized)
 
+**Signature-gated reads** (top-up history, `usePaymentHistory`) are cached in TanStack Query for the session, never persisted: keyed by address, wallet type and config mode; `enabled: false` (each request asks the wallet to sign, so only a click fetches); `staleTime`/`gcTime: Infinity`; `retry: false`. `refresh-balance` marks them stale with `invalidateQueries({ refetchType: 'none' })` from `useCreditBalance`, which is always mounted, and the page offers Refresh. TanStack never reports a disabled query as stale (`isStale` checks `enabled` first), so read `getQueryState(key).isInvalidated` instead. `useWalletAccountListener` drops other wallets' entries when the session address changes, and clears the module-level client cache alongside the Ethereum and x402 ones.
+
 ### Pages Feature
 
 Pages (`/pages`) is a no-code link-in-bio builder: users pick a template, edit profile/blocks/theme with a live preview, and publish a permanent, self-contained HTML page to Arweave with an optional ArNS domain. Pure-logic modules are node-tested (see the Vitest note in Quick Start).
