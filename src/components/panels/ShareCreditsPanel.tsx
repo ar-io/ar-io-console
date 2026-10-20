@@ -44,18 +44,21 @@ const EXPIRY_OPTIONS: { id: Expiry; label: string; short: string; seconds: numbe
 ];
 const CUSTOM_UNITS = { hours: 3_600, days: 86_400 } as const;
 
-const formatEnd = (seconds: number) =>
-  new Date(Date.now() + seconds * 1000).toLocaleString(undefined, {
+const formatTime = (at: number) =>
+  new Date(at).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   });
+// A preview: before sharing, the end is "this long from now".
+const formatEnd = (seconds: number) => formatTime(Date.now() + seconds * 1000);
 
 interface SharedResult {
   credits: number;
   recipient: string;
-  expirySeconds: number;
+  /** When the share ends, fixed when it was made; null when it never does. */
+  endsAt: number | null;
 }
 
 export default function ShareCreditsPanel() {
@@ -201,7 +204,7 @@ export default function ShareCreditsPanel() {
       const turbo = await createTurboClient();
       const approvedWinc = toApprovedWinc(amountInput, shareableWinc);
 
-      await turbo.shareCredits({
+      const approval = await turbo.shareCredits({
         approvedAddress: recipient,
         approvedWincAmount: approvedWinc.toString(),
         expiresBySeconds: expirySeconds > 0 ? expirySeconds : undefined,
@@ -211,7 +214,12 @@ export default function ShareCreditsPanel() {
       setShared({
         credits: amount,
         recipient,
-        expirySeconds,
+        // The service's own expiry when it returns one; otherwise the time
+        // the share was made, so a re-render can't move it.
+        endsAt:
+          expirySeconds > 0
+            ? Date.parse(approval?.expirationDate ?? '') || Date.now() + expirySeconds * 1000
+            : null,
       });
       resetForm();
 
@@ -470,7 +478,7 @@ export default function ShareCreditsPanel() {
           <p className="mt-1 text-sm leading-relaxed text-foreground/80">
             <span className="font-mono">{formatWalletAddress(shared.recipient, 4)}</span> can spend{' '}
             {shared.credits === 1 ? 'it' : 'them'} now.{' '}
-            {shared.expirySeconds > 0 ? `Ends ${formatEnd(shared.expirySeconds)}.` : 'Never expires.'}
+            {shared.endsAt !== null ? `Ends ${formatTime(shared.endsAt)}.` : 'Never expires.'}
           </p>
         </div>
       </div>
