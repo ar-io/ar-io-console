@@ -619,7 +619,7 @@ export default function ManageDomainModal({
                     </button>
                   ))}
                 </div>
-                <DocsLink href="https://docs.ar.io/learn/arns" className="mt-2 text-xs">
+                <DocsLink href="https://docs.ar.io/learn/arns/ants/#undernames" className="mt-2 text-xs">
                   How undernames work
                 </DocsLink>
               </div>

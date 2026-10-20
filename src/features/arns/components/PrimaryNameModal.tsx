@@ -196,7 +196,7 @@ export default function PrimaryNameModal({
               ) : (
                 <span>
                   Setting a name you own is a single wallet approval.{' '}
-                  <DocsLink href="https://docs.ar.io/learn/arns">How primary names work</DocsLink>
+                  <DocsLink href="https://docs.ar.io/learn/arns/name-registration/#primary-names">How primary names work</DocsLink>
                 </span>
               )}
             </div>
