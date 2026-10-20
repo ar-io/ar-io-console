@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
 import { useCreditBalance } from '../../hooks/useCreditBalance';
 import { useShareBalance } from '../../hooks/useShareBalance';
-import { wincToCredits } from '../../utils/shareableCredits';
+import { formatCreditsFloor } from '../../utils/shareableCredits';
 import { useFreeUploadLimit, useFreeStatus, freeTierSummary } from '../../hooks/useFreeUploadLimit';
 import { wincPerCredit } from '../../constants';
 import { buttonClass } from '@/components/button';
@@ -18,8 +18,6 @@ export default function BalanceCard() {
   // wallets shared with it. Those can't be shared on, so when there are any,
   // say how the total splits: the Share button below acts on the first part.
   const { data: shareBalance } = useShareBalance();
-  const receivedCredits = shareBalance ? wincToCredits(shareBalance.receivedWinc) : 0;
-  const ownCredits = shareBalance ? wincToCredits(shareBalance.shareableWinc) : 0;
 
   // Derive storage from credits (1 credit = 1e12 winc)
   const gibStorage = wincForOneGiB ? (credits * wincPerCredit) / Number(wincForOneGiB) : 0;
@@ -39,9 +37,6 @@ export default function BalanceCard() {
       return '0';
     }
   };
-
-  // Two places, rounded down, so the split never shows more than is there.
-  const splitFigure = (c: number) => (Math.floor(c * 100) / 100).toFixed(2);
 
   const freeMsg = freeTierSummary(freeUploadLimitBytes, bytesRemaining);
   const freeExhausted = bytesRemaining === 0;
@@ -78,9 +73,11 @@ export default function BalanceCard() {
             {formatCredits(credits)}{' '}
             <span className="text-base font-semibold text-foreground/60">Credits</span>
           </div>
-          {receivedCredits > 0 && (
+          {shareBalance && shareBalance.receivedWinc > 0n && (
             <div className="mt-1 text-sm text-foreground/70">
-              {splitFigure(ownCredits)} yours · {splitFigure(receivedCredits)} shared with you{' '}
+              {/* Two places, rounded down in winc, as Share Credits rounds. */}
+              {formatCreditsFloor(shareBalance.shareableWinc, 2)} yours ·{' '}
+              {formatCreditsFloor(shareBalance.receivedWinc, 2)} shared with you{' '}
               <span className="text-foreground/60">(spend only)</span>
             </div>
           )}

@@ -54,7 +54,10 @@ export default function CreditSharingSection() {
 
   const card = 'rounded-2xl border border-border/20 bg-card p-4 sm:p-6';
 
-  if (isError) {
+  // Only when nothing has loaded: a failed background refetch (focus,
+  // refresh-balance, the one after a failed revoke) keeps the rows on screen,
+  // as Share Credits does, so a revoke's own error message stays visible.
+  if (isError && !data) {
     return (
       <section aria-label="Credit sharing" className={card}>
         <Title description={DESCRIPTION} />
