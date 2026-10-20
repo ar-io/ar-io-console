@@ -12,6 +12,7 @@ import PriceAmount from './PriceAmount';
 import { splitNameAndSetup } from '../purchase/priceTotals';
 import { OPERATOR_DISCOUNT_PERCENT } from '../purchase/operatorDiscount';
 import { useCreditsForFiat } from '../../../hooks/useCreditsForFiat';
+import DocsLink from '@/components/DocsLink';
 
 /** Where to send users who need SOL for account rent and fees. Configurable. */
 const GET_SOL_URL = 'https://www.coinbase.com/how-to-buy/solana';
@@ -669,15 +670,12 @@ export function ArNSCostBreakdown({
           you pay with ARIO.
         </p>
       )}
-      <a
+      <DocsLink
         href="https://docs.ar.io/build/upload/turbo-credits#pricing--fees"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 inline-flex items-center gap-0.5 text-xs text-foreground/60 transition-colors hover:text-primary"
+        className="mt-2 text-xs"
       >
         How pricing works
-        <ExternalLink className="h-3 w-3" />
-      </a>
+      </DocsLink>
     </>
   );
 }

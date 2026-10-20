@@ -8,7 +8,8 @@ import {
 import { useStore } from '../../store/useStore';
 import { wincPerCredit } from '../../constants';
 import { useTurboConfig } from '../../hooks/useTurboConfig';
-import { ExternalLink, Shield, ArrowRight, Share2, Book, Lightbulb, Code, CheckCircle, Wallet } from 'lucide-react';
+import { Shield, ArrowRight, Share2, CheckCircle, Wallet } from 'lucide-react';
+import DocsLink from '@/components/DocsLink';
 import { promptSignIn, getTurboBalance } from '../../utils';
 import { toShareableBalance, toApprovedWinc, wincToCredits } from '../../utils/shareableCredits';
 import { useWincForOneGiB } from '../../hooks/useWincForOneGiB';
@@ -220,6 +221,9 @@ export default function ShareCreditsPanel() {
           <p className="text-sm text-foreground/80">
             Delegate credits to other wallets for collaborative uploads and distributed payments
           </p>
+          <DocsLink href="https://docs.ar.io/sdks/turbo-sdk/turbo-credit-sharing/" className="mt-1.5 text-xs">
+            How credit sharing works
+          </DocsLink>
         </div>
       </div>
 
@@ -529,72 +533,6 @@ export default function ShareCreditsPanel() {
           )}
         </div>
       )}
-
-      {/* Resource Links */}
-      <div className="mt-8">
-        <h4 className="mb-4">Learn More</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Documentation */}
-          <a
-            href="https://docs.ar.io/sdks/turbo-sdk/turbo-credit-sharing/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors group"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <Book className="w-5 h-5 text-foreground" />
-              <span className="font-medium">Documentation</span>
-            </div>
-            <p className="text-xs text-foreground/80">
-              Complete guide to credit sharing features and API
-            </p>
-            <div className="flex items-center gap-1 mt-2 text-xs text-foreground/80 group-hover:text-foreground">
-              <span>Read guide</span>
-              <ExternalLink className="w-3 h-3" />
-            </div>
-          </a>
-
-          {/* Use Cases */}
-          <a
-            href="https://docs.ar.io/sdks/turbo-sdk/turbo-credit-sharing/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors group"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <Lightbulb className="w-5 h-5 text-foreground" />
-              <span className="font-medium">Use Cases</span>
-            </div>
-            <p className="text-xs text-foreground/80">
-              Examples and scenarios for credit sharing
-            </p>
-            <div className="flex items-center gap-1 mt-2 text-xs text-foreground/80 group-hover:text-foreground">
-              <span>View examples</span>
-              <ExternalLink className="w-3 h-3" />
-            </div>
-          </a>
-
-          {/* SDK Reference */}
-          <a
-            href="https://github.com/ardriveapp/turbo-sdk?tab=readme-ov-file#sharecredits-approvedaddress-approvedwincamount-expiresbyseconds-"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-card rounded-2xl p-4 hover:bg-card/80 transition-colors group"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <Code className="w-5 h-5 text-foreground" />
-              <span className="font-medium">SDK Reference</span>
-            </div>
-            <p className="text-xs text-foreground/80">
-              Technical implementation details on GitHub
-            </p>
-            <div className="flex items-center gap-1 mt-2 text-xs text-foreground/80 group-hover:text-foreground">
-              <span>View code</span>
-              <ExternalLink className="w-3 h-3" />
-            </div>
-          </a>
-        </div>
-      </div>
     </div>
   );
 }

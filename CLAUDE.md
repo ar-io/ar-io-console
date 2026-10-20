@@ -789,6 +789,10 @@ All modal chrome lives in `components/modals/BaseModal.tsx` (~28 consumers). It 
 
 **Every routed screen has the same body width, on every device.** `Layout` wraps the outlet in `max-w-site`, and each screen's outermost element is `px-4 sm:px-6`, which also gives phones the same side gutter everywhere. **A screen must not add its own `mx-auto max-w-*` cap.** Name Detail (`max-w-5xl`), Pages (`max-w-6xl`) and two views inside Pages (`max-w-3xl`, `max-w-xl`) each had one, so they read as narrower than Upload or Deploy for no reason. Narrow measures are still right *inside* a screen: a centred empty-state sentence (`max-w-md`), prose (`max-w-prose`), modals, and the Pages live preview, which is a phone-sized frame on purpose. Browse is the one deliberate exception: it reclaims the layout padding to give its viewer more room.
 
+### Docs links
+
+Every link to documentation is `<DocsLink>` (`components/DocsLink.tsx`), placed beside what it explains (under the page description, or at the end of the sentence) and named for its topic ("How ArNS works"), never "Learn more". No bottom-of-page resource blocks or card grids. The console had five styles for this before 4.11.2 and three of its docs URLs were dead, one of them a soft 404 (`docs.ar.io` returns 200 with a "404: This page could not be found" title), so check a new URL's `<title>`, not its status code. Rules and exceptions: `docs/STYLE_GUIDE.md` § Docs links.
+
 ### Key Files
 
 - `src/styles/globals.css` - CSS custom properties

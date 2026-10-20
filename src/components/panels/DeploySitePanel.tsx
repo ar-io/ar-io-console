@@ -26,6 +26,7 @@ import { actionButtonClass } from '@/components/actionButton';
 import AssignedDomainLinks from '@/components/AssignedDomainLinks';
 import { assignedLabel, useArnsHost } from '@/hooks/useArnsHost';
 import { buttonClass } from '@/components/button';
+import DocsLink from '@/components/DocsLink';
 
 // Helper function moved outside component to prevent recreation on every render
 function getFileIcon(filename: string) {
@@ -2512,19 +2513,16 @@ export default function DeploySitePanel() {
               </li>
             </ul>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <button
                 onClick={() => navigate('/arns')}
-                className={`${buttonClass('secondary', 'lg')} flex-1`}
+                className={buttonClass('secondary', 'lg')}
               >
                 Find a name
               </button>
-              <button
-                onClick={() => window.open('https://docs.ar.io/learn/arns', '_blank', 'noopener,noreferrer')}
-                className={`${buttonClass('secondary', 'lg')} flex-1`}
-              >
+              <DocsLink href="https://docs.ar.io/learn/arns" className="text-sm self-center">
                 How ArNS works
-              </button>
+              </DocsLink>
             </div>
           </div>
         </div>

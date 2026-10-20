@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowDown,
   CheckCircle2,
-  ExternalLink,
   Info,
   Loader2,
   Search,
@@ -19,6 +18,7 @@ import ModalHeader from '../../../components/modals/ModalHeader';
 import NeedsSolNote from './NeedsSolNote';
 import TransactionReceipt from './TransactionReceipt';
 import { buttonClass } from '@/components/button';
+import DocsLink from '@/components/DocsLink';
 
 export type PrimaryNameModalMode = 'set' | 'change' | 'approve';
 
@@ -196,15 +196,7 @@ export default function PrimaryNameModal({
               ) : (
                 <span>
                   Setting a name you own is a single wallet approval.{' '}
-                  <a
-                    href="https://docs.ar.io/learn/arns"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-primary hover:underline"
-                  >
-                    Learn about primary names
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                  <DocsLink href="https://docs.ar.io/learn/arns/name-registration/#primary-names">How primary names work</DocsLink>
                 </span>
               )}
             </div>

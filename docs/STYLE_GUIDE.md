@@ -532,6 +532,24 @@ Back, "Pay with card instead", "Register another name": a plain text link
 (`text-sm text-primary hover:underline`, or `text-foreground/80
 hover:text-foreground` for a quieter one), not a button shape.
 
+### Docs links
+A link to documentation is always `<DocsLink>` (`src/components/DocsLink.tsx`):
+primary, medium weight, underline on hover, a small external-link icon, and a
+new tab. Don't hand-write one.
+
+- **Beside what it explains.** Under a page's description, or at the end of
+  the sentence it explains. No "Learn more" or "Resources" block at the bottom
+  of a page, and no card grid of docs links.
+- **Name the topic.** "How ArNS works", "What are credits?", not "Learn more".
+- **One per topic.** Two links to the same page is one link.
+- **Never a button.** A docs link is a tertiary action, so it sits beside the
+  button it supports ("Find a name" · How ArNS works), not as a second button.
+- Standalone, pass `className="text-xs"`; inside a sentence it takes the
+  sentence's size.
+
+Exceptions: the Gateway page's Developer Resources panel (there the links are
+the content), the landing page's marketing sections, and site navigation.
+
 ### Small Action Button (section and list headers)
 The buttons beside a section or list title ("Export CSV", "Check Status", "Edit", "Manage", "Add record"), and the small primary action that sits with them ("Create page"). Always use `actionButtonClass` from `src/components/actionButton.ts`; don't hand-write these classes.
 
