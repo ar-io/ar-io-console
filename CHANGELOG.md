@@ -2,7 +2,7 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
-## [4.11.3] - 2026-10-20
+## [4.11.3] - 2026-10-21
 
 ### Changed
 - **The Account page leads with your balance.** When other wallets have
@@ -24,6 +24,7 @@ All notable changes to the ar.io Console are documented in this file.
   confirms first and groups shares by wallet.
 - **Account showed the amount originally shared** as if it were still
   available; it now shows how much has been spent and what is left.
+- **Dates just under a year old read "0y ago"**; they now read "11mo ago".
 
 ## [4.11.2] - 2026-10-20
 
