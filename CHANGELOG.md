@@ -2,6 +2,30 @@
 
 All notable changes to the ar.io Console are documented in this file.
 
+## [4.11.3] - 2026-10-21
+
+### Changed
+- **The Account page leads with your balance.** When other wallets have
+  shared credits with you, it says how much of the total is yours and how
+  much is shared with you (spend only).
+- **Credit sharing on the Account page matches Share Credits.** The same two
+  tabs, the same figures to four places, and the same Revoke, which now asks
+  first and names the amount it returns. A wallet with no shares sees one line
+  instead of an empty panel. Approval IDs are no longer shown.
+- **Top-up history stays loaded for the session.** Leaving the Account page
+  and coming back shows it at once, without signing again. It says when it
+  was loaded and offers Refresh, and after a top-up, share or revoke it says
+  your balance has changed since. It is never saved to the browser: a reload
+  or another wallet asks for the signature again.
+
+### Fixed
+- **Revoking on the Account page took effect on one click** and revoked
+  everything shared with that wallet, though the row showed one share. It now
+  confirms first and groups shares by wallet.
+- **Account showed the amount originally shared** as if it were still
+  available; it now shows how much has been spent and what is left.
+- **Dates just under a year old read "0y ago"**; they now read "11mo ago".
+
 ## [4.11.2] - 2026-10-20
 
 ### Changed

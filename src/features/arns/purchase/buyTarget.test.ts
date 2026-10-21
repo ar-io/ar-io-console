@@ -197,6 +197,12 @@ describe('relativeTime', () => {
     expect(relativeTime(NOW - 800 * DAY, NOW)).toBe('2y ago');
   });
 
+  it('never says "0y ago" in the days before a full year', () => {
+    expect(relativeTime(NOW - 330 * DAY, NOW)).toBe('11mo ago');
+    expect(relativeTime(NOW - 362 * DAY, NOW)).toBe('11mo ago');
+    expect(relativeTime(NOW - 365 * DAY, NOW)).toBe('1y ago');
+  });
+
   it('says nothing for a missing or future timestamp', () => {
     // A future stamp means clock skew or a restored backup. "in 3 days" on a
     // thing you already published reads as a bug in the row.

@@ -133,6 +133,14 @@ describe('formatCreditsFloor', () => {
     expect(formatCreditsFloor(0n)).toBe('0.0000');
   });
 
+  it('takes the number of places, still in bigint', () => {
+    // As a double, 0.29 * 100 is 28.999…, which Math.floor turned into 0.28.
+    expect(formatCreditsFloor(290_000_000_000n, 2)).toBe('0.29');
+    expect(formatCreditsFloor(33_912_200_000_000n, 2)).toBe('33.91');
+    expect(formatCreditsFloor(3_400_000_000_000n, 2)).toBe('3.40');
+    expect(formatCreditsFloor(5_999_999_999_999n, 0)).toBe('5');
+  });
+
   it('what Max fills in reads back as no more than the balance', () => {
     for (const winc of [33_912_200_000_000n, 37_462_200_000_000n, 123_456_789n, 9_007_199_254_740_993_000n]) {
       expect(parseCreditsToWinc(formatCreditsFloor(winc))!).toBeLessThanOrEqual(winc);

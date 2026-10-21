@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { formatWalletAddress } from '../../utils';
 import { formatCreditsFloor, type ShareRow } from '../../utils/shareableCredits';
 import { buttonClass } from '@/components/button';
 
-// Rows a phone shows before "Show all"; desktop scrolls the whole list inside
-// a card locked to the form's height.
+// Rows a phone shows before "Show all". On desktop every row shows: pinned,
+// the list scrolls inside a card locked to the form's height; as a section,
+// rows sit two per line.
 const PHONE_ROWS = 3;
 
 const fmt = formatCreditsFloor;
@@ -18,9 +19,11 @@ const expiryLabel = (row: ShareRow) => {
 type Tab = 'given' | 'received';
 
 /**
- * The right-hand card on Share Credits: the shares this wallet has made, and
- * the ones made to it, as two tabs. Given rows are already grouped by
- * recipient (`toShareRows`), so Revoke acts on exactly what its row shows.
+ * The shares this wallet has made, and the ones made to it, as two tabs: the
+ * right-hand card on Share Credits (`pinned`) and the Credit sharing card on
+ * the Account page (`section`, with its own `header`). Given rows are already
+ * grouped by recipient (`toShareRows`), so Revoke acts on exactly what its
+ * row shows.
  */
 export default function ShareCreditsList({
   given,
@@ -28,13 +31,20 @@ export default function ShareCreditsList({
   sharedOutWinc,
   receivedWinc,
   onRevoke,
+  layout = 'pinned',
+  header,
+  label = 'Shares',
 }: {
   given: ShareRow[];
   received: ShareRow[];
   sharedOutWinc: bigint;
   receivedWinc: bigint;
   onRevoke: (address: string) => Promise<void>;
+  layout?: 'pinned' | 'section';
+  header?: ReactNode;
+  label?: string;
 }) {
+  const pinned = layout === 'pinned';
   const [tab, setTab] = useState<Tab>(given.length === 0 && received.length > 0 ? 'received' : 'given');
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -67,10 +77,11 @@ export default function ShareCreditsList({
 
   return (
     <section
-      aria-label="Shares"
-      className="flex flex-col gap-3 rounded-2xl border border-border/20 bg-card p-4 sm:p-6 lg:absolute lg:inset-0"
+      aria-label={label}
+      className={`flex flex-col gap-3 rounded-2xl border border-border/20 bg-card p-4 sm:p-6 ${pinned ? 'lg:absolute lg:inset-0' : ''}`}
     >
-      <div role="tablist" aria-label="Shares" className="grid h-12 flex-shrink-0 grid-cols-2 gap-1 rounded-2xl border border-border/20 bg-background p-1">
+      {header}
+      <div role="tablist" aria-label="Shares" className={`grid h-12 flex-shrink-0 grid-cols-2 gap-1 rounded-2xl border border-border/20 bg-background p-1 ${pinned ? '' : 'sm:max-w-md'}`}>
         <button type="button" role="tab" id="tab-given" aria-controls="panel-shares" aria-selected={tab === 'given'} onClick={() => pick('given')} className={tabClass(tab === 'given')}>
           Your shares · {given.length}
         </button>
@@ -93,7 +104,7 @@ export default function ShareCreditsList({
         role="tabpanel"
         aria-labelledby={tab === 'given' ? 'tab-given' : 'tab-received'}
         tabIndex={0}
-        className="flex flex-col gap-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1"
+        className={pinned ? 'flex flex-col gap-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1' : 'grid gap-2 lg:grid-cols-2 lg:items-start'}
       >
         {rows.length === 0 && (
           <p className="py-6 text-center text-sm text-foreground/70">

@@ -59,7 +59,7 @@ Before diving in, these are the most common issues:
 
 10. **Free tier has two axes**: `useFreeUploadLimit()` returns `{ freeUploadLimitBytes, freeTier }`. `freeUploadLimitBytes` (== `freeTier.maxItemBytes`) is the per-item size cap used by `isFileFree()`. `freeTier.lifetimeBytes` / `freeTier.ipBytes` are separate lifetime/IP quotas (0 = uncapped) shown in UI messaging — don't conflate them with the per-item limit.
 
-11. **The store's `creditBalance` is spendable, not shareable**: `useCreditBalance` fills it from the payment service's `effectiveBalance`, which includes credits *other wallets shared with this one*. Those can pay for uploads but cannot be shared onward; only `winc` can. Anything that offers to share or hand credits on reads `toShareableBalance()` (`utils/shareableCredits.ts`), as `ShareCreditsPanel` does. Reading `creditBalance` there offers more than the service will approve.
+11. **The store's `creditBalance` is spendable, not shareable**: `useCreditBalance` fills it from the payment service's `effectiveBalance`, which includes credits *other wallets shared with this one*. Those can pay for uploads but cannot be shared onward; only `winc` can. Anything that offers to share or hand credits on reads `useShareBalance()` (`hooks/useShareBalance.ts`, built on `toShareableBalance()`), as Share Credits and the Account page do; both render shares with `ShareCreditsList`, so grouping and Revoke behave the same in both places. Reading `creditBalance` there offers more than the service will approve.
 
 ## Architecture Overview
 
@@ -150,6 +150,8 @@ what it did. Don't reintroduce a second verification entry point.
 - `creditBalance`, payment flow state, UI state
 
 **Cache expiry:** ArNS names (24h), owned names (6h), upload status (1h confirmed, 24h finalized)
+
+**Signature-gated reads** (top-up history, `usePaymentHistory`) are cached in TanStack Query for the session, never persisted: keyed by address, wallet type and config mode; `enabled: false` (each request asks the wallet to sign, so only a click fetches); `staleTime`/`gcTime: Infinity`; `retry: false`. `refresh-balance` marks them stale with `invalidateQueries({ refetchType: 'none' })` from `useCreditBalance`, which is always mounted, and the page offers Refresh. TanStack never reports a disabled query as stale (`isStale` checks `enabled` first), so read `getQueryState(key).isInvalidated` instead. `useWalletAccountListener` drops other wallets' entries when the session address changes, and clears the module-level client cache alongside the Ethereum and x402 ones.
 
 ### Pages Feature
 

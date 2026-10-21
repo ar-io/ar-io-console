@@ -10,7 +10,9 @@ import {
   Inbox,
   Download,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { relativeTime } from '@/utils/relativeTime';
 import { usePaymentHistory, type PaymentHistoryItem } from '@/hooks/usePaymentHistory';
 import {
   isCryptoPayment,
@@ -221,24 +223,88 @@ function PaymentRow({ item }: { item: PaymentHistoryItem }) {
   );
 }
 
+// ---- freshness ---------------------------------------------------------------
+
+/**
+ * "Loaded 4m ago · Refresh", or, once a top-up, share or revoke has happened
+ * since, a nudge to refresh. The history never refetches on its own: each
+ * request asks the wallet to sign, so the user decides when.
+ */
+function HistoryFreshness({
+  loadedAt,
+  stale,
+  refreshing,
+  busy,
+  onRefresh,
+}: {
+  loadedAt: number;
+  stale: boolean;
+  refreshing: boolean;
+  /** Another fetch (Load more) is running; Refresh would cancel it. */
+  busy: boolean;
+  onRefresh: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const age = relativeTime(loadedAt, now) ?? 'just now';
+
+  const button = (
+    <button
+      type="button"
+      onClick={onRefresh}
+      disabled={refreshing || busy}
+      title="Asks your wallet to sign"
+      className="inline-flex items-center gap-1 font-medium text-primary hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-60"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+      {refreshing ? 'Refreshing…' : 'Refresh'}
+    </button>
+  );
+
+  if (stale && !refreshing) {
+    return (
+      <div className="mx-4 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/20 bg-background px-3 py-2 text-xs text-foreground/80 sm:mx-6">
+        <span>Your balance has changed since this loaded {age}.</span>
+        {button}
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 px-4 pb-2 text-xs text-foreground/60 sm:px-6" aria-live="polite">
+      <span>{refreshing ? 'Refreshing…' : `Loaded ${age}`}</span>
+      {!refreshing && (
+        <>
+          <span aria-hidden="true">·</span>
+          {button}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ---- section -----------------------------------------------------------------
 
 export default function PaymentHistorySection() {
   const navigate = useNavigate();
-  const { payments, hasMore, status, error, load, loadMore } = usePaymentHistory();
+  const { payments, hasMore, status, error, load, refresh, loadMore, loadedAt, stale } = usePaymentHistory();
+  // Rows stay on screen while a refresh or "Load more" runs.
+  const showing = status === 'loaded' || status === 'loadingMore' || status === 'refreshing';
 
   return (
     <div className="rounded-2xl border border-border/20 bg-card">
       {/* Header (matches CreditSharingSection) */}
       <div className="flex flex-wrap items-center gap-3 p-4 sm:p-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/20 bg-foreground/20">
-          <Receipt className="h-5 w-5 text-foreground" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
+          <Receipt className="h-5 w-5 text-primary" aria-hidden="true" />
         </div>
         <div>
           <h3 className="text-lg font-extrabold text-foreground">Top-up History</h3>
           <p className="text-sm text-foreground/80">Every credit purchase you’ve made</p>
         </div>
-        {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
+        {showing && payments.length > 0 && (
           <div className="ml-auto flex items-center gap-3">
             <button
               onClick={() => downloadTopupCsv(payments)}
@@ -251,6 +317,16 @@ export default function PaymentHistorySection() {
           </div>
         )}
       </div>
+
+      {showing && loadedAt !== undefined && (
+        <HistoryFreshness
+          loadedAt={loadedAt}
+          stale={stale}
+          refreshing={status === 'refreshing'}
+          busy={status === 'loadingMore'}
+          onRefresh={refresh}
+        />
+      )}
 
       {/* Opt-in */}
       {status === 'idle' && (
@@ -307,7 +383,7 @@ export default function PaymentHistorySection() {
       )}
 
       {/* Empty */}
-      {(status === 'loaded' || status === 'loadingMore') && payments.length === 0 && (
+      {showing && payments.length === 0 && (
         <div className="px-4 pb-8 pt-2 text-center sm:px-6">
           <Inbox className="mx-auto mb-3 h-10 w-10 text-foreground/30" />
           <h4 className="mb-1 font-extrabold text-foreground">No top-ups yet</h4>
@@ -325,7 +401,7 @@ export default function PaymentHistorySection() {
 
       {/* List — bounded height so a long history scrolls inside the card rather
           than growing the whole page. */}
-      {(status === 'loaded' || status === 'loadingMore') && payments.length > 0 && (
+      {showing && payments.length > 0 && (
         <div className="px-4 pb-4 sm:px-6">
           {/* pr-2 keeps the scrollbar from crowding the credits/tx column */}
           <div className="max-h-[28rem] overflow-y-auto pr-2">
@@ -340,7 +416,7 @@ export default function PaymentHistorySection() {
             <div className="flex justify-center pt-4">
               <button
                 onClick={loadMore}
-                disabled={status === 'loadingMore'}
+                disabled={status !== 'loaded'}
                 className={buttonClass('secondary', 'sm')}
               >
                 {status === 'loadingMore' ? (
