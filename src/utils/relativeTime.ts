@@ -24,7 +24,8 @@ export function relativeTime(
   if (days < 7) return `${days}d ago`;
   const weeks = Math.floor(days / 7);
   if (weeks < 5) return `${weeks}w ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
+  // 360–364 days is twelve 30-day months but not yet a year; cap at 11 so it
+  // never falls through to "0y ago".
+  if (days < 365) return `${Math.min(Math.floor(days / 30), 11)}mo ago`;
   return `${Math.floor(days / 365)}y ago`;
 }
