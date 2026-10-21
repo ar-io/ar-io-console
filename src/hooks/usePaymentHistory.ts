@@ -14,7 +14,10 @@ export type PaymentHistoryItem = Awaited<
   ReturnType<TurboAuthenticatedClient['getPaymentHistory']>
 >['payments'][number];
 
-type HistoryPage = Awaited<ReturnType<TurboAuthenticatedClient['getPaymentHistory']>>;
+type HistoryPage = Awaited<ReturnType<TurboAuthenticatedClient['getPaymentHistory']>> & {
+  /** When this page was fetched. Page one's is the history's age. */
+  fetchedAt: number;
+};
 
 // Generous page size so almost every user sees their whole history in a single
 // signed request — pagination costs another signature (the SDK signs a fresh
@@ -121,9 +124,10 @@ export function usePaymentHistory() {
     // A declined signature is an answer, not a flake.
     retry: false,
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam }): Promise<HistoryPage> => {
       const turbo = await getClient();
-      return turbo.getPaymentHistory(pageParam ? { limit: PAGE_SIZE, cursor: pageParam } : { limit: PAGE_SIZE });
+      const page = await turbo.getPaymentHistory(pageParam ? { limit: PAGE_SIZE, cursor: pageParam } : { limit: PAGE_SIZE });
+      return { ...page, fetchedAt: Date.now() };
     },
     getNextPageParam: (last) => (last.hasMore && last.cursor ? last.cursor : undefined),
   });
@@ -169,11 +173,30 @@ export function usePaymentHistory() {
     }
   }, [address, walletType, configMode, query, queryClient]);
 
-  /** Next page (keeps existing rows on failure). */
+  /**
+   * Next page (keeps existing rows on failure). Page one is unchanged, so a
+   * stale history stays stale: TanStack clears the invalidation on any
+   * successful fetch, so restore it if it was set before or during this one.
+   */
   const loadMore = useCallback(async () => {
     if (!query.hasNextPage || query.isFetching) return;
-    await query.fetchNextPage();
-  }, [query]);
+    const key = [PAYMENT_HISTORY_KEY, address, walletType, configMode];
+    const hash = queryClient.getQueryCache().find({ queryKey: key, exact: true })?.queryHash;
+    let wasInvalidated = !!queryClient.getQueryState(key)?.isInvalidated;
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated' && event.action.type === 'invalidate' && event.query.queryHash === hash) {
+        wasInvalidated = true;
+      }
+    });
+    try {
+      const result = await query.fetchNextPage();
+      if (!result.isError && wasInvalidated) {
+        await queryClient.invalidateQueries({ queryKey: key, exact: true, refetchType: 'none' });
+      }
+    } finally {
+      unsubscribe();
+    }
+  }, [address, walletType, configMode, query, queryClient]);
 
   // TanStack never reports a disabled query as stale (`isStale` checks
   // `enabled` first), so read the invalidation `refresh-balance` leaves on it
@@ -197,7 +220,7 @@ export function usePaymentHistory() {
     status,
     error: query.isError ? toMessage(query.error) : null,
     /** When the cached history was fetched (ms), or undefined before the first load. */
-    loadedAt: hasData ? query.dataUpdatedAt : undefined,
+    loadedAt: query.data?.pages[0]?.fetchedAt,
     /** True once a top-up, share or revoke has happened since it was fetched. */
     stale: hasData && invalidated,
     load,
